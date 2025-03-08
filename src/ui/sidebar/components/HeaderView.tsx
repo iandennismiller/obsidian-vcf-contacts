@@ -6,6 +6,8 @@ type HeaderProps = {
 	onSortChange: React.Dispatch<React.SetStateAction<Sort>>;
 	sort: Sort;
 	onCreateContact: () => void;
+	importVCF: () => void;
+	exportVCF: () => void;
 };
 
 export const HeaderView = (props: HeaderProps) => {
@@ -22,11 +24,33 @@ export const HeaderView = (props: HeaderProps) => {
 					<div
 						id="create-btn"
 						className="clickable-icon nav-action-button"
+						data-icon="contact"
 						aria-label="Create New Contact"
+						ref={(element) => (buttons.current[1] = element)}
 						onClick={props.onCreateContact}
-					>
-						Create
-					</div>
+					/>
+
+					<div
+						id="import-vcf-btn"
+						data-icon="file-down"
+						className={
+							"clickable-icon nav-action-button "
+						}
+						aria-label="import VCF"
+						ref={(element) => (buttons.current[2] = element)}
+						onClick={ props.importVCF }
+					/>
+					<div
+						id="import-vcf-btn"
+						data-icon="file-up"
+						className={
+							"clickable-icon nav-action-button "
+						}
+						aria-label="export VCF"
+						ref={(element) => (buttons.current[3] = element)}
+						onClick={ props.exportVCF }
+					/>
+
 					<div className="vl"></div>
 					<div
 						id="sort-by-name-btn"
@@ -36,7 +60,7 @@ export const HeaderView = (props: HeaderProps) => {
 							(props.sort === Sort.NAME && "is-active")
 						}
 						aria-label="Sort By Name"
-						ref={(element) => (buttons.current[1] = element)}
+						ref={(element) => (buttons.current[4] = element)}
 						onClick={() => props.onSortChange(Sort.NAME)}
 					/>
 					<div
@@ -47,7 +71,7 @@ export const HeaderView = (props: HeaderProps) => {
 							(props.sort === Sort.LAST_CONTACT && "is-active")
 						}
 						aria-label="Sort By Last Contact"
-						ref={(element) => (buttons.current[2] = element)}
+						ref={(element) => (buttons.current[5] = element)}
 						onClick={() => props.onSortChange(Sort.LAST_CONTACT)}
 					/>
 					<div
@@ -58,7 +82,7 @@ export const HeaderView = (props: HeaderProps) => {
 							(props.sort === Sort.BIRTHDAY && "is-active")
 						}
 						aria-label="Sort By Birthday"
-						ref={(element) => (buttons.current[3] = element)}
+						ref={(element) => (buttons.current[6] = element)}
 						onClick={() => props.onSortChange(Sort.BIRTHDAY)}
 					/>
 				</div>

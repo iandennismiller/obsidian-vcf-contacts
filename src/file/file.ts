@@ -1,6 +1,8 @@
-import { normalizePath, Notice, TFile, TFolder, Vault, Workspace } from "obsidian";
+import {App, Modal, normalizePath, Notice, TFile, TFolder, Vault, Workspace} from "obsidian";
 import { join } from "path";
 import { Template } from "src/settings/settings";
+import { ContactNameModal } from "../modals/contactNameModal";
+import {FileExistsModal} from "../modals/fileExistsModal";
 
 const customFormat =
   `/---contact---/
@@ -45,45 +47,51 @@ export function findContactFiles(contactsFolder: TFolder) {
   return contactFiles;
 }
 
-export function createContactFile(folderPath: string, template: Template, hashtag: string, vault: Vault, workspace: Workspace) {
-  const folder = vault.getAbstractFileByPath(folderPath)
-  if (!folder) {
-    new Notice(`Can not find path: '${folderPath}'. Please update "Contacts" plugin settings`);
-    return;
-  }
+export function createContactFile(app: App, folderPath: string, template: Template, hashtag: string, vault: Vault, workspace: Workspace) {
+	const folder = vault.getAbstractFileByPath(folderPath)
+	if (!folder) {
+		new Notice(`Can not find path: '${folderPath}'. Please update "Contacts" plugin settings`);
+		return;
+	}
 
-  vault.create(normalizePath(join(folderPath, `Contact ${findNextFileNumber(folderPath, vault)}.md`)), getNewFileContent(template, hashtag))
-    .then(createdFile => openFile(createdFile, workspace));
+	new ContactNameModal(app, async (givenName, familyName) => {
+		const filePath = normalizePath(join(folderPath, `${givenName} ${familyName}.md`));
+		const fileExists = await vault.adapter.exists(filePath);
+		if (fileExists) {
+			new FileExistsModal(filePath, (action: "replace" | "skip") => {
+				if(action === "skip") {
+					new Notice("File creation skipped.");
+				}
+
+				if(action === "replace") {
+					vault.adapter.write(filePath, getNewFileContent(template, hashtag))
+						.then(() => {
+							const file = vault.getAbstractFileByPath(filePath);
+							if (file instanceof TFile) {
+								openFile(file, workspace);
+							}
+							new Notice(`File overwritten.`);
+						});
+				}
+			}).open();
+		} else {
+			vault.create(filePath, getNewFileContent(template, hashtag))
+				.then(createdFile => openFile(createdFile, workspace));
+		}
+	}).open();
 }
 
-function findNextFileNumber(folderPath: string, vault: Vault) {
-  const folder = vault.getAbstractFileByPath(
-    normalizePath(folderPath)
-  ) as TFolder;
+// export function createContactFileWithData() {
+// 	const folder = vault.getAbstractFileByPath(folderPath)
+// 	if (!folder) {
+// 		new Notice(`Can not find path: '${folderPath}'. Please update "Contacts" plugin settings`);
+// 		return;
+// 	}
+//
+// 	vault.create(normalizePath(join(folderPath, `Contact ${findNextFileNumber(folderPath, vault)}.md`)), getNewFileContent(template, hashtag))
+// 		.then(createdFile => openFile(createdFile, workspace));
+// }
 
-  let nextNumber = 0;
-  Vault.recurseChildren(folder, (contactNote) => {
-    if (!(contactNote instanceof TFile)) {
-      return;
-    }
-    const name = contactNote.basename;
-    const regex = /Contact(?<number>\s\d+)*/g;
-    for (const match of name.matchAll(regex)) {
-      if (!match.groups || !match.groups.number) {
-        if (nextNumber === 0) {
-          nextNumber = 1;
-        }
-        continue;
-      }
-      const currentNumberString = match.groups.number.trim();
-      if (currentNumberString != undefined && currentNumberString !== "") {
-        const currentNumber = parseInt(currentNumberString);
-        nextNumber = Math.max(nextNumber, (currentNumber + 1));
-      }
-    }
-  });
-  return nextNumber === 0 ? "" : nextNumber.toString();
-}
 
 function getNewFileContent(template: Template, hashtag: string): string {
   let hashtagSuffix = '';
@@ -98,4 +106,38 @@ function getNewFileContent(template: Template, hashtag: string): string {
     default:
       return customFormat + hashtagSuffix;
   }
+}
+
+export async function openFilePicker(type: string): Promise<string> {
+	return new Promise((resolve) => {
+		const input = document.createElement("input");
+		input.type = "file";
+		input.accept = type;
+		input.style.display = "none";
+
+		input.addEventListener("change", () => {
+			if (input?.files && input.files.length > 0) {
+				const file = input.files[0];
+				const reader = new FileReader();
+
+				reader.onload = function (event) {
+					const rawData = event?.target?.result || '';
+					if (typeof rawData === "string") {
+						resolve(rawData);
+					} else {
+						resolve(new TextDecoder("utf-8").decode(rawData));
+					}
+
+				};
+
+				reader.readAsText(file, "UTF-8");
+			} else {
+				resolve('');
+			}
+		});
+
+		document.body.appendChild(input);
+		input.click();
+		document.body.removeChild(input);
+	});
 }

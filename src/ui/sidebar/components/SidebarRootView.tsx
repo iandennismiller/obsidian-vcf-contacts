@@ -1,20 +1,22 @@
 import { normalizePath, TAbstractFile, TFile, TFolder } from "obsidian";
 import * as React from "react";
 import { useApp } from "src/context/hooks";
-import { createContactFile, findContactFiles } from "src/file/file";
+import { createContactFile, findContactFiles, openFilePicker } from "src/file/file";
 import ContactsPlugin from "src/main";
 import { Contact } from "src/parse/contact";
 import { parseContactFiles } from "src/parse/parse";
 import { Sort } from "src/util/constants";
 import { ContactsListView } from "./ContactsListView";
 import { HeaderView } from "./HeaderView";
+import { parseToSingles, parseVcard } from "src/parse/vcard/vcardParse";
 
 type RootProps = {
 	plugin: ContactsPlugin;
 };
 
 export const SidebarRootView = (props: RootProps) => {
-	const { vault, metadataCache, workspace } = useApp();
+	const app = useApp();
+	const { vault, metadataCache, workspace } = app;
 	const [contacts, setContacts] = React.useState<Contact[]>([]);
 	const [sort, setSort] = React.useState<Sort>(Sort.LAST_CONTACT);
 	const folder = props.plugin.settings.contactsFolder;
@@ -67,8 +69,23 @@ export const SidebarRootView = (props: RootProps) => {
 		<div>
 			<HeaderView
 				onSortChange={setSort}
+				importVCF={() => {
+					openFilePicker('.vcf').then((fileContent: string) => {
+						if (fileContent === '') {
+							return;
+						} else {
+							const singles: string[] = parseToSingles(fileContent);
+							for (const single of singles) {
+								const vcardData = parseVcard(single);
+
+							}
+						}
+					})
+				}}
+				exportVCF={() => {}}
 				onCreateContact={() =>
 					createContactFile(
+						app,
 						folder,
 						props.plugin.settings.template,
 						props.plugin.settings.defaultHashtag,
