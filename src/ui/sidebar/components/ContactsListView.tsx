@@ -2,7 +2,7 @@ import { randomUUID } from "crypto";
 import * as React from "react";
 import { Contact } from "src/parse/contact";
 import { Sort } from "src/util/constants";
-import { compareDatesOrNull as compareDatesOrUndefined } from "src/util/dates";
+// import { compareDatesOrNull as compareDatesOrUndefined } from "src/util/dat";es
 import { ContactView } from "./ContactView";
 
 type ContactsListProps = {
@@ -22,11 +22,9 @@ export const ContactsListView = (props: ContactsListProps) => {
 		const sortedContacts = [...contacts].sort((a, b) => {
 			switch (sort) {
 				case Sort.NAME:
-					return (a.name + a.lastName).localeCompare(b.name + b.lastName);
-				case Sort.LAST_CONTACT:
-					return compareDatesOrUndefined(a.lastContact, b.lastContact);
+					return (a.data['N.GN'] + a.data['N.FN']).localeCompare(b.data['N.GN'] + b.data['N.FN']);
 				case Sort.BIRTHDAY:
-					return compareDatesOrUndefined(a.birthday, b.birthday);
+					return (a.data['N.GN'] + a.data['N.FN']).localeCompare(b.data['N.GN'] + b.data['N.FN']);
 				default:
 					return 0;
 			}

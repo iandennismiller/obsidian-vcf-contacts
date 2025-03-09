@@ -1,36 +1,6 @@
 import {App, Modal, normalizePath, Notice, TFile, TFolder, Vault, Workspace} from "obsidian";
 import { join } from "path";
-import { Template } from "src/settings/settings";
-import { ContactNameModal } from "../modals/contactNameModal";
 import {FileExistsModal} from "../modals/fileExistsModal";
-
-const customFormat =
-  `/---contact---/
-| key       | value |
-| --------- | ----- |
-| Name      |       |
-| Last Name |       |
-| Phone     |       |
-| Telegram  |       |
-| Linkedin  |       |
-| Birthday  |       |
-| Last chat |       |
-| Friends   |       |
-/---contact---/`
-
-const frontmatterFormat =
-  `---
-name:
-  first:
-  last:
-phone:
-telegram:
-linkedin:
-birthday:
-last_chat:
-friends:
-type: contact
----`
 
 export async function openFile(file: TFile, workspace: Workspace) {
   const leaf = workspace.getLeaf()
@@ -47,65 +17,50 @@ export function findContactFiles(contactsFolder: TFolder) {
   return contactFiles;
 }
 
-export function createContactFile(app: App, folderPath: string, template: Template, hashtag: string, vault: Vault, workspace: Workspace) {
-	const folder = vault.getAbstractFileByPath(folderPath)
+function openCreatedFile(app: App, filePath: string) {
+	const file = app.vault.getAbstractFileByPath(filePath);
+	if (file instanceof TFile) {
+		openFile(file, app.workspace);
+	}
+}
+
+async function handleFileCreation(app: App, filePath: string, content: string) {
+	const fileExists = await app.vault.adapter.exists(filePath);
+
+	if (fileExists) {
+		new FileExistsModal(filePath, async (action: "replace" | "skip") => {
+			if (action === "skip") {
+				new Notice("File creation skipped.");
+				return;
+			}
+
+			if (action === "replace") {
+				await app.vault.adapter.write(filePath, content);
+				openCreatedFile(app, filePath);
+				new Notice(`File overwritten.`);
+			}
+		}).open();
+	} else {
+		const createdFile = await app.vault.create(filePath, content);
+		openFile(createdFile, app.workspace);
+	}
+}
+
+export function createContactFile(
+	app: App,
+	folderPath: string,
+	content: string,
+	filename: string
+) {
+	const folder = app.vault.getAbstractFileByPath(folderPath);
 	if (!folder) {
 		new Notice(`Can not find path: '${folderPath}'. Please update "Contacts" plugin settings`);
 		return;
 	}
 
-	new ContactNameModal(app, async (givenName, familyName) => {
-		const filePath = normalizePath(join(folderPath, `${givenName} ${familyName}.md`));
-		const fileExists = await vault.adapter.exists(filePath);
-		if (fileExists) {
-			new FileExistsModal(filePath, (action: "replace" | "skip") => {
-				if(action === "skip") {
-					new Notice("File creation skipped.");
-				}
+	const filePath = normalizePath(join(folderPath, filename));
+	handleFileCreation(app, filePath, content);
 
-				if(action === "replace") {
-					vault.adapter.write(filePath, getNewFileContent(template, hashtag))
-						.then(() => {
-							const file = vault.getAbstractFileByPath(filePath);
-							if (file instanceof TFile) {
-								openFile(file, workspace);
-							}
-							new Notice(`File overwritten.`);
-						});
-				}
-			}).open();
-		} else {
-			vault.create(filePath, getNewFileContent(template, hashtag))
-				.then(createdFile => openFile(createdFile, workspace));
-		}
-	}).open();
-}
-
-// export function createContactFileWithData() {
-// 	const folder = vault.getAbstractFileByPath(folderPath)
-// 	if (!folder) {
-// 		new Notice(`Can not find path: '${folderPath}'. Please update "Contacts" plugin settings`);
-// 		return;
-// 	}
-//
-// 	vault.create(normalizePath(join(folderPath, `Contact ${findNextFileNumber(folderPath, vault)}.md`)), getNewFileContent(template, hashtag))
-// 		.then(createdFile => openFile(createdFile, workspace));
-// }
-
-
-function getNewFileContent(template: Template, hashtag: string): string {
-  let hashtagSuffix = '';
-  if (hashtag) {
-    hashtagSuffix = '\n' + hashtag;
-  }
-  switch (template) {
-    case Template.CUSTOM:
-      return customFormat + hashtagSuffix;
-    case Template.FRONTMATTER:
-      return frontmatterFormat + hashtagSuffix;
-    default:
-      return customFormat + hashtagSuffix;
-  }
 }
 
 export async function openFilePicker(type: string): Promise<string> {

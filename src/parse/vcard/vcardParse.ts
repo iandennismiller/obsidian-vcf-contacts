@@ -1,8 +1,8 @@
-import {VCardStructuredFields} from "./vcardDefinitions";
+import {ParsedVCardKey, VCardStructuredFields} from "./vcardDefinitions";
+import {ContactNameModal} from "src/modals/contactNameModal";
 
 function unfoldVCardLines(vCardData: string): string[] {
-	const normalizedData = vCardData.replace(/\r\n?/g, "\n");
-	const lines = normalizedData.split("\n");
+	const lines = vCardData.split(/\r\n?/g);
 	const unfoldedLines: string[] = [];
 	let currentLine = "";
 
@@ -48,11 +48,11 @@ function extractBaseKey(key: string): string {
 function sortVCardObject(vCardObject: Record<string, any>): Record<string, any> {
 	// Define sorting priority
 	const priorityOrder = [
-		"N", "FN", "NICKNAME",     // Names
-		"EMAIL", "TEL",            // Contact Information
-		"BDAY",                    // Birthday
-		"ADR",                     // Addresses (moved after BDAY)
-		"ORG", "TITLE", "ROLE"     // Work-related fields
+		"N", "FN", "PHOTO",
+		"EMAIL", "TEL",
+		"BDAY",
+		"ADR", "URL",
+		"ORG", "TITLE", "ROLE"
 	];
 
 	// Separate priority and other fields
@@ -74,12 +74,22 @@ function sortVCardObject(vCardObject: Record<string, any>): Record<string, any> 
 		}
 	});
 
+	// Sort priority entries based on priority order
+	const sortedPriorityEntries = Object.fromEntries(
+		Object.entries(priorityEntries).sort(([keyA], [keyB]) => {
+			const baseKeyA = extractBaseKey(keyA);
+			const baseKeyB = extractBaseKey(keyB);
+			return priorityOrder.indexOf(baseKeyA) - priorityOrder.indexOf(baseKeyB);
+		})
+	);
+
+
 	// Sort non-priority fields alphabetically while preserving indexes
 	const sortedOtherEntries = Object.fromEntries(
 		Object.entries(otherEntries).sort(([a], [b]) => a.localeCompare(b))
 	);
-
-	return { ...priorityEntries, ...adrEntries, ...sortedOtherEntries };
+	console.log(Object.entries({ ...sortedPriorityEntries, ...adrEntries, ...sortedOtherEntries }).map(k=>({[k[0]]:k[1]})))
+	return { ...sortedPriorityEntries, ...adrEntries, ...sortedOtherEntries };
 }
 
 
@@ -178,8 +188,29 @@ export function parseToSingles(vCardsRaw:string): string[] {
 	return  vCardsRaw.split(/BEGIN:VCARD\s*[\n\r]+|END:VCARD\s*[\n\r]+/).filter(section => section.trim());
 }
 
+export async function createEmptyVcard() {
+	const vCardObject: Record<string, any> = {
+		"TEL[CELL]": "",
+		"TEL[HOME]": "",
+		"TEL[WORK]": "",
+		"EMAIL[HOME]": "",
+		"EMAIL[WORK]": "",
+		"BDAY": "19700101",
+		"ADR[HOME].STREET": "",
+		"ADR[HOME].LOCALITY": "",
+		"ADR[HOME].POSTAL": "",
+		"ADR[HOME].COUNTRY": "",
+		"URL[HOME]": "",
+		"URL[WORK]": "",
+		"CATEGORIES": "",
+		"EGIN": "VCARD",
+		"VERSION": "4.0"
+	}
+	const checkedNameVCardObject = await checjOrAskForName(vCardObject);
+	return sortVCardObject(checkedNameVCardObject);
+}
 
-export function parseVcard(vCardData: string) {
+export async function parseVcard(vCardData: string) {
 	const unfoldedLines = unfoldVCardLines(vCardData);
 	const vCardObject: Record<string, any> = {};
 	for (const line of unfoldedLines) {
@@ -187,7 +218,63 @@ export function parseVcard(vCardData: string) {
 		const indexedParsedLine = indexIfKeysExist(vCardObject, parsedLine)
 		Object.assign(vCardObject, indexedParsedLine);
 	}
+	const checkedNameVCardObject = await checjOrAskForName(vCardObject);
+	return sortVCardObject(checkedNameVCardObject);
+}
 
-	const sortedVCard = sortVCardObject(vCardObject);
-	return sortedVCard;
+export async function checjOrAskForName(vCardObject: Record<string, any>): Promise<Record<string, any>> {
+	return new Promise((resolve) => {
+		if (vCardObject['N.GN'] && vCardObject['N.FN']) {
+			resolve(vCardObject);
+		} else {
+			new ContactNameModal(app, (givenName, familyName) => {
+				vCardObject['N.GN'] = givenName;
+				vCardObject['N.FN'] = familyName;
+				resolve(vCardObject);
+			}).open();
+		}
+	});
+}
+export function parseVCardKey(rawKey: string): ParsedVCardKey {
+	let base = rawKey;
+	let index: string | null = null;
+	let type: string | null = null;
+	let subkey: string | null = null;
+
+	// --- Extract subkey Look for a dot ('.') ---.
+	const subkeyRegex = /\.(.+)$/;
+	const subkeyMatch = rawKey.match(subkeyRegex);
+	if (subkeyMatch) {
+		subkey = subkeyMatch[1];
+		// Remove the subkey portion (including the dot) from the key.
+		base = rawKey.substring(0, rawKey.lastIndexOf('.'));
+	}
+
+	// --- Extract bracket part (if any) ---
+	const bracketRegex = /\[(.*)\]/;
+	const bracketMatch = base.match(bracketRegex);
+	if (bracketMatch) {
+		const bracketContent = bracketMatch[1];
+		// Remove the bracket part from the base string.
+		base = base.substring(0, base.indexOf('['));
+
+		// --- Extract index and type from the bracket content ---
+		const indexTypeRegex = /^(\d+):(.*)$/;
+		const indexTypeMatch = bracketContent.match(indexTypeRegex);
+		if (indexTypeMatch) {
+			index = indexTypeMatch[1];
+			type = indexTypeMatch[2] !== "" ? indexTypeMatch[2] : null;
+		} else {
+			type = bracketContent;
+		}
+	} else {
+		// If no bracket part was found, we still want to isolate the base.
+		const baseRegex = /^([^.\[\]]+)/;
+		const baseMatch = rawKey.match(baseRegex);
+		if (baseMatch) {
+			base = baseMatch[1];
+		}
+	}
+
+	return { base, index, type, subkey };
 }

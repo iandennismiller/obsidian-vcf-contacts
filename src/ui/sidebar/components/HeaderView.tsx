@@ -64,17 +64,6 @@ export const HeaderView = (props: HeaderProps) => {
 						onClick={() => props.onSortChange(Sort.NAME)}
 					/>
 					<div
-						id="sort-by-last-contact-btn"
-						data-icon="calendar-clock"
-						className={
-							"clickable-icon nav-action-button " +
-							(props.sort === Sort.LAST_CONTACT && "is-active")
-						}
-						aria-label="Sort By Last Contact"
-						ref={(element) => (buttons.current[5] = element)}
-						onClick={() => props.onSortChange(Sort.LAST_CONTACT)}
-					/>
-					<div
 						id="sort-by-birthday-btn"
 						data-icon="cake"
 						className={

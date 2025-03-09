@@ -8,7 +8,8 @@ import { parseContactFiles } from "src/parse/parse";
 import { Sort } from "src/util/constants";
 import { ContactsListView } from "./ContactsListView";
 import { HeaderView } from "./HeaderView";
-import { parseToSingles, parseVcard } from "src/parse/vcard/vcardParse";
+import { createEmptyVcard, parseToSingles, parseVcard } from "src/parse/vcard/vcardParse";
+import { mdRender } from "src/parse/vcard/vcardMdTemplate";
 
 type RootProps = {
 	plugin: ContactsPlugin;
@@ -16,9 +17,9 @@ type RootProps = {
 
 export const SidebarRootView = (props: RootProps) => {
 	const app = useApp();
-	const { vault, metadataCache, workspace } = app;
+	const { vault, metadataCache } = app;
 	const [contacts, setContacts] = React.useState<Contact[]>([]);
-	const [sort, setSort] = React.useState<Sort>(Sort.LAST_CONTACT);
+	const [sort, setSort] = React.useState<Sort>(Sort.NAME);
 	const folder = props.plugin.settings.contactsFolder;
 
 	const isFileInFolder = (file: TAbstractFile) => {
@@ -35,8 +36,9 @@ export const SidebarRootView = (props: RootProps) => {
 		}
 
 		const contactFiles: TFile[] = findContactFiles(contactsFolder);
+		console.log(contactFiles);
 
-		parseContactFiles(contactFiles, vault, metadataCache).then((contactsData) =>
+		parseContactFiles(contactFiles, metadataCache).then((contactsData) =>
 			setContacts(contactsData)
 		);
 	};
@@ -70,29 +72,27 @@ export const SidebarRootView = (props: RootProps) => {
 			<HeaderView
 				onSortChange={setSort}
 				importVCF={() => {
-					openFilePicker('.vcf').then((fileContent: string) => {
+					openFilePicker('.vcf').then(async (fileContent: string) => {
 						if (fileContent === '') {
 							return;
 						} else {
 							const singles: string[] = parseToSingles(fileContent);
 							for (const single of singles) {
-								const vcardData = parseVcard(single);
-
+								const records = await parseVcard(single);
+								const fileName = `${records['N.GN']} ${records['N.FN']}.md`
+								const mdContent = mdRender(records, props.plugin.settings.defaultHashtag);
+								createContactFile(app, folder, mdContent, fileName)
 							}
 						}
 					})
 				}}
 				exportVCF={() => {}}
-				onCreateContact={() =>
-					createContactFile(
-						app,
-						folder,
-						props.plugin.settings.template,
-						props.plugin.settings.defaultHashtag,
-						vault,
-						workspace
-					)
-				}
+				onCreateContact={async () => {
+					const records = await createEmptyVcard();
+					const fileName = `${records['N.GN']} ${records['N.FN']}.md`
+					const mdContent = mdRender(records, props.plugin.settings.defaultHashtag);
+					createContactFile(app, folder, mdContent, fileName)
+				}}
 				sort={sort}
 			/>
 			<ContactsListView contacts={contacts} sort={sort} />
