@@ -36,22 +36,10 @@ export class ContactsSettingTab extends PluginSettingTab {
       .setName('Contacts folder location')
       .setDesc('Files in this folder and all subfolders will be available as contacts')
       .addText(text => text
-        .setPlaceholder('Personal/Contacts')
+        .setPlaceholder('Contacts')
         .setValue(this.plugin.settings.contactsFolder)
         .onChange(async (value) => {
           this.plugin.settings.contactsFolder = value;
-          await this.plugin.saveSettings();
-        }));
-
-    new Setting(containerEl)
-      .setName('Contact file template')
-      .setDesc('Template to be used when creating a new contact file')
-      .addDropdown(dropdown => dropdown
-        .addOption(Template.CUSTOM, "Custom")
-        .addOption(Template.FRONTMATTER, "Frontmatter (YAML Metadata)")
-        .setValue(this.plugin.settings.template)
-        .onChange(async (value) => {
-          this.plugin.settings.template = value as Template;
           await this.plugin.saveSettings();
         }));
 

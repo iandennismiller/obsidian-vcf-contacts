@@ -11,7 +11,6 @@ export const CopyableItem: React.FC<CopyableItemProps> = ({ value, children }) =
 		navigator.clipboard.writeText(value).then(() => {
 			new Notice(`Copied "${value}" to clipboard`);
 		}).catch(err => {
-			console.error("Clipboard copy failed:", err);
 			new Notice("Failed to copy to clipboard");
 		});
 	};

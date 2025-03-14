@@ -99,7 +99,9 @@ export const SidebarRootView = (props: RootProps) => {
 					})
 				}}
 				exportAllVCF={async() => {
-					const vcards = await vcardToString(metadataCache, contacts.map((contact)=> contact.file));
+
+					const allContactFiles = contacts.map((contact)=> contact.file)
+					const vcards = await vcardToString(metadataCache, allContactFiles);
 					saveVcardFilePicker(vcards)
 				}}
 				onCreateContact={async () => {

@@ -113,7 +113,5 @@ export function saveVcardFilePicker(data: string, obsidianFile?: TFile ) {
 		element.href = URL.createObjectURL(file);
 		element.download = obsidianFile ? obsidianFile.basename.replace(/ /g, '-') + '.vcf' : "contacts.vcf";
 		element.click();
-	} catch (error) {
-		console.error("File save cancelled or failed:", error);
-	}
+	} catch (_err) {}
 }

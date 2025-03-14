@@ -88,7 +88,7 @@ function sortVCardObject(vCardObject: VCardForObsidianRecord): VCardForObsidianR
 	const sortedOtherEntries = Object.fromEntries(
 		Object.entries(otherEntries).sort(([a], [b]) => a.localeCompare(b))
 	);
-	console.log(Object.entries({ ...sortedPriorityEntries, ...adrEntries, ...sortedOtherEntries }).map(k=>({[k[0]]:k[1]})))
+
 	return { ...sortedPriorityEntries, ...adrEntries, ...sortedOtherEntries };
 }
 
@@ -217,6 +217,7 @@ export async function createEmptyVcard() {
 		"EMAIL[HOME]": "",
 		"EMAIL[WORK]": "",
 		"BDAY": "19700101",
+		"PHOTO": "",
 		"ADR[HOME].STREET": "",
 		"ADR[HOME].LOCALITY": "",
 		"ADR[HOME].POSTAL": "",

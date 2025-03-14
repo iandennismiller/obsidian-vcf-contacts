@@ -23,6 +23,7 @@
  *
  * The parsing functions assume that the input string is well-formed; an error is thrown if a closing bracket is missing.
  */
+import {Notice} from "obsidian";
 
 export interface ParsedKey {
 	key: string;
@@ -37,7 +38,7 @@ export interface ParsedKey {
 function extractSubkey(input: string): { main: string; subkey?: string } {
 	const dotIndex = input.indexOf('.');
 	if (dotIndex === -1) {
-		return { main: input };
+		return { main: input, subkey: ''};
 	}
 	return {
 		main: input.substring(0, dotIndex),
@@ -74,7 +75,7 @@ function parseKeyPart(main: string): { key: string; index?: string; type?: strin
 	// Find the closing bracket and validate it.
 	const closeBracketIndex = main.indexOf(']', openBracketIndex);
 	if (closeBracketIndex === -1) {
-		throw new Error('Invalid input: missing closing bracket');
+		throw new Error('Invalid vcard property key encountered please correct.');
 	}
 
 	// Extract and parse the content within the brackets.

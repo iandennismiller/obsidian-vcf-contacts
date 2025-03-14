@@ -1,4 +1,4 @@
-import {MetadataCache, TFile} from "obsidian";
+import {MetadataCache, Notice, TFile} from "obsidian";
 import {parseKey} from "./vcardKey";
 import {VCardStructuredFields} from "./vcardDefinitions";
 
@@ -38,32 +38,37 @@ function renderSingleKey([key, value]:[string, string]):string  {
 }
 
 function generateVCard(metadataCache: MetadataCache, file: TFile): string {
-	const frontMatter = metadataCache.getFileCache(file)?.frontmatter;
-	if (!frontMatter) return "";
+	try {
+		const frontMatter = metadataCache.getFileCache(file)?.frontmatter;
+		if (!frontMatter) return "";
 
-	const entries = Object.entries(frontMatter) as Array<[string, string]>;
+		const entries = Object.entries(frontMatter) as Array<[string, string]>;
 
-	const singleLineFields: Array<[string, string]> = [];
-	const structuredFields: Array<[string, string]> = [];
+		const singleLineFields: Array<[string, string]> = [];
+		const structuredFields: Array<[string, string]> = [];
 
-	entries.forEach(([key, value]) => {
-		const keyObj = parseKey(key);
+		entries.forEach(([key, value]) => {
+			const keyObj = parseKey(key);
 
-		if (['ADR', 'N'].includes(keyObj.key)) {
-			structuredFields.push([key, value]);
-		} else if(['VERSION'].includes(keyObj.key) ) {
-			// we target always v4 output
-			singleLineFields.push(['VERSION', '4.0']);
-		} else {
-			singleLineFields.push([key, value]);
-		}
-	});
+			if (['ADR', 'N'].includes(keyObj.key)) {
+				structuredFields.push([key, value]);
+			} else if(['VERSION'].includes(keyObj.key) ) {
+				// we target always v4 output
+				singleLineFields.push(['VERSION', '4.0']);
+			} else {
+				singleLineFields.push([key, value]);
+			}
+		});
 
-	const structuredLines = renderStructuredLines(structuredFields);
-	const singleLines = singleLineFields.map(renderSingleKey);
-	const lines = structuredLines.concat(singleLines);
+		const structuredLines = renderStructuredLines(structuredFields);
+		const singleLines = singleLineFields.map(renderSingleKey);
+		const lines = structuredLines.concat(singleLines);
 
-	return `BEGIN:VCARD\n${lines.join("\n")}\nEND:VCARD`;
+		return `BEGIN:VCARD\n${lines.join("\n")}\nEND:VCARD`;
+	} catch (err) {
+		new Notice(`${err.message} in file skipping ${file.basename}`);
+		return '';
+	}
 }
 
 export async function vcardToString(metadataCache: MetadataCache, contactFiles: TFile[]): Promise<string> {
