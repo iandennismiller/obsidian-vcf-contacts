@@ -2,12 +2,13 @@ import { setIcon } from "obsidian";
 import * as React from "react";
 import { Sort } from "src/util/constants";
 
+
 type HeaderProps = {
 	onSortChange: React.Dispatch<React.SetStateAction<Sort>>;
 	sort: Sort;
 	onCreateContact: () => void;
 	importVCF: () => void;
-	exportVCF: () => void;
+	exportAllVCF: () => void;
 };
 
 export const HeaderView = (props: HeaderProps) => {
@@ -18,7 +19,7 @@ export const HeaderView = (props: HeaderProps) => {
 	}, [buttons]);
 
 	return (
-		<div>
+		<div className="contacts-menu">
 			<div className="nav-header">
 				<div className="nav-buttons-container">
 					<div
@@ -48,10 +49,10 @@ export const HeaderView = (props: HeaderProps) => {
 						}
 						aria-label="export VCF"
 						ref={(element) => (buttons.current[3] = element)}
-						onClick={ props.exportVCF }
+						onClick={ props.exportAllVCF }
 					/>
 
-					<div className="vl"></div>
+					<div className="menu-vert"></div>
 					<div
 						id="sort-by-name-btn"
 						data-icon="baseline"
@@ -73,6 +74,17 @@ export const HeaderView = (props: HeaderProps) => {
 						aria-label="Sort By Birthday"
 						ref={(element) => (buttons.current[6] = element)}
 						onClick={() => props.onSortChange(Sort.BIRTHDAY)}
+					/>
+					<div
+						id="sort-by-organization-btn"
+						data-icon="building"
+						className={
+							"clickable-icon nav-action-button " +
+							(props.sort === Sort.ORG && "is-active")
+						}
+						aria-label="Sort By Organization"
+						ref={(element) => (buttons.current[7] = element)}
+						onClick={() => props.onSortChange(Sort.ORG)}
 					/>
 				</div>
 			</div>

@@ -1,5 +1,5 @@
-import {ParsedVCardKey, VCardStructuredFields} from "./vcardDefinitions";
-import {ContactNameModal} from "src/modals/contactNameModal";
+import {VCardForObsidianRecord, VCardStructuredFields} from "./vcardDefinitions";
+import { ContactNameModal } from "src/modals/contactNameModal";
 
 function unfoldVCardLines(vCardData: string): string[] {
 	const lines = vCardData.split(/\r\n?/g);
@@ -45,7 +45,7 @@ function extractBaseKey(key: string): string {
  * @param vCardObject The parsed vCard object.
  * @returns A sorted vCard object.
  */
-function sortVCardObject(vCardObject: Record<string, any>): Record<string, any> {
+function sortVCardObject(vCardObject: VCardForObsidianRecord): VCardForObsidianRecord {
 	// Define sorting priority
 	const priorityOrder = [
 		"N", "FN", "PHOTO",
@@ -56,9 +56,9 @@ function sortVCardObject(vCardObject: Record<string, any>): Record<string, any> 
 	];
 
 	// Separate priority and other fields
-	const priorityEntries: Record<string, any> = {};
-	const adrEntries: Record<string, any> = {};
-	const otherEntries: Record<string, any> = {};
+	const priorityEntries: VCardForObsidianRecord = {};
+	const adrEntries: VCardForObsidianRecord = {};
+	const otherEntries: VCardForObsidianRecord = {};
 
 	Object.entries(vCardObject).forEach(([key, value]) => {
 		const baseKey = extractBaseKey(key);
@@ -102,7 +102,7 @@ function sortVCardObject(vCardObject: Record<string, any>): Record<string, any> 
  * @param newEntry The new key-value pair to be indexed.
  * @returns An indexed key-value pair.
  */
-function indexIfKeysExist(vCardObject: Record<string, any>, newEntry: Record<string, any>): Record<string, any> {
+function indexIfKeysExist(vCardObject: VCardForObsidianRecord, newEntry: VCardForObsidianRecord): VCardForObsidianRecord {
 	const indexedEntry: Record<string, any> = {};
 
 	const typeRegex = /\[(.*?)\]/;       // Matches `[TYPE]` in keys
@@ -160,7 +160,7 @@ function parseStructuredField(key: keyof typeof VCardStructuredFields, value: st
 	return result;
 }
 
-function parseVCardLine(line: string): Record<string, any> {
+function parseVCardLine(line: string): VCardForObsidianRecord {
 	const [key, ...valueParts] = line.split(":");
 	const value = valueParts.join(":").trim();
 	const [property, ...paramParts] = key.split(";");
@@ -176,6 +176,8 @@ function parseVCardLine(line: string): Record<string, any> {
 	const typeValues:string = params["type"] ? `[${params["type"].join(",")}]` : "";
 	if (propKey in VCardStructuredFields) {
 		parsedData = parseStructuredField(propKey as keyof typeof VCardStructuredFields, value, typeValues);
+	} else if (propKey in ['BDAY', 'ANNIVERSARY']) {
+		parsedData[`${propKey}${typeValues}`] = formatVCardDate(value)
 	} else {
 		parsedData[`${propKey}${typeValues}`] = value;
 	}
@@ -183,6 +185,25 @@ function parseVCardLine(line: string): Record<string, any> {
 	return parsedData;
 }
 
+function formatVCardDate(input: string): string {
+	const trimmed = input.trim();
+
+	// Input from google can be "19990211", insert dashes.
+	if (trimmed.length === 8 && !isNaN(Number(trimmed))) {
+		const dashed = `${trimmed.slice(0, 4)}-${trimmed.slice(4, 6)}-${trimmed.slice(6, 8)}`;
+		const date = new Date(dashed);
+		if (!isNaN(date.getTime())) {
+			return date.toISOString().substring(0, 10);
+		}
+	}
+
+	const date = new Date(trimmed);
+	if (!isNaN(date.getTime())) {
+		return date.toISOString().substring(0, 10);
+	}
+
+	return trimmed;
+}
 
 export function parseToSingles(vCardsRaw:string): string[] {
 	return  vCardsRaw.split(/BEGIN:VCARD\s*[\n\r]+|END:VCARD\s*[\n\r]+/).filter(section => section.trim());
@@ -203,10 +224,9 @@ export async function createEmptyVcard() {
 		"URL[HOME]": "",
 		"URL[WORK]": "",
 		"CATEGORIES": "",
-		"EGIN": "VCARD",
 		"VERSION": "4.0"
 	}
-	const checkedNameVCardObject = await checjOrAskForName(vCardObject);
+	const checkedNameVCardObject = await checkOrAskForName(vCardObject);
 	return sortVCardObject(checkedNameVCardObject);
 }
 
@@ -218,16 +238,16 @@ export async function parseVcard(vCardData: string) {
 		const indexedParsedLine = indexIfKeysExist(vCardObject, parsedLine)
 		Object.assign(vCardObject, indexedParsedLine);
 	}
-	const checkedNameVCardObject = await checjOrAskForName(vCardObject);
+	const checkedNameVCardObject = await checkOrAskForName(vCardObject);
 	return sortVCardObject(checkedNameVCardObject);
 }
 
-export async function checjOrAskForName(vCardObject: Record<string, any>): Promise<Record<string, any>> {
+export async function checkOrAskForName(vCardObject: VCardForObsidianRecord): Promise<VCardForObsidianRecord> {
 	return new Promise((resolve) => {
 		if (vCardObject['N.GN'] && vCardObject['N.FN']) {
 			resolve(vCardObject);
 		} else {
-			new ContactNameModal(app, (givenName, familyName) => {
+			new ContactNameModal(app, vCardObject['FN'], (givenName, familyName) => {
 				vCardObject['N.GN'] = givenName;
 				vCardObject['N.FN'] = familyName;
 				resolve(vCardObject);
@@ -235,46 +255,4 @@ export async function checjOrAskForName(vCardObject: Record<string, any>): Promi
 		}
 	});
 }
-export function parseVCardKey(rawKey: string): ParsedVCardKey {
-	let base = rawKey;
-	let index: string | null = null;
-	let type: string | null = null;
-	let subkey: string | null = null;
 
-	// --- Extract subkey Look for a dot ('.') ---.
-	const subkeyRegex = /\.(.+)$/;
-	const subkeyMatch = rawKey.match(subkeyRegex);
-	if (subkeyMatch) {
-		subkey = subkeyMatch[1];
-		// Remove the subkey portion (including the dot) from the key.
-		base = rawKey.substring(0, rawKey.lastIndexOf('.'));
-	}
-
-	// --- Extract bracket part (if any) ---
-	const bracketRegex = /\[(.*)\]/;
-	const bracketMatch = base.match(bracketRegex);
-	if (bracketMatch) {
-		const bracketContent = bracketMatch[1];
-		// Remove the bracket part from the base string.
-		base = base.substring(0, base.indexOf('['));
-
-		// --- Extract index and type from the bracket content ---
-		const indexTypeRegex = /^(\d+):(.*)$/;
-		const indexTypeMatch = bracketContent.match(indexTypeRegex);
-		if (indexTypeMatch) {
-			index = indexTypeMatch[1];
-			type = indexTypeMatch[2] !== "" ? indexTypeMatch[2] : null;
-		} else {
-			type = bracketContent;
-		}
-	} else {
-		// If no bracket part was found, we still want to isolate the base.
-		const baseRegex = /^([^.\[\]]+)/;
-		const baseMatch = rawKey.match(baseRegex);
-		if (baseMatch) {
-			base = baseMatch[1];
-		}
-	}
-
-	return { base, index, type, subkey };
-}

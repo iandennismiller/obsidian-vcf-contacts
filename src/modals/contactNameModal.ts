@@ -2,15 +2,17 @@ import { App, Modal, Notice } from "obsidian";
 
 export class ContactNameModal extends Modal {
 	callback: (givenName: string, familyName: string) => void;
+	vcfFn: string | undefined;
 
-	constructor(app: App, callback: (givenName: string, familyName: string) => void) {
+	constructor(app: App, vcfFn: string|undefined, callback: (givenName: string, familyName: string) => void) {
 		super(app);
+		this.vcfFn = vcfFn;
 		this.callback = callback;
 	}
 
 	onOpen() {
 		const { contentEl, titleEl } = this;
-		titleEl.setText("Enter Name");
+		titleEl.setText(`Enter full name${this.vcfFn ? (" for " + this.vcfFn) : ''}`);
 
 		// Create input fields for given and family names
 		contentEl.innerHTML = `

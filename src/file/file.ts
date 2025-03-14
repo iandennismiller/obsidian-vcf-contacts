@@ -1,4 +1,4 @@
-import {App, Modal, normalizePath, Notice, TFile, TFolder, Vault, Workspace} from "obsidian";
+import {App, Modal, normalizePath, Notice, TAbstractFile, TFile, TFolder, Vault, Workspace} from "obsidian";
 import { join } from "path";
 import {FileExistsModal} from "../modals/fileExistsModal";
 
@@ -63,6 +63,15 @@ export function createContactFile(
 
 }
 
+export function fileId(file: TAbstractFile): string {
+	let hash = 0;
+	for (let i = 0; i < file.path.length; i++) {
+		hash = (hash << 5) - hash + file.path.charCodeAt(i);
+		hash |= 0; // Convert to 32-bit integer
+	}
+	return Math.abs(hash).toString(); // Ensure it's positive
+}
+
 export async function openFilePicker(type: string): Promise<string> {
 	return new Promise((resolve) => {
 		const input = document.createElement("input");
@@ -82,7 +91,6 @@ export async function openFilePicker(type: string): Promise<string> {
 					} else {
 						resolve(new TextDecoder("utf-8").decode(rawData));
 					}
-
 				};
 
 				reader.readAsText(file, "UTF-8");
@@ -95,4 +103,17 @@ export async function openFilePicker(type: string): Promise<string> {
 		input.click();
 		document.body.removeChild(input);
 	});
+}
+
+
+export function saveVcardFilePicker(data: string, obsidianFile?: TFile ) {
+	try {
+		const element = document.createElement("a");
+		const file = new Blob([data], { type: "text/vcard" })
+		element.href = URL.createObjectURL(file);
+		element.download = obsidianFile ? obsidianFile.basename.replace(/ /g, '-') + '.vcf' : "contacts.vcf";
+		element.click();
+	} catch (error) {
+		console.error("File save cancelled or failed:", error);
+	}
 }

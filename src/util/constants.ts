@@ -6,5 +6,6 @@ export const CONTACTS_VIEW_CONFIG = {
 
 export enum Sort {
 	NAME,
-	BIRTHDAY
+	BIRTHDAY,
+	ORG
 }

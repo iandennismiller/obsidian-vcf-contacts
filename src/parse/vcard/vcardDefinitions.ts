@@ -7,7 +7,7 @@ export enum VCardSupportedKey {
 	ADR_LABEL = "Address Label",
 	AGENT = "Agent (Representative)",
 	ANNIVERSARY = "Anniversary Date",
-	BDAY = "Birthday",
+	BDAY = "Birthday Date",
 	CATEGORIES = "Categories (Tags)",
 	CLASS = "Classification (Privacy Level)",
 	EMAIL = "Email Address",
@@ -26,57 +26,15 @@ export enum VCardSupportedKey {
 	TITLE = "Job Title",
 	TZ = "Time Zone",
 	UID = "Unique Identifier",
-	URL = "Website URL"
+	URL = "Website URL",
+  SOCIALPROFILE = "Social Profile"
 }
 
 export const VCardStructuredFields = {
-	N: ["FN", "GN", "MN", "PREFIX", "SUFFIX"], // Name components
-	ADR: ["PO", "EXT", "STREET", "LOCALITY", "REGION", "POSTAL", "COUNTRY"] // Address components
+	N: ["PREFIX", "GN", "MN", "FN", "SUFFIX"],
+	ADR: ["PO", "EXT", "STREET", "LOCALITY", "REGION", "POSTAL", "COUNTRY"]
 } as const;
 
-export const VCardSDisplayNames: Record<string, string> = {
-	FN: "Full Name",
-	NICKNAME :"Nickname",
-	ADR_LABEL :"Address Label",
-	AGENT :"Agent (Representative)",
-	ANNIVERSARY :"Anniversary Date",
-	BDAY :"Birthday",
-	CATEGORIES :"Categories (Tags)",
-	CLASS :"Classification (Privacy Level)",
-	EMAIL :"Email Address",
-	GENDER :"Gender",
-	GEO :"Geolocation (Latitude/Longitude)",
-	LANG :"Language Spoken",
-	MEMBER :"Group Member",
-	NAME :"Name Identifier",
-	NOTE :"Notes",
-	ORG :"Organization Name",
-	REV :"Last Updated Timestamp",
-	ROLE :"Job Role or Title",
-	TEL :"Telephone Number",
-	TITLE :"Job Title",
-	TZ :"Time Zone",
-	UID :"Unique Identifier",
-	URL :"Website URL",
-
-	"N.FN" :"Family Name",
-	"N.GN" :"Given Name",
-	"N.MN" :"Middle Name(s)",
-	"N.PREFIX" :"Honorific Prefix",
-	"N.SUFFIX" :"Honorific Suffix",
-
-	"ADR.PO" :"Post Office Box",
-	"ADR.EXT" :"Extended Address",
-	"ADR.STREET" :"Street Address",
-	"ADR.LOCALITY" :"City / Locality",
-	"ADR.REGION" :"State / Region",
-	"ADR.POSTAL" :"ZIP / Postal Code",
-	"ADR.COUNTRY" :"Country"
-}
-
-export interface ParsedVCardKey {
-	base: string;
-	index: string | null;
-	type: string | null;
-	subkey: string | null;
+export interface VCardForObsidianRecord {
+	[key: string]: string,
 }
