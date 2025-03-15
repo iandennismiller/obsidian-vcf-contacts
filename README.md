@@ -1,4 +1,4 @@
-# Obsidian VCF Contacts Plugin
+# VCF Contacts Plugin for Obsidian
 Introducing the [Obsidian](https://obsidian.md/) Contacts Plugin! With this plugin, you can easily organize and manage your contacts within [Obsidian](https://obsidian.md/). Simply create a note within the contacts folder and use the plugin's features to quickly add to, search, link and sort through your contacts. Contacts plugin also helps you to organize, import, and export to for example email clients or google contacts, remember birthdays and more.
 
 ![VFC contacts interface](assets/vfz-contacts-overview.jpg)
