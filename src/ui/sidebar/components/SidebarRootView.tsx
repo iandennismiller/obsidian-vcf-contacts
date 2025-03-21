@@ -39,9 +39,9 @@ export const SidebarRootView = (props: RootProps) => {
 			return;
 		}
 
-		parseContactFiles(findContactFiles(contactsFolder), metadataCache).then((contactsData) =>
-			setContacts(contactsData)
-		);
+		parseContactFiles(findContactFiles(contactsFolder), metadataCache).then((contactsData) =>{
+			setContacts(contactsData);
+		});
 	};
 
 	React.useEffect(() => {
@@ -49,10 +49,13 @@ export const SidebarRootView = (props: RootProps) => {
 	}, []);
 
 	React.useEffect(() => {
+
 		const updateFiles = (file: TAbstractFile) => {
-			if (isFileInFolder(file)) {
-				parseContacts();
-			}
+			setTimeout(() => {
+				if (isFileInFolder(file)) {
+					parseContacts();
+				}
+			}, 50); // place our update after obsidian has a opportunity to run some code
 		};
 
 		vault.on("create", updateFiles);
