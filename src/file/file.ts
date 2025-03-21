@@ -1,6 +1,6 @@
 import {App, Modal, normalizePath, Notice, TAbstractFile, TFile, TFolder, Vault, Workspace} from "obsidian";
 import { join } from "path";
-import {FileExistsModal} from "../modals/fileExistsModal";
+import { FileExistsModal } from "src/ui/modals/fileExistsModal";
 
 export async function openFile(file: TFile, workspace: Workspace) {
   const leaf = workspace.getLeaf()
@@ -57,10 +57,16 @@ export function createContactFile(
 		new Notice(`Can not find path: '${folderPath}'. Please update "Contacts" plugin settings`);
 		return;
 	}
+	const activeFile = app.workspace.getActiveFile();
+	const parentFolder = activeFile?.parent; // Get the parent folder if it's a file
 
-	const filePath = normalizePath(join(folderPath, filename));
-	handleFileCreation(app, filePath, content);
-
+	if (parentFolder?.path?.contains(folderPath)) {
+		const filePath = normalizePath(join(parentFolder.path, filename));
+		handleFileCreation(app, filePath, content);
+	} else {
+		const filePath = normalizePath(join(folderPath, filename));
+		handleFileCreation(app, filePath, content);
+	}
 }
 
 export function fileId(file: TAbstractFile): string {

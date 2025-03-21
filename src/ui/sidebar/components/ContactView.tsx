@@ -124,7 +124,6 @@ export const ContactView = (props: ContactProps) => {
 
 	return (
 		<div
-			style={{padding: '8px'}}
 			className="contact-card"
 			onClick={() => openFile(contact.file, workspace)}
 			id={fileId(contact.file)}

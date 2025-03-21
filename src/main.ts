@@ -20,9 +20,7 @@ export default class ContactsPlugin extends Plugin {
 		this.addSettingTab(new ContactsSettingTab(this.app, this));
 	}
 
-	onunload() {
-		this.app.workspace.detachLeavesOfType(CONTACTS_VIEW_CONFIG.type);
-	}
+	onunload() {}
 
 	async loadSettings() {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
@@ -33,12 +31,12 @@ export default class ContactsPlugin extends Plugin {
 	}
 
 	async activateSidebarView() {
-		this.app.workspace.detachLeavesOfType(CONTACTS_VIEW_CONFIG.type);
-
-		await this.app.workspace.getRightLeaf(false).setViewState({
-			type: CONTACTS_VIEW_CONFIG.type,
-			active: true,
-		});
+		if (this.app.workspace.getLeavesOfType(CONTACTS_VIEW_CONFIG.type).length < 1) {
+			await this.app.workspace.getRightLeaf(false).setViewState({
+				type: CONTACTS_VIEW_CONFIG.type,
+				active: true,
+			});
+		}
 
 		this.app.workspace.revealLeaf(
 			this.app.workspace.getLeavesOfType(CONTACTS_VIEW_CONFIG.type)[0]

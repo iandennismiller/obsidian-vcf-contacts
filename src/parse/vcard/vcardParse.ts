@@ -1,5 +1,5 @@
 import {VCardForObsidianRecord, VCardStructuredFields} from "./vcardDefinitions";
-import { ContactNameModal } from "src/modals/contactNameModal";
+import { ContactNameModal } from "src/ui/modals/contactNameModal";
 
 function unfoldVCardLines(vCardData: string): string[] {
 	const lines = vCardData.split(/\r\n?/g);

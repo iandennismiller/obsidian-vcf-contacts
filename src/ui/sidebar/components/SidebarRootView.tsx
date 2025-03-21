@@ -32,15 +32,14 @@ export const SidebarRootView = (props: RootProps) => {
 	const parseContacts = () => {
 		const contactsFolder = vault.getAbstractFileByPath(
 			normalizePath(folder)
-		) as TFolder;
+		)
 
-		if (!contactsFolder) {
+		if (!(contactsFolder instanceof TFolder)) {
 			setContacts([]);
+			return;
 		}
 
-		const contactFiles: TFile[] = findContactFiles(contactsFolder);
-
-		parseContactFiles(contactFiles, metadataCache).then((contactsData) =>
+		parseContactFiles(findContactFiles(contactsFolder), metadataCache).then((contactsData) =>
 			setContacts(contactsData)
 		);
 	};

@@ -15,7 +15,6 @@ export const Avatar = (props: AvatarProps) => {
 			{props.photoUrl && !hasImageError ? (
 				<img
 					src={props.photoUrl}
-					style={{ width: "100%", height: "100%" }}
 					onError={() => setHasImageError(true)}
 				/>
 			) : (
