@@ -1,7 +1,7 @@
 import { normalizePath, TAbstractFile, TFile, TFolder } from "obsidian";
 import * as React from "react";
 import { useApp } from "src/context/hooks";
-import {createContactFile, findContactFiles, openFilePicker, saveVcardFilePicker} from "src/file/file";
+import {createContactFile, createFileName, findContactFiles, openFilePicker, saveVcardFilePicker} from "src/file/file";
 import ContactsPlugin from "src/main";
 import { Contact } from "src/parse/contact";
 import { parseContactFiles } from "src/parse/parse";
@@ -12,7 +12,7 @@ import { createEmptyVcard, parseToSingles, parseVcard } from "src/parse/vcard/vc
 import { mdRender } from "src/parse/vcard/vcardMdTemplate";
 import myScrollTo from "src/util/myScrollTo";
 import { vcardToString } from "src/parse/vcard/vcardToString";
-
+import { processAvatar } from "src/util/avatarActions";
 
 type RootProps = {
 	plugin: ContactsPlugin;
@@ -93,30 +93,32 @@ export const SidebarRootView = (props: RootProps) => {
 							const singles: string[] = parseToSingles(fileContent);
 							for (const single of singles) {
 								const records = await parseVcard(single);
-								const fileName = `${records['N.GN']} ${records['N.FN']}.md`
 								const mdContent = mdRender(records, props.plugin.settings.defaultHashtag);
-								createContactFile(app, folder, mdContent, fileName)
+								createContactFile(app, folder, mdContent, createFileName(records))
 							}
 						}
 					})
 				}}
 				exportAllVCF={async() => {
-
 					const allContactFiles = contacts.map((contact)=> contact.file)
 					const vcards = await vcardToString(metadataCache, allContactFiles);
 					saveVcardFilePicker(vcards)
 				}}
 				onCreateContact={async () => {
 					const records = await createEmptyVcard();
-					const fileName = `${records['N.GN']} ${records['N.FN']}.md`
 					const mdContent = mdRender(records, props.plugin.settings.defaultHashtag);
-					createContactFile(app, folder, mdContent, fileName)
+					createContactFile(app, folder, mdContent, createFileName(records))
 				}}
 				sort={sort}
 			/>
 			<ContactsListView
 				contacts={contacts}
 				sort={sort}
+				processAvatar={(contact :Contact) => {
+					(async () => {
+						await processAvatar(contact)
+					})();
+				}}
 				exportVCF={(contactFile: TFile) => {
 					(async () => {
 						const vcards = await vcardToString(metadataCache, [contactFile])

@@ -31,7 +31,7 @@ export enum VCardSupportedKey {
 }
 
 export const VCardStructuredFields = {
-	N: ["PREFIX", "GN", "MN", "FN", "SUFFIX"],
+	N: ["FN", "GN", "MN", "PREFIX", "SUFFIX"],
 	ADR: ["PO", "EXT", "STREET", "LOCALITY", "REGION", "POSTAL", "COUNTRY"]
 } as const;
 

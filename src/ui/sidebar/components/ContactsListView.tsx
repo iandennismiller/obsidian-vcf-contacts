@@ -10,6 +10,7 @@ import {TFile} from "obsidian";
 type ContactsListProps = {
 	contacts: Contact[];
 	sort: Sort;
+	processAvatar: (contact: Contact) => void;
 	exportVCF: (contactFile: TFile) => void;
 };
 
@@ -94,7 +95,7 @@ export const ContactsListView = (props: ContactsListProps) => {
 	return (
 		<>
 			{processedContacts.map((contact) => {
-				return <ContactView contact={contact} key={randomUUID()} exportVCF={props.exportVCF} />;
+				return <ContactView contact={contact} key={randomUUID()} exportVCF={props.exportVCF} processAvatar={props.processAvatar} />;
 			})}
 		</>
 	);

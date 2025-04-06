@@ -10,6 +10,7 @@ import { CopyableItem } from "./CopyableItem";
 type ContactProps = {
 	contact: Contact;
 	exportVCF: (contactFile: TFile) => void;
+	processAvatar: (contact: Contact) => void;
 };
 
 
@@ -129,7 +130,6 @@ export const ContactView = (props: ContactProps) => {
 			id={fileId(contact.file)}
 		>
 			<div className="content">
-
 				<div className="inner-card-container">
 					<div className="bizzy-card-container">
 						{renderOrganization(contact.data)}
@@ -138,7 +138,8 @@ export const ContactView = (props: ContactProps) => {
 								<Avatar photoUrl={contact.data["PHOTO"]} firstName={contact.data["N.GN"]}
 												lastName={contact.data["N.FN"]}/>
 								<div className="biz-words-container">
-									<div className="biz-name">      {[
+									<div className="biz-name">
+									{[
 										contact.data["N.PREFIX"],
 										contact.data["N.GN"],
 										contact.data["N.MN"],
@@ -159,7 +160,8 @@ export const ContactView = (props: ContactProps) => {
 						</div>
 
 						<div className="biz-card-b">
-							<div className="biz-shape"/>
+							<div className="biz-shape">
+							</div>
 							<div className="biz-contact-box">
 								{renderFirstPhone(['TEL[CELL]', 'TEL'], contact.data)}
 								{renderFirstPhone(['TEL[WORK]', 'TEL[HOME]'], contact.data)}
@@ -167,16 +169,29 @@ export const ContactView = (props: ContactProps) => {
 								{renderFirstEmail(['EMAIL', 'EMAIL[WORK]'], contact.data)}
 								{renderFirstAdress(['ADR[WORK]', 'ADR[HOME]', 'ADR'], contact.data)}
 							</div>
-					</div>
-						<div
-							data-icon="file-up"
-							className={
-								"clickable-icon nav-action-button "
-							}
-							aria-label="export VCF"
-							ref={(element) => (buttons.current[0] = element)}
-							onClick={() => props.exportVCF(contact.file)}
-						/>
+						</div>
+						<div className="biz-contact-actions">
+							<div
+								data-icon="image-up"
+								className={
+									"clickable-icon nav-action-button "
+								}
+								aria-label="Process Avatar"
+								ref={(element) => (buttons.current[0] = element)}
+								onClick={() => props.processAvatar(contact)}
+							>
+							</div>
+							<div
+								data-icon="file-up"
+								className={
+									"clickable-icon nav-action-button "
+								}
+								aria-label="export VCF"
+								ref={(element) => (buttons.current[1] = element)}
+								onClick={() => props.exportVCF(contact.file)}
+							>
+							</div>
+						</div>
 					</div>
 				</div>
 			</div>

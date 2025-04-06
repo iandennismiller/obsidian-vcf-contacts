@@ -121,3 +121,18 @@ export function saveVcardFilePicker(data: string, obsidianFile?: TFile ) {
 		element.click();
 	} catch (_err) {}
 }
+
+export function createFileName(records: Record<string, string>) {
+	const parts = [
+		records['N.PREFIX'] || '',
+		records['N.GN'] || '',
+		records['N.MN'] || '',
+		records['N.FN'] || '',
+		records['N.SUFFIX'] || ''
+	];
+
+	return parts
+		.map(part => part.trim())
+		.filter(part => part !== '')
+		.join(' ') + '.md';
+}

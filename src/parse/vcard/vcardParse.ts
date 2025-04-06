@@ -1,5 +1,6 @@
 import {VCardForObsidianRecord, VCardStructuredFields} from "./vcardDefinitions";
 import { ContactNameModal } from "src/ui/modals/contactNameModal";
+import { convertToLatestVCFPhotoFormat } from "src/util/avatarActions";
 
 function unfoldVCardLines(vCardData: string): string[] {
 	const lines = vCardData.split(/\r\n?/g);
@@ -129,6 +130,7 @@ function indexIfKeysExist(vCardObject: VCardForObsidianRecord, newEntry: VCardFo
 
 			while (vCardObject.hasOwnProperty(newKey)) {
 				index++;
+
 				if (typeRegex.test(key)) {
 					newKey = key.replace(typeRegex, `[${index}:$1]`);
 				} else if (dotRegex.test(key)) {
@@ -164,6 +166,7 @@ function parseVCardLine(line: string): VCardForObsidianRecord {
 	const [key, ...valueParts] = line.split(":");
 	const value = valueParts.join(":").trim();
 	const [property, ...paramParts] = key.split(";");
+	
 	const params = paramParts.reduce((acc, part) => {
 		const [paramKey, paramValue] = part.split("=");
 		acc[paramKey.toLowerCase()] = paramValue ? paramValue.split(",") : [];
@@ -174,7 +177,11 @@ function parseVCardLine(line: string): VCardForObsidianRecord {
 	let parsedData: Record<string, any> = {};
 
 	const typeValues:string = params["type"] ? `[${params["type"].join(",")}]` : "";
-	if (propKey in VCardStructuredFields) {
+	if (key.contains('PHOTO') && key.contains('ENCODING=BASE64')) {
+		parsedData['PHOTO'] = convertToLatestVCFPhotoFormat(line);
+	} else if (key === 'VERSION') {
+		parsedData['VERSION'] = '4.0';
+	} else if (propKey in VCardStructuredFields) {
 		parsedData = parseStructuredField(propKey as keyof typeof VCardStructuredFields, value, typeValues);
 	} else if (propKey in ['BDAY', 'ANNIVERSARY']) {
 		parsedData[`${propKey}${typeValues}`] = formatVCardDate(value)
