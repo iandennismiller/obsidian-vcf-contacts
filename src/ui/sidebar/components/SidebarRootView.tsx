@@ -1,4 +1,4 @@
-import { normalizePath, TAbstractFile, TFile, TFolder } from "obsidian";
+import {normalizePath, Notice, TAbstractFile, TFile, TFolder} from "obsidian";
 import * as React from "react";
 import { useApp } from "src/context/hooks";
 import {createContactFile, createFileName, findContactFiles, openFilePicker, saveVcardFilePicker} from "src/file/file";
@@ -116,7 +116,12 @@ export const SidebarRootView = (props: RootProps) => {
 				sort={sort}
 				processAvatar={(contact :Contact) => {
 					(async () => {
-						await processAvatar(contact)
+						try {
+							await processAvatar(app, contact);
+							setTimeout(() => { parseContacts() }, 50);
+						} catch (err) {
+							new Notice(err.message);
+						}
 					})();
 				}}
 				exportVCF={(contactFile: TFile) => {

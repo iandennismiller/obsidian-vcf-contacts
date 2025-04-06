@@ -166,7 +166,7 @@ function parseVCardLine(line: string): VCardForObsidianRecord {
 	const [key, ...valueParts] = line.split(":");
 	const value = valueParts.join(":").trim();
 	const [property, ...paramParts] = key.split(";");
-	
+
 	const params = paramParts.reduce((acc, part) => {
 		const [paramKey, paramValue] = part.split("=");
 		acc[paramKey.toLowerCase()] = paramValue ? paramValue.split(",") : [];

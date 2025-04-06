@@ -1,4 +1,7 @@
-import {Contact} from "../parse/contact";
+import {Contact} from "src/parse/contact";
+import {openFilePicker} from "src/file/file";
+import {updateFrontMatterValue} from "src/parse/parse";
+import {App, Notice} from "obsidian";
 
 const resizeAndCropImage = (img: HTMLImageElement, outputSize: number): HTMLCanvasElement => {
 	const canvas = document.createElement('canvas');
@@ -22,43 +25,53 @@ const resizeAndCropImage = (img: HTMLImageElement, outputSize: number): HTMLCanv
 };
 
 
-const base64EncodeImage = (canvas: HTMLCanvasElement, quality: number = 1): string => {
+const base64EncodeImage = (canvas: HTMLCanvasElement, quality = 1): string => {
 	return canvas.toDataURL('image/jpeg', quality);
 };
 
-const getImage = (fileOrUrl: File | string): Promise<HTMLImageElement> => {
+const getImage = (url: string): Promise<HTMLImageElement> => {
 	return new Promise((resolve, reject) => {
 		const img = new Image();
 		img.crossOrigin = 'anonymous';
-
 		img.onload = () => resolve(img);
 		img.onerror = reject;
-
-		if (typeof fileOrUrl === 'string') {
-			img.src = fileOrUrl;
-		} else {
-			const reader = new FileReader();
-			reader.onload = () => {
-				img.src = reader.result as string;
-			};
-			reader.onerror = reject;
-			reader.readAsDataURL(fileOrUrl);
-		}
+		img.src = url;
 	});
 };
 
-const setBase64Avatar = async (
-	fileOrUrl: File | string,
-): Promise<string> => {
-	const outputSize = 120;
-	const quality = 1;
-	const img = await getImage(fileOrUrl);
-	const canvas = resizeAndCropImage(img, outputSize);
-	return base64EncodeImage(canvas, quality);
-};
+function isHttpUrl(str: string): boolean {
+	try {
+		const url = new URL(str);
+		return url.protocol === 'http:' || url.protocol === 'https:';
+	} catch {
+		return false;
+	}
+}
 
-export const processAvatar = async (contact: Contact) => {
-	console.log(contact.data['PHOTO']);
+export const processAvatar = async (app: App, contact: Contact) => {
+	try {
+		let rawImg :HTMLImageElement;
+		if (isHttpUrl(contact.data['PHOTO'])) {
+			new Notice("Detected online photo url: Scaling and pulling into your local vault.");
+			rawImg = await getImage(contact.data['PHOTO']);
+		} else {
+			const rawBlob = await openFilePicker('image/*');
+			if (typeof rawBlob === 'string') {
+				throw new Error('Process avatar can only use a online url or blob image');
+			} else {
+				const objectUrl  = URL.createObjectURL(rawBlob);
+				rawImg = await getImage(objectUrl);
+			}
+		}
+
+		await updateFrontMatterValue(app, contact.file, 'PHOTO', base64EncodeImage(resizeAndCropImage(rawImg, 120)));
+	} catch (err) {
+		console.error(err);
+		throw new Error(
+			"hmmm... Could not load or process the avatar image. The website hosting the image likely does not allow access from other apps (CORS restriction). " +
+			"Try removing the 'PHOTO' property to upload a file from disk."
+		);
+	}
 }
 
 export const convertToLatestVCFPhotoFormat = (line:string) => {

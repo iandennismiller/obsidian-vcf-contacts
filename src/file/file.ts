@@ -78,7 +78,7 @@ export function fileId(file: TAbstractFile): string {
 	return Math.abs(hash).toString(); // Ensure it's positive
 }
 
-export async function openFilePicker(type: string): Promise<string> {
+export async function openFilePicker(type: string): Promise<string | Blob> {
 	return new Promise((resolve) => {
 		const input = document.createElement("input");
 		input.type = "file";
@@ -88,18 +88,24 @@ export async function openFilePicker(type: string): Promise<string> {
 		input.addEventListener("change", () => {
 			if (input?.files && input.files.length > 0) {
 				const file = input.files[0];
-				const reader = new FileReader();
 
-				reader.onload = function (event) {
-					const rawData = event?.target?.result || '';
-					if (typeof rawData === "string") {
-						resolve(rawData);
-					} else {
-						resolve(new TextDecoder("utf-8").decode(rawData));
-					}
-				};
+				const isImage = type === 'image/*' || type.startsWith('image/');
+				if (isImage) {
+					resolve(file); // Return the File for image use
+				} else {
+					const reader = new FileReader();
 
-				reader.readAsText(file, "UTF-8");
+					reader.onload = function (event) {
+						const rawData = event?.target?.result || '';
+						if (typeof rawData === "string") {
+							resolve(rawData);
+						} else {
+							resolve(new TextDecoder("utf-8").decode(rawData));
+						}
+					};
+
+					reader.readAsText(file, "UTF-8");
+				}
 			} else {
 				resolve('');
 			}
