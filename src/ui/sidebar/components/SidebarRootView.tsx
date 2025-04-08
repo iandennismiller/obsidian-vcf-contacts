@@ -1,6 +1,6 @@
 import {normalizePath, Notice, TAbstractFile, TFile, TFolder} from "obsidian";
 import * as React from "react";
-import { useApp } from "src/context/hooks";
+import { getApp } from "src/context/sharedAppContext";
 import {createContactFile, createFileName, findContactFiles, openFilePicker, saveVcardFilePicker} from "src/file/file";
 import ContactsPlugin from "src/main";
 import { Contact } from "src/parse/contact";
@@ -14,13 +14,13 @@ import myScrollTo from "src/util/myScrollTo";
 import { vcardToString } from "src/parse/vcard/vcardToString";
 import { processAvatar } from "src/util/avatarActions";
 
+
 type RootProps = {
 	plugin: ContactsPlugin;
 };
 
 export const SidebarRootView = (props: RootProps) => {
-	const app = useApp();
-	const { vault, metadataCache } = app;
+	const { vault } = getApp();
 	const [contacts, setContacts] = React.useState<Contact[]>([]);
 	const [sort, setSort] = React.useState<Sort>(Sort.NAME);
 	const folder = props.plugin.settings.contactsFolder;
@@ -39,7 +39,7 @@ export const SidebarRootView = (props: RootProps) => {
 			return;
 		}
 
-		parseContactFiles(findContactFiles(contactsFolder), metadataCache).then((contactsData) =>{
+		parseContactFiles(findContactFiles(contactsFolder)).then((contactsData) =>{
 			setContacts(contactsData);
 		});
 	};
@@ -101,7 +101,7 @@ export const SidebarRootView = (props: RootProps) => {
 				}}
 				exportAllVCF={async() => {
 					const allContactFiles = contacts.map((contact)=> contact.file)
-					const vcards = await vcardToString(metadataCache, allContactFiles);
+					const vcards = await vcardToString(allContactFiles);
 					saveVcardFilePicker(vcards)
 				}}
 				onCreateContact={async () => {
@@ -117,7 +117,7 @@ export const SidebarRootView = (props: RootProps) => {
 				processAvatar={(contact :Contact) => {
 					(async () => {
 						try {
-							await processAvatar(app, contact);
+							await processAvatar(contact);
 							setTimeout(() => { parseContacts() }, 50);
 						} catch (err) {
 							new Notice(err.message);
@@ -126,7 +126,7 @@ export const SidebarRootView = (props: RootProps) => {
 				}}
 				exportVCF={(contactFile: TFile) => {
 					(async () => {
-						const vcards = await vcardToString(metadataCache, [contactFile])
+						const vcards = await vcardToString([contactFile])
 						saveVcardFilePicker(vcards, contactFile)
 					})();
 				}} />

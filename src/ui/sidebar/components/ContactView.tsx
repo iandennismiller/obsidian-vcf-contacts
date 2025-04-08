@@ -1,5 +1,5 @@
 import * as React from "react";
-import {useApp} from "src/context/hooks";
+import {getApp} from "src/context/sharedAppContext";
 import {fileId, openFile} from "src/file/file";
 import {Contact} from "src/parse/contact";
 import {setIcon, TFile} from "obsidian";
@@ -15,7 +15,7 @@ type ContactProps = {
 
 
 export const ContactView = (props: ContactProps) => {
-	const {workspace} = useApp();
+	const {workspace} = getApp();
 	const contact = props.contact;
 	const buttons = React.useRef<(HTMLElement | null)[]>([]);
 	React.useEffect(() => {

@@ -48,7 +48,7 @@ function isHttpUrl(str: string): boolean {
 	}
 }
 
-export const processAvatar = async (app: App, contact: Contact) => {
+export const processAvatar = async (contact: Contact) => {
 	try {
 		let rawImg :HTMLImageElement;
 		if (isHttpUrl(contact.data['PHOTO'])) {
@@ -64,7 +64,7 @@ export const processAvatar = async (app: App, contact: Contact) => {
 			}
 		}
 
-		await updateFrontMatterValue(app, contact.file, 'PHOTO', base64EncodeImage(resizeAndCropImage(rawImg, 120)));
+		await updateFrontMatterValue(contact.file, 'PHOTO', base64EncodeImage(resizeAndCropImage(rawImg, 120)));
 	} catch (err) {
 		console.error(err);
 		throw new Error(

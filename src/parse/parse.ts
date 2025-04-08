@@ -1,8 +1,10 @@
-import {App, MetadataCache, TFile} from "obsidian";
+import {TFile} from "obsidian";
 import * as yaml from 'js-yaml';
 import { Contact } from "./contact";
+import { getApp } from "src/context/sharedAppContext";
 
-export async function parseContactFiles(files: TFile[], metadataCache: MetadataCache) {
+export async function parseContactFiles(files: TFile[]) {
+	const { metadataCache } = getApp();
   const contactsData: Contact[] = [];
   for (const file of files) {
 		const frontMatter = metadataCache.getFileCache(file)?.frontmatter
@@ -16,8 +18,8 @@ export async function parseContactFiles(files: TFile[], metadataCache: MetadataC
   return contactsData;
 }
 
-export async function updateFrontMatterValue(app: App, file: TFile, key: string, value: string) {
-
+export async function updateFrontMatterValue(file: TFile, key: string, value: string) {
+  const app = getApp();
 	const content = await app.vault.read(file);
 
 	const match = content.match(/^---\n([\s\S]*?)\n---\n?/);
