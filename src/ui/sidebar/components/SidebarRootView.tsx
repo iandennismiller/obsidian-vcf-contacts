@@ -1,18 +1,21 @@
-import {normalizePath, Notice, TAbstractFile, TFile, TFolder} from "obsidian";
+import { normalizePath, Notice, TAbstractFile, TFile, TFolder, WorkspaceLeaf } from "obsidian";
 import * as React from "react";
+import { Contact, getFrontmatterFromFiles, mdRender } from "src/contacts";
+import { createEmptyVcard, parseToSingles, parseVcard, vcardToString } from "src/contacts/vcard";
 import { getApp } from "src/context/sharedAppContext";
-import {createContactFile, createFileName, findContactFiles, openFilePicker, saveVcardFilePicker} from "src/file/file";
+import {
+  createContactFile,
+  createFileName,
+  findContactFiles,
+  openFilePicker,
+  saveVcardFilePicker
+} from "src/file/file";
 import ContactsPlugin from "src/main";
-import { Contact } from "src/parse/contact";
-import { parseContactFiles } from "src/parse/parse";
-import { Sort } from "src/util/constants";
-import { ContactsListView } from "./ContactsListView";
-import { HeaderView } from "./HeaderView";
-import { createEmptyVcard, parseToSingles, parseVcard } from "src/parse/vcard/vcardParse";
-import { mdRender } from "src/parse/vcard/vcardMdTemplate";
-import myScrollTo from "src/util/myScrollTo";
-import { vcardToString } from "src/parse/vcard/vcardToString";
+import { ContactsListView } from "src/ui/sidebar/components/ContactsListView";
+import { HeaderView } from "src/ui/sidebar/components/HeaderView";
 import { processAvatar } from "src/util/avatarActions";
+import { Sort } from "src/util/constants";
+import myScrollTo from "src/util/myScrollTo";
 
 
 type RootProps = {
@@ -39,7 +42,7 @@ export const SidebarRootView = (props: RootProps) => {
 			return;
 		}
 
-		parseContactFiles(findContactFiles(contactsFolder)).then((contactsData) =>{
+		getFrontmatterFromFiles(findContactFiles(contactsFolder)).then((contactsData) =>{
 			setContacts(contactsData);
 		});
 	};
@@ -52,6 +55,7 @@ export const SidebarRootView = (props: RootProps) => {
 
 		const updateFiles = (file: TAbstractFile) => {
 			setTimeout(() => {
+				console.log('updatingFiles');
 				if (isFileInFolder(file)) {
 					parseContacts();
 				}
@@ -71,9 +75,11 @@ export const SidebarRootView = (props: RootProps) => {
 		};
 	}, [vault, folder]);
 
-
 	React.useEffect(() => {
-		app.workspace.on("active-leaf-change", myScrollTo.scrollToLeaf);
+		app.workspace.on("active-leaf-change", (leaf: WorkspaceLeaf):void => {
+			console.log('leafchange', leaf);
+			myScrollTo.scrollToLeaf(leaf);
+		});
 
 		return () => {
 			myScrollTo.clearDebounceTimer()

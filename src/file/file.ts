@@ -1,4 +1,4 @@
-import {App, Modal, normalizePath, Notice, TAbstractFile, TFile, TFolder, Vault, Workspace} from "obsidian";
+import {App, normalizePath, Notice, TAbstractFile, TFile, TFolder, Vault, Workspace} from "obsidian";
 import { join } from "path";
 import { FileExistsModal } from "src/ui/modals/fileExistsModal";
 

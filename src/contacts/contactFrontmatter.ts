@@ -1,9 +1,13 @@
-import {TFile} from "obsidian";
 import * as yaml from 'js-yaml';
-import { Contact } from "./contact";
+import { TFile } from "obsidian";
 import { getApp } from "src/context/sharedAppContext";
 
-export async function parseContactFiles(files: TFile[]) {
+export type Contact = {
+	data: Record<string, any>;
+	file: TFile;
+}
+
+export async function getFrontmatterFromFiles(files: TFile[]) {
 	const { metadataCache } = getApp();
   const contactsData: Contact[] = [];
   for (const file of files) {
@@ -34,7 +38,7 @@ export async function updateFrontMatterValue(file: TFile, key: string, value: st
 
 	yamlObj[key] = value;
 
-	const newFrontMatter = '---\n' + yaml.dump(yamlObj) + '---\n';
+	const newFrontMatter = '---\n' + yaml.dump(yamlObj, { lineWidth: -1 }) + '---\n';
 	const newContent = newFrontMatter + body;
 
 	await app.vault.modify(file, newContent);

@@ -1,7 +1,6 @@
-import {Contact} from "src/parse/contact";
-import {openFilePicker} from "src/file/file";
-import {updateFrontMatterValue} from "src/parse/parse";
-import {App, Notice} from "obsidian";
+import { Notice } from "obsidian";
+import { Contact, updateFrontMatterValue } from "src/contacts";
+import { openFilePicker } from "src/file/file";
 
 const resizeAndCropImage = (img: HTMLImageElement, outputSize: number): HTMLCanvasElement => {
 	const canvas = document.createElement('canvas');

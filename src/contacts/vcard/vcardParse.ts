@@ -1,4 +1,4 @@
-import {VCardForObsidianRecord, VCardStructuredFields} from "./vcardDefinitions";
+import { VCardForObsidianRecord, VCardStructuredFields } from "src/contacts/vcard";
 import { ContactNameModal } from "src/ui/modals/contactNameModal";
 import { convertToLatestVCFPhotoFormat } from "src/util/avatarActions";
 

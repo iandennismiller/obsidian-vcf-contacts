@@ -1,7 +1,7 @@
-import {Notice, TFile} from "obsidian";
-import {parseKey} from "./vcardKey";
-import {VCardStructuredFields} from "./vcardDefinitions";
-import {getApp} from "src/context/sharedAppContext";
+import { Notice, TFile } from "obsidian";
+import { parseKey } from "src/contacts";
+import { VCardStructuredFields } from "src/contacts/vcard";
+import { getApp } from "src/context/sharedAppContext";
 
 function filterNonNull<T>(array: (T | null | undefined)[]): T[] {
 	return array.filter((item): item is T => item !== null && item !== undefined);

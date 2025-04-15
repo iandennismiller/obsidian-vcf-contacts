@@ -1,4 +1,4 @@
-import {MarkdownView, WorkspaceLeaf} from "obsidian";
+import { MarkdownView, WorkspaceLeaf } from "obsidian";
 import { fileId } from "src/file/file";
 
 let debounceTimer: NodeJS.Timeout;
@@ -28,7 +28,7 @@ const scrollToLeaf = (leaf: WorkspaceLeaf):void => {
 				behavior: "smooth",
 			});
 		});
-	}, 250);
+	}, 50);
 };
 
 const scrollToTop = ():void => {

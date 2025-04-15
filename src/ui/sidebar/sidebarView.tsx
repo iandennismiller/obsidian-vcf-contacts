@@ -1,10 +1,10 @@
 import { ItemView, WorkspaceLeaf } from "obsidian";
 import * as React from "react";
 import { createRoot } from "react-dom/client";
-import {setApp, clearApp} from "src/context/sharedAppContext";
+import { clearApp, setApp } from "src/context/sharedAppContext";
 import ContactsPlugin from "src/main";
+import { SidebarRootView } from "src/ui/sidebar/components/SidebarRootView";
 import { CONTACTS_VIEW_CONFIG } from "src/util/constants";
-import { SidebarRootView } from "./components/SidebarRootView";
 
 export class ContactsView extends ItemView {
 	root = createRoot(this.containerEl.children[1]);
