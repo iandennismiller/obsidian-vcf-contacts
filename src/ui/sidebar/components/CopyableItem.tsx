@@ -1,5 +1,5 @@
+import { Menu, Notice } from "obsidian";
 import * as React from "react";
-import {Menu, Notice} from "obsidian";
 
 interface CopyableItemProps {
 	value: string;

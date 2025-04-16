@@ -9,7 +9,7 @@ export function mdRender(record: Record<string, any>, hashtags: string): string 
 		const tempTags= recordWithoutNote.CATEGORIES.split(',')
 		additionalTags = `#${tempTags.join(' #')}`
 	}
-	const yamlString = yaml.dump(recordWithoutNote);
+	const yamlString = yaml.dump(recordWithoutNote, { lineWidth: -1 });
 
 	return `---
 ${yamlString}

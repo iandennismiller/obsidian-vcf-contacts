@@ -1,6 +1,7 @@
-import {MetadataCache, Notice, TFile} from "obsidian";
-import {parseKey} from "./vcardKey";
-import {VCardStructuredFields} from "./vcardDefinitions";
+import { Notice, TFile } from "obsidian";
+import { parseKey } from "src/contacts";
+import { VCardStructuredFields } from "src/contacts/vcard";
+import { getApp } from "src/context/sharedAppContext";
 
 function filterNonNull<T>(array: (T | null | undefined)[]): T[] {
 	return array.filter((item): item is T => item !== null && item !== undefined);
@@ -37,8 +38,9 @@ function renderSingleKey([key, value]:[string, string]):string  {
 	return `${keyObj.key}${type}:${value}`;
 }
 
-function generateVCard(metadataCache: MetadataCache, file: TFile): string {
+function generateVCard(file: TFile): string {
 	try {
+		const { metadataCache } = getApp();
 		const frontMatter = metadataCache.getFileCache(file)?.frontmatter;
 		if (!frontMatter) return "";
 
@@ -71,9 +73,9 @@ function generateVCard(metadataCache: MetadataCache, file: TFile): string {
 	}
 }
 
-export async function vcardToString(metadataCache: MetadataCache, contactFiles: TFile[]): Promise<string> {
+export async function vcardToString(contactFiles: TFile[]): Promise<string> {
 	return contactFiles
-		.map(file => generateVCard(metadataCache, file))
+		.map(file => generateVCard(file))
 		.filter(vcard => vcard !== "") // Remove empty results
 		.join("\n");
 }

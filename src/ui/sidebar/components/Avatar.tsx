@@ -1,4 +1,5 @@
 import * as React from "react";
+import { convertToLatestVCFPhotoFormat } from "src/util/avatarActions";
 
 interface AvatarProps {
 	photoUrl?: string;
@@ -14,7 +15,7 @@ export const Avatar = (props: AvatarProps) => {
 		<div className="avatar-initials">
 			{props.photoUrl && !hasImageError ? (
 				<img
-					src={props.photoUrl}
+					src={convertToLatestVCFPhotoFormat(props.photoUrl)}
 					onError={() => setHasImageError(true)}
 				/>
 			) : (
