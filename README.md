@@ -47,6 +47,15 @@ To keep your contacts organized, create a dedicated contacts folder and set it i
     Choose where to save the .vcf file.
     The file will be generated in vCard 4.0 format.
 
+🖼️ Importing Avatars
+
+You can add avatars to your contacts in two ways:
+
+    From a Local File: Press process avatar button. Select an image file (e.g. .jpg, .png).
+    From a URL: Paste in the image URL directly in the PHOTO property and then press process avatar button. 
+
+    The process avatar button will minimize, scale and include the avatars to obsidion Vault-Local Storage 
+
 📞 Click-to-Call & Quick Copy
 
     Click on a phone number or email address to initiate a call or open your email client.

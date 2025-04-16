@@ -72,10 +72,14 @@
 	}
 }
 
-.bizzy-card-container .nav-action-button {
+.bizzy-card-container .biz-contact-actions {
 	position: absolute;
 	right: 4px;
 	top: 4px;
+	display: flex;
+}
+.bizzy-card-container .biz-contact-actions .clickable-icon {
+	padding: var(--size-2-2);
 }
 
 /*=============================
