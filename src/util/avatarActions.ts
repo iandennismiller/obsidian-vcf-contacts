@@ -23,7 +23,6 @@ const resizeAndCropImage = (img: HTMLImageElement, outputSize: number): HTMLCanv
 	return canvas;
 };
 
-
 const base64EncodeImage = (canvas: HTMLCanvasElement, quality = 1): string => {
 	return canvas.toDataURL('image/jpeg', quality);
 };
@@ -65,7 +64,6 @@ export const processAvatar = async (contact: Contact) => {
 
 		await updateFrontMatterValue(contact.file, 'PHOTO', base64EncodeImage(resizeAndCropImage(rawImg, 120)));
 	} catch (err) {
-		console.error(err);
 		throw new Error(
 			"hmmm... Could not load or process the avatar image. The website hosting the image likely does not allow access from other apps (CORS restriction). " +
 			"Try removing the 'PHOTO' property to upload a file from disk."

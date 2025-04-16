@@ -55,7 +55,6 @@ export const SidebarRootView = (props: RootProps) => {
 
 		const updateFiles = (file: TAbstractFile) => {
 			setTimeout(() => {
-				console.log('updatingFiles');
 				if (isFileInFolder(file)) {
 					parseContacts();
 				}
@@ -77,7 +76,6 @@ export const SidebarRootView = (props: RootProps) => {
 
 	React.useEffect(() => {
 		app.workspace.on("active-leaf-change", (leaf: WorkspaceLeaf):void => {
-			console.log('leafchange', leaf);
 			myScrollTo.scrollToLeaf(leaf);
 		});
 
