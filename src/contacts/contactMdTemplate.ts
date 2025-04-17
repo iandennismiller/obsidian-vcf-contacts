@@ -1,4 +1,4 @@
-import * as yaml from "js-yaml";
+import { stringifyYaml } from "obsidian";
 
 export function mdRender(record: Record<string, any>, hashtags: string): string {
 	const { NOTE, ...recordWithoutNote } = record;
@@ -9,7 +9,7 @@ export function mdRender(record: Record<string, any>, hashtags: string): string 
 		const tempTags= recordWithoutNote.CATEGORIES.split(',')
 		additionalTags = `#${tempTags.join(' #')}`
 	}
-	const yamlString = yaml.dump(recordWithoutNote, { lineWidth: -1 });
+	const yamlString = stringifyYaml(recordWithoutNote);
 
 	return `---
 ${yamlString}

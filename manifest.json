@@ -1,10 +1,11 @@
 {
 	"id": "vcf-contacts",
 	"name": "VCF Contacts",
-	"version": "2.0.2",
-	"minAppVersion": "0.15.0",
-	"description": "Effortlessly manage, organize, and interact with your contacts inside Obsidian. Import, export, and structure vCard (VCF) files seamlessly while keeping all contact details accessible in your knowledge base. Includes click-to-call, right-click copy, structured metadata, and more!",
+	"version": "2.0.3",
+	"minAppVersion": "1.1.0",
+	"description": "Effortlessly manage, organize, and interact with your contacts. Import, export, and structure vCard (VCF) files seamlessly while keeping all contact details accessible in your knowledge base. Includes click-to-call, right-click copy, structured metadata, and more!",
 	"author": "Roland Broekema",
 	"authorUrl": "https://github.com/broekema41/",
-	"isDesktopOnly": true
+	"isDesktopOnly": true,
+  "forkedFrom": "https://github.com/vbeskrovnov/obsidian-contacts/"
 }

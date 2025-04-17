@@ -26,7 +26,7 @@ export const HeaderView = (props: HeaderProps) => {
 						id="create-btn"
 						className="clickable-icon nav-action-button"
 						data-icon="contact"
-						aria-label="Create New Contact"
+						aria-label="Create new contact"
 						ref={(element) => (buttons.current[1] = element)}
 						onClick={props.onCreateContact}
 					/>
@@ -37,7 +37,7 @@ export const HeaderView = (props: HeaderProps) => {
 						className={
 							"clickable-icon nav-action-button "
 						}
-						aria-label="import VCF"
+						aria-label="Import vcf"
 						ref={(element) => (buttons.current[2] = element)}
 						onClick={ props.importVCF }
 					/>
@@ -47,7 +47,7 @@ export const HeaderView = (props: HeaderProps) => {
 						className={
 							"clickable-icon nav-action-button "
 						}
-						aria-label="export VCF"
+						aria-label="Export vcf"
 						ref={(element) => (buttons.current[3] = element)}
 						onClick={ props.exportAllVCF }
 					/>
@@ -60,7 +60,7 @@ export const HeaderView = (props: HeaderProps) => {
 							"clickable-icon nav-action-button " +
 							(props.sort === Sort.NAME && "is-active")
 						}
-						aria-label="Sort By Name"
+						aria-label="Sort by name"
 						ref={(element) => (buttons.current[4] = element)}
 						onClick={() => props.onSortChange(Sort.NAME)}
 					/>
@@ -71,7 +71,7 @@ export const HeaderView = (props: HeaderProps) => {
 							"clickable-icon nav-action-button " +
 							(props.sort === Sort.BIRTHDAY && "is-active")
 						}
-						aria-label="Sort By Birthday"
+						aria-label="Sort by birthday"
 						ref={(element) => (buttons.current[6] = element)}
 						onClick={() => props.onSortChange(Sort.BIRTHDAY)}
 					/>
@@ -82,7 +82,7 @@ export const HeaderView = (props: HeaderProps) => {
 							"clickable-icon nav-action-button " +
 							(props.sort === Sort.ORG && "is-active")
 						}
-						aria-label="Sort By Organization"
+						aria-label="Sort by organization"
 						ref={(element) => (buttons.current[7] = element)}
 						onClick={() => props.onSortChange(Sort.ORG)}
 					/>

@@ -19,7 +19,7 @@ export const CopyableItem: React.FC<CopyableItemProps> = ({ value, children }) =
 		event.preventDefault();
 		const menu = new Menu();
 		menu.addItem((item) =>
-			item.setTitle("Copy to Clipboard").setIcon("clipboard").onClick(handleCopy)
+			item.setTitle("Copy to clipboard").setIcon("clipboard").onClick(handleCopy)
 		);
 		menu.showAtPosition({ x: event.pageX, y: event.pageY });
 	};

@@ -1,11 +1,11 @@
 import { MarkdownView, WorkspaceLeaf } from "obsidian";
 import { fileId } from "src/file/file";
 
-let debounceTimer: NodeJS.Timeout;
+let debounceTimer: number
 
 const scrollToLeaf = (leaf: WorkspaceLeaf):void => {
 	clearTimeout(debounceTimer); // Reset debounce timer
-	debounceTimer = setTimeout(() => {
+  debounceTimer = window.setTimeout(() => {
 		if (!(leaf?.view instanceof MarkdownView)) return;
 
 		const contactElement = document.getElementById(fileId(leaf.view.file));
@@ -44,7 +44,7 @@ const scrollToTop = ():void => {
 
 
 const clearDebounceTimer = ():void => {
-	clearTimeout(debounceTimer);
+  window.clearTimeout(debounceTimer);
 }
 
 export default {

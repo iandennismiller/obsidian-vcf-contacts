@@ -210,3 +210,7 @@ For many of us, using Obsidian is like brewing a perfect cup of coffee—it kick
 ✔ **Add a dash of joy to your everyday workflow—because organization brings productivity and happy routines!**
 
 Wishing you an inspiring journey with your enhanced contact experience. ** Start using the plugin today and share your thoughts in the [community comments](https://github.com/broekema41/obsidian-vcf-contacts/discussions)!**
+
+🙏 Acknowledgements
+
+This plugin was originally inspired by and started as a fork of Vadim Beskrovnov’s Contacts plugin. You probably wouldn’t recognize it from the current codebase anymore—but still, huge thanks to Vadim for laying a solid foundation to explore, experiment with, and be inspired by.
