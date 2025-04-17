@@ -3,24 +3,26 @@ import { ContactNameModal } from "src/ui/modals/contactNameModal";
 import { convertToLatestVCFPhotoFormat } from "src/util/avatarActions";
 
 function unfoldVCardLines(vCardData: string): string[] {
-	const lines = vCardData.split(/\r\n?/g);
-	const unfoldedLines: string[] = [];
-	let currentLine = "";
+  // Normalize line endings to \n first (handles \r, \r\n)
+  const normalized = vCardData.replace(/\r\n?/g, '\n');
 
-	for (const line of lines) {
-		if (/^\s/.test(line)) {
-			// Continuation of the previous line (line folding)
-			currentLine += line.trimStart();
-		} else {
-			if (currentLine) unfoldedLines.push(currentLine);
-			currentLine = line;
-		}
-	}
-	if (currentLine) unfoldedLines.push(currentLine);
+  const lines = normalized.split('\n');
+  const unfoldedLines: string[] = [];
+  let currentLine = "";
 
-	return unfoldedLines;
+  for (const line of lines) {
+    if (/^[ \t]/.test(line)) {
+      // Line is a continuation (folded)
+      currentLine += line.slice(1); // remove the space or tab
+    } else {
+      if (currentLine) unfoldedLines.push(currentLine);
+      currentLine = line;
+    }
+  }
+  if (currentLine) unfoldedLines.push(currentLine);
+
+  return unfoldedLines;
 }
-
 /**
  * Extracts the base key from a vCard field name.
  * - If the key contains `[`, extract everything before it.
@@ -241,6 +243,7 @@ export async function createEmptyVcard() {
 export async function parseVcard(vCardData: string) {
 	const unfoldedLines = unfoldVCardLines(vCardData);
 	const vCardObject: Record<string, any> = {};
+
 	for (const line of unfoldedLines) {
 		const parsedLine = parseVCardLine(line);
 		const indexedParsedLine = indexIfKeysExist(vCardObject, parsedLine)

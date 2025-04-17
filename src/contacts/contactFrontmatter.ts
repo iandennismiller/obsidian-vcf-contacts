@@ -1,5 +1,4 @@
-import * as yaml from 'js-yaml';
-import { TFile } from "obsidian";
+import { parseYaml, stringifyYaml, TFile } from "obsidian";
 import { getApp } from "src/context/sharedAppContext";
 
 export type Contact = {
@@ -32,13 +31,13 @@ export async function updateFrontMatterValue(file: TFile, key: string, value: st
 	let body = content;
 
 	if (match) {
-		yamlObj = yaml.load(match[1]) || {};
+		yamlObj = parseYaml(match[1]) || {};
 		body = content.slice(match[0].length);
 	}
 
 	yamlObj[key] = value;
 
-	const newFrontMatter = '---\n' + yaml.dump(yamlObj, { lineWidth: -1 }) + '---\n';
+	const newFrontMatter = '---\n' + stringifyYaml(yamlObj) + '---\n';
 	const newContent = newFrontMatter + body;
 
 	await app.vault.modify(file, newContent);

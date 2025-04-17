@@ -175,7 +175,7 @@ export const ContactView = (props: ContactProps) => {
 								className={
 									"clickable-icon nav-action-button "
 								}
-								aria-label="Process Avatar"
+								aria-label="Process avatar"
 								ref={(element) => (buttons.current[0] = element)}
 								onClick={() => props.processAvatar(contact)}
 							>
@@ -185,7 +185,7 @@ export const ContactView = (props: ContactProps) => {
 								className={
 									"clickable-icon nav-action-button "
 								}
-								aria-label="export VCF"
+								aria-label="Export vcf"
 								ref={(element) => (buttons.current[1] = element)}
 								onClick={() => props.exportVCF(contact.file)}
 							>

@@ -30,8 +30,6 @@ export class ContactsSettingTab extends PluginSettingTab {
 
     containerEl.empty();
 
-    containerEl.createEl('h2', { text: 'Settings for "Contacts" plugin.' });
-
     new Setting(containerEl)
       .setName('Contacts folder location')
       .setDesc('Files in this folder and all subfolders will be available as contacts')
