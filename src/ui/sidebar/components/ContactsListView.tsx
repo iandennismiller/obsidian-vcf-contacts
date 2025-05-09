@@ -1,7 +1,7 @@
-import { randomUUID } from "crypto";
 import { TFile } from "obsidian";
 import * as React from "react";
 import { Contact } from "src/contacts";
+import { fileId } from "src/file/file";
 import { ContactView } from "src/ui/sidebar/components/ContactView";
 import { Sort } from "src/util/constants";
 import myScrollTo from "src/util/myScrollTo";
@@ -95,7 +95,7 @@ export const ContactsListView = (props: ContactsListProps) => {
 	return (
 		<>
 			{processedContacts.map((contact) => {
-				return <ContactView contact={contact} key={randomUUID()} exportVCF={props.exportVCF} processAvatar={props.processAvatar} />;
+				return <ContactView contact={contact} key={fileId(contact.file)} exportVCF={props.exportVCF} processAvatar={props.processAvatar} />;
 			})}
 		</>
 	);

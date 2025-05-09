@@ -12,7 +12,7 @@ const scrollToLeaf = (leaf: WorkspaceLeaf):void => {
 		if (!contactElement) return;
 
 
-		const scrollContainer = contactElement.closest(".view-content") as HTMLElement | null;
+		const scrollContainer = document.querySelector(".contacts-view") as HTMLElement | null;
 		if (!scrollContainer) return;
 
 		const elementRect = contactElement.getBoundingClientRect();
@@ -32,7 +32,7 @@ const scrollToLeaf = (leaf: WorkspaceLeaf):void => {
 };
 
 const scrollToTop = ():void => {
-		const scrollContainer = document.querySelector('.contacts-menu')?.closest(".view-content") as HTMLElement | null;
+		const scrollContainer = document.querySelector(".contacts-view") as HTMLElement | null;
 		if (!scrollContainer) return;
 		requestAnimationFrame(() => {
 			scrollContainer.scrollTo({
