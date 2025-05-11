@@ -1,5 +1,4 @@
 import {App, normalizePath, Notice, TAbstractFile, TFile, TFolder, Vault, Workspace} from "obsidian";
-import { join } from "path";
 import { FileExistsModal } from "src/ui/modals/fileExistsModal";
 
 export async function openFile(file: TFile, workspace: Workspace) {
@@ -61,10 +60,10 @@ export function createContactFile(
 	const parentFolder = activeFile?.parent; // Get the parent folder if it's a file
 
 	if (parentFolder?.path?.contains(folderPath)) {
-		const filePath = normalizePath(join(parentFolder.path, filename));
+		const filePath = normalizePath(fileJoin(parentFolder.path, filename));
 		handleFileCreation(app, filePath, content);
 	} else {
-		const filePath = normalizePath(join(folderPath, filename));
+		const filePath = normalizePath(fileJoin(folderPath, filename));
 		handleFileCreation(app, filePath, content);
 	}
 }
@@ -76,6 +75,14 @@ export function fileId(file: TAbstractFile): string {
 		hash |= 0; // Convert to 32-bit integer
 	}
 	return Math.abs(hash).toString(); // Ensure it's positive
+}
+
+export function fileJoin(...parts: string[]): string {
+  return parts
+    .filter(Boolean)
+    .join("/")
+    .replace(/\/{2,}/g, "/")
+    .replace(/\/+$/, "");
 }
 
 export async function openFilePicker(type: string): Promise<string | Blob> {
