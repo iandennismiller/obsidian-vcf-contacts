@@ -177,7 +177,10 @@ export const ContactView = (props: ContactProps) => {
 								}
 								aria-label="Process avatar"
 								ref={(element) => (buttons.current[0] = element)}
-								onClick={() => props.processAvatar(contact)}
+								onClick={(event) => {
+                  event.stopPropagation();
+                  props.processAvatar(contact);
+                }}
 							>
 							</div>
 							<div
@@ -187,7 +190,10 @@ export const ContactView = (props: ContactProps) => {
 								}
 								aria-label="Export vcf"
 								ref={(element) => (buttons.current[1] = element)}
-								onClick={() => props.exportVCF(contact.file)}
+								onClick={(event) => {
+                  event.stopPropagation();
+                  props.exportVCF(contact.file);
+                }}
 							>
 							</div>
 						</div>

@@ -1,4 +1,6 @@
 import {App, normalizePath, Notice, TAbstractFile, TFile, TFolder, Vault, Workspace} from "obsidian";
+import { getSettings } from "src/context/sharedSettingsContext";
+import { ContactsPluginSettings } from "src/settings/settings";
 import { FileExistsModal } from "src/ui/modals/fileExistsModal";
 
 export async function openFile(file: TFile, workspace: Workspace) {
@@ -148,4 +150,10 @@ export function createFileName(records: Record<string, string>) {
 		.map(part => part.trim())
 		.filter(part => part !== '')
 		.join(' ') + '.md';
+}
+
+let settings: ContactsPluginSettings| null = null;
+export function isFileInFolder(file: TAbstractFile) {
+  if (!settings) { settings = getSettings()}
+  return file.path.startsWith(settings.contactsFolder);
 }

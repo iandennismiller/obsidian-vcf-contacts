@@ -1,7 +1,23 @@
 import { MarkdownView, WorkspaceLeaf } from "obsidian";
-import { fileId } from "src/file/file";
+import { fileId, isFileInFolder } from "src/file/file";
 
 let debounceTimer: number
+let lastContactLeaf: WorkspaceLeaf | null = null;
+
+const handleLeafEvent = (leaf: WorkspaceLeaf | null):void => {
+  const viewType = leaf?.view?.getViewType?.();
+
+  if (leaf?.view instanceof MarkdownView) {
+    if (isFileInFolder(leaf?.view?.file)) {
+      lastContactLeaf = leaf;
+      scrollToLeaf(lastContactLeaf);
+    }
+  } else if (viewType === 'contacts-view' && lastContactLeaf !== null) {
+    scrollToLeaf(lastContactLeaf);
+  } else if (leaf === null && lastContactLeaf !== null) {
+    scrollToLeaf(lastContactLeaf);
+  }
+}
 
 const scrollToLeaf = (leaf: WorkspaceLeaf):void => {
 	clearTimeout(debounceTimer); // Reset debounce timer
@@ -12,7 +28,7 @@ const scrollToLeaf = (leaf: WorkspaceLeaf):void => {
 		if (!contactElement) return;
 
 
-		const scrollContainer = contactElement.closest(".view-content") as HTMLElement | null;
+		const scrollContainer = document.querySelector(".contacts-view") as HTMLElement | null;
 		if (!scrollContainer) return;
 
 		const elementRect = contactElement.getBoundingClientRect();
@@ -32,7 +48,7 @@ const scrollToLeaf = (leaf: WorkspaceLeaf):void => {
 };
 
 const scrollToTop = ():void => {
-		const scrollContainer = document.querySelector('.contacts-menu')?.closest(".view-content") as HTMLElement | null;
+		const scrollContainer = document.querySelector(".contacts-view") as HTMLElement | null;
 		if (!scrollContainer) return;
 		requestAnimationFrame(() => {
 			scrollContainer.scrollTo({
@@ -49,6 +65,6 @@ const clearDebounceTimer = ():void => {
 
 export default {
 	scrollToTop,
-	scrollToLeaf,
+  handleLeafEvent,
 	clearDebounceTimer,
 }
