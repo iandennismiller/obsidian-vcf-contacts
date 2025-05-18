@@ -52,7 +52,7 @@ const scrollToLeaf = (leaf: WorkspaceLeaf):void => {
 				behavior: "smooth",
 			});
 		});
-	}, 550);
+	}, 50);
 };
 
 const scrollToTop = ():void => {

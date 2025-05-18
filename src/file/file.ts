@@ -138,7 +138,6 @@ export function saveVcardFilePicker(data: string, obsidianFile?: TFile ) {
      * This dependency can change at any point but there is no alternative
      * found that can actually share without extra user click on IOS and Android
     **/
-    console.log('starting');
     // @ts-ignore
     if(Platform.isMobileApp && window.Capacitor && typeof window.Capacitor.Plugins.Filesystem.open === 'function') {
       (async () => {
