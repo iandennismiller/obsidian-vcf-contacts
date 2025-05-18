@@ -2,6 +2,7 @@ import { ItemView, WorkspaceLeaf } from "obsidian";
 import * as React from "react";
 import { createRoot } from "react-dom/client";
 import { clearApp, setApp } from "src/context/sharedAppContext";
+import { clearSettings, setSettings } from "src/context/sharedSettingsContext";
 import ContactsPlugin from "src/main";
 import { SidebarRootView } from "src/ui/sidebar/components/SidebarRootView";
 import { CONTACTS_VIEW_CONFIG } from "src/util/constants";
@@ -28,13 +29,15 @@ export class ContactsView extends ItemView {
 
 	async onOpen(){
 		setApp(this.app);
+    setSettings(this.plugin.settings);
 		this.root.render(
-				<SidebarRootView plugin={this.plugin} />
+				<SidebarRootView />
 		);
 	}
 
 	async onClose() {
 		clearApp();
+    clearSettings();
 		this.root.unmount();
 	}
 }

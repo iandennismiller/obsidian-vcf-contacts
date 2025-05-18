@@ -1,6 +1,8 @@
 import { Plugin } from 'obsidian';
 import { ContactsView } from "src/ui/sidebar/sidebarView";
 import { CONTACTS_VIEW_CONFIG } from "src/util/constants";
+import myScrollTo from "src/util/myScrollTo";
+
 import { ContactsPluginSettings, ContactsSettingTab, DEFAULT_SETTINGS } from './settings/settings';
 
 export default class ContactsPlugin extends Plugin {
@@ -15,6 +17,7 @@ export default class ContactsPlugin extends Plugin {
 
 		this.addRibbonIcon('contact', 'Contacts', () => {
 			this.activateSidebarView();
+      myScrollTo.handleLeafEvent(null);
 		});
 
 		this.addSettingTab(new ContactsSettingTab(this.app, this));

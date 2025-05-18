@@ -1,6 +1,6 @@
-import {App, normalizePath, Notice, TAbstractFile, TFile, TFolder, Vault, Workspace} from "obsidian";
-import { join } from "path";
-import { FileExistsModal } from "src/ui/modals/fileExistsModal";
+import {App, normalizePath, Notice, Platform,TAbstractFile, TFile, TFolder, Vault, Workspace} from "obsidian";
+import { getSettings } from "src/context/sharedSettingsContext";
+import { FileExistsModal } from "src/ui/modals/fileExistsModal";;
 
 export async function openFile(file: TFile, workspace: Workspace) {
   const leaf = workspace.getLeaf()
@@ -61,10 +61,10 @@ export function createContactFile(
 	const parentFolder = activeFile?.parent; // Get the parent folder if it's a file
 
 	if (parentFolder?.path?.contains(folderPath)) {
-		const filePath = normalizePath(join(parentFolder.path, filename));
+		const filePath = normalizePath(fileJoin(parentFolder.path, filename));
 		handleFileCreation(app, filePath, content);
 	} else {
-		const filePath = normalizePath(join(folderPath, filename));
+		const filePath = normalizePath(fileJoin(folderPath, filename));
 		handleFileCreation(app, filePath, content);
 	}
 }
@@ -76,6 +76,14 @@ export function fileId(file: TAbstractFile): string {
 		hash |= 0; // Convert to 32-bit integer
 	}
 	return Math.abs(hash).toString(); // Ensure it's positive
+}
+
+export function fileJoin(...parts: string[]): string {
+  return parts
+    .filter(Boolean)
+    .join("/")
+    .replace(/\/{2,}/g, "/")
+    .replace(/\/+$/, "");
 }
 
 export async function openFilePicker(type: string): Promise<string | Blob> {
@@ -119,13 +127,50 @@ export async function openFilePicker(type: string): Promise<string | Blob> {
 
 
 export function saveVcardFilePicker(data: string, obsidianFile?: TFile ) {
-	try {
-		const element = document.createElement("a");
-		const file = new Blob([data], { type: "text/vcard" })
-		element.href = URL.createObjectURL(file);
-		element.download = obsidianFile ? obsidianFile.basename.replace(/ /g, '-') + '.vcf' : "contacts.vcf";
-		element.click();
-	} catch (_err) {}
+  try {
+
+    const file = new Blob([data], { type: "text/vcard" });
+    const filename = obsidianFile ? '/' + obsidianFile.basename.replace(/ /g, '-') + '.vcf' : "/shared-contacts.vcf";
+    const fileObject = new File([file], filename, { type: "text/vcard" });
+
+    /**
+     * Warning we are hooking into obsidian implementation (capacitor)
+     * This dependency can change at any point but there is no alternative
+     * found that can actually share without extra user click on IOS and Android
+    **/
+    // @ts-ignore
+    if(Platform.isMobileApp && window.Capacitor && typeof window.Capacitor.Plugins.Filesystem.open === 'function') {
+      (async () => {
+        try {
+          // @ts-ignore
+          await window.Capacitor.Plugins.Filesystem.writeFile({
+            path: filename,
+            data,
+            directory: 'DOCUMENTS',
+            encoding: 'utf8'
+          });
+          if(Platform.isAndroidApp) {
+            new Notice(`Saved to /Documents on device:\n${filename}\nOpen the Files app to share with other applications`);
+          } else {
+            new Notice(`\`Saved to your device's Files app under this app:\n${filename}\nOpen the Files app to share with other applications`);
+          }
+        } catch (e) {
+          console.log(e);
+        }
+      })();
+
+    } else {
+
+      // desktopApp
+      const element = document.createElement("a");
+      element.href = URL.createObjectURL(fileObject);
+      element.download = filename;
+      element.click();
+    }
+
+  } catch (err) {
+    console.log("Failed to share or save VCard", err);
+  }
 }
 
 export function createFileName(records: Record<string, string>) {
@@ -141,4 +186,10 @@ export function createFileName(records: Record<string, string>) {
 		.map(part => part.trim())
 		.filter(part => part !== '')
 		.join(' ') + '.md';
+}
+
+
+export function isFileInFolder(file: TAbstractFile) {
+  const settings = getSettings()
+  return file.path.startsWith(settings.contactsFolder);
 }
