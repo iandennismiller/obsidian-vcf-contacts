@@ -4,7 +4,15 @@ import { fileId, isFileInFolder } from "src/file/file";
 let debounceTimer: number
 let lastContactLeaf: WorkspaceLeaf | null = null;
 
+const handleOpenWhenNoLeafEventYet =  (leaf: WorkspaceLeaf | undefined):void => {
+  console.log('brppp', leaf);
+  if (leaf?.view instanceof MarkdownView && lastContactLeaf === null) {
+    handleLeafEvent(leaf);
+  }
+}
+
 const handleLeafEvent = (leaf: WorkspaceLeaf | null):void => {
+  console.log('handler', leaf);
   const viewType = leaf?.view?.getViewType?.();
 
   if (leaf?.view instanceof MarkdownView) {
@@ -44,7 +52,7 @@ const scrollToLeaf = (leaf: WorkspaceLeaf):void => {
 				behavior: "smooth",
 			});
 		});
-	}, 50);
+	}, 550);
 };
 
 const scrollToTop = ():void => {
@@ -66,5 +74,6 @@ const clearDebounceTimer = ():void => {
 export default {
 	scrollToTop,
   handleLeafEvent,
+  handleOpenWhenNoLeafEventYet,
 	clearDebounceTimer,
 }

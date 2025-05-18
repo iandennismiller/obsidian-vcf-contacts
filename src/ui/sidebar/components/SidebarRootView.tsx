@@ -1,4 +1,4 @@
-import { normalizePath, Notice, TAbstractFile, TFile, TFolder, WorkspaceLeaf } from "obsidian";
+import { MarkdownView, normalizePath, Notice, TAbstractFile, TFile, TFolder } from "obsidian";
 import * as React from "react";
 import { Contact, getFrontmatterFromFiles, mdRender } from "src/contacts";
 import { createEmptyVcard, parseToSingles, parseVcard, vcardToString } from "src/contacts/vcard";
@@ -70,9 +70,9 @@ export const SidebarRootView = () => {
 
 
   React.useEffect(() => {
-    const handler = (leaf: WorkspaceLeaf): void => {
-      myScrollTo.handleLeafEvent(leaf);
-    };
+
+    const view = app.workspace.getActiveViewOfType(MarkdownView);
+    myScrollTo.handleOpenWhenNoLeafEventYet(view?.leaf);
 
     workspace.on("active-leaf-change",  myScrollTo.handleLeafEvent);
 
