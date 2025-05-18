@@ -12,20 +12,20 @@ export const InsightsView = (props: ActionProps) => {
 
       <div className="action-card">
         <div className="action-card-content action-card-content--no-height">
-          <p><b>Roland Broekema</b> birthdays is today.</p>
+          <p>No insights available yet.</p>
         </div>
-        <div className="modal-close-button"></div>
+        {/*<div className="modal-close-button"></div>*/}
       </div>
-      <div className="action-card">
-        <div className="action-card-content">
-          <p><b>3</b> birthdays in the next 7 days.</p>
-          <p><b>16</b> profile improvements possible.</p>
-        </div>
-        <button
-          className="action-card-button"
-        >Go</button>
-        <div className="modal-close-button"></div>
-      </div>
+      {/*<div className="action-card">*/}
+      {/*  <div className="action-card-content">*/}
+      {/*    <p><b>3</b> birthdays in the next 7 days.</p>*/}
+      {/*    <p><b>16</b> profile improvements possible.</p>*/}
+      {/*  </div>*/}
+      {/*  <button*/}
+      {/*    className="action-card-button"*/}
+      {/*  >Go</button>*/}
+      {/*  <div className="modal-close-button"></div>*/}
+      {/*</div>*/}
     </div>
   )
 }
