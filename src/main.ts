@@ -1,3 +1,5 @@
+import "src/insights/insightLoading";
+
 import { Plugin } from 'obsidian';
 import { ContactsView } from "src/ui/sidebar/sidebarView";
 import { CONTACTS_VIEW_CONFIG } from "src/util/constants";
@@ -9,6 +11,7 @@ export default class ContactsPlugin extends Plugin {
 	settings: ContactsPluginSettings;
 
 	async onload() {
+
 		await this.loadSettings();
 		this.registerView(
 			CONTACTS_VIEW_CONFIG.type,

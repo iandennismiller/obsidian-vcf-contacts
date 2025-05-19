@@ -5,14 +5,12 @@ let debounceTimer: number
 let lastContactLeaf: WorkspaceLeaf | null = null;
 
 const handleOpenWhenNoLeafEventYet =  (leaf: WorkspaceLeaf | undefined):void => {
-  console.log('brppp', leaf);
   if (leaf?.view instanceof MarkdownView && lastContactLeaf === null) {
     handleLeafEvent(leaf);
   }
 }
 
 const handleLeafEvent = (leaf: WorkspaceLeaf | null):void => {
-  console.log('handler', leaf);
   const viewType = leaf?.view?.getViewType?.();
 
   if (leaf?.view instanceof MarkdownView) {

@@ -1,20 +1,25 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
+import { setSettings } from "src/context/sharedSettingsContext";
+import { InsighSettingProperties } from "src/insights/insightDefinitions";
+import { insightService } from "src/insights/insightService";
 import ContactsPlugin from "src/main";
 
 export interface ContactsPluginSettings {
   contactsFolder: string;
-  template: Template;
   defaultHashtag: string;
+  [key: string]: string|boolean;
 }
 
-export enum Template {
-  CUSTOM = "custom", FRONTMATTER = "frontmatter"
-}
+const insightsSetting = insightService.settings();
+const insightsSettingDefaults = insightsSetting.reduce((acc:Record<string, string|boolean>, setting) => {
+  acc[setting.settingPropertyName] = setting.settingDefaultValue;
+  return acc;
+}, {} as Record<string, string>);
 
 export const DEFAULT_SETTINGS: ContactsPluginSettings = {
   contactsFolder: '/',
-  template: Template.CUSTOM,
-  defaultHashtag: ''
+  defaultHashtag: '',
+  ...insightsSettingDefaults
 }
 
 export class ContactsSettingTab extends PluginSettingTab {
@@ -27,29 +32,52 @@ export class ContactsSettingTab extends PluginSettingTab {
 
   display(): void {
     const { containerEl } = this;
-
     containerEl.empty();
 
+    const contactsFolder = this.plugin.settings.contactsFolder;
     new Setting(containerEl)
       .setName('Contacts folder location')
       .setDesc('Files in this folder and all subfolders will be available as contacts')
       .addText(text => text
         .setPlaceholder('Contacts')
-        .setValue(this.plugin.settings.contactsFolder)
+        .setValue(contactsFolder)
         .onChange(async (value) => {
           this.plugin.settings.contactsFolder = value;
           await this.plugin.saveSettings();
+          setSettings(this.plugin.settings);
         }));
 
+    const defaultHashtag = this.plugin.settings.defaultHashtag;
     new Setting(containerEl)
       .setName('Default hashtag')
       .setDesc('Hashtag to be used for every contact created')
       .addText(text => text
         .setPlaceholder('')
-        .setValue(this.plugin.settings.defaultHashtag)
+        .setValue(defaultHashtag)
         .onChange(async (value) => {
           this.plugin.settings.defaultHashtag = value;
           await this.plugin.saveSettings();
+          setSettings(this.plugin.settings);
         }));
+
+    insightsSetting.forEach((settingProps :InsighSettingProperties) => {
+      const settingKey = settingProps.settingPropertyName;
+      const currentValue = this.plugin.settings[settingKey];
+
+      if (typeof currentValue === 'boolean') {
+        new Setting(containerEl)
+          .setName(settingProps.name)
+          .setDesc(settingProps.settingDescription)
+          .addToggle(toggle =>
+            toggle
+              .setValue(currentValue)
+              .onChange(async (value) => {
+                this.plugin.settings[settingKey] = value;
+                await this.plugin.saveSettings();
+                setSettings(this.plugin.settings);
+              }));
+      }
+    })
+
   }
 }
