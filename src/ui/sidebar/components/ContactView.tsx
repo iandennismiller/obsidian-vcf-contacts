@@ -12,6 +12,19 @@ type ContactProps = {
 	processAvatar: (contact: Contact) => void;
 };
 
+const uiSafeString = (input: unknown): string | undefined => {
+  if (input === null || input === undefined){
+    return undefined;
+  }
+
+  if (typeof input === 'string') {
+    return input.trim();
+  } else if (typeof input === 'number' || input instanceof Date || typeof input === 'boolean') {
+    return input.toString();
+  } else {
+    return undefined;
+  }
+}
 
 export const ContactView = (props: ContactProps) => {
 	const {workspace} = getApp();
@@ -91,7 +104,8 @@ export const ContactView = (props: ContactProps) => {
 									values[`${pre}.STREET`],
 									values[`${pre}.EXT`]
 								]
-									.filter(part => part && part.trim())
+                  .map(uiSafeString)
+                  .filter((value)=> value !== undefined)
 									.join(' ')}
 							</div>
 						)}
@@ -101,7 +115,8 @@ export const ContactView = (props: ContactProps) => {
 									values[`${pre}.POSTAL`],
 									values[`${pre}.LOCALITY`],
 								]
-									.filter(part => part && part.trim())
+                  .map(uiSafeString)
+                  .filter((value)=> value !== undefined)
 									.join(' ')}
 							</div>
 						)}
@@ -111,7 +126,8 @@ export const ContactView = (props: ContactProps) => {
 									values[`${pre}.REGION`],
 									values[`${pre}.COUNTRY`]
 								]
-									.filter(part => part && part.trim())
+                  .map(uiSafeString)
+                  .filter((value)=> value !== undefined)
 									.join(' ')}
 							</div>
 						)}
@@ -145,7 +161,8 @@ export const ContactView = (props: ContactProps) => {
 										contact.data["N.FN"],
 										contact.data["N.SUFFIX"]
 									]
-										.filter(part => part && part.trim())
+                    .map(uiSafeString)
+                    .filter((value)=> value !== undefined)
 										.join(' ')}</div>
 
 									{contact.data["ROLE"] ? (
