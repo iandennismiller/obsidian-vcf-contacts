@@ -1,4 +1,4 @@
-import { VCardForObsidianRecord, VCardStructuredFields } from "src/contacts/vcard";
+import { VCardForObsidianRecord, VCardStructuredFields, VCardSupportedKey } from "src/contacts/vcard";
 import { ContactNameModal } from "src/ui/modals/contactNameModal";
 import { convertToLatestVCFPhotoFormat } from "src/util/avatarActions";
 
@@ -176,6 +176,7 @@ function parseVCardLine(line: string): VCardForObsidianRecord {
 	}, {} as Record<string, string[]>);
 
 	const propKey: string = property.toUpperCase();
+
 	let parsedData: Record<string, any> = {};
 
 	const typeValues:string = params["type"] ? `[${params["type"].join(",")}]` : "";
@@ -188,7 +189,9 @@ function parseVCardLine(line: string): VCardForObsidianRecord {
 	} else if (propKey in ['BDAY', 'ANNIVERSARY']) {
 		parsedData[`${propKey}${typeValues}`] = formatVCardDate(value)
 	} else {
-		parsedData[`${propKey}${typeValues}`] = value;
+    if (propKey in VCardSupportedKey) {
+      parsedData[`${propKey}${typeValues}`] = value;
+    }
 	}
 
 	return parsedData;
@@ -220,19 +223,24 @@ export function parseToSingles(vCardsRaw:string): string[] {
 
 export async function createEmptyVcard() {
 	const vCardObject: Record<string, any> = {
+        "N.PREFIX": "",
+        "N.GN": "",
+        "N.MN": "",
+        "N.FN": "",
+        "N.SUFFIX": "",
 		"TEL[CELL]": "",
 		"TEL[HOME]": "",
 		"TEL[WORK]": "",
 		"EMAIL[HOME]": "",
 		"EMAIL[WORK]": "",
-		"BDAY": "19700101",
+		"BDAY": "",
 		"PHOTO": "",
 		"ADR[HOME].STREET": "",
 		"ADR[HOME].LOCALITY": "",
 		"ADR[HOME].POSTAL": "",
 		"ADR[HOME].COUNTRY": "",
-		"URL[HOME]": "",
 		"URL[WORK]": "",
+        "ORG": "",
 		"CATEGORIES": "",
 		"VERSION": "4.0"
 	}
@@ -246,8 +254,10 @@ export async function parseVcard(vCardData: string) {
 
 	for (const line of unfoldedLines) {
 		const parsedLine = parseVCardLine(line);
-		const indexedParsedLine = indexIfKeysExist(vCardObject, parsedLine)
-		Object.assign(vCardObject, indexedParsedLine);
+    if(parsedLine) {
+      const indexedParsedLine = indexIfKeysExist(vCardObject, parsedLine)
+      Object.assign(vCardObject, indexedParsedLine);
+    }
 	}
 	const checkedNameVCardObject = await checkOrAskForName(vCardObject);
 	return sortVCardObject(checkedNameVCardObject);

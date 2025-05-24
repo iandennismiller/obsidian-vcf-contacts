@@ -1,5 +1,8 @@
 import {App, normalizePath, Notice, Platform,TAbstractFile, TFile, TFolder, Vault, Workspace} from "obsidian";
+import { getFrontmatterFromFiles } from "src/contacts";
 import { getSettings } from "src/context/sharedSettingsContext";
+import { RunType } from "src/insights/insightDefinitions";
+import { insightService } from "src/insights/insightService";
 import { FileExistsModal } from "src/ui/modals/fileExistsModal";;
 
 export async function openFile(file: TFile, workspace: Workspace) {
@@ -42,6 +45,9 @@ async function handleFileCreation(app: App, filePath: string, content: string) {
 		}).open();
 	} else {
 		const createdFile = await app.vault.create(filePath, content);
+    await new Promise(r => setTimeout(r, 50));
+    const contact= await getFrontmatterFromFiles([createdFile])
+    await insightService.process(contact, RunType.IMMEDIATELY);
 		openFile(createdFile, app.workspace);
 	}
 }

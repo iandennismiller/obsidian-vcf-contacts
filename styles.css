@@ -333,6 +333,8 @@
 	}
 }
 
-
-
+.progress-bar.progress-bar--contacts,
+.progress-bar.progress-bar--contacts .progress-bar-indicator {
+  width: 100%;
+}
 

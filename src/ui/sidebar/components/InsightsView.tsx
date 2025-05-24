@@ -1,21 +1,116 @@
 import * as React from "react";
+import { useEffect, useRef, useState } from "react";
+import { Contact } from "src/contacts";
+import { InsightQueItem, RunType } from "src/insights/insightDefinitions";
+import { insightService } from "src/insights/insightService";
 
 type ActionProps = {
   setDisplayInsightsView: (displayActionView: boolean) => void;
+  processContacts: Contact[];
 };
 
+function groupByProcessorNameMap(items: InsightQueItem[]): Map<string, InsightQueItem[]> {
+  const grouped = new Map<string, InsightQueItem[]>();
+
+  for (const item of items) {
+    const list = grouped.get(item.name) ?? [];
+    list.push(item);
+    grouped.set(item.name, list);
+  }
+
+  return grouped;
+}
+
+
 export const InsightsView = (props: ActionProps) => {
+  const [loading, setLoading] = useState(true);
+  const [writing, setWriting] = useState(false);
+  const writeTimerRef = useRef<number | null>(null);
+  const [contacts] = useState(() => props.processContacts);
+  const [immediateResults, setImmediateResults] = useState<Map<string, InsightQueItem[]>>(new Map());
+
+  useEffect(() => {
+    if(loading) {
+      return;
+    }
+
+    if (writeTimerRef.current !== null) {
+      clearTimeout(writeTimerRef.current);
+    }
+
+    if(writing) {
+      writeTimerRef.current = window.setTimeout(() => {
+        if(!loading) {
+          setWriting(false);
+          writeTimerRef.current = null;
+        }
+      }, 250);
+      return;
+    }
+
+    // if the detect user is manipulating files manually then we go back to the main view.
+    props.setDisplayInsightsView(false);
+  }, [props.processContacts]);
+
+  useEffect(() => {
+    async function load() {
+      try {
+        setWriting(true);
+        const immediateResults = await insightService.process(contacts, RunType.IMMEDIATELY);
+
+        if (immediateResults.length === 0) {
+          setWriting(false);
+          setLoading(false);
+        }
+
+        setLoading(false);
+        setImmediateResults(groupByProcessorNameMap(immediateResults))
+
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    load();
+  }, []);
 
   return (
     <div className="contacts-view">
-      <button onClick={ () => props.setDisplayInsightsView(false)}>back</button>
 
-      <div className="action-card">
-        <div className="action-card-content action-card-content--no-height">
-          <p>No insights available yet.</p>
+      {loading ? (
+        <div className="progress-bar progress-bar--contacts">
+          <div className="progress-bar-message u-center-text">Loading Insights...</div>
+          <div className="progress-bar-indicator">
+            <div className="progress-bar-line"></div>
+            <div className="progress-bar-subline mod-increase"></div>
+            <div className="progress-bar-subline mod-decrease"></div>
+          </div>
         </div>
-        {/*<div className="modal-close-button"></div>*/}
-      </div>
+      ) : (
+        <button onClick={() => props.setDisplayInsightsView(false)}>Back</button>
+      )}
+
+
+      {!loading ? (
+          Array.from(immediateResults.entries()).length === 0 ? (
+            <div className="action-card">
+              <div className="action-card-content action-card-content--no-height">
+                <p>No insights available.</p>
+              </div>
+            </div>
+        ) : (
+          Array.from(immediateResults.entries()).map(([key, insights]) => (
+            insights[0].renderGroup(insights)
+          ))
+        )
+      ) : null}
+
+      {/*<div className="action-card">*/}
+      {/*  <div className="action-card-content action-card-content--no-height">*/}
+      {/*    <p>No insights available.</p>*/}
+      {/*  </div>*/}
+      {/*  <div className="modal-close-button"></div>*/}
+      {/*</div>*/}
+
       {/*<div className="action-card">*/}
       {/*  <div className="action-card-content">*/}
       {/*    <p><b>3</b> birthdays in the next 7 days.</p>*/}
