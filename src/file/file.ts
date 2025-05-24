@@ -31,7 +31,7 @@ async function handleFileCreation(app: App, filePath: string, content: string) {
 	const fileExists = await app.vault.adapter.exists(filePath);
 
 	if (fileExists) {
-		new FileExistsModal(filePath, async (action: "replace" | "skip") => {
+		new FileExistsModal(app, filePath, async (action: "replace" | "skip") => {
 			if (action === "skip") {
 				new Notice("File creation skipped.");
 				return;
@@ -58,7 +58,7 @@ export function createContactFile(
 	content: string,
 	filename: string
 ) {
-	const folder = app.vault.getAbstractFileByPath(folderPath);
+	const folder = app.vault.getAbstractFileByPath(folderPath !== '' ? folderPath : '/') ;
 	if (!folder) {
 		new Notice(`Can not find path: '${folderPath}'. Please update "Contacts" plugin settings`);
 		return;
@@ -75,7 +75,7 @@ export function createContactFile(
 	}
 }
 
-export function fileId(file: TAbstractFile): string {
+export function fileId(file: TFile): string {
 	let hash = 0;
 	for (let i = 0; i < file.path.length; i++) {
 		hash = (hash << 5) - hash + file.path.charCodeAt(i);
@@ -195,7 +195,7 @@ export function createFileName(records: Record<string, string>) {
 }
 
 
-export function isFileInFolder(file: TAbstractFile) {
+export function isFileInFolder(file: TFile) {
   const settings = getSettings()
   return file.path.startsWith(settings.contactsFolder);
 }

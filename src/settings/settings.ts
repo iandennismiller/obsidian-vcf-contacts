@@ -3,6 +3,7 @@ import { setSettings } from "src/context/sharedSettingsContext";
 import { InsighSettingProperties } from "src/insights/insightDefinitions";
 import { insightService } from "src/insights/insightService";
 import ContactsPlugin from "src/main";
+import { FolderSuggest } from "src/settings/FolderSuggest";
 
 export interface ContactsPluginSettings {
   contactsFolder: string;
@@ -35,17 +36,21 @@ export class ContactsSettingTab extends PluginSettingTab {
     containerEl.empty();
 
     const contactsFolder = this.plugin.settings.contactsFolder;
-    new Setting(containerEl)
-      .setName('Contacts folder location')
-      .setDesc('Files in this folder and all subfolders will be available as contacts')
-      .addText(text => text
-        .setPlaceholder('Contacts')
-        .setValue(contactsFolder)
-        .onChange(async (value) => {
-          this.plugin.settings.contactsFolder = value;
-          await this.plugin.saveSettings();
-          setSettings(this.plugin.settings);
-        }));
+    new Setting(this.containerEl)
+      .setName("Template folder location")
+      .setDesc("Files in this folder will be available as templates.")
+      .addSearch((cb) => {
+        new FolderSuggest(this.app, this.plugin, cb.inputEl);
+        cb.setPlaceholder("Example: Contacts")
+          .setValue(contactsFolder)
+          .onChange(async(value) => {
+            if(value === '') {
+              this.plugin.settings.contactsFolder = '';
+              await this.plugin.saveSettings();
+              setSettings(this.plugin.settings);
+            }
+          });
+      });
 
     const defaultHashtag = this.plugin.settings.defaultHashtag;
     new Setting(containerEl)

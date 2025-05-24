@@ -38,13 +38,16 @@ export default class ContactsPlugin extends Plugin {
 
 	async activateSidebarView() {
 		if (this.app.workspace.getLeavesOfType(CONTACTS_VIEW_CONFIG.type).length < 1) {
-			await this.app.workspace.getRightLeaf(false).setViewState({
-				type: CONTACTS_VIEW_CONFIG.type,
-				active: true,
-			});
+      const leaf = this.app.workspace.getRightLeaf(false);
+      if (leaf) {
+        await leaf.setViewState({
+          type: CONTACTS_VIEW_CONFIG.type,
+          active: true,
+        });
+      }
 		}
 
-		this.app.workspace.revealLeaf(
+		await this.app.workspace.revealLeaf(
 			this.app.workspace.getLeavesOfType(CONTACTS_VIEW_CONFIG.type)[0]
 		);
 	}

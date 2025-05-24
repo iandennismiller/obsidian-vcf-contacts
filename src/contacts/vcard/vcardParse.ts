@@ -1,4 +1,5 @@
 import { VCardForObsidianRecord, VCardStructuredFields, VCardSupportedKey } from "src/contacts/vcard";
+import { getApp } from "src/context/sharedAppContext";
 import { ContactNameModal } from "src/ui/modals/contactNameModal";
 import { convertToLatestVCFPhotoFormat } from "src/util/avatarActions";
 
@@ -264,7 +265,8 @@ export async function parseVcard(vCardData: string) {
 }
 
 export async function checkOrAskForName(vCardObject: VCardForObsidianRecord): Promise<VCardForObsidianRecord> {
-	return new Promise((resolve) => {
+	const app = getApp();
+  return new Promise((resolve) => {
 		if (vCardObject['N.GN'] && vCardObject['N.FN']) {
 			resolve(vCardObject);
 		} else {
