@@ -37,6 +37,25 @@ export const UidProcessor: InsightProcessor = {
       message: `Generated UUID for Contact ${contact.file.name}.` });
   },
 
+  insightRender (item) =>  (
+    <div className="insight-card">
+      <h4>UUID Generated</h4>
+      <p>{item.message}</p>
+      <code>{item.uid}</code>
+    </div>
+  ),
+
+  insightsRender (count) => (
+    <div className="insight-group">
+      <h3>{items.length} UUIDs Generated</h3>
+      <ul>
+        {items.map((item, i) => (
+          <li key={i}>{item.uid} — {item.message}</li>
+        ))}
+      </ul>
+    </div>
+  )
+
 };
 
 
