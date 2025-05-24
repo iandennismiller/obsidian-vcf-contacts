@@ -1,6 +1,8 @@
 import { Notice } from "obsidian";
 import { Contact, updateFrontMatterValue } from "src/contacts";
 import { openFilePicker } from "src/file/file";
+import { RunType } from "src/insights/insightDefinitions";
+import { insightService } from "src/insights/insightService";
 
 const resizeAndCropImage = (img: HTMLImageElement, outputSize: number): HTMLCanvasElement => {
 	const canvas = document.createElement('canvas');
@@ -49,6 +51,7 @@ function isHttpUrl(str: string): boolean {
 export const processAvatar = async (contact: Contact) => {
 	try {
 		let rawImg :HTMLImageElement;
+    await insightService.process(contact, RunType.IMMEDIATELY)
 		if (isHttpUrl(contact.data['PHOTO'])) {
 			new Notice("Detected online photo url: Scaling and pulling into your local vault.");
 			rawImg = await getImage(contact.data['PHOTO']);

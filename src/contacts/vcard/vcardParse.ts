@@ -223,19 +223,24 @@ export function parseToSingles(vCardsRaw:string): string[] {
 
 export async function createEmptyVcard() {
 	const vCardObject: Record<string, any> = {
+        "N.PREFIX": "",
+        "N.GN": "",
+        "N.MN": "",
+        "N.FN": "",
+        "N.SUFFIX": "",
 		"TEL[CELL]": "",
 		"TEL[HOME]": "",
 		"TEL[WORK]": "",
 		"EMAIL[HOME]": "",
 		"EMAIL[WORK]": "",
-		"BDAY": "19700101",
+		"BDAY": "",
 		"PHOTO": "",
 		"ADR[HOME].STREET": "",
 		"ADR[HOME].LOCALITY": "",
 		"ADR[HOME].POSTAL": "",
 		"ADR[HOME].COUNTRY": "",
-		"URL[HOME]": "",
 		"URL[WORK]": "",
+        "ORG": "",
 		"CATEGORIES": "",
 		"VERSION": "4.0"
 	}

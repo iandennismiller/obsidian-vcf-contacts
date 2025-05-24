@@ -1,6 +1,6 @@
 
 import { Contact } from "src/contacts";
-import { InsighSettingProperties, InsightProcessor, RunType } from "src/insights/insightDefinitions";
+import { InsighSettingProperties, InsightProcessor, InsightQueItem, RunType } from "src/insights/insightDefinitions";
 
 const processors = new Map<string, InsightProcessor>();
 
@@ -20,14 +20,12 @@ export const insightService = {
     processors.set(processor.name, processor);
   },
 
-  async process(contacts: Contact|Contact[], runType: RunType) {
-    if (!Array.isArray(contacts)) {
-      return processSingleContact(contacts, runType);
-    } else {
-      return contacts.map((contact: Contact) => {
-        processSingleContact(contact, runType);
-      });
-    }
+  async process(contacts: Contact|Contact[], runType: RunType): Promise<InsightQueItem[]> {
+    const contactArray = Array.isArray(contacts) ? contacts : [contacts];
+    const results =  await Promise.all(
+      contactArray.map((contact) => processSingleContact(contact, runType))
+    );
+    return results.flat().filter((insight) => insight !== undefined) as InsightQueItem[];
   },
 
   settings(): InsighSettingProperties[] {

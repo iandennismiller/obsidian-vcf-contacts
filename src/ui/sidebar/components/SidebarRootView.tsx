@@ -87,6 +87,7 @@ export const SidebarRootView = () => {
       { displayInsightsView ?
         <InsightsView
           setDisplayInsightsView={setDisplayInsightsView}
+          processContacts={contacts}
         />
       :
         <>

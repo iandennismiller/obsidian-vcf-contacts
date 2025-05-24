@@ -1,11 +1,13 @@
-import { Setting } from "obsidian";
+import { TFile } from "obsidian";
 import { Contact } from "src/contacts";
 
 export interface InsightQueItem {
   name: string;
   runType: RunType
-  uid: string;
+  file: TFile;
   message: string;
+  render: (queItem: InsightQueItem) => JSX.Element;
+  renderGroup: (queItems: InsightQueItem[]) => JSX.Element;
 }
 
 export interface InsightProcessor {
@@ -28,5 +30,6 @@ export interface InsighSettingProperties {
 
 export enum RunType {
   IMMEDIATELY = 'immediately',
-  QUEUED = 'queued'
+  UPCOMMING = 'upcoming',
+  INPROVEMENT = 'inprovement',
 }

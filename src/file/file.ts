@@ -47,7 +47,6 @@ async function handleFileCreation(app: App, filePath: string, content: string) {
 		const createdFile = await app.vault.create(filePath, content);
     await new Promise(r => setTimeout(r, 50));
     const contact= await getFrontmatterFromFiles([createdFile])
-    console.log(contact);
     await insightService.process(contact, RunType.IMMEDIATELY);
 		openFile(createdFile, app.workspace);
 	}

@@ -1,3 +1,4 @@
+import * as React from "react";
 import { Contact, updateFrontMatterValue } from "src/contacts";
 import { getSettings } from "src/context/sharedSettingsContext";
 import { InsightProcessor, InsightQueItem, RunType } from "src/insights/insightDefinitions";
@@ -12,6 +13,27 @@ const generateUUID = (): string => {
   }).replace(/^(.{24})/, (_, p1) => {
     return timestamp + p1.slice(timestamp.length);
   });
+}
+
+const renderGroup = (queItems: InsightQueItem[]):JSX.Element => {
+  return (
+    <div className="action-card">
+      <div className="action-card-content">
+        <p><b>{queItems.length} UID's generates</b></p>
+        <p>Unique Contact identifiers generated for your contacts where they where absent.</p>
+      </div>
+    </div>
+  );
+}
+
+const render = (queItem: InsightQueItem):JSX.Element => {
+  return (
+    <div className="action-card">
+      <div className="action-card-content">
+        <p>{queItem.message}</p>
+      </div>
+    </div>
+  );
 }
 
 export const UidProcessor: InsightProcessor = {
@@ -33,28 +55,12 @@ export const UidProcessor: InsightProcessor = {
     return Promise.resolve({
       name: this.name,
       runType: this.runType,
-      uid: UUID,
-      message: `Generated UUID for Contact ${contact.file.name}.` });
+      file: contact.file,
+      message: `Generated Unique user identifier for Contact ${contact.file.name}.`,
+      render,
+      renderGroup
+    });
   },
-
-  insightRender (item) =>  (
-    <div className="insight-card">
-      <h4>UUID Generated</h4>
-      <p>{item.message}</p>
-      <code>{item.uid}</code>
-    </div>
-  ),
-
-  insightsRender (count) => (
-    <div className="insight-group">
-      <h3>{items.length} UUIDs Generated</h3>
-      <ul>
-        {items.map((item, i) => (
-          <li key={i}>{item.uid} — {item.message}</li>
-        ))}
-      </ul>
-    </div>
-  )
 
 };
 
