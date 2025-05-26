@@ -18,14 +18,17 @@ import { processAvatar } from "src/util/avatarActions";
 import { Sort } from "src/util/constants";
 import myScrollTo from "src/util/myScrollTo";
 
-export const SidebarRootView = () => {
+interface SidebarRootViewProps {
+  createDefaultPluginFolder: () => Promise<void>;
+}
+
+export const SidebarRootView = (props: SidebarRootViewProps) => {
 	const app = getApp();
   const { vault, workspace } = app;
-
   const [contacts, setContacts] = React.useState<Contact[]>([]);
   const [displayInsightsView, setDisplayInsightsView] = React.useState<boolean>(false);
 	const [sort, setSort] = React.useState<Sort>(Sort.NAME);
-	const settings = getSettings();
+	let settings = getSettings();
 
 	const parseContacts = () => {
 		const contactsFolder = vault.getAbstractFileByPath(
@@ -44,7 +47,10 @@ export const SidebarRootView = () => {
 
 	React.useEffect(() => {
 		parseContacts();
-    const offSettings = onSettingsChange(parseContacts.bind(this));
+    const offSettings = onSettingsChange(() => {
+      settings = getSettings();
+      parseContacts.call(this);
+    });
 
     return () => {
       offSettings();
@@ -155,15 +161,18 @@ export const SidebarRootView = () => {
               }} />
           :
             <>
-              <div className="action-card">
-                <div className="action-card-content">
-                  <p>Your contacts folder is currently set to the <strong>root of your vault</strong>.</p>
-                  <p>We advise to create a specific folder prevent system processing</p>
-                  <button className="action-card-button"
-                  >Make contacts folder
-                  </button>
+              {!settings.contactsFolder ?
+                <div className="action-card">
+                  <div className="action-card-content">
+                    <p>
+                      Your contacts folder is currently set to the <strong>root of your vault</strong>. We advise to create a specific folder prevent system processing.
+                    </p>
+                    <p>
+                      <button onClick={props.createDefaultPluginFolder} className="action-card-button">Make contacts folder</button>
+                    </p>
+                  </div>
                 </div>
-              </div>
+              : null }
 
               <div className="action-card">
                 <div className="action-card-content">
