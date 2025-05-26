@@ -14,7 +14,7 @@ const handleLeafEvent = (leaf: WorkspaceLeaf | null):void => {
   const viewType = leaf?.view?.getViewType?.();
 
   if (leaf?.view instanceof MarkdownView) {
-    if (isFileInFolder(leaf?.view?.file)) {
+    if (leaf.view && leaf.view.file) {
       lastContactLeaf = leaf;
       scrollToLeaf(lastContactLeaf);
     }
@@ -29,6 +29,7 @@ const scrollToLeaf = (leaf: WorkspaceLeaf):void => {
 	clearTimeout(debounceTimer); // Reset debounce timer
   debounceTimer = window.setTimeout(() => {
 		if (!(leaf?.view instanceof MarkdownView)) return;
+        if (leaf.view.file === null) return;
 
 		const contactElement = document.getElementById(fileId(leaf.view.file));
 		if (!contactElement) return;

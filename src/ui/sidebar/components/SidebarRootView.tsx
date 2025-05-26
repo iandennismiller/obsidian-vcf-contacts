@@ -3,7 +3,7 @@ import * as React from "react";
 import { Contact, getFrontmatterFromFiles, mdRender } from "src/contacts";
 import { createEmptyVcard, parseToSingles, parseVcard, vcardToString } from "src/contacts/vcard";
 import { getApp } from "src/context/sharedAppContext";
-import { getSettings } from "src/context/sharedSettingsContext";
+import { getSettings, onSettingsChange } from "src/context/sharedSettingsContext";
 import {
   createContactFile,
   createFileName,
@@ -19,9 +19,10 @@ import { Sort } from "src/util/constants";
 import myScrollTo from "src/util/myScrollTo";
 
 export const SidebarRootView = () => {
-	const { vault, workspace } = getApp();
+	const app = getApp();
+  const { vault, workspace } = app;
 
-	const [contacts, setContacts] = React.useState<Contact[]>([]);
+  const [contacts, setContacts] = React.useState<Contact[]>([]);
   const [displayInsightsView, setDisplayInsightsView] = React.useState<boolean>(false);
 	const [sort, setSort] = React.useState<Sort>(Sort.NAME);
 	const settings = getSettings();
@@ -43,11 +44,15 @@ export const SidebarRootView = () => {
 
 	React.useEffect(() => {
 		parseContacts();
+    const offSettings = onSettingsChange(parseContacts.bind(this));
+
+    return () => {
+      offSettings();
+    };
 	}, []);
 
 	React.useEffect(() => {
-
-		const updateFiles = (file: TAbstractFile) => {
+		const updateFiles = (file: TFile) => {
 			setTimeout(() => {
 				if (isFileInFolder(file)) {
 					parseContacts();
@@ -71,7 +76,7 @@ export const SidebarRootView = () => {
 
   React.useEffect(() => {
 
-    const view = app.workspace.getActiveViewOfType(MarkdownView);
+    const view = workspace.getActiveViewOfType(MarkdownView);
     myScrollTo.handleOpenWhenNoLeafEventYet(view?.leaf);
 
     workspace.on("active-leaf-change",  myScrollTo.handleLeafEvent);

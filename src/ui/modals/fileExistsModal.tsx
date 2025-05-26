@@ -1,4 +1,4 @@
-import { Modal } from "obsidian";
+import { App, Modal } from "obsidian";
 import * as React from "react";
 import { createRoot, Root } from "react-dom/client"
 
@@ -40,7 +40,7 @@ export class FileExistsModal extends Modal {
 	callback?: (action: "replace" | "skip") => void;
 	private reactRoot: Root | null = null;
 
-	constructor(filePath:string, callback?: (action: "replace" | "skip") => void) {
+	constructor(app: App, filePath:string, callback?: (action: "replace" | "skip") => void) {
 		super(app);
 		this.filePath = filePath;
 		this.callback = callback;
