@@ -133,28 +133,52 @@ export const SidebarRootView = () => {
           </div>
         </div>
         <div className="contacts-view">
-          <ContactsListView
-            contacts={contacts}
-            sort={sort}
-            processAvatar={(contact :Contact) => {
-              (async () => {
-                try {
-                  await processAvatar(contact);
-                  setTimeout(() => { parseContacts() }, 50);
-                } catch (err) {
-                  new Notice(err.message);
-                }
-              })();
-            }}
-            exportVCF={(contactFile: TFile) => {
-              (async () => {
-                const vcards = await vcardToString([contactFile])
-                saveVcardFilePicker(vcards, contactFile)
-              })();
-            }} />
+          { contacts.length > 0 ?
+            <ContactsListView
+              contacts={contacts}
+              sort={sort}
+              processAvatar={(contact :Contact) => {
+                (async () => {
+                  try {
+                    await processAvatar(contact);
+                    setTimeout(() => { parseContacts() }, 50);
+                  } catch (err) {
+                    new Notice(err.message);
+                  }
+                })();
+              }}
+              exportVCF={(contactFile: TFile) => {
+                (async () => {
+                  const vcards = await vcardToString([contactFile])
+                  saveVcardFilePicker(vcards, contactFile)
+                })();
+              }} />
+          :
+            <>
+              <div className="action-card">
+                <div className="action-card-content">
+                  <p>Your contacts folder is currently set to the <strong>root of your vault</strong>.</p>
+                  <p>We advise to create a specific folder prevent system processing</p>
+                  <button className="action-card-button"
+                  >Make contacts folder
+                  </button>
+                </div>
+              </div>
+
+              <div className="action-card">
+                <div className="action-card-content">
+                  <p><b>No contacts found</b> It looks like you haven’t added any contacts yet. Use the icons above to:</p>
+                  <ul>
+                    <li>Create a new contact manually</li>
+                    <li>Import a <code>.vcf</code> file from another app</li>
+                  </ul>
+                </div>
+              </div>
+            </>
+          }
         </div>
-      </>
-    }
-  </div>
-	);
+        </>
+      }
+    </div>
+  );
 };
