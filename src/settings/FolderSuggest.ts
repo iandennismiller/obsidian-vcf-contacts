@@ -1,5 +1,4 @@
 import { AbstractInputSuggest, App, TFolder } from 'obsidian';
-import { KeyboardEvent, MouseEvent } from "react";
 import { setSettings } from "src/context/sharedSettingsContext";
 import ContactsPlugin from "src/main";
 
