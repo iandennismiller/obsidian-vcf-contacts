@@ -1,4 +1,4 @@
-import { ItemView, WorkspaceLeaf } from "obsidian";
+import { ItemView, Notice, WorkspaceLeaf } from "obsidian";
 import * as React from "react";
 import { createRoot } from "react-dom/client";
 import { clearApp, setApp } from "src/context/sharedAppContext";
@@ -15,6 +15,28 @@ export class ContactsView extends ItemView {
 		super(leaf);
 		this.plugin = plugin;
 	}
+
+  async createDefaultPluginFolder(): Promise<void> {
+    const vault = this.app.vault;
+    const folderPath = "Contacts"; // You can move this to a constant if you prefer
+
+    try {
+      const folderExists = await vault.adapter.exists(folderPath);
+      if (!folderExists) {
+        await vault.createFolder(folderPath);
+        this.plugin.settings.contactsFolder = folderPath;
+        await this.plugin.saveSettings();
+        setSettings(this.plugin.settings);
+      } else {
+        this.plugin.settings.contactsFolder = folderPath;
+        await this.plugin.saveSettings();
+        setSettings(this.plugin.settings);
+      }
+    } catch (err) {
+      new Notice('Failed to create folder default Contacts folder');
+    }
+  }
+
 	getViewType(): string {
 		return CONTACTS_VIEW_CONFIG.type;
 	}
@@ -31,7 +53,9 @@ export class ContactsView extends ItemView {
 		setApp(this.app);
     setSettings(this.plugin.settings);
 		this.root.render(
-				<SidebarRootView />
+				<SidebarRootView
+          createDefaultPluginFolder={this.createDefaultPluginFolder.bind(this)}
+        />
 		);
 	}
 

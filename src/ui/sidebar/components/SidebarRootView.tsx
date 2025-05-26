@@ -18,14 +18,17 @@ import { processAvatar } from "src/util/avatarActions";
 import { Sort } from "src/util/constants";
 import myScrollTo from "src/util/myScrollTo";
 
-export const SidebarRootView = () => {
+interface SidebarRootViewProps {
+  createDefaultPluginFolder: () => Promise<void>;
+}
+
+export const SidebarRootView = (props: SidebarRootViewProps) => {
 	const app = getApp();
   const { vault, workspace } = app;
-
   const [contacts, setContacts] = React.useState<Contact[]>([]);
   const [displayInsightsView, setDisplayInsightsView] = React.useState<boolean>(false);
 	const [sort, setSort] = React.useState<Sort>(Sort.NAME);
-	const settings = getSettings();
+	let settings = getSettings();
 
 	const parseContacts = () => {
 		const contactsFolder = vault.getAbstractFileByPath(
@@ -44,7 +47,10 @@ export const SidebarRootView = () => {
 
 	React.useEffect(() => {
 		parseContacts();
-    const offSettings = onSettingsChange(parseContacts.bind(this));
+    const offSettings = onSettingsChange(() => {
+      settings = getSettings();
+      parseContacts.call(this);
+    });
 
     return () => {
       offSettings();
@@ -133,28 +139,55 @@ export const SidebarRootView = () => {
           </div>
         </div>
         <div className="contacts-view">
-          <ContactsListView
-            contacts={contacts}
-            sort={sort}
-            processAvatar={(contact :Contact) => {
-              (async () => {
-                try {
-                  await processAvatar(contact);
-                  setTimeout(() => { parseContacts() }, 50);
-                } catch (err) {
-                  new Notice(err.message);
-                }
-              })();
-            }}
-            exportVCF={(contactFile: TFile) => {
-              (async () => {
-                const vcards = await vcardToString([contactFile])
-                saveVcardFilePicker(vcards, contactFile)
-              })();
-            }} />
+          { contacts.length > 0 ?
+            <ContactsListView
+              contacts={contacts}
+              sort={sort}
+              processAvatar={(contact :Contact) => {
+                (async () => {
+                  try {
+                    await processAvatar(contact);
+                    setTimeout(() => { parseContacts() }, 50);
+                  } catch (err) {
+                    new Notice(err.message);
+                  }
+                })();
+              }}
+              exportVCF={(contactFile: TFile) => {
+                (async () => {
+                  const vcards = await vcardToString([contactFile])
+                  saveVcardFilePicker(vcards, contactFile)
+                })();
+              }} />
+          :
+            <>
+              {!settings.contactsFolder ?
+                <div className="action-card">
+                  <div className="action-card-content">
+                    <p>
+                      Your contacts folder is currently set to the <strong>root of your vault</strong>. We advise to create a specific folder prevent system processing.
+                    </p>
+                    <p>
+                      <button onClick={props.createDefaultPluginFolder} className="action-card-button">Make contacts folder</button>
+                    </p>
+                  </div>
+                </div>
+              : null }
+
+              <div className="action-card">
+                <div className="action-card-content">
+                  <p><b>No contacts found</b> It looks like you haven’t added any contacts yet. Use the icons above to:</p>
+                  <ul>
+                    <li>Create a new contact manually</li>
+                    <li>Import a <code>.vcf</code> file from another app</li>
+                  </ul>
+                </div>
+              </div>
+            </>
+          }
         </div>
-      </>
-    }
-  </div>
-	);
+        </>
+      }
+    </div>
+  );
 };
