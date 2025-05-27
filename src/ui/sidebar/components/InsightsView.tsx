@@ -67,7 +67,7 @@ export const InsightsView = (props: ActionProps) => {
         setImmediateResults(groupByProcessorNameMap(immediateResults))
 
       } catch (e) {
-        console.error(e);
+        console.error('error loading insights', e);
       }
     }
     load();

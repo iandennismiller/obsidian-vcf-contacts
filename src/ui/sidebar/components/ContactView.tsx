@@ -35,67 +35,67 @@ export const ContactView = (props: ContactProps) => {
 	}, [buttons]);
 
 
-	const renderFirstEmail = (prefix: string[], values: any) => {
-		for (let i = 0; i < prefix.length; i++) {
-			const pre = prefix[i];
-			const keyparts = parseKey(pre);
-			if (values[`${pre}`]) {
-				if (values[`${pre}`].length > 24) {
-					return (
-						<CopyableItem value={values[`${pre}`]}>
-							@ <a href={`mailto:${values[`${pre}`]}`}>Email {keyparts.type?.toLowerCase()} </a>
-						</CopyableItem>
-					)
-				}
-				return (
-					<CopyableItem value={values[`${pre}`]}>
-						<a href={`mailto:${values[`${pre}`]}`}>{values[`${pre}`]}</a>
-					</CopyableItem>
-				)
-			}
-		}
-		return null;
-	}
+  const renderTopThreeItems = (
+    base: string,
+    sortArray: string[],
+    data: Record<string, any>,
+    renderItem: (key: string, value: string, keyParts: ReturnType<typeof parseKey>) => JSX.Element
+  ): JSX.Element[] | null => {
+    const entries: [string, string][] = Object.entries(data)
+      .filter(
+        ([key, value]) => {
+          if (!key.startsWith(base)) return false;
+          if (value === null) return false;
+          return value !== '';
+        }
+      )
+      .sort(([aKey], [bKey]) => {
+        const aIndex = sortArray.indexOf(aKey);
+        const bIndex = sortArray.indexOf(bKey);
+        return (aIndex === -1 ? 999 : aIndex) - (bIndex === -1 ? 999 : bIndex);
+      });
 
-	const renderTopPhones = (base: string, sortArray: string[], data: Record<string, any>) => {
-    const rendered: JSX.Element[] = [];
-    const phoneNumbers: [string, string][] = Object.entries(data).filter(
-      ([key, value]) => key.startsWith(base) && value !== ''
-    ).sort(([aKey], [bKey]) => {
-      const aIndex = sortArray.indexOf(aKey);
-      const bIndex = sortArray.indexOf(bKey);
-      return (aIndex === -1 ? 999 : aIndex) - (bIndex === -1 ? 999 : bIndex);
-    })
-
-    const reversed = [...phoneNumbers].reverse();
+    const reversed = [...entries].reverse();
     const seen = new Set<string>();
     const deduped: [string, string][] = [];
+
     for (const [key, value] of reversed) {
       if (!seen.has(value)) {
         deduped.push([key, value]);
         seen.add(value);
       }
     }
-    const topThreePhoneNumbers = deduped.reverse().slice(0, 3);
 
-    if (!topThreePhoneNumbers.length) {
-      return null;
-    }
+    const topThree = deduped.reverse().slice(0, 3);
+    if (!topThree.length) return null;
 
-    for (let i = 0; i < topThreePhoneNumbers.length; i++) {
-      const [key, value] = topThreePhoneNumbers[i];
+    return topThree.map(([key, value]) => {
       const keyParts = parseKey(key);
+      return renderItem(key, value, keyParts);
+    });
+  };
 
-      rendered.push(
-        <CopyableItem value={value}>
-          <a href={`tel:${value}`}>
-            {keyParts.type?.toLowerCase()} {value}
-          </a>
+
+	const renderTopEmails =  (base: string, sortArray: string[], data: Record<string, any>) => {
+    return renderTopThreeItems(base, sortArray, data, (key, value, keyParts) => {
+      return value.length > 24 ? (
+        <CopyableItem key={key} value={value}>
+          @ <a href={`mailto:${value}`}>Email {keyParts.type?.toLowerCase()} </a>
         </CopyableItem>
-      );
-    }
+      ) : (
+        <CopyableItem key={key} value={value}>
+          <a href={`mailto:${value}`}>{value}</a>
+        </CopyableItem>
+      )
+    });
+	}
 
-    return rendered;
+	const renderTopPhones = (base: string, sortArray: string[], data: Record<string, any>) => {
+    return renderTopThreeItems(base, sortArray, data, (key, value, keyParts) => (
+      <CopyableItem key={key} value={value}>
+        <a href={`tel:${value}`}>{keyParts.type?.toLowerCase()} {value}</a>
+      </CopyableItem>
+    ));
 	}
 
 	const renderOrganization = (values: any) => {
@@ -206,8 +206,7 @@ export const ContactView = (props: ContactProps) => {
 							</div>
 							<div className="biz-contact-box">
 								{renderTopPhones('TEL', ['TEL', 'TEL[CELL]', 'TEL[HOME]', 'TEL[WORK]'],  contact.data)}
-								{renderFirstEmail(['EMAIL', 'EMAIL[HOME]'], contact.data)}
-								{renderFirstEmail(['EMAIL', 'EMAIL[WORK]'], contact.data)}
+                {renderTopEmails('EMAIL', ['TEL', 'EMAIL[HOME]', 'EMAIL[WORK]'],  contact.data)}
 								{renderFirstAdress(['ADR[WORK]', 'ADR[HOME]', 'ADR'], contact.data)}
 							</div>
 						</div>
