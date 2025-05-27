@@ -96,7 +96,7 @@
 
 .bizzy-card-organization {
 	position: absolute;
-	width: 218px;
+	width: 196px;
 	padding: 2px;
 	padding-left: 14px;
 	padding-right: 14px;
@@ -175,15 +175,14 @@
 	height: 220px;
 	padding: 10px;
 	transition: 0.2s ease;
-	overflow: hidden;
 }
 
 .biz-shape {
 	position: absolute;
 	background: var(--tag-background);
-	transform: scaleX(1) rotate(20deg);
+	transform: scaleX(1) rotate(16deg);
 	top: -60px;
-	left: 40px;
+	left: 20px;
 	height: 308px;
 	border-radius: 50px;
 	width: 300px;
@@ -196,7 +195,7 @@
 	position: absolute;
 	top: 0;
 	bottom: 0;
-	padding: 18px;
+	padding: 10px 10px 16px 0px;
 	width: 215px;
 	display: flex;
 	flex-direction: column;
@@ -316,20 +315,20 @@
 	.biz-card-b {
 		width: 240px;
 		height: 180px;
-		padding-top: 0;
+		padding: 0;
 	}
 
 	.biz-shape {
 		transform: scaleX(1) rotate(85deg);
-		top: 0;
+    top: -2px;
 		left: 0;
 	}
 
 	.biz-contact-box {
 		position: absolute;
 		margin-top: 150px;
-		margin-left: -10px;
 		width: 100%;
+    padding: 0 10px 10px 0;
 	}
 }
 

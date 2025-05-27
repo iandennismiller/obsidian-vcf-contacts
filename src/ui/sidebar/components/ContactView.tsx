@@ -57,19 +57,45 @@ export const ContactView = (props: ContactProps) => {
 		return null;
 	}
 
-	const renderFirstPhone = (prefix: string[], values: any) => {
-		for (let i = 0; i < prefix.length; i++) {
-			const pre = prefix[i];
-			const keyparts = parseKey(pre);
-			if (values[`${pre}`]) {
-				return (
-					<CopyableItem value={values[`${pre}`]}>
-						<a href={`tel:${values[`${pre}`]}`}>{keyparts.type?.toLowerCase()} {values[`${pre}`]}</a>
-					</CopyableItem>
-				)
-			}
-		}
-		return null;
+	const renderTopPhones = (base: string, sortArray: string[], data: Record<string, any>) => {
+    const rendered: JSX.Element[] = [];
+    const phoneNumbers: [string, string][] = Object.entries(data).filter(
+      ([key, value]) => key.startsWith(base) && value !== ''
+    ).sort(([aKey], [bKey]) => {
+      const aIndex = sortArray.indexOf(aKey);
+      const bIndex = sortArray.indexOf(bKey);
+      return (aIndex === -1 ? 999 : aIndex) - (bIndex === -1 ? 999 : bIndex);
+    })
+
+    const reversed = [...phoneNumbers].reverse();
+    const seen = new Set<string>();
+    const deduped: [string, string][] = [];
+    for (const [key, value] of reversed) {
+      if (!seen.has(value)) {
+        deduped.push([key, value]);
+        seen.add(value);
+      }
+    }
+    const topThreePhoneNumbers = deduped.reverse().slice(0, 3);
+
+    if (!topThreePhoneNumbers.length) {
+      return null;
+    }
+
+    for (let i = 0; i < topThreePhoneNumbers.length; i++) {
+      const [key, value] = topThreePhoneNumbers[i];
+      const keyParts = parseKey(key);
+
+      rendered.push(
+        <CopyableItem value={value}>
+          <a href={`tel:${value}`}>
+            {keyParts.type?.toLowerCase()} {value}
+          </a>
+        </CopyableItem>
+      );
+    }
+
+    return rendered;
 	}
 
 	const renderOrganization = (values: any) => {
@@ -179,8 +205,7 @@ export const ContactView = (props: ContactProps) => {
 							<div className="biz-shape">
 							</div>
 							<div className="biz-contact-box">
-								{renderFirstPhone(['TEL[CELL]', 'TEL'], contact.data)}
-								{renderFirstPhone(['TEL[WORK]', 'TEL[HOME]'], contact.data)}
+								{renderTopPhones('TEL', ['TEL', 'TEL[CELL]', 'TEL[HOME]', 'TEL[WORK]'],  contact.data)}
 								{renderFirstEmail(['EMAIL', 'EMAIL[HOME]'], contact.data)}
 								{renderFirstEmail(['EMAIL', 'EMAIL[WORK]'], contact.data)}
 								{renderFirstAdress(['ADR[WORK]', 'ADR[HOME]', 'ADR'], contact.data)}
