@@ -19,6 +19,12 @@
   scrollbar-gutter: stable;
 }
 
+.contacts-view-close {
+  position: relative;
+  width: 100%;
+  padding-top: 34px;
+}
+
 .contact-card {
 	padding: 8px;
 }

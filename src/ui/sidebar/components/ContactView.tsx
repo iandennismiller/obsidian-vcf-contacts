@@ -69,10 +69,16 @@ export const ContactView = (props: ContactProps) => {
     const topThree = deduped.reverse().slice(0, 3);
     if (!topThree.length) return null;
 
-    return topThree.map(([key, value]) => {
-      const keyParts = parseKey(key);
-      return renderItem(key, value, keyParts);
-    });
+    try {
+      return topThree.map(([key, value]) => {
+        const keyParts = parseKey(key);
+        return renderItem(key, value, keyParts);
+      });
+    } catch (e) {
+      console.error('Failed to render Display Items', e, topThree);
+      return null;
+    }
+
   };
 
 

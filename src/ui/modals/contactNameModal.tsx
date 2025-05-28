@@ -52,7 +52,7 @@ const ContactNameModalContent: React.FC<ContactNameModalProps> = ({ vcfFn, onClo
 				/>
 			</div>
 			<div className="contact-modal-buttons">
-				<button
+				<button className="mod-cta"
 					onClick={handleSubmit}
 				>
 					Submit

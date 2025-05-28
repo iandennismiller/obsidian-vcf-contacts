@@ -14,7 +14,7 @@ const FileExistsModalContent: React.FC<FileExistsModalProps> = ({ filePath, onCl
 		<div className="contact-modal'">
 			<p>The file "{filePath}" already exists. What would you like to do?</p>
 			<div className="contact-modal-buttons">
-				<button
+				<button className="mod-cta"
 					onClick={() => {
 						onAction("skip");
 						onClose();
