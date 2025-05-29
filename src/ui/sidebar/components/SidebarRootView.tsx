@@ -40,7 +40,8 @@ export const SidebarRootView = (props: SidebarRootViewProps) => {
 			return;
 		}
 
-		getFrontmatterFromFiles(findContactFiles(contactsFolder)).then((contactsData) =>{
+    const contactFiles = findContactFiles(contactsFolder);
+		getFrontmatterFromFiles(contactFiles).then((contactsData) =>{
 			setContacts(contactsData);
 		});
 	};
