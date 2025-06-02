@@ -11,7 +11,11 @@ export const Avatar = (props: AvatarProps) => {
 	const [hasImageError, setHasImageError] = React.useState(false);
 	const initials = `${props.firstName.charAt(0).toUpperCase()}${props.lastName.charAt(0).toUpperCase()}`;
 
-	return (
+  React.useEffect(() => {
+    setHasImageError(false);
+  }, [props.photoUrl]);
+
+  return (
 		<div className="avatar-initials">
 			{props.photoUrl && !hasImageError ? (
 				<img
