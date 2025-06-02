@@ -84,7 +84,7 @@ export const ContactView = (props: ContactProps) => {
 
 	const renderTopEmails =  (base: string, sortArray: string[], data: Record<string, any>) => {
     return renderTopThreeItems(base, sortArray, data, (key, value, keyParts) => {
-      return value.length > 24 ? (
+      return value.length > 23 ? (
         <CopyableItem key={key} value={value}>
           @ <a href={`mailto:${value}`}>Email {keyParts.type?.toLowerCase()} </a>
         </CopyableItem>
