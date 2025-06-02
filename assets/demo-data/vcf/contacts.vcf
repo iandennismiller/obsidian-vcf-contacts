@@ -10,10 +10,9 @@ TEL;TYPE=CANADA:+14165559876
 BDAY:1990-05-15
 URL;TYPE=HOME:https://hana.example.jp
 URL;TYPE=WORK:https://company.co.jp/hana
-PHOTO:null
+PHOTO:
 CATEGORIES:Design, Art
 VERSION:4.0
-UID:urn:uuid:a1
 END:VCARD
 
 BEGIN:VCARD
@@ -21,17 +20,16 @@ N:Stark;Tony;;;
 ORG:Stark Industries
 ADR;TYPE=HOME:;;10880 Malibu Point;Malibu;CA;90265;USA
 EMAIL;TYPE=HOME:tony.stark@starkindustries.com
-EMAIL;TYPE=WORK:ironman@avengers.com
+EMAIL;TYPE=WORKSHOP:ironman@avengers.com
 TEL;TYPE=CELL:+13105551234
 TEL;TYPE=WORKSHOP:+13105551235
 TEL;TYPE=USA:+14165551234
 BDAY:1970-05-29
 URL;TYPE=HOME:https://starkindustries.com/tony
 URL;TYPE=WORK:https://avengers.com/ironman
-PHOTO:null
-CATEGORIES:Hero, Engineer, Billionaire, Philanthropist, Playboy
+PHOTO:
+CATEGORIES:Hero, Engineer, Billionaire, Philanthropist
 VERSION:4.0
-UID:urn:uuid:a2
 END:VCARD
 
 
@@ -47,10 +45,9 @@ TEL;TYPE=CANADA:+14165551234
 BDAY:1964-07-03
 URL;TYPE=HOME:https://imf.gov/agents/hunt
 URL;TYPE=WORK:https://phoenix.imf.gov/ethan
-PHOTO:null
+PHOTO:
 CATEGORIES:Spy, Agent, Action
 VERSION:4.0
-UID:urn:uuid:a2
 END:VCARD
 
 
@@ -66,10 +63,9 @@ TEL;TYPE=INDIA :+14165551111
 BDAY:1985-03-17
 URL;TYPE=HOME:https://rajiv.in
 URL;TYPE=WORK:https://masala.in/rajiv
-PHOTO:null
+PHOTO:
 CATEGORIES:Food, Festival
 VERSION:4.0
-UID:urn:uuid:a4
 END:VCARD
 
 BEGIN:VCARD
@@ -83,10 +79,9 @@ TEL;TYPE:BATPHONE:+12125550001
 BDAY:1939-05-27
 URL;TYPE=HOME:https://wayneenterprises.com/bruce
 URL;TYPE=WORK:https://batcave.org/batman
-PHOTO:null
+PHOTO:
 CATEGORIES:Detective, Billionaire, Vigilante
 VERSION:4.0
-UID:urn:uuid:dc-1
 END:VCARD
 
 BEGIN:VCARD
@@ -101,10 +96,9 @@ TEL;TYPE=ISRAEL:+14165558888
 BDAY:1987-11-22
 URL;TYPE=HOME:https://mira.il
 URL;TYPE=WORK:https://startnation.il/mira
-PHOTO:null
+PHOTO:
 CATEGORIES:Tech, Yoga
 VERSION:4.0
-UID:urn:uuid:a6
 END:VCARD
 
 BEGIN:VCARD
@@ -119,10 +113,9 @@ TEL;TYPE=BRAZIL:+14165559999
 BDAY:1993-02-28
 URL;TYPE=HOME:https://thiago.br
 URL;TYPE=WORK:https://futebiz.br/thiago
-PHOTO:null
+PHOTO:
 CATEGORIES:Sports, Celebration
 VERSION:4.0
-UID:urn:uuid:a7
 END:VCARD
 
 BEGIN:VCARD
@@ -132,15 +125,13 @@ ADR;TYPE=HOME:;;15 Ice Lane;Moscow;;101000;Russia
 EMAIL;TYPE=HOME:anya.ice@frostmail.ru
 EMAIL;TYPE=WORK:anya@techsnow.ru
 TEL;TYPE=CELL:+74951234567
-TEL;TYPE=TREEHOUSE:+74951234568
-TEL;TYPE=CANADA:+14165557777
+TEL;TYPE=HOME:+74951234568
 BDAY:1991-01-05
 URL;TYPE=HOME:https://anya.ru
 URL;TYPE=WORK:https://techsnow.ru/anya
-PHOTO:null
+PHOTO:
 CATEGORIES:Art, Robotics
 VERSION:4.0
-UID:urn:uuid:a8
 END:VCARD
 
 BEGIN:VCARD
@@ -151,14 +142,13 @@ EMAIL;TYPE=HOME:liam.green@lucky.ie
 EMAIL;TYPE=WORK:liam@storycraft.ie
 TEL;TYPE=CELL:+353851234567
 TEL;TYPE=SKYPE:+353851234568
-TEL;TYPE=CANADA:+14165556666
+TEL;TYPE=UK:+14165556666
 BDAY:1986-03-17
 URL;TYPE=HOME:https://liam.ie
 URL;TYPE=WORK:https://storycraft.ie/liam
-PHOTO:null
+PHOTO:
 CATEGORIES:Writing, Mythology
 VERSION:4.0
-UID:urn:uuid:a9
 END:VCARD
 
 BEGIN:VCARD
@@ -173,10 +163,9 @@ TEL;TYPE=CHINA:+14165554444
 BDAY:1994-09-09
 URL;TYPE=HOME:https://zhihao.cn
 URL;TYPE=WORK:https://greenlogic.cn/zhihao
-PHOTO:null
+PHOTO:
 CATEGORIES:Nature, Code
 VERSION:4.0
-UID:urn:uuid:a10
 END:VCARD
 
 BEGIN:VCARD
@@ -194,9 +183,8 @@ TEL;TYPE=CANADA:+14165553333
 BDAY:1990-08-08
 URL;TYPE=HOME:https://zahra.ae
 URL;TYPE=WORK:https://dreambuild.ae/zahra
-PHOTO:null
+PHOTO:
 CATEGORIES:Architecture, Stars
-UID:urn:uuid:a11
 END:VCARD
 
 
@@ -212,10 +200,9 @@ TEL;TYPE=CANADA:+14165555555
 BDAY:1989-04-21
 URL;TYPE=HOME:https://elisabet.is
 URL;TYPE=WORK:https://auroratech.is/elisabet
-PHOTO:null
+PHOTO:
 CATEGORIES:Science, Light
 VERSION:4.0
-UID:urn:uuid:a12
 END:VCARD
 
 BEGIN:VCARD
@@ -233,11 +220,9 @@ TEL;TYPE=CANADA:+14165557788
 BDAY:1996-06-30
 URL;TYPE=HOME:https://bao.vn
 URL;TYPE=WORK:https://phoexpress.vn/bao
-PHOTO:null
+PHOTO:
 CATEGORIES:Cuisine, Zen
-UID:urn:uuid:a13
 END:VCARD
-
 
 BEGIN:VCARD
 VERSION:4.0
@@ -249,16 +234,14 @@ ADR;TYPE=HOME:;;Björkstigen 12;Umeå;;90342;Sverige
 EMAIL;TYPE=HOME:elin.lindstrom@skogkisel.se
 EMAIL;TYPE=WORK:elin@designskog.se
 TEL;TYPE=CELL:+46701234567
-TEL;TYPE:SKYPE:+46701234568
+TEL;TYPE=SKYPE:+46701234568
 TEL;TYPE=SWEDEN:+14165554444
 BDAY:1988-09-03
 URL;TYPE=HOME:https://elin.se
 URL;TYPE=WORK:https://skogkisel.se/elin
-PHOTO;VALUE=URI:https://example.com/photos/elin.jpg
+PHOTO;https://raw.githubusercontent.com/broekema41/obsidian-vcf-contacts/refs/heads/master/assets/demo-data/avatars/avatar1.jpg
 CATEGORIES:Design, Forest, Code, Fika
-UID:urn:uuid:a17
 END:VCARD
-
 
 BEGIN:VCARD
 VERSION:4.0
@@ -275,8 +258,7 @@ TEL;TYPE=CHINA:+14165559999
 BDAY:1992-10-10
 URL;TYPE=HOME:https://liwei.cn
 URL;TYPE=WORK:https://zhuyukeji.cn/liwei
-PHOTO;VALUE=URI:https://example.com/photos/liwei.jpg
+PHOTO;
 CATEGORIES:自然, 编程, 茶
-UID:urn:uuid:a16
 END:VCARD
 

@@ -64,7 +64,7 @@ export const SidebarRootView = (props: SidebarRootViewProps) => {
 				if (isFileInFolder(file)) {
 					parseContacts();
 				}
-			}, 50); // place our update after obsidian has a opportunity to run some code
+			}, 450); // place our update after obsidian has a opportunity to run some code
 		};
 
 		vault.on("create", updateFiles);
