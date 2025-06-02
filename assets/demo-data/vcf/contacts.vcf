@@ -1,0 +1,282 @@
+BEGIN:VCARD
+N:Yamada;Hana;;;
+ORG:Sakura Studio Collective
+ADR;TYPE=HOME:;;1 Sakura Lane;Kyoto;;600-8001;Japan
+EMAIL;TYPE=HOME:hana.yamada@example.jp
+EMAIL;TYPE=WORK:hana@company.co.jp
+TEL;TYPE=CELL:+819012345678
+TEL;TYPE=TREEHOUSE:+818012345679
+TEL;TYPE=CANADA:+14165559876
+BDAY:1990-05-15
+URL;TYPE=HOME:https://hana.example.jp
+URL;TYPE=WORK:https://company.co.jp/hana
+PHOTO:null
+CATEGORIES:Design, Art
+VERSION:4.0
+UID:urn:uuid:a1
+END:VCARD
+
+BEGIN:VCARD
+N:Stark;Tony;;;
+ORG:Stark Industries
+ADR;TYPE=HOME:;;10880 Malibu Point;Malibu;CA;90265;USA
+EMAIL;TYPE=HOME:tony.stark@starkindustries.com
+EMAIL;TYPE=WORK:ironman@avengers.com
+TEL;TYPE=CELL:+13105551234
+TEL;TYPE=WORKSHOP:+13105551235
+TEL;TYPE=USA:+14165551234
+BDAY:1970-05-29
+URL;TYPE=HOME:https://starkindustries.com/tony
+URL;TYPE=WORK:https://avengers.com/ironman
+PHOTO:null
+CATEGORIES:Hero, Engineer, Billionaire, Philanthropist, Playboy
+VERSION:4.0
+UID:urn:uuid:a2
+END:VCARD
+
+
+BEGIN:VCARD
+N:Hunt;Ethan;;;
+ORG:Impossible Missions
+ADR;TYPE=HOME:;;221B Spyglass Lane;Unknown;;00000;USA
+EMAIL;TYPE=HOME:ethan.hunt@imf.gov
+EMAIL;TYPE=WORK:mission.control@imf.gov
+TEL;TYPE=CELL:+13035551234
+TEL;TYPE=SECURE:+13035551235
+TEL;TYPE=CANADA:+14165551234
+BDAY:1964-07-03
+URL;TYPE=HOME:https://imf.gov/agents/hunt
+URL;TYPE=WORK:https://phoenix.imf.gov/ethan
+PHOTO:null
+CATEGORIES:Spy, Agent, Action
+VERSION:4.0
+UID:urn:uuid:a2
+END:VCARD
+
+
+BEGIN:VCARD
+N:Patel;Rajiv;;;
+ORG:Masala Mosaic Creations
+ADR;TYPE=HOME:;;42 Holi Street;Mumbai;;400001;India
+EMAIL;TYPE=HOME:rajiv.colors@rangmail.in
+EMAIL;TYPE=WORK:rajiv@masala.in
+TEL;TYPE=CELL:+919811112222
+TEL;TYPE=VIP:+919811112223
+TEL;TYPE=INDIA :+14165551111
+BDAY:1985-03-17
+URL;TYPE=HOME:https://rajiv.in
+URL;TYPE=WORK:https://masala.in/rajiv
+PHOTO:null
+CATEGORIES:Food, Festival
+VERSION:4.0
+UID:urn:uuid:a4
+END:VCARD
+
+BEGIN:VCARD
+N:Wayne;Bruce;;;
+ORG:Wayne Enterprises
+ADR;TYPE=HOME:;;1007 Mountain Drive;Gotham;;10001;USA
+EMAIL;TYPE=HOME:bruce.wayne@wayneenterprises.com
+EMAIL;TYPE=WORK:batman@batcave.org
+TEL;TYPE:CELL:+12125550000
+TEL;TYPE:BATPHONE:+12125550001
+BDAY:1939-05-27
+URL;TYPE=HOME:https://wayneenterprises.com/bruce
+URL;TYPE=WORK:https://batcave.org/batman
+PHOTO:null
+CATEGORIES:Detective, Billionaire, Vigilante
+VERSION:4.0
+UID:urn:uuid:dc-1
+END:VCARD
+
+BEGIN:VCARD
+N:Goldstein;Mira;;;
+ORG:StartNation Wellness Labs
+ADR;TYPE=HOME:;;101 Desert Path;Tel Aviv;;69300;Israel
+EMAIL;TYPE=HOME:mira.sunshine@koshmail.il
+EMAIL;TYPE=WORK:mira@startnation.il
+TEL;TYPE=CELL:+972501234567
+TEL;TYPE=BOTIM:+972501234568
+TEL;TYPE=ISRAEL:+14165558888
+BDAY:1987-11-22
+URL;TYPE=HOME:https://mira.il
+URL;TYPE=WORK:https://startnation.il/mira
+PHOTO:null
+CATEGORIES:Tech, Yoga
+VERSION:4.0
+UID:urn:uuid:a6
+END:VCARD
+
+BEGIN:VCARD
+N:Santos;Thiago;;;
+ORG:Futebol Fiesta League
+ADR;TYPE=HOME:;;34 Carnival Lane;Rio de Janeiro;;22041-001;Brazil
+EMAIL;TYPE=HOME:thiago.samba@carnamail.br
+EMAIL;TYPE=WORK:thiago@futebiz.br
+TEL;TYPE=CELL:+5521999998888
+TEL;TYPE=BOTIM:+5521999998889
+TEL;TYPE=BRAZIL:+14165559999
+BDAY:1993-02-28
+URL;TYPE=HOME:https://thiago.br
+URL;TYPE=WORK:https://futebiz.br/thiago
+PHOTO:null
+CATEGORIES:Sports, Celebration
+VERSION:4.0
+UID:urn:uuid:a7
+END:VCARD
+
+BEGIN:VCARD
+N:Volkova;Anya;;;
+ORG:FrostTech Artisans
+ADR;TYPE=HOME:;;15 Ice Lane;Moscow;;101000;Russia
+EMAIL;TYPE=HOME:anya.ice@frostmail.ru
+EMAIL;TYPE=WORK:anya@techsnow.ru
+TEL;TYPE=CELL:+74951234567
+TEL;TYPE=TREEHOUSE:+74951234568
+TEL;TYPE=CANADA:+14165557777
+BDAY:1991-01-05
+URL;TYPE=HOME:https://anya.ru
+URL;TYPE=WORK:https://techsnow.ru/anya
+PHOTO:null
+CATEGORIES:Art, Robotics
+VERSION:4.0
+UID:urn:uuid:a8
+END:VCARD
+
+BEGIN:VCARD
+N:O’Reilly;Liam;;;
+ORG:StoryCraft Mythology Guild
+ADR;TYPE=HOME:;;18 Clover Court;Dublin;;D02;Ireland
+EMAIL;TYPE=HOME:liam.green@lucky.ie
+EMAIL;TYPE=WORK:liam@storycraft.ie
+TEL;TYPE=CELL:+353851234567
+TEL;TYPE=SKYPE:+353851234568
+TEL;TYPE=CANADA:+14165556666
+BDAY:1986-03-17
+URL;TYPE=HOME:https://liam.ie
+URL;TYPE=WORK:https://storycraft.ie/liam
+PHOTO:null
+CATEGORIES:Writing, Mythology
+VERSION:4.0
+UID:urn:uuid:a9
+END:VCARD
+
+BEGIN:VCARD
+N:Tang;Zhihao;;;
+ORG:Bamboo Logic Studios
+ADR;TYPE=HOME:;;300 Panda Park;Chengdu;;610000;China
+EMAIL;TYPE=HOME:zhihao.panda@bamboomail.cn
+EMAIL;TYPE=WORK:zhihao@greenlogic.cn
+TEL;TYPE=CELL:+8613900000000
+TEL;TYPE=WECHAT:+8613900000001
+TEL;TYPE=CHINA:+14165554444
+BDAY:1994-09-09
+URL;TYPE=HOME:https://zhihao.cn
+URL;TYPE=WORK:https://greenlogic.cn/zhihao
+PHOTO:null
+CATEGORIES:Nature, Code
+VERSION:4.0
+UID:urn:uuid:a10
+END:VCARD
+
+BEGIN:VCARD
+VERSION:4.0
+N:Ali;Zahra;;;
+FN:Zahra Ali
+ORG:Mirage Dream Builders
+ROLE:Lead Vision Architect
+ADR;TYPE=HOME:;;2 Sand Dune Street;Dubai;;00000;UAE
+EMAIL;TYPE=HOME:zahra.moon@miragemail.ae
+EMAIL;TYPE=WORK:zahra@dreambuild.ae
+TEL;TYPE=CELL:+971501234567
+TEL;TYPE=BOTIM:+971501234568
+TEL;TYPE=CANADA:+14165553333
+BDAY:1990-08-08
+URL;TYPE=HOME:https://zahra.ae
+URL;TYPE=WORK:https://dreambuild.ae/zahra
+PHOTO:null
+CATEGORIES:Architecture, Stars
+UID:urn:uuid:a11
+END:VCARD
+
+
+BEGIN:VCARD
+N:Jónsdóttir;Elísabet;;;
+ORG:Aurora Science Initiative
+ADR;TYPE=HOME:;;77 Volcano Lane;Reykjavik;;101;Iceland
+EMAIL;TYPE=HOME:elisabet.northern@icepost.is
+EMAIL;TYPE=WORK:elisabet@auroratech.is
+TEL;TYPE=CELL:+3548612345
+TEL;TYPE=MAGICPORTAL:+3548612346
+TEL;TYPE=CANADA:+14165555555
+BDAY:1989-04-21
+URL;TYPE=HOME:https://elisabet.is
+URL;TYPE=WORK:https://auroratech.is/elisabet
+PHOTO:null
+CATEGORIES:Science, Light
+VERSION:4.0
+UID:urn:uuid:a12
+END:VCARD
+
+BEGIN:VCARD
+VERSION:4.0
+N:Nguyen;Bao;;;
+FN:Bao Nguyen
+ORG:Zen Pho Express
+ROLE:Head of Culinary Calm
+ADR;TYPE=HOME:;;56 Lotus Alley;Ho Chi Minh City;;70000;Vietnam
+EMAIL;TYPE=HOME:bao.vibes@vietmail.vn
+EMAIL;TYPE=WORK:bao@phoexpress.vn
+TEL;TYPE=CELL:+84981234567
+TEL;TYPE=SKYPE:+84981234568
+TEL;TYPE=CANADA:+14165557788
+BDAY:1996-06-30
+URL;TYPE=HOME:https://bao.vn
+URL;TYPE=WORK:https://phoexpress.vn/bao
+PHOTO:null
+CATEGORIES:Cuisine, Zen
+UID:urn:uuid:a13
+END:VCARD
+
+
+BEGIN:VCARD
+VERSION:4.0
+N:Lindström;Elin;;;
+FN:Elin Lindström
+ORG:Skog & Kisel AB
+ROLE:Designstrateg & Naturkodare
+ADR;TYPE=HOME:;;Björkstigen 12;Umeå;;90342;Sverige
+EMAIL;TYPE=HOME:elin.lindstrom@skogkisel.se
+EMAIL;TYPE=WORK:elin@designskog.se
+TEL;TYPE=CELL:+46701234567
+TEL;TYPE:SKYPE:+46701234568
+TEL;TYPE=SWEDEN:+14165554444
+BDAY:1988-09-03
+URL;TYPE=HOME:https://elin.se
+URL;TYPE=WORK:https://skogkisel.se/elin
+PHOTO;VALUE=URI:https://example.com/photos/elin.jpg
+CATEGORIES:Design, Forest, Code, Fika
+UID:urn:uuid:a17
+END:VCARD
+
+
+BEGIN:VCARD
+VERSION:4.0
+N:李;伟;;;
+FN:李伟
+ORG:竹语科技有限公司
+ROLE:首席算法工程师
+ADR;TYPE=HOME:;;成都市锦江区熊猫大道300号;成都;;610000;中国
+EMAIL;TYPE=HOME:liwei@zhuyukeji.cn
+EMAIL;TYPE=WORK:li.wei@bamboo-tech.cn
+TEL;TYPE=CELL:+8613800000000
+TEL:+8613800000001
+TEL;TYPE=CHINA:+14165559999
+BDAY:1992-10-10
+URL;TYPE=HOME:https://liwei.cn
+URL;TYPE=WORK:https://zhuyukeji.cn/liwei
+PHOTO;VALUE=URI:https://example.com/photos/liwei.jpg
+CATEGORIES:自然, 编程, 茶
+UID:urn:uuid:a16
+END:VCARD
+

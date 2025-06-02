@@ -1,0 +1,28 @@
+---
+N.FN: Stark
+N.GN: Tony
+PHOTO: "null"
+"EMAIL[HOME]": tony.stark@starkindustries.com
+"EMAIL[WORK]": ironman@avengers.com
+"TEL[CELL]": "+13105551234"
+"TEL[WORKSHOP]": "+13105551235"
+"TEL[USA]": "+14165551234"
+BDAY: 1970-05-29
+"URL[HOME]": https://starkindustries.com/tony
+"URL[WORK]": https://avengers.com/ironman
+ORG: Stark Industries
+"ADR[HOME].STREET": 10880 Malibu Point
+"ADR[HOME].LOCALITY": Malibu
+"ADR[HOME].REGION": CA
+"ADR[HOME].POSTAL": "90265"
+"ADR[HOME].COUNTRY": USA
+CATEGORIES: Hero, Engineer, Billionaire, Philanthropist, Playboy
+UID: urn:uuid:a2
+VERSION: "4.0"
+
+---
+#### Notes
+
+
+
+ #Hero # Engineer # Billionaire # Philanthropist # Playboy
