@@ -1,7 +1,7 @@
 ---
 N.FN: Goldstein
 N.GN: Mira
-PHOTO: "null"
+PHOTO: https://raw.githubusercontent.com/broekema41/obsidian-vcf-contacts/refs/heads/master/assets/demo-data/avatars/avatar5.jpg
 "EMAIL[HOME]": mira.sunshine@koshmail.il
 "EMAIL[WORK]": mira@startnation.il
 "TEL[CELL]": "+972501234567"
@@ -16,12 +16,11 @@ ORG: StartNation Wellness Labs
 "ADR[HOME].POSTAL": "69300"
 "ADR[HOME].COUNTRY": Israel
 CATEGORIES: Tech, Yoga
-UID: urn:uuid:a6
 VERSION: "4.0"
-
+UID: urn:uuid:019730a76c145-41a8-8d33-13bd1493dc3a
 ---
 #### Notes
 
 
 
- #Tech # Yoga
+#Contact #Tech # Yoga

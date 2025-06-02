@@ -1,7 +1,7 @@
 ---
 N.FN: Jónsdóttir
 N.GN: Elísabet
-PHOTO: "null"
+PHOTO: https://raw.githubusercontent.com/broekema41/obsidian-vcf-contacts/refs/heads/master/assets/demo-data/avatars/avatar2.jpg
 "EMAIL[HOME]": elisabet.northern@icepost.is
 "EMAIL[WORK]": elisabet@auroratech.is
 "TEL[CELL]": "+3548612345"
@@ -16,12 +16,11 @@ ORG: Aurora Science Initiative
 "ADR[HOME].POSTAL": "101"
 "ADR[HOME].COUNTRY": Iceland
 CATEGORIES: Science, Light
-UID: urn:uuid:a12
 VERSION: "4.0"
-
+UID: urn:uuid:019730a76c188-4c65-b2ba-27bb58d7144d
 ---
 #### Notes
 
 
 
- #Science # Light
+#Contact #Science # Light

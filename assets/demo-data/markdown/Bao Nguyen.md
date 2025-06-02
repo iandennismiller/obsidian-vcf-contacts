@@ -2,7 +2,7 @@
 N.FN: Nguyen
 N.GN: Bao
 FN: Bao Nguyen
-PHOTO: "null"
+PHOTO: https://raw.githubusercontent.com/broekema41/obsidian-vcf-contacts/refs/heads/master/assets/demo-data/avatars/avatar12.jpg
 "EMAIL[HOME]": bao.vibes@vietmail.vn
 "EMAIL[WORK]": bao@phoexpress.vn
 "TEL[CELL]": "+84981234567"
@@ -18,12 +18,11 @@ ROLE: Head of Culinary Calm
 "ADR[HOME].POSTAL": "70000"
 "ADR[HOME].COUNTRY": Vietnam
 CATEGORIES: Cuisine, Zen
-UID: urn:uuid:a13
 VERSION: "4.0"
-
+UID: urn:uuid:019730a76c1ba-4f99-bdec-7ba72e5d302c
 ---
 #### Notes
 
 
 
- #Cuisine # Zen
+#Contact #Cuisine # Zen
