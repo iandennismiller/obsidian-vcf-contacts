@@ -40,7 +40,8 @@ export const SidebarRootView = (props: SidebarRootViewProps) => {
 			return;
 		}
 
-		getFrontmatterFromFiles(findContactFiles(contactsFolder)).then((contactsData) =>{
+    const contactFiles = findContactFiles(contactsFolder);
+		getFrontmatterFromFiles(contactFiles).then((contactsData) =>{
 			setContacts(contactsData);
 		});
 	};
@@ -63,7 +64,7 @@ export const SidebarRootView = (props: SidebarRootViewProps) => {
 				if (isFileInFolder(file)) {
 					parseContacts();
 				}
-			}, 50); // place our update after obsidian has a opportunity to run some code
+			}, 450); // place our update after obsidian has a opportunity to run some code
 		};
 
 		vault.on("create", updateFiles);
@@ -168,7 +169,7 @@ export const SidebarRootView = (props: SidebarRootViewProps) => {
                       Your contacts folder is currently set to the <strong>root of your vault</strong>. We advise to create a specific folder prevent system processing.
                     </p>
                     <p>
-                      <button onClick={props.createDefaultPluginFolder} className="action-card-button">Make contacts folder</button>
+                      <button onClick={props.createDefaultPluginFolder} className="mod-cta action-card-button">Make contacts folder</button>
                     </p>
                   </div>
                 </div>

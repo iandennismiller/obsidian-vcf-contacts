@@ -1,7 +1,7 @@
 ---
 N.FN: Yamada
 N.GN: Hana
-PHOTO: "null"
+PHOTO: https://raw.githubusercontent.com/broekema41/obsidian-vcf-contacts/refs/heads/master/assets/demo-data/avatars/avatar3.jpg
 "EMAIL[HOME]": hana.yamada@example.jp
 "EMAIL[WORK]": hana@company.co.jp
 "TEL[CELL]": "+819012345678"
@@ -16,12 +16,11 @@ ORG: Sakura Studio Collective
 "ADR[HOME].POSTAL": 600-8001
 "ADR[HOME].COUNTRY": Japan
 CATEGORIES: Design, Art
-UID: urn:uuid:a1
 VERSION: "4.0"
-
+UID: urn:uuid:019730a76bf36-48a6-9bcd-73482533234a
 ---
 #### Notes
 
 
 
- #Design # Art
+#Contact #Design # Art

@@ -49,6 +49,8 @@ function generateVCard(file: TFile): string {
 		const singleLineFields: Array<[string, string]> = [];
 		const structuredFields: Array<[string, string]> = [];
 
+    singleLineFields.push(['FN', file.basename]);
+
 		entries.forEach(([key, value]) => {
 			const keyObj = parseKey(key);
 

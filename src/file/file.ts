@@ -136,7 +136,7 @@ export function saveVcardFilePicker(data: string, obsidianFile?: TFile ) {
   try {
 
     const file = new Blob([data], { type: "text/vcard" });
-    const filename = obsidianFile ? '/' + obsidianFile.basename.replace(/ /g, '-') + '.vcf' : "/shared-contacts.vcf";
+    const filename = obsidianFile ? obsidianFile.basename.replace(/ /g, '-') + '.vcf' : "shared-contacts.vcf";
     const fileObject = new File([file], filename, { type: "text/vcard" });
 
     /**

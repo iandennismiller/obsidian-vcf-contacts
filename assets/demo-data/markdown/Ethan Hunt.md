@@ -1,7 +1,7 @@
 ---
 N.FN: Hunt
 N.GN: Ethan
-PHOTO: "null"
+PHOTO: https://raw.githubusercontent.com/broekema41/obsidian-vcf-contacts/refs/heads/master/assets/demo-data/avatars/avatar10.jpg
 "EMAIL[HOME]": ethan.hunt@imf.gov
 "EMAIL[WORK]": mission.control@imf.gov
 "TEL[CELL]": "+13035551234"
@@ -16,12 +16,11 @@ ORG: Impossible Missions
 "ADR[HOME].POSTAL": "00000"
 "ADR[HOME].COUNTRY": USA
 CATEGORIES: Spy, Agent, Action
-UID: urn:uuid:a2
 VERSION: "4.0"
-
+UID: urn:uuid:019730a76c0df-4fa2-b0cf-8078e4717c93
 ---
 #### Notes
 
 
 
- #Spy # Agent # Action
+#Contact #Spy # Agent # Action

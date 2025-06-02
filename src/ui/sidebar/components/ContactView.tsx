@@ -69,16 +69,22 @@ export const ContactView = (props: ContactProps) => {
     const topThree = deduped.reverse().slice(0, 3);
     if (!topThree.length) return null;
 
-    return topThree.map(([key, value]) => {
-      const keyParts = parseKey(key);
-      return renderItem(key, value, keyParts);
-    });
+    try {
+      return topThree.map(([key, value]) => {
+        const keyParts = parseKey(key);
+        return renderItem(key, value, keyParts);
+      });
+    } catch (e) {
+      console.error('Failed to render Display Items', e, topThree);
+      return null;
+    }
+
   };
 
 
 	const renderTopEmails =  (base: string, sortArray: string[], data: Record<string, any>) => {
     return renderTopThreeItems(base, sortArray, data, (key, value, keyParts) => {
-      return value.length > 24 ? (
+      return value.length > 23 ? (
         <CopyableItem key={key} value={value}>
           @ <a href={`mailto:${value}`}>Email {keyParts.type?.toLowerCase()} </a>
         </CopyableItem>

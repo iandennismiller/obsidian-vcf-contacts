@@ -1,9 +1,9 @@
 ---
 N.FN: Stark
 N.GN: Tony
-PHOTO: "null"
+PHOTO: https://raw.githubusercontent.com/broekema41/obsidian-vcf-contacts/refs/heads/master/assets/demo-data/avatars/avatar6.jpg
 "EMAIL[HOME]": tony.stark@starkindustries.com
-"EMAIL[WORK]": ironman@avengers.com
+"EMAIL[WORKSHOP]": ironman@avengers.com
 "TEL[CELL]": "+13105551234"
 "TEL[WORKSHOP]": "+13105551235"
 "TEL[USA]": "+14165551234"
@@ -16,13 +16,12 @@ ORG: Stark Industries
 "ADR[HOME].REGION": CA
 "ADR[HOME].POSTAL": "90265"
 "ADR[HOME].COUNTRY": USA
-CATEGORIES: Hero, Engineer, Billionaire, Philanthropist, Playboy
-UID: urn:uuid:a2
+CATEGORIES: Hero, Engineer, Billionaire, Philanthropist
 VERSION: "4.0"
-
+UID: urn:uuid:019730a76c09e-4768-b9bc-f4e7ff3b8b8d
 ---
 #### Notes
 
 
 
- #Hero # Engineer # Billionaire # Philanthropist # Playboy
+#Contact #Hero # Engineer # Billionaire # Philanthropist

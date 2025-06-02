@@ -19,6 +19,12 @@
   scrollbar-gutter: stable;
 }
 
+.contacts-view-close {
+  position: relative;
+  width: 100%;
+  padding-top: 34px;
+}
+
 .contact-card {
 	padding: 8px;
 }
@@ -107,6 +113,9 @@
 	text-align: right;
 	color: var(--nav-item-color);
 	border-bottom: 2px solid var(--divider-color);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .biz-headshot {
@@ -124,7 +133,8 @@
 
 .avatar-initials {
 	display: block;
-	width: 100px;
+  width: 100px;
+  height: 100px;
 	box-shadow: 0 0 0 2px var(--tag-border-color);
 	background-color: var(--tag-background);
 	border-radius: 50%;
@@ -290,14 +300,17 @@
 
 	.avatar-initials {
 		width: 85px;
+    height: 85px;
 	}
 
 
 	.bizzy-card-organization {
 		width: 240px;
-		padding: 6px;
-		padding-left: 14px;
-		text-align: left;
+    padding: 6px 65px 6px 14px;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 	}
 
 

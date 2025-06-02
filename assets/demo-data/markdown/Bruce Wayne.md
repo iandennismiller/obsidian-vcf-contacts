@@ -1,7 +1,7 @@
 ---
 N.FN: Wayne
 N.GN: Bruce
-PHOTO: "null"
+PHOTO: https://raw.githubusercontent.com/broekema41/obsidian-vcf-contacts/refs/heads/master/assets/demo-data/avatars/avatar16.jpg
 "EMAIL[HOME]": bruce.wayne@wayneenterprises.com
 "EMAIL[WORK]": batman@batcave.org
 "TEL[]": CELL:+12125550000
@@ -15,12 +15,11 @@ ORG: Wayne Enterprises
 "ADR[HOME].POSTAL": "10001"
 "ADR[HOME].COUNTRY": USA
 CATEGORIES: Detective, Billionaire, Vigilante
-UID: urn:uuid:dc-1
 VERSION: "4.0"
-
+UID: urn:uuid:019730a76c14a-4d32-a36e-a0f5dbf86fa3
 ---
 #### Notes
 
 
 
- #Detective # Billionaire # Vigilante
+#Contact #Detective # Billionaire # Vigilante

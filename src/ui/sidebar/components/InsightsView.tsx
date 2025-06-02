@@ -86,12 +86,15 @@ export const InsightsView = (props: ActionProps) => {
           </div>
         </div>
       ) : (
-        <button onClick={() => props.setDisplayInsightsView(false)}>Back</button>
+        <div className="contacts-view-close" >
+          <div className="modal-close-button" onClick={() => props.setDisplayInsightsView(false)}></div>
+        </div>
       )}
 
 
-      {!loading ? (
-          Array.from(immediateResults.entries()).length === 0 ? (
+{
+  !loading ? (
+    Array.from(immediateResults.entries()).length === 0 ? (
             <div className="action-card">
               <div className="action-card-content action-card-content--no-height">
                 <p>No insights available.</p>

@@ -1,7 +1,7 @@
 ---
 N.FN: Patel
 N.GN: Rajiv
-PHOTO: "null"
+PHOTO: https://raw.githubusercontent.com/broekema41/obsidian-vcf-contacts/refs/heads/master/assets/demo-data/avatars/avatar11.jpg
 "EMAIL[HOME]": rajiv.colors@rangmail.in
 "EMAIL[WORK]": rajiv@masala.in
 "TEL[CELL]": "+919811112222"
@@ -16,12 +16,11 @@ ORG: Masala Mosaic Creations
 "ADR[HOME].POSTAL": "400001"
 "ADR[HOME].COUNTRY": India
 CATEGORIES: Food, Festival
-UID: urn:uuid:a4
 VERSION: "4.0"
-
+UID: urn:uuid:019730a76c142-4455-9c1c-2c2bf7e5a40d
 ---
 #### Notes
 
 
 
- #Food # Festival
+#Contact #Food # Festival

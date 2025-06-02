@@ -3,13 +3,12 @@
 <div align="center">
 
 <!-- TOC --><a name="-vcf-contacts-plugin-for-obsidian"></a>
-# ✨ VCF Contacts Plugin for Obsidian  
-**Bring people into your knowledge graph.**  
+# VCF Contacts Plugin for Obsidian  
+**Bring people into your knowledge vault.**  
 
 
 A powerful way to manage, link, and export contact data directly within [Obsidian](https://obsidian.md).
 
-![Obsidian](https://img.shields.io/badge/Obsidian-%23483699.svg?style=for-the-badge&logo=obsidian&logoColor=white)
 ![VCF Contacts Plugin Interface](assets/vfz-contacts-overview.jpg)
 
 </div>
@@ -18,7 +17,7 @@ A powerful way to manage, link, and export contact data directly within [Obsidia
 
 <!-- TOC start -->
 # Table of Contents
-- [✨ VCF Contacts Plugin for Obsidian  ](#-vcf-contacts-plugin-for-obsidian)
+- [VCF Contacts Plugin for Obsidian  ](#-vcf-contacts-plugin-for-obsidian)
    * [🚀 Features at a Glance](#-features-at-a-glance)
    * [📦 Installation](#-installation)
       + [🔄 Automatic via Community Plugins](#-automatic-via-community-plugins)
@@ -50,13 +49,13 @@ A powerful way to manage, link, and export contact data directly within [Obsidia
 <!-- TOC --><a name="-features-at-a-glance"></a>
 ## 🚀 Features at a Glance
 
-- 📁 **Organized Contact Notes** – Every contact is a markdown file, enriched with vCard-compliant frontmatter.
-- 🔍 **Smart Search & Linking** – Easily find, navigate, and link to contacts from any note.
-- 🔄 **vCard 4.0 Support** – Import/export full contact data to/from `.vcf` files.
-- 🖼️ **Avatars Support** – Add profile pictures from local files or URLs.
-- 📅 **Birthday Reminders** – Keep track of important dates.
-- 📲 **Click-to-Call & Quick Copy** – Instantly act on phone numbers, emails, and more.
-- ✨ **Minimal, Markdown-native UI** – It's just markdown—but smarter.
+- **Organized Contact Notes** – Every contact is a markdown file, enriched with vCard-compliant frontmatter.
+- **Smart Search & Linking** – Easily find, navigate, and link to contacts from any note.
+- **vCard 4.0 Support** – Import/export full contact data to/from `.vcf` files.
+- **Avatars Support** – Add profile pictures from local files or URLs.
+- **Birthday Reminders** – Keep track of important dates.
+- **Click-to-Call & Quick Copy** – Instantly act on phone numbers, emails, and more.
+- **Minimal, Markdown-native UI** – It's just markdown—but smarter.
 
 ---
 
@@ -187,50 +186,50 @@ It supports a wide range of information, including:
 - 🏷️ **Tags and categories**
 - 🔒 **Privacy metadata and revision history**
 
-Using this format ensures your contacts are **portable**, **interoperable**, and **future-proof** — whether you're syncing across devices or backing up your data.
+Using this format ensures your contacts are **portable**, **interoperable**, and **future-proof**.. Whether you're syncing across devices or backing up your data.
 
 > ✅ The VCF Contacts plugin uses **vCard 4.0**, the latest version of the specification.
 
 📜 **Read the official vCard 4.0 spec**:  
 [RFC 6350 – vCard MIME Directory Profile](https://datatracker.ietf.org/doc/html/rfc6350)
 
----
 
 ---
 
 <!-- TOC --><a name="-example-contact-note-foo-bar"></a>
 ## 📄 Example Contact Note (Foo Bar)
 
-Below is a sample contact note for **Foo Bar**, showcasing real-world-style fields supported by the plugin and the vCard 4.0 format:
+Below is a sample contact note for **Ethan Hunt**, showcasing real-world-style fields supported by the plugin and the vCard 4.0 format:
 
 ![Foo Bar Card Example](assets/foo-bar-contact-card-example.jpg)
 
 ```markdown
 ---
-N.GN: Foo  # Given Name
-N.FN: Bar  # Family Name
-EMAIL[HOME]: "foo.bar@example.com"  # Personal Email
-EMAIL[WORK]: "foo.bar@corporate.fake"  # Work Email
-TEL[CELL]: "+1234567890"  # Mobile Phone
-TEL[HOME]: "+1987654321"  # Home Phone
-TEL[WORK]: "+1098765432"  # Work Phone
-BDAY: "1985-12-31"  # Birthday (YYYY-MM-DD)
-URL[HOME]: "https://foobar.example.com"  # Personal Website
-URL[WORK]: "https://company.fake/foobar"  # Work Website
-PHOTO: "https://picsum.photos/200"  # Profile Picture URL
-ADR[HOME].STREET: "123 Fake Street"  # Home Street
-ADR[HOME].LOCALITY: "Faketown"  # Home City
-ADR[HOME].POSTAL: "00000"  # Home ZIP Code
-ADR[HOME].COUNTRY: "Nowhere Land"  # Home Country
-CATEGORIES: "Work, Club"  # Tags/Categories
-VERSION: "4.0"  # vCard Format Version
+N.FN: Hunt
+N.GN: Ethan
+FN: Ethan Hunt
+PHOTO: https://raw.githubusercontent.com/broekema41/obsidian-vcf-contacts/refs/heads/master/assets/demo-data/avatars/avatar10.jpg
+"EMAIL[HOME]": ethan.hunt@imf.gov
+"EMAIL[WORK]": mission.control@imf.gov
+"TEL[CELL]": "+13035551234"
+"TEL[SECURE]": "+13035551235"
+"TEL[CANADA]": "+14165551234"
+BDAY: 1964-07-03
+"URL[HOME]": https://imf.gov/agents/hunt
+"URL[WORK]": https://phoenix.imf.gov/ethan
+ORG: Impossible Missions
+"ADR[HOME].STREET": 221B Spyglass Lane
+"ADR[HOME].LOCALITY": Unknown
+"ADR[HOME].POSTAL": "00000"
+"ADR[HOME].COUNTRY": USA
+CATEGORIES: Spy, Agent, Action
+UID: urn:uuid:019730a76c0df-4fa2-b0cf-8078e4717c93
+VERSION: "4.0"
+
 ---
+#### Notes
 
-#### 📝 Notes
-Additional information or personal notes about Foo Bar.  
-You can link, tag, or embed anything here like a regular Obsidian note.
-
-#Contact
+#Contact #Spy #Agent #Action
 ```
 
 ---
@@ -300,6 +299,8 @@ Here’s a breakdown of supported vCard fields and their **human-readable meanin
 <!-- TOC --><a name="-profile-photo"></a>
 ### 🖼️ Profile Photo
 
+Photo's avatars can also be imported from file and will be resized so that they become a integrated part of the contact markdown file by default. 
+
 | **vCard Field**  | **Readable Name**      | **Example**                                |
 |------------------|------------------------|--------------------------------------------|
 | `PHOTO`          | Profile Picture URL    | `https://example.com/photos/foo-bar.jpg`   |
@@ -328,7 +329,7 @@ This plugin solves that beautifully. ✨
 
 ✔ **vCard 4.0 keeps contacts tidy, organized, and universally shareable.**  
 ✔ **Easily import/export contacts between Obsidian and your favorite apps.**  
-✔ **Covers nearly all real-world use cases — personal, work, or hybrid.**  
+✔ **Covers nearly all real-world use cases personal, work, or hybrid.**  
 ✔ **Integrates contacts directly into your knowledge graph.**  
 ✔ **Feels native, modern, and fun to use.**
 
