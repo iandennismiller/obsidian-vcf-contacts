@@ -18,7 +18,7 @@ const insightsSettingDefaults = insightsSetting.reduce((acc:Record<string, strin
 }, {} as Record<string, string>);
 
 export const DEFAULT_SETTINGS: ContactsPluginSettings = {
-  contactsFolder: '/',
+  contactsFolder: '',
   defaultHashtag: '',
   ...insightsSettingDefaults
 }
