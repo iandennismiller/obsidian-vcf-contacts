@@ -4,12 +4,7 @@ import { InsighSettingProperties } from "src/insights/insightDefinitions";
 import { insightService } from "src/insights/insightService";
 import ContactsPlugin from "src/main";
 import { FolderSuggest } from "src/settings/FolderSuggest";
-
-export interface ContactsPluginSettings {
-  contactsFolder: string;
-  defaultHashtag: string;
-  [key: string]: string|boolean;
-}
+import { ContactsPluginSettings } from "src/settings/settings.d"
 
 const insightsSetting = insightService.settings();
 const insightsSettingDefaults = insightsSetting.reduce((acc:Record<string, string|boolean>, setting) => {
