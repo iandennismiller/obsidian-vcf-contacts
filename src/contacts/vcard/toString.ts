@@ -1,6 +1,6 @@
 import { Notice, TFile } from "obsidian";
 import { parseKey } from "src/contacts";
-import { VCardStructuredFields } from "src/contacts/vcard";
+import { StructuredFields } from "src/contacts/vcard/shared/structuredFields";
 import { getApp } from "src/context/sharedAppContext";
 
 function filterNonNull<T>(array: (T | null | undefined)[]): T[] {
@@ -18,10 +18,10 @@ function renderStructuredLines(structuredFields:[string, string][]):string[] {
 		const type = keyObj.type ? `;TYPE=${keyObj.type}` : '';
 		switch (keyObj.key) {
 			case 'N': {
-				return `N${type}:${VCardStructuredFields.N.map(field => fields[key + '.' + field] || "").join(";")}`;
+				return `N${type}:${StructuredFields.N.map(field => fields[key + '.' + field] || "").join(";")}`;
 			}
 			case 'ADR': {
-				return `ADR${type}:${VCardStructuredFields.ADR.map(field => fields[key + '.' + field] || "").join(";")}`;
+				return `ADR${type}:${StructuredFields.ADR.map(field => fields[key + '.' + field] || "").join(";")}`;
 			}
 			default: {
 				return '';
@@ -75,7 +75,7 @@ function generateVCard(file: TFile): string {
 	}
 }
 
-export async function vcardToString(contactFiles: TFile[]): Promise<string> {
+export async function toString(contactFiles: TFile[]): Promise<string> {
 	return contactFiles
 		.map(file => generateVCard(file))
 		.filter(vcard => vcard !== "") // Remove empty results

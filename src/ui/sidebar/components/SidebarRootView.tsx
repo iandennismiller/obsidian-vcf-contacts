@@ -1,7 +1,7 @@
-import { MarkdownView, normalizePath, Notice, TAbstractFile, TFile, TFolder } from "obsidian";
+import { MarkdownView, normalizePath, Notice, TFile, TFolder } from "obsidian";
 import * as React from "react";
 import { Contact, getFrontmatterFromFiles, mdRender } from "src/contacts";
-import { createEmptyVcard, parseToSingles, parseVcard, vcardToString } from "src/contacts/vcard";
+import { vcard } from "src/contacts/vcard";
 import { getApp } from "src/context/sharedAppContext";
 import { getSettings, onSettingsChange } from "src/context/sharedSettingsContext";
 import {
@@ -112,22 +112,21 @@ export const SidebarRootView = (props: SidebarRootViewProps) => {
                     if (fileContent === '') {
                       return;
                     } else {
-                      const singles: string[] = parseToSingles(fileContent);
-                      for (const single of singles) {
-                        const records = await parseVcard(single);
-                        const mdContent = mdRender(records, settings.defaultHashtag);
-                        createContactFile(app, settings.contactsFolder, mdContent, createFileName(records))
+                      const records = await vcard.parse(fileContent);
+                      for (const record of records) {
+                        const mdContent = mdRender(record, settings.defaultHashtag);
+                        createContactFile(app, settings.contactsFolder, mdContent, createFileName(record))
                       }
                     }
                   })
                 }}
                 exportAllVCF={async() => {
                   const allContactFiles = contacts.map((contact)=> contact.file)
-                  const vcards = await vcardToString(allContactFiles);
+                  const vcards = await vcard.toString(allContactFiles);
                   saveVcardFilePicker(vcards)
                 }}
                 onCreateContact={async () => {
-                  const records = await createEmptyVcard();
+                  const records = await vcard.createEmpty();
                   const mdContent = mdRender(records, settings.defaultHashtag);
                   createContactFile(app, settings.contactsFolder, mdContent, createFileName(records))
                 }}
@@ -156,7 +155,7 @@ export const SidebarRootView = (props: SidebarRootViewProps) => {
               }}
               exportVCF={(contactFile: TFile) => {
                 (async () => {
-                  const vcards = await vcardToString([contactFile])
+                  const vcards = await vcard.toString([contactFile])
                   saveVcardFilePicker(vcards, contactFile)
                 })();
               }} />

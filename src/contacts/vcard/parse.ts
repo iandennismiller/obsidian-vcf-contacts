@@ -1,6 +1,7 @@
-import { VCardForObsidianRecord, VCardStructuredFields, VCardSupportedKey } from "src/contacts/vcard";
-import { getApp } from "src/context/sharedAppContext";
-import { ContactNameModal } from "src/ui/modals/contactNameModal";
+import { VCardForObsidianRecord, VCardSupportedKey } from "src/contacts/vcard";
+import { ensureHasName } from "src/contacts/vcard/shared/ensureHasName";
+import { sortVCardOFields } from "src/contacts/vcard/shared/sortVcardFields";
+import { StructuredFields } from "src/contacts/vcard/shared/structuredFields";
 import { convertToLatestVCFPhotoFormat } from "src/util/avatarActions";
 
 function unfoldVCardLines(vCardData: string): string[] {
@@ -23,77 +24,6 @@ function unfoldVCardLines(vCardData: string): string[] {
   if (currentLine) unfoldedLines.push(currentLine);
 
   return unfoldedLines;
-}
-/**
- * Extracts the base key from a vCard field name.
- * - If the key contains `[`, extract everything before it.
- * - Else if the key contains `.`, extract everything before the first dot.
- * - Otherwise, return the key as is.
- * @param key The full vCard field key.
- * @returns The extracted base key.
- */
-function extractBaseKey(key: string): string {
-	if (key.includes("[")) {
-		return key.split("[")[0];
-	} else if (key.includes(".")) {
-		return key.split(".")[0];
-	}
-	return key;
-}
-
-/**
- * Sorts a vCard object:
- * - Moves priority fields (e.g., `N`, `FN`, `EMAIL`, `TEL`) to the top.
- * - Places `ADR` fields **after** `BDAY`.
- * - Sorts indexed fields (`[1:]`, `[1:TYPE]`) in order.
- * @param vCardObject The parsed vCard object.
- * @returns A sorted vCard object.
- */
-function sortVCardObject(vCardObject: VCardForObsidianRecord): VCardForObsidianRecord {
-	// Define sorting priority
-	const priorityOrder = [
-		"N", "FN", "PHOTO",
-		"EMAIL", "TEL",
-		"BDAY",
-		"ADR", "URL",
-		"ORG", "TITLE", "ROLE"
-	];
-
-	// Separate priority and other fields
-	const priorityEntries: VCardForObsidianRecord = {};
-	const adrEntries: VCardForObsidianRecord = {};
-	const otherEntries: VCardForObsidianRecord = {};
-
-	Object.entries(vCardObject).forEach(([key, value]) => {
-		const baseKey = extractBaseKey(key);
-
-		if (priorityOrder.includes(baseKey)) {
-			if (baseKey === "ADR") {
-				adrEntries[key] = value; // Keep ADR separate to place after BDAY
-			} else {
-				priorityEntries[key] = value;
-			}
-		} else {
-			otherEntries[key] = value;
-		}
-	});
-
-	// Sort priority entries based on priority order
-	const sortedPriorityEntries = Object.fromEntries(
-		Object.entries(priorityEntries).sort(([keyA], [keyB]) => {
-			const baseKeyA = extractBaseKey(keyA);
-			const baseKeyB = extractBaseKey(keyB);
-			return priorityOrder.indexOf(baseKeyA) - priorityOrder.indexOf(baseKeyB);
-		})
-	);
-
-
-	// Sort non-priority fields alphabetically while preserving indexes
-	const sortedOtherEntries = Object.fromEntries(
-		Object.entries(otherEntries).sort(([a], [b]) => a.localeCompare(b))
-	);
-
-	return { ...sortedPriorityEntries, ...adrEntries, ...sortedOtherEntries };
 }
 
 
@@ -151,9 +81,9 @@ function indexIfKeysExist(vCardObject: VCardForObsidianRecord, newEntry: VCardFo
 }
 
 
-function parseStructuredField(key: keyof typeof VCardStructuredFields, value: string, typeValues: string): Record<string, string> {
+function parseStructuredField(key: keyof typeof StructuredFields, value: string, typeValues: string): Record<string, string> {
 	const components = value.split(";");
-	const structure = VCardStructuredFields[key];
+	const structure = StructuredFields[key];
 	const result: Record<string, string> = {};
 
 	components.forEach((comp, index) => {
@@ -185,8 +115,8 @@ function parseVCardLine(line: string): VCardForObsidianRecord {
 		parsedData['PHOTO'] = convertToLatestVCFPhotoFormat(line);
 	} else if (key === 'VERSION') {
 		parsedData['VERSION'] = '4.0';
-	} else if (propKey in VCardStructuredFields) {
-		parsedData = parseStructuredField(propKey as keyof typeof VCardStructuredFields, value, typeValues);
+	} else if (propKey in StructuredFields) {
+		parsedData = parseStructuredField(propKey as keyof typeof StructuredFields, value, typeValues);
 	} else if (propKey in ['BDAY', 'ANNIVERSARY']) {
 		parsedData[`${propKey}${typeValues}`] = formatVCardDate(value)
 	} else {
@@ -201,7 +131,6 @@ function parseVCardLine(line: string): VCardForObsidianRecord {
 function formatVCardDate(input: string): string {
 	const trimmed = input.trim();
 
-	// Input from google can be "19990211", insert dashes.
 	if (trimmed.length === 8 && !isNaN(Number(trimmed))) {
 		const dashed = `${trimmed.slice(0, 4)}-${trimmed.slice(4, 6)}-${trimmed.slice(6, 8)}`;
 		const date = new Date(dashed);
@@ -222,60 +151,24 @@ export function parseToSingles(vCardsRaw:string): string[] {
 	return  vCardsRaw.split(/BEGIN:VCARD\s*[\n\r]+|END:VCARD\s*[\n\r]+/).filter(section => section.trim());
 }
 
-export async function createEmptyVcard() {
-	const vCardObject: Record<string, any> = {
-        "N.PREFIX": "",
-        "N.GN": "",
-        "N.MN": "",
-        "N.FN": "",
-        "N.SUFFIX": "",
-		"TEL[CELL]": "",
-		"TEL[HOME]": "",
-		"TEL[WORK]": "",
-		"EMAIL[HOME]": "",
-		"EMAIL[WORK]": "",
-		"BDAY": "",
-		"PHOTO": "",
-		"ADR[HOME].STREET": "",
-		"ADR[HOME].LOCALITY": "",
-		"ADR[HOME].POSTAL": "",
-		"ADR[HOME].COUNTRY": "",
-		"URL[WORK]": "",
-        "ORG": "",
-		"CATEGORIES": "",
-		"VERSION": "4.0"
-	}
-	const checkedNameVCardObject = await checkOrAskForName(vCardObject);
-	return sortVCardObject(checkedNameVCardObject);
-}
+export async function parse(vCardData: string): Promise<VCardForObsidianRecord[]> {
+  const singles: string[] = parseToSingles(vCardData);
 
-export async function parseVcard(vCardData: string) {
-	const unfoldedLines = unfoldVCardLines(vCardData);
-	const vCardObject: Record<string, any> = {};
+  return await Promise.all(singles.map(async (singleVCard) => {
+    const unfoldedLines = unfoldVCardLines(singleVCard);
+    const vCardObject: Record<string, any> = {};
 
-	for (const line of unfoldedLines) {
-		const parsedLine = parseVCardLine(line);
-    if(parsedLine) {
-      const indexedParsedLine = indexIfKeysExist(vCardObject, parsedLine)
-      Object.assign(vCardObject, indexedParsedLine);
+    for (const line of unfoldedLines) {
+      const parsedLine = parseVCardLine(line);
+      if (parsedLine) {
+        const indexedParsedLine = indexIfKeysExist(vCardObject, parsedLine)
+        Object.assign(vCardObject, indexedParsedLine);
+      }
     }
-	}
-	const checkedNameVCardObject = await checkOrAskForName(vCardObject);
-	return sortVCardObject(checkedNameVCardObject);
+    const checkedNameVCardObject = await ensureHasName(vCardObject);
+    return sortVCardOFields(checkedNameVCardObject);
+  }));
 }
 
-export async function checkOrAskForName(vCardObject: VCardForObsidianRecord): Promise<VCardForObsidianRecord> {
-	const app = getApp();
-  return new Promise((resolve) => {
-		if (vCardObject['N.GN'] && vCardObject['N.FN']) {
-			resolve(vCardObject);
-		} else {
-			new ContactNameModal(app, vCardObject['FN'], (givenName, familyName) => {
-				vCardObject['N.GN'] = givenName;
-				vCardObject['N.FN'] = familyName;
-				resolve(vCardObject);
-			}).open();
-		}
-	});
-}
+
 

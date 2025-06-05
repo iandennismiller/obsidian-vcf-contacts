@@ -1,7 +1,6 @@
 {
   "compilerOptions": {
     "baseUrl": ".",
-    "sourceMap": true,
     "inlineSourceMap": true,
     "inlineSources": true,
     "module": "ESNext",
