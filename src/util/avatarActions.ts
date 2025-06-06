@@ -1,7 +1,7 @@
 import { Notice } from "obsidian";
 import { Contact, updateFrontMatterValue } from "src/contacts";
 import { openFilePicker } from "src/file/file";
-import { RunType } from "src/insights/insight";
+import { RunType } from "src/insights/insight.d";
 import { insightService } from "src/insights/insightService";
 
 const resizeAndCropImage = (img: HTMLImageElement, outputSize: number): HTMLCanvasElement => {
@@ -74,13 +74,4 @@ export const processAvatar = async (contact: Contact) => {
 	}
 }
 
-export const convertToLatestVCFPhotoFormat = (line:string) => {
-	const url = line.startsWith('PHOTO;') ? line.slice(6) : line;
-	const match = url.match(/^ENCODING=BASE64;(.*?):/);
-		if (match) {
-		const mimeType = match[1].toLowerCase(); // e.g., "jpeg"
-		const base64Data = url.split(':').slice(1).join(':');
-		return `data:image/${mimeType};base64,${base64Data}`;
-	}
-	return url;
-}
+

@@ -1,5 +1,5 @@
 import { App } from "obsidian";
-import { createEmpty } from 'src/contacts/vcard/createEmpty';
+import { vcard } from "src/contacts/vcard";
 import { setApp } from "src/context/sharedAppContext";
 import { describe, expect, it, vi } from 'vitest';
 
@@ -28,7 +28,7 @@ vi.mock('src/ui/modals/contactNameModal', () => {
 });
 describe('vcard creatEmpty', () => {
   it('should ask for a firstname and lastname ', async () => {
-    const empty = await createEmpty();
+    const empty = await vcard.createEmpty();
     expect(empty).toBeDefined();
 
     expect(empty).toEqual(expect.objectContaining({
