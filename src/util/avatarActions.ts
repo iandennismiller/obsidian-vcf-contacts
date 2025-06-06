@@ -1,7 +1,7 @@
 import { Notice } from "obsidian";
 import { Contact, updateFrontMatterValue } from "src/contacts";
 import { openFilePicker } from "src/file/file";
-import { RunType } from "src/insights/insightDefinitions";
+import { RunType } from "src/insights/insight";
 import { insightService } from "src/insights/insightService";
 
 const resizeAndCropImage = (img: HTMLImageElement, outputSize: number): HTMLCanvasElement => {

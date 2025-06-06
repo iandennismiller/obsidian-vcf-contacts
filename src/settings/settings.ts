@@ -1,6 +1,6 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
 import { setSettings } from "src/context/sharedSettingsContext";
-import { InsighSettingProperties } from "src/insights/insightDefinitions";
+import { InsighSettingProperties } from "src/insights/insight";
 import { insightService } from "src/insights/insightService";
 import ContactsPlugin from "src/main";
 import { FolderSuggest } from "src/settings/FolderSuggest";

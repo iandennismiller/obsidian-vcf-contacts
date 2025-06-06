@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Contact, updateFrontMatterValue } from "src/contacts";
 import { getSettings } from "src/context/sharedSettingsContext";
-import { InsightProcessor, InsightQueItem, RunType } from "src/insights/insightDefinitions";
+import { InsightProcessor, InsightQueItem, RunType } from "src/insights/insight";
 
 // Zero dependency uuid generator as its not used for millions of records
 const generateUUID = (): string => {

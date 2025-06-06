@@ -1,10 +1,10 @@
 import { App } from "obsidian";
 import { clearApp,getApp, setApp } from 'src/context/sharedAppContext'
 import {
-  setSettings,
-  getSettings,
   clearSettings,
+  getSettings,
   onSettingsChange,
+  setSettings,
 } from 'src/context/sharedSettingsContext';
 import type { ContactsPluginSettings } from 'src/settings/settings.d';
 import { afterEach,describe, expect, it, vi } from 'vitest';
