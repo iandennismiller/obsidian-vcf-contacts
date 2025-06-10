@@ -1,5 +1,4 @@
 import { ensureHasName } from "src/contacts/vcard/shared/ensureHasName";
-import { sortVCardOFields } from "src/contacts/vcard/shared/sortVcardFields";
 
 export async function createEmpty() {
   const vCardObject: Record<string, any> = {
@@ -24,6 +23,5 @@ export async function createEmpty() {
     "CATEGORIES": "",
     "VERSION": "4.0"
   }
-  const checkedNameVCardObject = await ensureHasName(vCardObject);
-  return sortVCardOFields(checkedNameVCardObject);
+  return await ensureHasName(vCardObject);
 }

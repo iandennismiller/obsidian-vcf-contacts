@@ -1,0 +1,19 @@
+BEGIN:VCARD
+N:;Zahra;;;
+ADR;TYPE=HOME:;;2 Sand Dune Street;Dubai;;00000;UAE
+FN:Zahra Ali
+FN:Zahra Ali
+EMAIL;TYPE=HOME:zahra.moon@miragemail.ae
+EMAIL;TYPE=WORK:zahra@dreambuild.ae
+TEL;TYPE=CELL:+971501234567
+TEL;TYPE=BOTIM:+971501234568
+TEL;TYPE=CANADA:+14165553333
+BDAY:1990-08-08
+URL;TYPE=HOME:https://zahra.ae
+URL;TYPE=WORK:https://dreambuild.ae/zahra
+ORG:Mirage Dream Builders
+ROLE:Lead Vision Architect
+CATEGORIES:Architecture, Stars
+VERSION:4.0
+UID:urn:uuid:019730a76c182-4191-824c-9d9607f52656
+END:VCARD

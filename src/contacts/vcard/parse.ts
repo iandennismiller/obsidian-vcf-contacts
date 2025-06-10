@@ -1,6 +1,6 @@
 import { VCardForObsidianRecord, VCardSupportedKey } from "src/contacts/vcard";
 import { ensureHasName } from "src/contacts/vcard/shared/ensureHasName";
-import { sortVCardOFields } from "src/contacts/vcard/shared/sortVcardFields";
+import { sortVCardOFields } from "src/contacts/sortVcardFields";
 import { StructuredFields } from "src/contacts/vcard/shared/structuredFields";
 import { photoLineFromV3toV4 } from "src/util/photoLineFromV3toV4";
 
@@ -111,7 +111,7 @@ function parseVCardLine(line: string): VCardForObsidianRecord {
 	let parsedData: Record<string, any> = {};
 
 	const typeValues:string = params["type"] ? `[${params["type"].join(",")}]` : "";
-	if (key.contains('PHOTO') && key.contains('ENCODING=BASE64')) {
+	if (key.includes('PHOTO') && key.includes('ENCODING=BASE64')) {
 		parsedData['PHOTO'] = photoLineFromV3toV4(line);
 	} else if (key === 'VERSION') {
 		parsedData['VERSION'] = '4.0';
@@ -165,8 +165,7 @@ export async function parse(vCardData: string): Promise<VCardForObsidianRecord[]
         Object.assign(vCardObject, indexedParsedLine);
       }
     }
-    const checkedNameVCardObject = await ensureHasName(vCardObject);
-    return sortVCardOFields(checkedNameVCardObject);
+    return await ensureHasName(vCardObject);
   }));
 }
 

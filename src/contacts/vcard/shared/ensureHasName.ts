@@ -9,8 +9,17 @@ export async function ensureHasName(vCardObject: VCardForObsidianRecord): Promis
       resolve(vCardObject);
     } else {
       new ContactNameModal(app, vCardObject['FN'], (givenName, familyName) => {
+        if (vCardObject['N.PREFIX'] === undefined) {
+          vCardObject['N.PREFIX'] = '';
+        }
         vCardObject['N.GN'] = givenName;
+        if (vCardObject['N.MN'] === undefined) {
+          vCardObject['N.MN'] = '';
+        }
         vCardObject['N.FN'] = familyName;
+        if (vCardObject['N.SUFFIX'] === undefined) {
+          vCardObject['N.SUFFIX'] = '';
+        }
         resolve(vCardObject);
       }).open();
     }
