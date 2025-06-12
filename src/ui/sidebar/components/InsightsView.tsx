@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useEffect, useRef, useState } from "react";
 import { Contact } from "src/contacts";
-import { InsightQueItem, RunType } from "src/insights/insightDefinitions";
+import { InsightQueItem, RunType } from "src/insights/insight.d";
 import { insightService } from "src/insights/insightService";
 
 type ActionProps = {

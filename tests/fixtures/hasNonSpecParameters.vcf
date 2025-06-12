@@ -1,0 +1,6 @@
+BEGIN:VCARD
+N:My;Name;;;
+EMAIL;TYPE=HOME:my.name@example.com
+NONSPEC;TYPE=HOME:non-spec-value
+X-NONSPEC;TYPE=HOME:x-non-spec-value
+END:VCARD

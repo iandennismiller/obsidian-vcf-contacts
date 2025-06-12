@@ -30,11 +30,17 @@ export enum VCardSupportedKey {
   SOCIALPROFILE = "Social Profile"
 }
 
-export const VCardStructuredFields = {
-	N: ["FN", "GN", "MN", "PREFIX", "SUFFIX"],
-	ADR: ["PO", "EXT", "STREET", "LOCALITY", "REGION", "POSTAL", "COUNTRY"]
-} as const;
-
 export interface VCardForObsidianRecord {
 	[key: string]: string,
+}
+
+export interface VCardToStringError {
+  status: string;
+  file: string;
+  message: string;
+}
+
+export interface VCardToStringReply {
+  vcards: string;
+  errors: VCardToStringError[];
 }

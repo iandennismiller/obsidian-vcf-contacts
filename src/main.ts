@@ -4,8 +4,8 @@ import { Plugin } from 'obsidian';
 import { ContactsView } from "src/ui/sidebar/sidebarView";
 import { CONTACTS_VIEW_CONFIG } from "src/util/constants";
 import myScrollTo from "src/util/myScrollTo";
-
-import { ContactsPluginSettings, ContactsSettingTab, DEFAULT_SETTINGS } from './settings/settings';
+import { ContactsPluginSettings } from  './settings/settings.d';
+import { ContactsSettingTab, DEFAULT_SETTINGS } from './settings/settings';
 
 export default class ContactsPlugin extends Plugin {
 	settings: ContactsPluginSettings;

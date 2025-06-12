@@ -1,9 +1,9 @@
 import {App, normalizePath, Notice, Platform,TAbstractFile, TFile, TFolder, Vault, Workspace} from "obsidian";
 import { getFrontmatterFromFiles } from "src/contacts";
 import { getSettings } from "src/context/sharedSettingsContext";
-import { RunType } from "src/insights/insightDefinitions";
+import { RunType } from "src/insights/insight.d";
 import { insightService } from "src/insights/insightService";
-import { FileExistsModal } from "src/ui/modals/fileExistsModal";;
+import { FileExistsModal } from "src/ui/modals/fileExistsModal";
 
 export async function openFile(file: TFile, workspace: Workspace) {
   const leaf = workspace.getLeaf()

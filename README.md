@@ -337,6 +337,20 @@ Start using the plugin today and share your experience in the [💬 GitHub Discu
 
 ---
 
+## 📘 Testing strategy
+Our goal is to maintain high-confidence, non-UI testing that focuses on:
+* Validating all resolved production bugs.
+* Thoroughly testing deep module interfaces (e.g., parsing, formatting, file logic, syncing, processors etc)
+
+Use the following commands to run tests and view coverage:
+```bash
+npm run test
+npm run test:coverage
+```
+For a breakdown of our testing approach, structure, and goals, see:
+👉 [our testing strategy](assets/docs/testing-strategy.md)
+---
+
 <!-- TOC --><a name="-acknowledgements"></a>
 ## 🙏 Acknowledgements
 
