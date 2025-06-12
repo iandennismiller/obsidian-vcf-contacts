@@ -6,7 +6,7 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   resolve: {
     alias: {
-      obsidian: path.resolve(__dirname, 'tests/setup/ObsidianMock.ts'),
+      obsidian: path.resolve(__dirname, 'tests/setup/emptyObsidianMock.ts'),
     },
   },
   test: {
@@ -17,7 +17,7 @@ export default defineConfig({
       provider: 'istanbul',
       reporter: ['text', 'html'],
       reportsDirectory: './coverage',
-      include: ['src/context/*.ts', 'src/contacts/vcard/**/*.ts'],
+      include: ['src/context/*.ts', 'src/contacts/vcard/**/*.ts', 'src/util/photoLineFromV3toV4.ts'],
       exclude: ['src/**/*.tsx', 'src/**/*.d.ts']
     },
   },

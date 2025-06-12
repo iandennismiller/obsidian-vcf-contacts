@@ -7,7 +7,6 @@ import { describe, expect, it, vi } from 'vitest';
 setApp({
   metadataCache: {
     getFileCache: (file: TFile) => {
-      console.log(file.basename);
       const frontmatter = fixtures.readFrontmatterFixture(file.basename);
       return {
         frontmatter
@@ -186,7 +185,6 @@ describe('vcard tostring', () => {
   it('should collect and return a error if there is any type of failure', async () => {
     const result = await vcard.toString([{ basename: 'no-exist.frontmatter' } as TFile]);
     const { vcards, errors } = result;
-    console.log(errors);
     expect(errors.length).toBe(1)
     expect(errors[0].file).toBe('no-exist.frontmatter');
     expect(errors[0].message).not.toBe('');
