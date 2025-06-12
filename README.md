@@ -347,6 +347,7 @@ Use the following commands to run tests and view coverage:
 npm run test
 npm run test:coverage
 ```
+
 For a breakdown of our testing approach, structure, and goals, see:
 👉 [our testing strategy](assets/docs/testing-strategy.md)
 ---
