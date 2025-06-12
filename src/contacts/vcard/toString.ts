@@ -42,7 +42,9 @@ function renderSingleKey([key, value]:[string, string]):string  {
 function generateVCard(file: TFile): string {
   const { metadataCache } = getApp();
   const frontMatter = metadataCache.getFileCache(file)?.frontmatter;
-  if (!frontMatter) return "";
+  if (!frontMatter) {
+    throw new Error('No frontmatter found.');
+  }
 
   const entries = Object.entries(frontMatter) as Array<[string, string]>;
 
@@ -56,9 +58,6 @@ function generateVCard(file: TFile): string {
 
     if (['ADR', 'N'].includes(keyObj.key)) {
       structuredFields.push([key, value]);
-    } else if(['VERSION'].includes(keyObj.key) ) {
-      // we target always v4 output
-      singleLineFields.push(['VERSION', '4.0']);
     } else {
       singleLineFields.push([key, value]);
     }

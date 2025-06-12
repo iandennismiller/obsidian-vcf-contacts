@@ -148,9 +148,49 @@ describe('vcard parse', () => {
 
 
 describe('vcard tostring', () => {
-  it('should be able to turn basic frontmatter to vcf string', async () => {
-    const result = await vcard.toString([{ basename: 'basic.frontmatter' } as TFile]);
-    console.log(result);
+  it('should be able to turn base frontmatter to vcf string', async () => {
+    const result = await vcard.toString([{ basename: 'base.frontmatter' } as TFile]);
+    const { vcards, errors } = result;
+
+    expect(errors).toEqual([]);
+
+    expect(vcards).toMatch(/^N:OReilly;Liam;;;$/m);
+    expect(vcards).toMatch(/^ADR;TYPE=HOME:;;18 Clover Court;Dublin;;D02;Ireland$/m);
+
+    const emailLines = vcards.match(/^EMAIL;TYPE=.*:.*$/gm) || [];
+    expect(emailLines.length).toBe(2);
+    expect(emailLines[0]).toMatch(/TYPE=HOME/);
+    expect(emailLines[1]).toMatch(/TYPE=WORK/);
+
+    // FN should include the file name (FN:base.frontmatter)
+    expect(vcards).toMatch(/^FN:base\.frontmatter$/m);
+
+    expect(vcards).toMatch(/^BEGIN:VCARD$/m);
+    expect(vcards).toMatch(/^END:VCARD$/m);
   });
+
+  it('should be able revert the indexed fields to lines', async () => {
+    const result = await vcard.toString([{ basename: 'hasDuplicateParameters.frontmatter' } as TFile]);
+    const { vcards, errors } = result;
+
+    const aniLines = vcards.match(/^ANNIVERSARY:.*$/gm) || [];
+    expect(aniLines.length).toBe(2);
+    const telLines = vcards.match(/^TEL.*:.*$/gm) || [];
+    expect(telLines.length).toBe(5);
+    const telWorkLines = vcards.match(/^TEL;TYPE=WORK:.*$/gm) || [];
+    expect(telWorkLines.length).toBe(2);
+    expect(vcards).toMatch(/^BEGIN:VCARD$/m);
+    expect(vcards).toMatch(/^END:VCARD$/m);
+  });
+
+  it('should collect and return a error if there is any type of failure', async () => {
+    const result = await vcard.toString([{ basename: 'no-exist.frontmatter' } as TFile]);
+    const { vcards, errors } = result;
+    console.log(errors);
+    expect(errors.length).toBe(1)
+    expect(errors[0].file).toBe('no-exist.frontmatter');
+    expect(errors[0].message).not.toBe('');
+  });
+
 
 });

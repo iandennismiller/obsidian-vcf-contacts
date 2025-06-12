@@ -6,10 +6,15 @@ export function readVcfFixture(fileName: string): string {
   return readFileSync(filePath, 'utf8');
 }
 
-export function readFrontmatterFixture(fileName: string): Record<string, any> {
+export function readFrontmatterFixture(fileName: string): Record<string, any>|undefined {
   const fullPath = resolve(__dirname, fileName + '.js');
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-   return require(fullPath);
+  try {
+    return require(fullPath);
+  } catch (e) {
+    return;
+  }
+
 }
 
 export const fixtures = {
