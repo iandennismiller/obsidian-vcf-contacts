@@ -350,6 +350,7 @@ npm run test:coverage
 
 For a breakdown of our testing approach, structure, and goals, see:
 👉 [our testing strategy](assets/docs/testing-strategy.md)
+
 ---
 
 <!-- TOC --><a name="-acknowledgements"></a>
