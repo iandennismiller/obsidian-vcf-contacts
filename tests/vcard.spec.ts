@@ -1,10 +1,20 @@
-import { App } from "obsidian";
+import { App, TFile } from "obsidian";
 import { vcard } from "src/contacts/vcard";
 import { setApp } from "src/context/sharedAppContext";
 import { fixtures } from "tests/fixtures/fixtures";
 import { describe, expect, it, vi } from 'vitest';
 
-setApp({} as App);
+setApp({
+  metadataCache: {
+    getFileCache: (file: TFile) => {
+      console.log(file.basename);
+      const frontmatter = fixtures.readFrontmatterFixture(file.basename);
+      return {
+        frontmatter
+      };
+    }
+  }
+} as unknown as App);
 
 vi.mock('src/ui/modals/contactNameModal', () => {
   class ContactNameModal {
@@ -134,7 +144,13 @@ describe('vcard parse', () => {
     expect(result[0]['N.FN']).toBe('Jan');
     expect(result[0]['NOTE']).toBe('This is a long note that continues on the next line, and still keeps going.');
   });
-
-
 });
 
+
+describe('vcard tostring', () => {
+  it('should be able to turn basic frontmatter to vcf string', async () => {
+    const result = await vcard.toString([{ basename: 'basic.frontmatter' } as TFile]);
+    console.log(result);
+  });
+
+});

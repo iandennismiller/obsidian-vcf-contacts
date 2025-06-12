@@ -1,6 +1,7 @@
-import { Notice, TFile } from "obsidian";
+import { TFile } from "obsidian";
 import { parseKey } from "src/contacts";
 import { StructuredFields } from "src/contacts/vcard/shared/structuredFields";
+import { VCardToStringError, VCardToStringReply } from "src/contacts/vcard/shared/vcard";
 import { getApp } from "src/context/sharedAppContext";
 
 function filterNonNull<T>(array: (T | null | undefined)[]): T[] {
@@ -39,45 +40,54 @@ function renderSingleKey([key, value]:[string, string]):string  {
 }
 
 function generateVCard(file: TFile): string {
-	try {
-		const { metadataCache } = getApp();
-		const frontMatter = metadataCache.getFileCache(file)?.frontmatter;
-		if (!frontMatter) return "";
+  const { metadataCache } = getApp();
+  const frontMatter = metadataCache.getFileCache(file)?.frontmatter;
+  if (!frontMatter) return "";
 
-		const entries = Object.entries(frontMatter) as Array<[string, string]>;
+  const entries = Object.entries(frontMatter) as Array<[string, string]>;
 
-		const singleLineFields: Array<[string, string]> = [];
-		const structuredFields: Array<[string, string]> = [];
+  const singleLineFields: Array<[string, string]> = [];
+  const structuredFields: Array<[string, string]> = [];
 
-    singleLineFields.push(['FN', file.basename]);
+  singleLineFields.push(['FN', file.basename]);
 
-		entries.forEach(([key, value]) => {
-			const keyObj = parseKey(key);
+  entries.forEach(([key, value]) => {
+    const keyObj = parseKey(key);
 
-			if (['ADR', 'N'].includes(keyObj.key)) {
-				structuredFields.push([key, value]);
-			} else if(['VERSION'].includes(keyObj.key) ) {
-				// we target always v4 output
-				singleLineFields.push(['VERSION', '4.0']);
-			} else {
-				singleLineFields.push([key, value]);
-			}
-		});
+    if (['ADR', 'N'].includes(keyObj.key)) {
+      structuredFields.push([key, value]);
+    } else if(['VERSION'].includes(keyObj.key) ) {
+      // we target always v4 output
+      singleLineFields.push(['VERSION', '4.0']);
+    } else {
+      singleLineFields.push([key, value]);
+    }
+  });
 
-		const structuredLines = renderStructuredLines(structuredFields);
-		const singleLines = singleLineFields.map(renderSingleKey);
-		const lines = structuredLines.concat(singleLines);
+  const structuredLines = renderStructuredLines(structuredFields);
+  const singleLines = singleLineFields.map(renderSingleKey);
+  const lines = structuredLines.concat(singleLines);
 
-		return `BEGIN:VCARD\n${lines.join("\n")}\nEND:VCARD`;
-	} catch (err) {
-		new Notice(`${err.message} in file skipping ${file.basename}`);
-		return '';
-	}
+  return `BEGIN:VCARD\n${lines.join("\n")}\nEND:VCARD`;
+
 }
 
-export async function toString(contactFiles: TFile[]): Promise<string> {
-	return contactFiles
-		.map(file => generateVCard(file))
-		.filter(vcard => vcard !== "") // Remove empty results
-		.join("\n");
+export async function toString(contactFiles: TFile[]): Promise<VCardToStringReply> {
+  const vCards: string[] = [];
+  const vCardsErrors: VCardToStringError[] = [];
+
+  contactFiles.forEach((file) => {
+    try {
+      const singleVcard = generateVCard(file)
+      vCards.push(singleVcard)
+    } catch (err) {
+      vCardsErrors.push({"status": "error", "file": file.basename, "message": err.message})
+    }
+  })
+
+  return Promise.resolve({
+    vcards: vCards.join('\n'),
+    errors: vCardsErrors
+  });
+
 }

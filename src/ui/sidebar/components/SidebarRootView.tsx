@@ -122,7 +122,10 @@ export const SidebarRootView = (props: SidebarRootViewProps) => {
                 }}
                 exportAllVCF={async() => {
                   const allContactFiles = contacts.map((contact)=> contact.file)
-                  const vcards = await vcard.toString(allContactFiles);
+                  const {vcards, errors} = await vcard.toString(allContactFiles);
+                  errors.forEach((err) => {
+                    new Notice(`${err.message} in file skipping ${err.file}`);
+                  })
                   saveVcardFilePicker(vcards)
                 }}
                 onCreateContact={async () => {
@@ -155,7 +158,10 @@ export const SidebarRootView = (props: SidebarRootViewProps) => {
               }}
               exportVCF={(contactFile: TFile) => {
                 (async () => {
-                  const vcards = await vcard.toString([contactFile])
+                  const {vcards, errors} = await vcard.toString([contactFile])
+                  errors.forEach((err) => {
+                    new Notice(`${err.message} in file skipping ${err.file}`);
+                  })
                   saveVcardFilePicker(vcards, contactFile)
                 })();
               }} />

@@ -33,3 +33,14 @@ export enum VCardSupportedKey {
 export interface VCardForObsidianRecord {
 	[key: string]: string,
 }
+
+export interface VCardToStringError {
+  status: string;
+  file: string;
+  message: string;
+}
+
+export interface VCardToStringReply {
+  vcards: string;
+  errors: VCardToStringError[];
+}
