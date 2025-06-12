@@ -48,24 +48,23 @@ function groupVCardFields(record: Record<string, any>) {
   return groups;
 }
 
-
 function sortNameItems(record: Record<string, any>)  {
   const nameSortOrder = ['N.PREFIX', 'N.GN', 'N.MN', 'N.FN', 'N.SUFFIX', 'FN'];
-  return stringifyYaml(Object.fromEntries(
+  return Object.fromEntries(
     Object.entries(record).sort(([keyA], [keyB]) => {
       return nameSortOrder.indexOf(keyA) - nameKeys.indexOf(keyB);
     })
-  ));
+  );
 }
 
 function sortedPriorityItems(record: Record<string, any>)  {
-  return stringifyYaml(Object.fromEntries(
+  return Object.fromEntries(
     Object.entries(record).sort(([keyA], [keyB]) => {
       const baseKeyA = extractBaseKey(keyA);
       const baseKeyB = extractBaseKey(keyB);
       return priorityKeys.indexOf(baseKeyA) - priorityKeys.indexOf(baseKeyB);
     })
-  ));
+  );
 }
 
 export function mdRender(record: Record<string, any>, hashtags: string): string {
@@ -80,8 +79,8 @@ export function mdRender(record: Record<string, any>, hashtags: string): string 
 	}
 
 	return `---
-${sortNameItems(groups.name)}
-${sortedPriorityItems(groups.priority)}
+${stringifyYaml(sortNameItems(groups.name))}
+${stringifyYaml(sortedPriorityItems(groups.priority))}
 ${stringifyYaml(groups.address)}
 ${stringifyYaml(groups.other)}
 ---

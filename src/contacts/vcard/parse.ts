@@ -1,6 +1,5 @@
 import { VCardForObsidianRecord, VCardSupportedKey } from "src/contacts/vcard";
 import { ensureHasName } from "src/contacts/vcard/shared/ensureHasName";
-import { sortVCardOFields } from "src/contacts/sortVcardFields";
 import { StructuredFields } from "src/contacts/vcard/shared/structuredFields";
 import { photoLineFromV3toV4 } from "src/util/photoLineFromV3toV4";
 
@@ -15,13 +14,13 @@ function unfoldVCardLines(vCardData: string): string[] {
   for (const line of lines) {
     if (/^[ \t]/.test(line)) {
       // Line is a continuation (folded)
-      currentLine += line.slice(1); // remove the space or tab
+      currentLine += ' ' + line.slice(1);
     } else {
       if (currentLine) unfoldedLines.push(currentLine);
       currentLine = line;
     }
   }
-  if (currentLine) unfoldedLines.push(currentLine);
+  // if (currentLine) unfoldedLines.push(currentLine);
 
   return unfoldedLines;
 }
@@ -108,6 +107,7 @@ function parseVCardLine(line: string): VCardForObsidianRecord {
 
 	const propKey: string = property.toUpperCase();
 
+
 	let parsedData: Record<string, any> = {};
 
 	const typeValues:string = params["type"] ? `[${params["type"].join(",")}]` : "";
@@ -117,7 +117,7 @@ function parseVCardLine(line: string): VCardForObsidianRecord {
 		parsedData['VERSION'] = '4.0';
 	} else if (propKey in StructuredFields) {
 		parsedData = parseStructuredField(propKey as keyof typeof StructuredFields, value, typeValues);
-	} else if (propKey in ['BDAY', 'ANNIVERSARY']) {
+	} else if (['BDAY', 'ANNIVERSARY'].includes(propKey)) {
 		parsedData[`${propKey}${typeValues}`] = formatVCardDate(value)
 	} else {
     if (propKey in VCardSupportedKey) {
@@ -129,7 +129,11 @@ function parseVCardLine(line: string): VCardForObsidianRecord {
 }
 
 function formatVCardDate(input: string): string {
-	const trimmed = input.trim();
+	let trimmed = input.trim();
+
+  if (trimmed[8] === 'T') {
+    trimmed = trimmed.slice(0, 8);
+  }
 
 	if (trimmed.length === 8 && !isNaN(Number(trimmed))) {
 		const dashed = `${trimmed.slice(0, 4)}-${trimmed.slice(4, 6)}-${trimmed.slice(6, 8)}`;

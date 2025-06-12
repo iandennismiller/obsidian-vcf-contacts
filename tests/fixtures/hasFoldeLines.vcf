@@ -1,0 +1,8 @@
+BEGIN:VCARD
+VERSION:4.0
+FN:Jan Huntelaar
+N:Jan;Huntelaar;;;
+NOTE:This is a long note that
+ continues on the next line,
+ and still keeps going.
+END:VCARD

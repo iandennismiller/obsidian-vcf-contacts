@@ -20,6 +20,7 @@ export async function createEmpty() {
     "ADR[HOME].COUNTRY": "",
     "URL[WORK]": "",
     "ORG": "",
+    "ROLE": "",
     "CATEGORIES": "",
     "VERSION": "4.0"
   }
