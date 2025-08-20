@@ -30,10 +30,17 @@ export class ContactsSettingTab extends PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
 
+    const folderDesc = document.createDocumentFragment();
+    folderDesc.append(
+      "New contacts will be saved here.",
+      folderDesc.createEl("br"),
+      "If empty, contacts will be created in the root of your vault."
+    );
+
     const contactsFolder = this.plugin.settings.contactsFolder;
     new Setting(this.containerEl)
-      .setName("Template folder location")
-      .setDesc("Files in this folder will be available as templates.")
+      .setName("Contacts folder location")
+      .setDesc(folderDesc)
       .addSearch((cb) => {
         new FolderSuggest(this.app, this.plugin, cb.inputEl);
         cb.setPlaceholder("Example: Contacts")
