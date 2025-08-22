@@ -13,8 +13,8 @@ const insightsSettingDefaults = insightsSetting.reduce((acc:Record<string, strin
 }, {} as Record<string, string>);
 
 export const DEFAULT_SETTINGS: ContactsPluginSettings = {
-  contactsFolder: '',
-  defaultHashtag: '',
+  contactsFolder: "",
+  defaultHashtag: "",
   ...insightsSettingDefaults
 }
 
@@ -30,29 +30,51 @@ export class ContactsSettingTab extends PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
 
+    const folderDesc = document.createDocumentFragment();
+    folderDesc.append(
+      "New contacts will be saved here.",
+      folderDesc.createEl("br"),
+      "If empty, contacts will be created in the root of your vault."
+    );
+
     const contactsFolder = this.plugin.settings.contactsFolder;
     new Setting(this.containerEl)
-      .setName("Template folder location")
-      .setDesc("Files in this folder will be available as templates.")
+      .setName("Contacts folder location")
+      .setDesc(folderDesc)
       .addSearch((cb) => {
         new FolderSuggest(this.app, this.plugin, cb.inputEl);
         cb.setPlaceholder("Example: Contacts")
           .setValue(contactsFolder)
           .onChange(async(value) => {
             if(value === '') {
-              this.plugin.settings.contactsFolder = '';
+              this.plugin.settings.contactsFolder = "";
               await this.plugin.saveSettings();
               setSettings(this.plugin.settings);
             }
           });
       });
+    
+    const hashtagDesc = document.createDocumentFragment();
+    hashtagDesc.append(
+      "New contacts are automatically tagged with this hashtags.",
+      hashtagDesc.createEl("br"),
+      "The hashtags are inserted at the end of the note.",
+      hashtagDesc.createEl("br"),
+      hashtagDesc.createEl("br"),
+      hashtagDesc.createEl("strong", {
+                text: "Attention: ",
+      }),
+      "You must include the ",
+      hashtagDesc.createEl("code", { text: "#" }),
+      "-sign"
+    );
 
     const defaultHashtag = this.plugin.settings.defaultHashtag;
     new Setting(containerEl)
-      .setName('Default hashtag')
-      .setDesc('Hashtag to be used for every contact created')
+      .setName("Default hashtags")
+      .setDesc(hashtagDesc)
       .addText(text => text
-        .setPlaceholder('')
+        .setPlaceholder("")
         .setValue(defaultHashtag)
         .onChange(async (value) => {
           this.plugin.settings.defaultHashtag = value;
@@ -64,7 +86,7 @@ export class ContactsSettingTab extends PluginSettingTab {
       const settingKey = settingProps.settingPropertyName;
       const currentValue = this.plugin.settings[settingKey];
 
-      if (typeof currentValue === 'boolean') {
+      if (typeof currentValue === "boolean") {
         new Setting(containerEl)
           .setName(settingProps.name)
           .setDesc(settingProps.settingDescription)
