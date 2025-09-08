@@ -59,7 +59,7 @@ export function createNameSlug(
 
 export function getSortName (contact:VCardForObsidianRecord): string {
   if(isKind(contact, VCardKinds.Individual)) {
-    const name = contact["N.FN"] + contact["N.GN"];
+    const name = contact["N.GN"] + contact["N.FN"];
     if (!name) {
       return contact["FN"]
     }

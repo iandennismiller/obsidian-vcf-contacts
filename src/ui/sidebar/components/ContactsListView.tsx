@@ -44,8 +44,12 @@ export const ContactsListView = (props: ContactsListProps) => {
 	React.useEffect(() => {
 		const sortedContacts = [...contacts].sort((a, b) => {
 			switch (sort) {
-				case Sort.NAME:
-					return (getSortName(a.data)).localeCompare(getSortName(b.data));
+				case Sort.NAME: {
+          const nameA= getSortName(a.data);
+          const nameB= getSortName(b.data);
+          console.log(nameA, nameB);
+          return nameA.localeCompare(nameB);
+        }
 				case Sort.BIRTHDAY: {
 					const aBday = a.data['BDAY'];
 					const bBday = b.data['BDAY'];
