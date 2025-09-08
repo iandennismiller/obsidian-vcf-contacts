@@ -4,8 +4,9 @@ import { Plugin } from 'obsidian';
 import { ContactsView } from "src/ui/sidebar/sidebarView";
 import { CONTACTS_VIEW_CONFIG } from "src/util/constants";
 import myScrollTo from "src/util/myScrollTo";
-import { ContactsPluginSettings } from  './settings/settings.d';
+
 import { ContactsSettingTab, DEFAULT_SETTINGS } from './settings/settings';
+import { ContactsPluginSettings } from  './settings/settings.d';
 
 export default class ContactsPlugin extends Plugin {
 	settings: ContactsPluginSettings;
@@ -24,6 +25,25 @@ export default class ContactsPlugin extends Plugin {
 		});
 
 		this.addSettingTab(new ContactsSettingTab(this.app, this));
+
+    this.addCommand({
+      id: 'contacts-sidebar',
+      name: "Open Contacts Sidebar",
+      callback: () => {
+        this.activateSidebarView();
+      },
+    });
+
+    this.addCommand({
+      id: 'contacts-create',
+      name: "Create Contact",
+      callback: async () => {
+        const leaf = await this.activateSidebarView();
+        leaf?.createNewContact()
+      },
+    });
+
+
 	}
 
 	onunload() {}
@@ -47,8 +67,11 @@ export default class ContactsPlugin extends Plugin {
       }
 		}
 
-		await this.app.workspace.revealLeaf(
-			this.app.workspace.getLeavesOfType(CONTACTS_VIEW_CONFIG.type)[0]
-		);
+    // Grab the leaf
+    const leaf = this.app.workspace.getLeavesOfType(CONTACTS_VIEW_CONFIG.type)[0];
+    if (!leaf) return null;
+
+    await this.app.workspace.revealLeaf(leaf);
+    return leaf.view as ContactsView;
 	}
 }

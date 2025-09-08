@@ -19,6 +19,7 @@ import { Sort } from "src/util/constants";
 import myScrollTo from "src/util/myScrollTo";
 
 interface SidebarRootViewProps {
+  sideBarApi: (api: { createNewContact: () => void }) => void;
   createDefaultPluginFolder: () => Promise<void>;
 }
 
@@ -58,6 +59,11 @@ export const SidebarRootView = (props: SidebarRootViewProps) => {
     };
 	}, []);
 
+
+  React.useEffect(() => {
+    props.sideBarApi({ createNewContact });
+  }, []);
+
 	React.useEffect(() => {
 		const updateFiles = (file: TFile) => {
 			setTimeout(() => {
@@ -94,6 +100,12 @@ export const SidebarRootView = (props: SidebarRootViewProps) => {
     };
   }, [workspace]);
 
+  async function createNewContact() {
+      const records = await vcard.createEmpty();
+      const mdContent = mdRender(records, settings.defaultHashtag);
+      createContactFile(app, settings.contactsFolder, mdContent, createFileName(records))
+  }
+
 	return (
 		<div className="contacts-sidebar">
       { displayInsightsView ?
@@ -128,11 +140,7 @@ export const SidebarRootView = (props: SidebarRootViewProps) => {
                   })
                   saveVcardFilePicker(vcards)
                 }}
-                onCreateContact={async () => {
-                  const records = await vcard.createEmpty();
-                  const mdContent = mdRender(records, settings.defaultHashtag);
-                  createContactFile(app, settings.contactsFolder, mdContent, createFileName(records))
-                }}
+                onCreateContact={createNewContact}
                 setDisplayInsightsView={setDisplayInsightsView}
                 sort={sort}
               />
