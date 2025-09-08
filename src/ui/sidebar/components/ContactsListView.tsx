@@ -5,6 +5,7 @@ import { fileId } from "src/file/file";
 import { ContactView } from "src/ui/sidebar/components/ContactView";
 import { Sort } from "src/util/constants";
 import myScrollTo from "src/util/myScrollTo";
+import { getSortName } from "src/util/nameUtils";
 
 
 type ContactsListProps = {
@@ -44,7 +45,7 @@ export const ContactsListView = (props: ContactsListProps) => {
 		const sortedContacts = [...contacts].sort((a, b) => {
 			switch (sort) {
 				case Sort.NAME:
-					return (a.data['N.GN'] + a.data['N.FN']).localeCompare(b.data['N.GN'] + b.data['N.FN']);
+					return (getSortName(a.data)).localeCompare(getSortName(b.data));
 				case Sort.BIRTHDAY: {
 					const aBday = a.data['BDAY'];
 					const bBday = b.data['BDAY'];
@@ -69,16 +70,10 @@ export const ContactsListView = (props: ContactsListProps) => {
 					if (!orgA && orgB) return 1;
 
 					if (!orgA && !orgB) {
-						const nameA = (a.data['N.GN'] + a.data['N.FN']) || "";
-						const nameB = (b.data['N.GN'] + b.data['N.FN']) || "";
-						return nameA.localeCompare(nameB);
+						return 0;
 					}
+					return orgA.localeCompare(orgB);
 
-					const orgCompare = orgA.localeCompare(orgB);
-					if (orgCompare !== 0) return orgCompare;
-					const nameA = (a.data['N.GN'] + a.data['N.FN']) || "";
-					const nameB = (b.data['N.GN'] + b.data['N.FN']) || "";
-					return nameA.localeCompare(nameB);
 				}
 				default:
 					return 0;

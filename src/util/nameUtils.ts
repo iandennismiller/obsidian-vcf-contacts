@@ -1,3 +1,4 @@
+import { Contact } from "src/contacts";
 import { VCardForObsidianRecord, VCardKind } from "src/contacts/vcard/index";
 import { VCardKinds } from "src/contacts/vcard/shared/structuredFields";
 
@@ -56,9 +57,56 @@ export function createNameSlug(
   return sanitizeFileName(fileName)
 }
 
+export function getSortName (contact:VCardForObsidianRecord): string {
+  if(isKind(contact, VCardKinds.Individual)) {
+    const name = contact["N.FN"] + contact["N.GN"];
+    if (!name) {
+      return contact["FN"]
+    }
+    return name;
+  }
+  return contact["FN"]
+
+}
 
 
-export function isKind(records: VCardForObsidianRecord, kind: VCardKind): boolean {
-  const myKind = records["KIND"] || VCardKinds.Individual
+export function uiSafeString (input: unknown): string | undefined {
+  if (input === null || input === undefined){
+    return undefined;
+  }
+
+  if (typeof input === 'string') {
+    return input.trim();
+  } else if (typeof input === 'number' || input instanceof Date || typeof input === 'boolean') {
+    return input.toString();
+  } else {
+    return undefined;
+  }
+}
+
+export function getUiName(contact:VCardForObsidianRecord): string {
+  if (isKind(contact, VCardKinds.Individual)) {
+    const myName = [
+      contact["N.PREFIX"],
+      contact["N.GN"],
+      contact["N.MN"],
+      contact["N.FN"],
+      contact["N.SUFFIX"]
+    ]
+      .map(uiSafeString)
+      .filter((value) => value !== undefined)
+      .join(' ')
+
+    if(myName.length > 0) {
+      return myName;
+    }
+  }
+  return uiSafeString(contact["FN"]) || '';
+
+}
+
+
+export function isKind(record: VCardForObsidianRecord, kind: VCardKind): boolean {
+  const myKind = record["KIND"] || VCardKinds.Individual
   return myKind === kind;
 }
