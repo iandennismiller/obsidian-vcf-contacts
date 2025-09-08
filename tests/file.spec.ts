@@ -1,6 +1,7 @@
-import { describe, expect, it } from 'vitest';
 import { createFileName } from 'src/file/file';
-import { createNameSlug } from 'src/contacts/vcard/shared/nameUtils';
+import { createNameSlug } from "src/util/nameUtils";
+import { describe, expect, it } from 'vitest';
+
 
 describe('createFileName', () => {
   it('should add .md extension to name slug', () => {
@@ -14,6 +15,6 @@ describe('createFileName', () => {
 
   it('should throw error when no name data is available', () => {
     const records = {};
-    expect(() => createFileName(records)).toThrow('No name found for record');
+    expect(() => createFileName(records)).toThrow('Failed to update, create file name due to missing FN property');
   });
 });

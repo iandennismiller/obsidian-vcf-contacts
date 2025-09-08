@@ -166,15 +166,10 @@ describe('vcard parse', () => {
     expect(result[0]['N.FN']).toBeUndefined();
   });
 
-  it('should NOT use ORG as FN fallback for organizations without FN', async () => {
+  it('should skip the contact for organizations without FN', async () => {
     const vcf = fixtures.readVcfFixture('organizationNoFN.vcf');
     const result = await parseValidVCards(vcf);
-    expect(result[0]['KIND']).toBe('org');
-    expect(result[0]['FN']).toBeUndefined(); // FN should not be populated from ORG
-    expect(result[0]['ORG']).toBe('Tech Solutions Inc');
-    // Should not have N fields populated since it's an organization
-    expect(result[0]['N.GN']).toBeUndefined();
-    expect(result[0]['N.FN']).toBeUndefined();
+    expect(result).toEqual([]);
   });
 
   it('should skip organization contacts without FN or ORG', async () => {
@@ -183,7 +178,7 @@ VERSION:4.0
 KIND:org
 TEL;TYPE=WORK:+1-555-0300
 END:VCARD`;
-    
+
     // Organization without FN or ORG has no valid slug, so it's skipped
     const result = await parseValidVCards(vcfWithoutFnOrOrg);
     expect(result.length).toBe(0);
@@ -196,7 +191,7 @@ FN:Tech Company
 ORG:Tech Company
 TEL;TYPE=WORK:+1-555-0400
 END:VCARD`;
-    
+
     const result = await parseValidVCards(vcfImplicitOrg);
     // Should not trigger name dialog since it's detected as org
     expect(result[0]['FN']).toBe('Tech Company');

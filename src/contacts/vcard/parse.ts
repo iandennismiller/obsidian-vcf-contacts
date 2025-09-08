@@ -1,7 +1,7 @@
 import { VCardForObsidianRecord, VCardSupportedKey } from "src/contacts/vcard";
 import { StructuredFields } from "src/contacts/vcard/shared/structuredFields";
+import { createNameSlug } from "src/util/nameUtils";
 import { photoLineFromV3toV4 } from "src/util/photoLineFromV3toV4";
-import { createNameSlug } from "src/contacts/vcard/shared/nameUtils";
 
 function unfoldVCardLines(vCardData: string): string[] {
   // Normalize line endings to \n first (handles \r, \r\n)
@@ -161,7 +161,7 @@ function parseToSingles(vCardsRaw:string): string[] {
  */
 export async function* parse(vCardData: string): AsyncGenerator<[string | undefined, VCardForObsidianRecord], void, unknown> {
   const singles: string[] = parseToSingles(vCardData);
-  
+
   for (const singleVCard of singles) {
     const unfoldedLines = unfoldVCardLines(singleVCard);
     const vCardObject: VCardForObsidianRecord = {};
@@ -173,10 +173,17 @@ export async function* parse(vCardData: string): AsyncGenerator<[string | undefi
         Object.assign(vCardObject, indexedParsedLine);
       }
     }
-    
-    // Check if contact has any name information
-    const slug = createNameSlug(vCardObject);
-    yield [slug, vCardObject];
+
+    /**
+     * TODO: ok, hmm. now we are skipping if we can not generate a name.
+     * the generator pattern can make it difficult to prompt the user.
+     */
+    try {
+      const slug = createNameSlug(vCardObject);
+      yield [slug, vCardObject];
+    } catch (error) {
+      yield [undefined, vCardObject];
+    }
   }
 }
 

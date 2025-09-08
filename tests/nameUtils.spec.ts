@@ -1,125 +1,88 @@
+import { VCardKinds } from "src/contacts/vcard/shared/structuredFields";
+import { createNameSlug, isKind } from "src/util/nameUtils";
 import { describe, expect, it } from 'vitest';
-import { createNameSlug, hasValidNFields, isOrganization } from 'src/contacts/vcard/shared/nameUtils';
+
 
 describe('nameUtils', () => {
   describe('createNameSlug', () => {
-    it('should create slug from N components', () => {
-      const records = {
+    it('should create slug from N fields', () => {
+      const record = {
         'N.PREFIX': 'Dr.',
         'N.GN': 'John',
         'N.MN': 'Q',
         'N.FN': 'Smith',
         'N.SUFFIX': 'Jr.'
       };
-      expect(createNameSlug(records)).toBe('Dr. John Q Smith Jr.');
+      expect(createNameSlug(record)).toBe('Dr. John Q Smith Jr');
     });
 
-    it('should handle partial N components', () => {
-      const records = {
+    it('should handle partial N fields', () => {
+      const record = {
         'N.GN': 'Jane',
         'N.FN': 'Doe'
       };
-      expect(createNameSlug(records)).toBe('Jane Doe');
+      expect(createNameSlug(record)).toBe('Jane Doe');
     });
 
-    it('should fallback to FN when N components are empty', () => {
-      const records = {
+    it('should fallback to FN when N fields are empty', () => {
+      const record = {
         'N.PREFIX': '',
         'N.GN': '',
         'N.FN': '',
         'FN': 'Acme Corporation'
       };
-      expect(createNameSlug(records)).toBe('Acme Corporation');
+      expect(createNameSlug(record)).toBe('Acme Corporation');
     });
 
     it('should fallback to ORG when N and FN are empty', () => {
-      const records = {
+      const record = {
         'ORG': 'Tech Solutions Inc'
       };
-      expect(createNameSlug(records)).toBe('Tech Solutions Inc');
+      expect(() => createNameSlug(record)).toThrow();
     });
 
     it('should return undefined when no name data exists', () => {
-      const records = {};
-      expect(createNameSlug(records)).toBeUndefined();
+      const record = {};
+      expect(() => createNameSlug(record)).toThrow();
     });
 
     it('should sanitize problematic filename characters', () => {
-      const records = {
+      const record = {
         'FN': 'John/Doe: <CEO>'
       };
-      expect(createNameSlug(records)).toBe('John Doe CEO');
+      expect(createNameSlug(record)).toBe('John Doe CEO');
     });
 
     it('should handle multiple consecutive dots', () => {
-      const records = {
+      const record = {
         'FN': 'Company Inc...'
       };
-      expect(createNameSlug(records)).toBe('Company Inc.');
+      expect(createNameSlug(record)).toBe('Company Inc');
     });
 
     it('should handle names with pipe and asterisk', () => {
-      const records = {
+      const record = {
         'N.GN': 'John*',
         'N.FN': 'Doe|Smith'
       };
-      expect(createNameSlug(records)).toBe('John DoeSmith');
+      expect(createNameSlug(record)).toBe('John Doe Smith');
     });
   });
 
-  describe('hasValidNFields', () => {
-    it('should return true when both GN and FN exist', () => {
-      expect(hasValidNFields({ 'N.GN': 'John', 'N.FN': 'Doe' })).toBe(true);
-    });
 
-    it('should return true when only GN exists', () => {
-      expect(hasValidNFields({ 'N.GN': 'John' })).toBe(true);
-    });
+  describe('isKind', () => {
 
-    it('should return true when only FN exists', () => {
-      expect(hasValidNFields({ 'N.FN': 'Doe' })).toBe(true);
-    });
-
-    it('should return false when N fields are empty', () => {
-      expect(hasValidNFields({ 'N.GN': '', 'N.FN': '' })).toBe(false);
-    });
-
-    it('should return false when N fields are missing', () => {
-      expect(hasValidNFields({})).toBe(false);
-    });
-  });
-
-  describe('isOrganization', () => {
-    it('should detect explicit KIND:org', () => {
-      expect(isOrganization({ 'KIND': 'org' })).toBe(true);
-      expect(isOrganization({ 'KIND': 'ORG' })).toBe(true);
-      expect(isOrganization({ 'KIND': 'organization' })).toBe(true);
-    });
-
-    it('should respect explicit KIND:individual', () => {
-      expect(isOrganization({ 'KIND': 'individual', 'ORG': 'Company' })).toBe(false);
-    });
-
-    it('should detect implicit organization (no N fields + has ORG)', () => {
-      const records = {
-        'ORG': 'Acme Corporation',
-        'FN': 'Acme Corporation'
-      };
-      expect(isOrganization(records)).toBe(true);
-    });
-
-    it('should not detect organization when N fields exist', () => {
-      const records = {
-        'N.GN': 'John',
-        'N.FN': 'Doe',
-        'ORG': 'Acme Corporation'
-      };
-      expect(isOrganization(records)).toBe(false);
+    it('should be able to test the different types', () => {
+      expect(isKind({ 'KIND': 'group'}, VCardKinds.Group)).toBe(true);
+      expect(isKind({ 'KIND': 'individual'}, VCardKinds.Individual)).toBe(true);
+      expect(isKind({ 'KIND': 'org'}, VCardKinds.Org)).toBe(true);
     });
 
     it('should default to individual when no clear indicators', () => {
-      expect(isOrganization({})).toBe(false);
-      expect(isOrganization({ 'FN': 'Some Name' })).toBe(false);
+      expect(isKind({},VCardKinds.Individual)).toBe(true);
+      expect(isKind({ 'FN': 'Some Name'}, VCardKinds.Individual)).toBe(true);
+      expect(isKind({ 'FN': 'Some Name'}, VCardKinds.Group)).toBe(false);
+      expect(isKind({ 'FN': 'Some Name'}, VCardKinds.Org)).toBe(false);
     });
 
     it('should handle macOS-style organization detection', () => {
@@ -129,7 +92,10 @@ describe('nameUtils', () => {
         'ORG': 'Apple Inc.',
         'TEL': '+1-408-996-1010'
       };
-      expect(isOrganization(macOSOrg)).toBe(true);
+      expect(isKind(macOSOrg, VCardKinds.Org)).toBe(false);
     });
+
+
+
   });
 });

@@ -45,3 +45,5 @@ export interface VCardToStringReply {
   vcards: string;
   errors: VCardToStringError[];
 }
+
+export type VCardKind = "individual" | "org" | "group";
