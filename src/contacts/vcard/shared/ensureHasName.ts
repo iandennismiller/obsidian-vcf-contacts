@@ -1,7 +1,7 @@
 import { VCardForObsidianRecord } from "src/contacts/vcard/index";
 import { VCardKinds } from "src/contacts/vcard/shared/structuredFields";
 import { getApp } from "src/context/sharedAppContext";
-import { ContactNameModal, NamiingPayload } from "src/ui/modals/contactNameModal";
+import { ContactNameModal, NamingPayload } from "src/ui/modals/contactNameModal";
 import { createNameSlug } from "src/util/nameUtils";
 
 export async function ensureHasName(
@@ -16,7 +16,7 @@ export async function ensureHasName(
     const app = getApp();
     return new Promise((resolve) => {
       console.warn("No name found for record", vCardObject);
-      new ContactNameModal(app, (nameData: NamiingPayload) => {
+      new ContactNameModal(app, (nameData: NamingPayload) => {
         if(nameData.kind === VCardKinds.Individual) {
           vCardObject["N.PREFIX"] ??= "";
           vCardObject["N.GN"] = nameData.given;

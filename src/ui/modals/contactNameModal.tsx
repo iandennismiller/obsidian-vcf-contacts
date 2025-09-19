@@ -138,9 +138,9 @@ const ContactNameModalContent: React.FC<ContactNameModalProps> = ({ onClose, onS
 
 export class ContactNameModal extends Modal {
   private reactRoot: Root | null = null;
-  private callback: (nameData: NamiingPayload) => void;
+  private callback: (nameData: NamingPayload) => void;
 
-	constructor(app: App, callback: (nameData: NamiingPayload) => void) {
+	constructor(app: App, callback: (nameData: NamingPayload) => void) {
 		super(app);
 		this.callback = callback;
 	}
@@ -152,7 +152,7 @@ export class ContactNameModal extends Modal {
 		this.reactRoot.render(
 			<ContactNameModalContent
 				onClose={() => this.close()}
-				onSubmit={(nameData: NamiingPayload) => this.callback(nameData)}
+				onSubmit={(nameData: NamingPayload) => this.callback(nameData)}
 			/>
 		);
 	}
