@@ -26,10 +26,10 @@ interface SidebarRootViewProps {
 
 const importVCFContacts = async (fileContent: string, app: App, settings: ContactsPluginSettings) => {
   if (fileContent === '') return;
-    
+
   let imported = 0;
   let skipped = 0;
-  
+
   // Use generator to avoid double parsing and reduce memory usage
   for await (const [slug, record] of vcard.parse(fileContent)) {
     if (slug) {
@@ -43,7 +43,7 @@ const importVCFContacts = async (fileContent: string, app: App, settings: Contac
       skipped++;
     }
   }
-  
+
   if (skipped > 0) new Notice(`Skipped ${skipped} contact(s) without name information`);
   if (imported > 0) new Notice(`Imported ${imported} contact(s)`);
 };

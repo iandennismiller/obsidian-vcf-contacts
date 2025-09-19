@@ -1,6 +1,8 @@
 import { App, TFile } from "obsidian";
 import { vcard, VCardForObsidianRecord } from "src/contacts/vcard";
+import { VCardKinds } from "src/contacts/vcard/shared/structuredFields";
 import { setApp } from "src/context/sharedAppContext";
+import { NamingPayload } from "src/ui/modals/contactNameModal";
 import { fixtures } from "tests/fixtures/fixtures";
 import { describe, expect, it, vi } from 'vitest';
 
@@ -25,17 +27,20 @@ setApp({
 
 vi.mock('src/ui/modals/contactNameModal', () => {
   class ContactNameModal {
-    private callback: (givenName: string, familyName: string) => void;
+    private callback: (nameData: NamingPayload) => void;
 
     constructor(
       app: any,
-      vcfFn: string | undefined,
-      callback: (givenName: string, familyName: string) => void
+      callback: (nameData: NamingPayload) => void
     ) {
       this.callback = callback;
     }
     open() {
-      this.callback('Foo', 'Bar');
+      this.callback({
+        kind: VCardKinds.Individual,
+        given: 'Foo',
+        family: 'Bar'
+      });
     }
     onOpen() {}
     onClose() {}
@@ -217,12 +222,23 @@ describe('vcard tostring', () => {
     expect(emailLines[0]).toMatch(/TYPE=HOME/);
     expect(emailLines[1]).toMatch(/TYPE=WORK/);
 
-    // FN should include the file name (FN:base.frontmatter)
-    expect(vcards).toMatch(/^FN:base\.frontmatter$/m);
+    expect(vcards).toMatch(/^BEGIN:VCARD$/m);
+    expect(vcards).toMatch(/^END:VCARD$/m);
+  });
+
+  it('should export with FN if there is no naming given at all.', async () => {
+    const result = await vcard.toString([{ basename: 'noName.frontmatter' } as TFile]);
+    const { vcards, errors } = result;
+    expect(errors).toEqual([]);
+    expect(vcards).toMatch(/^ADR;TYPE=HOME:;;18 Clover Court;Dublin;;D02;Ireland$/m);
+    // FN should include the file name if none is given (FN:base.frontmatter)
+    expect(vcards).toMatch(/^FN:noName\.frontmatter$/m);
 
     expect(vcards).toMatch(/^BEGIN:VCARD$/m);
     expect(vcards).toMatch(/^END:VCARD$/m);
   });
+
+
 
   it('should be able revert the indexed fields to lines', async () => {
     const result = await vcard.toString([{ basename: 'hasDuplicateParameters.frontmatter' } as TFile]);

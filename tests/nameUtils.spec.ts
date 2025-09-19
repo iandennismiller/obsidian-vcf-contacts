@@ -75,14 +75,14 @@ describe('nameUtils', () => {
     it('should be able to test the different types', () => {
       expect(isKind({ 'KIND': 'group'}, VCardKinds.Group)).toBe(true);
       expect(isKind({ 'KIND': 'individual'}, VCardKinds.Individual)).toBe(true);
-      expect(isKind({ 'KIND': 'org'}, VCardKinds.Org)).toBe(true);
+      expect(isKind({ 'KIND': 'org'}, VCardKinds.Organisation)).toBe(true);
     });
 
     it('should default to individual when no clear indicators', () => {
       expect(isKind({},VCardKinds.Individual)).toBe(true);
       expect(isKind({ 'FN': 'Some Name'}, VCardKinds.Individual)).toBe(true);
       expect(isKind({ 'FN': 'Some Name'}, VCardKinds.Group)).toBe(false);
-      expect(isKind({ 'FN': 'Some Name'}, VCardKinds.Org)).toBe(false);
+      expect(isKind({ 'FN': 'Some Name'}, VCardKinds.Organisation)).toBe(false);
     });
 
     it('should handle macOS-style organization detection', () => {
@@ -92,7 +92,7 @@ describe('nameUtils', () => {
         'ORG': 'Apple Inc.',
         'TEL': '+1-408-996-1010'
       };
-      expect(isKind(macOSOrg, VCardKinds.Org)).toBe(false);
+      expect(isKind(macOSOrg, VCardKinds.Organisation)).toBe(false);
     });
 
 

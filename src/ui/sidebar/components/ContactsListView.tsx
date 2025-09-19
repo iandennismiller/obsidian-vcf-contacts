@@ -47,7 +47,6 @@ export const ContactsListView = (props: ContactsListProps) => {
 				case Sort.NAME: {
           const nameA= getSortName(a.data);
           const nameB= getSortName(b.data);
-          console.log(nameA, nameB);
           return nameA.localeCompare(nameB);
         }
 				case Sort.BIRTHDAY: {
