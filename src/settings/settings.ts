@@ -15,6 +15,9 @@ const insightsSettingDefaults = insightsSetting.reduce((acc:Record<string, strin
 export const DEFAULT_SETTINGS: ContactsPluginSettings = {
   contactsFolder: "",
   defaultHashtag: "",
+  vcfWatchFolder: "",
+  vcfWatchEnabled: false,
+  vcfWatchPollingFrequency: 60,
   ...insightsSettingDefaults
 }
 
@@ -78,6 +81,67 @@ export class ContactsSettingTab extends PluginSettingTab {
         .setValue(defaultHashtag)
         .onChange(async (value) => {
           this.plugin.settings.defaultHashtag = value;
+          await this.plugin.saveSettings();
+          setSettings(this.plugin.settings);
+        }));
+
+    // VCF Watch Settings
+    const vcfWatchHeaderDesc = document.createDocumentFragment();
+    vcfWatchHeaderDesc.append(
+      "Configure VCF folder watching to automatically import VCF contacts.",
+      vcfWatchHeaderDesc.createEl("br"),
+      "When enabled, the plugin will periodically scan the specified folder for VCF files and create corresponding markdown contact files."
+    );
+    
+    new Setting(containerEl)
+      .setName("VCF Folder Watching")
+      .setDesc(vcfWatchHeaderDesc)
+      .setHeading();
+
+    // VCF Watch Folder
+    const vcfFolderDesc = document.createDocumentFragment();
+    vcfFolderDesc.append(
+      "Path to folder containing VCF files to watch for changes.",
+      vcfFolderDesc.createEl("br"),
+      "Leave empty to disable VCF folder watching."
+    );
+
+    const vcfWatchFolder = this.plugin.settings.vcfWatchFolder;
+    new Setting(containerEl)
+      .setName("VCF folder path")
+      .setDesc(vcfFolderDesc)
+      .addText(text => text
+        .setPlaceholder("Example: /Users/john/Contacts")
+        .setValue(vcfWatchFolder)
+        .onChange(async (value) => {
+          this.plugin.settings.vcfWatchFolder = value;
+          await this.plugin.saveSettings();
+          setSettings(this.plugin.settings);
+        }));
+
+    // VCF Watch Enable Toggle
+    new Setting(containerEl)
+      .setName("Enable VCF folder watching")
+      .setDesc("Enable background polling of the VCF folder for changes")
+      .addToggle(toggle =>
+        toggle
+          .setValue(this.plugin.settings.vcfWatchEnabled)
+          .onChange(async (value) => {
+            this.plugin.settings.vcfWatchEnabled = value;
+            await this.plugin.saveSettings();
+            setSettings(this.plugin.settings);
+          }));
+
+    // VCF Watch Polling Frequency
+    new Setting(containerEl)
+      .setName("Polling frequency (seconds)")
+      .setDesc("How often to check for VCF file changes (minimum: 10 seconds)")
+      .addText(text => text
+        .setPlaceholder("60")
+        .setValue(String(this.plugin.settings.vcfWatchPollingFrequency))
+        .onChange(async (value) => {
+          const freq = parseInt(value) || 60;
+          this.plugin.settings.vcfWatchPollingFrequency = Math.max(10, freq);
           await this.plugin.saveSettings();
           setSettings(this.plugin.settings);
         }));

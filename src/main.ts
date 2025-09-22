@@ -4,16 +4,23 @@ import { Plugin } from 'obsidian';
 import { ContactsView } from "src/ui/sidebar/sidebarView";
 import { CONTACTS_VIEW_CONFIG } from "src/util/constants";
 import myScrollTo from "src/util/myScrollTo";
+import { VcfWatcherService } from "src/vcfWatcher/vcfWatcherService";
+import { setSettings } from "src/context/sharedSettingsContext";
 
 import { ContactsSettingTab, DEFAULT_SETTINGS } from './settings/settings';
 import { ContactsPluginSettings } from  './settings/settings.d';
 
 export default class ContactsPlugin extends Plugin {
 	settings: ContactsPluginSettings;
+	private vcfWatcherService: VcfWatcherService | null = null;
 
 	async onload() {
 
 		await this.loadSettings();
+		
+		// Initialize VCF watcher service
+		this.vcfWatcherService = new VcfWatcherService(this.settings);
+		
 		this.registerView(
 			CONTACTS_VIEW_CONFIG.type,
 			(leaf) => new ContactsView(leaf, this)
@@ -43,10 +50,13 @@ export default class ContactsPlugin extends Plugin {
       },
     });
 
-
 	}
 
-	onunload() {}
+	onunload() {
+		if (this.vcfWatcherService) {
+			this.vcfWatcherService.stop();
+		}
+	}
 
 	async loadSettings() {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
@@ -54,6 +64,12 @@ export default class ContactsPlugin extends Plugin {
 
 	async saveSettings() {
 		await this.saveData(this.settings);
+		setSettings(this.settings);
+		
+		// Update VCF watcher service with new settings
+		if (this.vcfWatcherService) {
+			this.vcfWatcherService.updateSettings(this.settings);
+		}
 	}
 
 	async activateSidebarView() {

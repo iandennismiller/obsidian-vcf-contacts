@@ -13,6 +13,9 @@ const mockSettings: ContactsPluginSettings = {
   contactsFolder: 'Contacts',
   defaultHashtag: '',
   enableSync: true,
+  vcfWatchFolder: '',
+  vcfWatchEnabled: false,
+  vcfWatchPollingFrequency: 60,
 };
 
 describe('sharedSppContext', () => {
