@@ -2,6 +2,7 @@ import * as fs from 'fs/promises';
 import { App, Notice, TFile } from 'obsidian';
 import * as path from 'path';
 import { mdRender } from "src/contacts/contactMdTemplate";
+import { updateFrontMatterValue } from "src/contacts/contactFrontmatter";
 import { vcard } from "src/contacts/vcard";
 import { VCardForObsidianRecord } from "src/contacts/vcard/shared/vcard.d";
 import { createContactFile } from "src/file/file";
@@ -18,6 +19,14 @@ export interface VCFFileInfo {
   lastModified: number;
   /** Optional UID associated with this file */
   uid?: string;
+}
+
+/**
+ * Generates a REV timestamp in the vCard format (YYYYMMDDTHHMMSSZ)
+ * @returns Formatted timestamp string
+ */
+function generateRevTimestamp(): string {
+  return new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
 }
 
 /**
@@ -40,6 +49,7 @@ export class VCFolderWatcher {
   private existingUIDs = new Set<string>();
   private contactFiles = new Map<string, TFile>(); // Track contact files by UID
   private contactFileListeners: (() => void)[] = []; // Track registered listeners
+  private updatingRevFields = new Set<string>(); // Track files being updated internally to prevent loops
 
   /**
    * Creates a new VCF folder watcher instance.
@@ -650,6 +660,11 @@ export class VCFolderWatcher {
         return;
       }
 
+      // Skip if we're currently updating this file internally to avoid loops
+      if (this.updatingRevFields.has(file.path)) {
+        return;
+      }
+
       // Get the UID from the file's frontmatter
       const cache = this.app.metadataCache.getFileCache(file);
       const uid = cache?.frontmatter?.UID;
@@ -658,11 +673,27 @@ export class VCFolderWatcher {
         return; // Skip files without UID
       }
 
-      // Update our tracking
-      this.contactFiles.set(uid, file);
-      
-      // Write back to VCF if enabled
-      await this.writeContactToVCF(file, uid);
+      try {
+        // Mark that we're updating this file to prevent infinite loops
+        this.updatingRevFields.add(file.path);
+        
+        // Update the REV field in the contact file with current timestamp
+        const revTimestamp = generateRevTimestamp();
+        await updateFrontMatterValue(file, 'REV', revTimestamp);
+        
+        // Update our tracking
+        this.contactFiles.set(uid, file);
+        
+        // Write back to VCF if enabled
+        await this.writeContactToVCF(file, uid);
+        
+        loggingService.debug(`Updated contact file REV timestamp for ${file.basename} (UID: ${uid})`);
+      } catch (error) {
+        loggingService.error(`Error updating contact file REV timestamp: ${error.message}`);
+      } finally {
+        // Always remove the flag, even if there was an error
+        this.updatingRevFields.delete(file.path);
+      }
     };
 
     const onFileRename = async (file: TFile) => {
@@ -758,7 +789,7 @@ export class VCFolderWatcher {
       }
 
       // Add REV field with current timestamp for sync tracking
-      const timestamp = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+      const timestamp = generateRevTimestamp();
       const vcfWithRev = vcards.replace('END:VCARD', `REV:${timestamp}\nEND:VCARD`);
 
       // Write to filesystem
