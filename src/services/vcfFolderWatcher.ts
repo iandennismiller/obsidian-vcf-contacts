@@ -35,6 +35,9 @@ export class VCFolderWatcher {
     // Stop any existing watcher
     this.stop();
 
+    // Wait a bit for Obsidian to fully initialize the metadata cache
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
     // Initialize existing UIDs from Obsidian contacts
     await this.initializeExistingUIDs();
 
@@ -108,6 +111,8 @@ export class VCFolderWatcher {
     
     try {
       const contactsFolder = this.settings.contactsFolder || '/';
+      loggingService.debug(`Contacts folder path: "${contactsFolder}"`);
+      
       const folder = this.app.vault.getAbstractFileByPath(contactsFolder);
       
       if (!folder) {
@@ -115,24 +120,65 @@ export class VCFolderWatcher {
         return;
       }
 
-      const files = this.app.vault.getMarkdownFiles().filter(file => 
+      const allMarkdownFiles = this.app.vault.getMarkdownFiles();
+      loggingService.debug(`Total markdown files in vault: ${allMarkdownFiles.length}`);
+      
+      const files = allMarkdownFiles.filter(file => 
         file.path.startsWith(contactsFolder)
       );
+      loggingService.debug(`Markdown files in contacts folder: ${files.length}`);
+
+      let filesWithUID = 0;
+      let filesWithoutUID = 0;
+      let metadataCacheIssues = 0;
 
       for (const file of files) {
         try {
           const cache = this.app.metadataCache.getFileCache(file);
+          if (!cache) {
+            metadataCacheIssues++;
+            loggingService.debug(`No metadata cache for file: ${file.path}`);
+            
+            // Fallback: try to read the file content directly
+            try {
+              const content = await this.app.vault.read(file);
+              const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
+              if (frontmatterMatch) {
+                const frontmatterText = frontmatterMatch[1];
+                const uidMatch = frontmatterText.match(/^UID:\s*(.+)$/m);
+                if (uidMatch) {
+                  const uid = uidMatch[1].trim();
+                  this.existingUIDs.add(uid);
+                  this.contactFiles.set(uid, file);
+                  filesWithUID++;
+                  loggingService.debug(`Found UID "${uid}" via direct read from file: ${file.path}`);
+                  continue;
+                }
+              }
+            } catch (readError) {
+              loggingService.debug(`Failed to read file directly: ${file.path} - ${readError.message}`);
+            }
+            continue;
+          }
+          
           const uid = cache?.frontmatter?.UID;
           if (uid) {
             this.existingUIDs.add(uid);
             this.contactFiles.set(uid, file);
+            filesWithUID++;
+            loggingService.debug(`Found UID "${uid}" in file: ${file.path}`);
+          } else {
+            filesWithoutUID++;
+            loggingService.debug(`No UID found in file: ${file.path}`);
           }
         } catch (error) {
           console.warn(`Error reading UID from ${file.path}:`, error);
+          metadataCacheIssues++;
         }
       }
 
       loggingService.info(`UID cache built successfully: ${this.existingUIDs.size} existing contacts indexed`);
+      loggingService.debug(`Files with UID: ${filesWithUID}, without UID: ${filesWithoutUID}, metadata issues: ${metadataCacheIssues}`);
     } catch (error) {
       console.error('Error initializing existing UIDs:', error);
       loggingService.error(`Failed to build UID cache: ${error.message}`);
@@ -140,21 +186,31 @@ export class VCFolderWatcher {
   }
 
   private async findContactFileByUID(uid: string): Promise<TFile | null> {
+    loggingService.debug(`Looking for contact with UID: "${uid}"`);
+    
     // First check the cached contactFiles map
     const cachedFile = this.contactFiles.get(uid);
     if (cachedFile) {
+      loggingService.debug(`Found cached file for UID "${uid}": ${cachedFile.path}`);
       // Verify the file still exists and has the correct UID
       try {
         const cache = this.app.metadataCache.getFileCache(cachedFile);
         const fileUID = cache?.frontmatter?.UID;
         if (fileUID === uid) {
+          loggingService.debug(`Cache verification successful for UID "${uid}"`);
           return cachedFile;
+        } else {
+          loggingService.debug(`Cache verification failed for UID "${uid}": file UID is "${fileUID}"`);
         }
       } catch (error) {
         console.warn(`Error verifying cached file ${cachedFile.path}:`, error);
+        loggingService.debug(`Cache verification error for UID "${uid}": ${error.message}`);
       }
       // Remove stale cache entry
       this.contactFiles.delete(uid);
+      loggingService.debug(`Removed stale cache entry for UID "${uid}"`);
+    } else {
+      loggingService.debug(`No cached file found for UID "${uid}"`);
     }
 
     // Fall back to searching all files if not in cache or cache is stale
@@ -164,19 +220,43 @@ export class VCFolderWatcher {
         file.path.startsWith(contactsFolder)
       );
 
+      loggingService.debug(`Searching ${files.length} files in "${contactsFolder}" for UID "${uid}"`);
+
       for (const file of files) {
         try {
           const cache = this.app.metadataCache.getFileCache(file);
-          const fileUID = cache?.frontmatter?.UID;
+          let fileUID = cache?.frontmatter?.UID;
+          
+          // If metadata cache doesn't have the UID, try reading the file directly
+          if (!fileUID) {
+            try {
+              const content = await this.app.vault.read(file);
+              const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
+              if (frontmatterMatch) {
+                const frontmatterText = frontmatterMatch[1];
+                const uidMatch = frontmatterText.match(/^UID:\s*(.+)$/m);
+                if (uidMatch) {
+                  fileUID = uidMatch[1].trim();
+                  loggingService.debug(`Found UID "${fileUID}" via direct read from ${file.path}`);
+                }
+              }
+            } catch (readError) {
+              loggingService.debug(`Failed to read file ${file.path} directly: ${readError.message}`);
+            }
+          }
+          
           if (fileUID === uid) {
             // Update the cache
             this.contactFiles.set(uid, file);
+            loggingService.debug(`Found matching file for UID "${uid}": ${file.path}`);
             return file;
           }
         } catch (error) {
           console.warn(`Error reading UID from ${file.path}:`, error);
         }
       }
+      
+      loggingService.debug(`No file found for UID "${uid}" after searching ${files.length} files`);
     } catch (error) {
       console.error('Error finding contact file by UID:', error);
     }
