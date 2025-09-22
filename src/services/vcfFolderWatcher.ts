@@ -681,10 +681,13 @@ export class VCFolderWatcher {
         const revTimestamp = generateRevTimestamp();
         await updateFrontMatterValue(file, 'REV', revTimestamp);
         
+        // Wait a brief moment for the metadata cache to update after the file modification
+        await new Promise(resolve => setTimeout(resolve, 50));
+        
         // Update our tracking
         this.contactFiles.set(uid, file);
         
-        // Write back to VCF if enabled
+        // Write back to VCF if enabled (metadata cache should be updated now)
         await this.writeContactToVCF(file, uid);
         
         loggingService.debug(`Updated contact file REV timestamp for ${file.basename} (UID: ${uid})`);
