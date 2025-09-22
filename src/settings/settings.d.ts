@@ -2,5 +2,8 @@
 export interface ContactsPluginSettings {
   contactsFolder: string;
   defaultHashtag: string;
-  [key: string]: string|boolean;
+  vcfWatchFolder: string;
+  vcfWatchEnabled: boolean;
+  vcfWatchPollingInterval: number;
+  [key: string]: string|boolean|number;
 }

@@ -12,6 +12,9 @@ import { afterEach,describe, expect, it, vi } from 'vitest';
 const mockSettings: ContactsPluginSettings = {
   contactsFolder: 'Contacts',
   defaultHashtag: '',
+  vcfWatchFolder: '',
+  vcfWatchEnabled: false,
+  vcfWatchPollingInterval: 30,
   enableSync: true,
 };
 

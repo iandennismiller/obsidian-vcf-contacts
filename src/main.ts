@@ -4,16 +4,32 @@ import { Plugin } from 'obsidian';
 import { ContactsView } from "src/ui/sidebar/sidebarView";
 import { CONTACTS_VIEW_CONFIG } from "src/util/constants";
 import myScrollTo from "src/util/myScrollTo";
+import { VCFolderWatcher } from "src/services/vcfFolderWatcher";
+import { onSettingsChange } from "src/context/sharedSettingsContext";
 
 import { ContactsSettingTab, DEFAULT_SETTINGS } from './settings/settings';
 import { ContactsPluginSettings } from  './settings/settings.d';
 
 export default class ContactsPlugin extends Plugin {
 	settings: ContactsPluginSettings;
+	private vcfWatcher: VCFolderWatcher | null = null;
+	private settingsUnsubscribe: (() => void) | null = null;
 
 	async onload() {
 
 		await this.loadSettings();
+		
+		// Initialize VCF folder watcher
+		this.vcfWatcher = new VCFolderWatcher(this.app, this.settings);
+		await this.vcfWatcher.start();
+
+		// Listen for settings changes to update watcher
+		this.settingsUnsubscribe = onSettingsChange(async (newSettings) => {
+			if (this.vcfWatcher) {
+				await this.vcfWatcher.updateSettings(newSettings);
+			}
+		});
+
 		this.registerView(
 			CONTACTS_VIEW_CONFIG.type,
 			(leaf) => new ContactsView(leaf, this)
@@ -46,7 +62,19 @@ export default class ContactsPlugin extends Plugin {
 
 	}
 
-	onunload() {}
+	onunload() {
+		// Clean up VCF folder watcher
+		if (this.vcfWatcher) {
+			this.vcfWatcher.stop();
+			this.vcfWatcher = null;
+		}
+
+		// Unsubscribe from settings changes
+		if (this.settingsUnsubscribe) {
+			this.settingsUnsubscribe();
+			this.settingsUnsubscribe = null;
+		}
+	}
 
 	async loadSettings() {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
