@@ -1,11 +1,11 @@
+import * as fs from 'fs/promises';
 import { App, Notice, TFile } from 'obsidian';
+import * as path from 'path';
+import { mdRender } from "src/contacts/contactMdTemplate";
 import { vcard } from "src/contacts/vcard";
 import { createContactFile } from "src/file/file";
-import { mdRender } from "src/contacts/contactMdTemplate";
-import { ContactsPluginSettings } from "src/settings/settings.d";
 import { loggingService } from "src/services/loggingService";
-import * as path from 'path';
-import * as fs from 'fs/promises';
+import { ContactsPluginSettings } from "src/settings/settings.d";
 
 export interface VCFFileInfo {
   path: string;
