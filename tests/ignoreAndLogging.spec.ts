@@ -91,7 +91,8 @@ describe('VCFolderWatcher - Ignore Functionality', () => {
       vcfWatchPollingInterval: 30,
       vcfWriteBackEnabled: false,
       vcfIgnoreFilenames: ['ignored.vcf', 'malformed.vcf'],
-      vcfIgnoreUIDs: ['ignored-uid-123', 'problematic-uid-456']
+      vcfIgnoreUIDs: ['ignored-uid-123', 'problematic-uid-456'],
+      logLevel: 'INFO',
     };
 
     watcher = new VCFolderWatcher(mockApp, mockSettings);
