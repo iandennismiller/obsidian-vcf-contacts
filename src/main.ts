@@ -104,6 +104,14 @@ export default class ContactsPlugin extends Plugin {
       },
     });
 
+    this.addCommand({
+      id: 'contacts-refresh-current-relationships',
+      name: "Refresh Current Contact Relationships",
+      callback: async () => {
+        await this.refreshCurrentContactRelationships();
+      },
+    });
+
 
 	}
 
@@ -204,6 +212,38 @@ export default class ContactsPlugin extends Plugin {
 			loggingService.info(`Updated relationships for ${contactFiles.length} contacts`);
 		} catch (error) {
 			loggingService.warn(`Error updating all contact relationships: ${error.message}`);
+		}
+	}
+
+	private async refreshCurrentContactRelationships() {
+		try {
+			if (!this.relationshipSyncService) {
+				return;
+			}
+
+			// Get the currently active file
+			const activeFile = this.app.workspace.getActiveFile();
+			if (!activeFile || activeFile.extension !== 'md') {
+				loggingService.warn('No active markdown file to refresh relationships');
+				return;
+			}
+
+			// Check if it's a contact file
+			const frontmatter = this.app.metadataCache.getFileCache(activeFile)?.frontmatter;
+			if (!frontmatter || (!frontmatter['N.GN'] && !frontmatter['FN'])) {
+				loggingService.warn('Active file is not a contact file');
+				return;
+			}
+
+			// First, sync from markdown to frontmatter (in case user made changes)
+			await this.relationshipSyncService.syncRelationshipsFromContent(activeFile);
+			
+			// Then, sync from frontmatter to markdown (to ensure consistency and show any upgrades)
+			await this.relationshipSyncService.updateRelationshipsSection(activeFile);
+
+			loggingService.info(`Refreshed relationships for ${activeFile.basename}`);
+		} catch (error) {
+			loggingService.warn(`Error refreshing current contact relationships: ${error.message}`);
 		}
 	}
 
