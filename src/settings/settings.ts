@@ -112,27 +112,7 @@ export class ContactsSettingTab extends PluginSettingTab {
     const vcfWatchingTitle = containerEl.createEl("h3", { text: "VCF Folder Watching" });
     vcfWatchingTitle.style.marginTop = "2em";
 
-    // VCF Watch Folder
-    const vcfFolderDesc = document.createDocumentFragment();
-    vcfFolderDesc.append(
-      "Local filesystem folder to watch for VCF files.",
-      vcfFolderDesc.createEl("br"),
-      "Can be outside of your Obsidian vault. Leave empty to disable."
-    );
-
-    new Setting(containerEl)
-      .setName("VCF Watch Folder")
-      .setDesc(vcfFolderDesc)
-      .addText(text => text
-        .setPlaceholder("Example: /Users/username/Documents/Contacts")
-        .setValue(this.plugin.settings.vcfWatchFolder)
-        .onChange(async (value) => {
-          this.plugin.settings.vcfWatchFolder = value;
-          await this.plugin.saveSettings();
-          setSettings(this.plugin.settings);
-        }));
-
-    // VCF Watch Enabled Toggle
+    // VCF Watch Enabled Toggle (always shown)
     new Setting(containerEl)
       .setName("Enable VCF Folder Watching")
       .setDesc("When enabled, the plugin will automatically import new VCF files from the watched folder.")
@@ -143,94 +123,123 @@ export class ContactsSettingTab extends PluginSettingTab {
             this.plugin.settings.vcfWatchEnabled = value;
             await this.plugin.saveSettings();
             setSettings(this.plugin.settings);
+            // Refresh the display to show/hide dependent settings
+            this.display();
           }));
 
-    // VCF Watch Polling Interval
-    new Setting(containerEl)
-      .setName("Polling Interval (seconds)")
-      .setDesc("How often to check the VCF folder for changes. Minimum 10 seconds.")
-      .addText(text => text
-        .setPlaceholder("30")
-        .setValue(String(this.plugin.settings.vcfWatchPollingInterval))
-        .onChange(async (value) => {
-          const numValue = parseInt(value, 10);
-          if (!isNaN(numValue) && numValue >= 10) {
-            this.plugin.settings.vcfWatchPollingInterval = numValue;
-            await this.plugin.saveSettings();
-            setSettings(this.plugin.settings);
-          }
-        }));
+    // Show folder watching sub-settings only when watching is enabled
+    if (this.plugin.settings.vcfWatchEnabled) {
+      // VCF Watch Folder
+      const vcfFolderDesc = document.createDocumentFragment();
+      vcfFolderDesc.append(
+        "Local filesystem folder to watch for VCF files.",
+        vcfFolderDesc.createEl("br"),
+        "Can be outside of your Obsidian vault. Leave empty to disable."
+      );
 
-    // VCF Write Back Toggle
-    new Setting(containerEl)
-      .setName("Enable VCF Write Back")
-      .setDesc("When enabled, changes to contacts in Obsidian will be written back to the corresponding VCF files in the watched folder. Disable to prevent any modifications to VCF files.")
-      .addToggle(toggle =>
-        toggle
-          .setValue(this.plugin.settings.vcfWriteBackEnabled)
+      new Setting(containerEl)
+        .setName("VCF Watch Folder")
+        .setDesc(vcfFolderDesc)
+        .addText(text => text
+          .setPlaceholder("Example: /Users/username/Documents/Contacts")
+          .setValue(this.plugin.settings.vcfWatchFolder)
           .onChange(async (value) => {
-            this.plugin.settings.vcfWriteBackEnabled = value;
+            this.plugin.settings.vcfWatchFolder = value;
             await this.plugin.saveSettings();
             setSettings(this.plugin.settings);
           }));
 
-    // Ignore Lists Section
-    const ignoreTitle = containerEl.createEl("h3", { text: "Ignore Lists" });
-    ignoreTitle.style.marginTop = "2em";
-
-    // Ignored Filenames
-    const ignoreFilenamesDesc = document.createDocumentFragment();
-    ignoreFilenamesDesc.append(
-      "VCF filenames to ignore during sync (one per line).",
-      ignoreFilenamesDesc.createEl("br"),
-      "Use this for known malformed files or files controlled by CardDAV services."
-    );
-
-    new Setting(containerEl)
-      .setName("Ignored VCF Filenames")
-      .setDesc(ignoreFilenamesDesc)
-      .addTextArea(textArea => {
-        textArea
-          .setPlaceholder("filename1.vcf\nfilename2.vcf")
-          .setValue(this.plugin.settings.vcfIgnoreFilenames.join('\n'))
+      // VCF Watch Polling Interval
+      new Setting(containerEl)
+        .setName("Polling Interval (seconds)")
+        .setDesc("How often to check the VCF folder for changes. Minimum 10 seconds.")
+        .addText(text => text
+          .setPlaceholder("30")
+          .setValue(String(this.plugin.settings.vcfWatchPollingInterval))
           .onChange(async (value) => {
-            this.plugin.settings.vcfIgnoreFilenames = value
-              .split('\n')
-              .map(line => line.trim())
-              .filter(line => line.length > 0);
-            await this.plugin.saveSettings();
-            setSettings(this.plugin.settings);
-          });
-        textArea.inputEl.rows = 4;
-        textArea.inputEl.style.width = "100%";
-      });
+            const numValue = parseInt(value, 10);
+            if (!isNaN(numValue) && numValue >= 10) {
+              this.plugin.settings.vcfWatchPollingInterval = numValue;
+              await this.plugin.saveSettings();
+              setSettings(this.plugin.settings);
+            }
+          }));
 
-    // Ignored UIDs
-    const ignoreUIDsDesc = document.createDocumentFragment();
-    ignoreUIDsDesc.append(
-      "Contact UIDs to ignore during sync (one per line).",
-      ignoreUIDsDesc.createEl("br"),
-      "Use this for contacts that cause sync problems."
-    );
+      // VCF Write Back Toggle (only shown when folder watching is enabled)
+      new Setting(containerEl)
+        .setName("Enable VCF Write Back")
+        .setDesc("When enabled, changes to contacts in Obsidian will be written back to the corresponding VCF files in the watched folder. Disable to prevent any modifications to VCF files.")
+        .addToggle(toggle =>
+          toggle
+            .setValue(this.plugin.settings.vcfWriteBackEnabled)
+            .onChange(async (value) => {
+              this.plugin.settings.vcfWriteBackEnabled = value;
+              await this.plugin.saveSettings();
+              setSettings(this.plugin.settings);
+              // Refresh the display to show/hide dependent settings
+              this.display();
+            }));
+    }
 
-    new Setting(containerEl)
-      .setName("Ignored Contact UIDs")
-      .setDesc(ignoreUIDsDesc)
-      .addTextArea(textArea => {
-        textArea
-          .setPlaceholder("UID-1234-5678\nUID-ABCD-EFGH")
-          .setValue(this.plugin.settings.vcfIgnoreUIDs.join('\n'))
-          .onChange(async (value) => {
-            this.plugin.settings.vcfIgnoreUIDs = value
-              .split('\n')
-              .map(line => line.trim())
-              .filter(line => line.length > 0);
-            await this.plugin.saveSettings();
-            setSettings(this.plugin.settings);
-          });
-        textArea.inputEl.rows = 4;
-        textArea.inputEl.style.width = "100%";
-      });
+    // Ignore Lists Section (only shown when both folder watching and write back are enabled)
+    if (this.plugin.settings.vcfWatchEnabled && this.plugin.settings.vcfWriteBackEnabled) {
+      const ignoreTitle = containerEl.createEl("h3", { text: "Ignore Lists" });
+      ignoreTitle.style.marginTop = "2em";
+
+      // Ignored Filenames
+      const ignoreFilenamesDesc = document.createDocumentFragment();
+      ignoreFilenamesDesc.append(
+        "VCF filenames to ignore during sync (one per line).",
+        ignoreFilenamesDesc.createEl("br"),
+        "Use this for known malformed files or files controlled by CardDAV services."
+      );
+
+      new Setting(containerEl)
+        .setName("Ignored VCF Filenames")
+        .setDesc(ignoreFilenamesDesc)
+        .addTextArea(textArea => {
+          textArea
+            .setPlaceholder("filename1.vcf\nfilename2.vcf")
+            .setValue(this.plugin.settings.vcfIgnoreFilenames.join('\n'))
+            .onChange(async (value) => {
+              this.plugin.settings.vcfIgnoreFilenames = value
+                .split('\n')
+                .map(line => line.trim())
+                .filter(line => line.length > 0);
+              await this.plugin.saveSettings();
+              setSettings(this.plugin.settings);
+            });
+          textArea.inputEl.rows = 4;
+          textArea.inputEl.style.width = "100%";
+        });
+
+      // Ignored UIDs
+      const ignoreUIDsDesc = document.createDocumentFragment();
+      ignoreUIDsDesc.append(
+        "Contact UIDs to ignore during sync (one per line).",
+        ignoreUIDsDesc.createEl("br"),
+        "Use this for contacts that cause sync problems."
+      );
+
+      new Setting(containerEl)
+        .setName("Ignored Contact UIDs")
+        .setDesc(ignoreUIDsDesc)
+        .addTextArea(textArea => {
+          textArea
+            .setPlaceholder("UID-1234-5678\nUID-ABCD-EFGH")
+            .setValue(this.plugin.settings.vcfIgnoreUIDs.join('\n'))
+            .onChange(async (value) => {
+              this.plugin.settings.vcfIgnoreUIDs = value
+                .split('\n')
+                .map(line => line.trim())
+                .filter(line => line.length > 0);
+              await this.plugin.saveSettings();
+              setSettings(this.plugin.settings);
+            });
+          textArea.inputEl.rows = 4;
+          textArea.inputEl.style.width = "100%";
+        });
+    }
 
     // Logging Section
     const loggingTitle = containerEl.createEl("h3", { text: "Logging" });
