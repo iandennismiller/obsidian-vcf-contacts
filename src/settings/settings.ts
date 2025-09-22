@@ -21,6 +21,7 @@ export const DEFAULT_SETTINGS: ContactsPluginSettings = {
   vcfWriteBackEnabled: false,
   vcfIgnoreFilenames: [],
   vcfIgnoreUIDs: [],
+  logLevel: 'INFO',
   ...insightsSettingDefaults
 }
 
@@ -234,6 +235,35 @@ export class ContactsSettingTab extends PluginSettingTab {
     // Logging Section
     const loggingTitle = containerEl.createEl("h3", { text: "Logging" });
     loggingTitle.style.marginTop = "2em";
+
+    // Log Level Setting
+    const logLevelDesc = document.createDocumentFragment();
+    logLevelDesc.append(
+      "Set the minimum log level for VCF sync operations.",
+      logLevelDesc.createEl("br"),
+      "DEBUG: All messages, INFO: Normal operation, WARNING: Potential issues, ERROR: Only errors."
+    );
+
+    new Setting(containerEl)
+      .setName("Log Level")
+      .setDesc(logLevelDesc)
+      .addDropdown(dropdown => {
+        dropdown
+          .addOption('DEBUG', 'DEBUG - Most verbose')
+          .addOption('INFO', 'INFO - Normal operation')
+          .addOption('WARNING', 'WARNING - Potential issues')
+          .addOption('ERROR', 'ERROR - Errors only')
+          .setValue(this.plugin.settings.logLevel)
+          .onChange(async (value: 'DEBUG' | 'INFO' | 'WARNING' | 'ERROR') => {
+            this.plugin.settings.logLevel = value;
+            await this.plugin.saveSettings();
+            setSettings(this.plugin.settings);
+            
+            // Update log level immediately
+            const { loggingService } = require("src/services/loggingService");
+            loggingService.setLogLevel(value);
+          });
+      });
 
     // Log viewer
     const logDesc = document.createDocumentFragment();

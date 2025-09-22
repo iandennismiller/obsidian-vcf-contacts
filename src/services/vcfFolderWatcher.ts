@@ -116,7 +116,7 @@ export class VCFolderWatcher {
       const folder = this.app.vault.getAbstractFileByPath(contactsFolder);
       
       if (!folder) {
-        loggingService.warn(`Contacts folder not found: ${contactsFolder}`);
+        loggingService.warning(`Contacts folder not found: ${contactsFolder}`);
         return;
       }
 
@@ -330,7 +330,7 @@ export class VCFolderWatcher {
       try {
         await fs.access(folderPath);
       } catch (error) {
-        loggingService.warn(`VCF watch folder does not exist: ${folderPath}`);
+        loggingService.warning(`VCF watch folder does not exist: ${folderPath}`);
         return;
       }
 
@@ -393,7 +393,7 @@ export class VCFolderWatcher {
       // Read and parse VCF file
       const content = await fs.readFile(filePath, 'utf-8');
       if (!content) {
-        loggingService.warn(`Empty or unreadable VCF file: ${filename}`);
+        loggingService.warning(`Empty or unreadable VCF file: ${filename}`);
         return;
       }
 

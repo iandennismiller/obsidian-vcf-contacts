@@ -1,6 +1,6 @@
 export interface LogEntry {
   timestamp: Date;
-  level: 'DEBUG' | 'INFO' | 'WARN' | 'ERROR';
+  level: 'DEBUG' | 'INFO' | 'WARNING' | 'ERROR';
   message: string;
 }
 
@@ -8,8 +8,24 @@ export class LoggingService {
   private logs: LogEntry[] = [];
   private readonly maxSizeBytes = 64 * 1024; // 64KB
   private readonly cleanupSizeBytes = 4 * 1024; // 4KB to discard when limit exceeded
+  private currentLogLevel: 'DEBUG' | 'INFO' | 'WARNING' | 'ERROR' = 'INFO';
 
-  log(level: 'DEBUG' | 'INFO' | 'WARN' | 'ERROR', message: string): void {
+  setLogLevel(level: 'DEBUG' | 'INFO' | 'WARNING' | 'ERROR'): void {
+    this.currentLogLevel = level;
+  }
+
+  private shouldLog(level: 'DEBUG' | 'INFO' | 'WARNING' | 'ERROR'): boolean {
+    const levels = ['DEBUG', 'INFO', 'WARNING', 'ERROR'];
+    const currentLevelIndex = levels.indexOf(this.currentLogLevel);
+    const messageLevelIndex = levels.indexOf(level);
+    return messageLevelIndex >= currentLevelIndex;
+  }
+
+  log(level: 'DEBUG' | 'INFO' | 'WARNING' | 'ERROR', message: string): void {
+    if (!this.shouldLog(level)) {
+      return;
+    }
+
     const entry: LogEntry = {
       timestamp: new Date(),
       level,
@@ -28,8 +44,12 @@ export class LoggingService {
     this.log('INFO', message);
   }
 
+  warning(message: string): void {
+    this.log('WARNING', message);
+  }
+
   warn(message: string): void {
-    this.log('WARN', message);
+    this.log('WARNING', message);
   }
 
   error(message: string): void {

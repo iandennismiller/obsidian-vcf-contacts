@@ -8,5 +8,6 @@ export interface ContactsPluginSettings {
   vcfWriteBackEnabled: boolean;
   vcfIgnoreFilenames: string[];
   vcfIgnoreUIDs: string[];
+  logLevel: 'DEBUG' | 'INFO' | 'WARNING' | 'ERROR';
   [key: string]: string|boolean|number|string[];
 }
