@@ -1,4 +1,4 @@
-import { TFile } from "obsidian";
+import { TFile, App } from "obsidian";
 import { parseKey } from "src/contacts";
 import { StructuredFields } from "src/contacts/vcard/shared/structuredFields";
 import { VCardToStringError, VCardToStringReply } from "src/contacts/vcard/shared/vcard";
@@ -39,9 +39,10 @@ function renderSingleKey([key, value]:[string, string]):string  {
 	return `${keyObj.key}${type}:${value}`;
 }
 
-function generateVCard(file: TFile): string {
-  const { metadataCache } = getApp();
-  const frontMatter = metadataCache.getFileCache(file)?.frontmatter;
+function generateVCard(file: TFile, app?: App): string {
+  // Use provided app instance or fall back to shared context
+  const appInstance = app || getApp();
+  const frontMatter = appInstance.metadataCache.getFileCache(file)?.frontmatter;
   if (!frontMatter) {
     throw new Error('No frontmatter found.');
   }
@@ -74,13 +75,13 @@ function generateVCard(file: TFile): string {
 
 }
 
-export async function toString(contactFiles: TFile[]): Promise<VCardToStringReply> {
+export async function toString(contactFiles: TFile[], app?: App): Promise<VCardToStringReply> {
   const vCards: string[] = [];
   const vCardsErrors: VCardToStringError[] = [];
 
   contactFiles.forEach((file) => {
     try {
-      const singleVcard = generateVCard(file)
+      const singleVcard = generateVCard(file, app)
       vCards.push(singleVcard)
     } catch (err) {
       vCardsErrors.push({"status": "error", "file": file.basename, "message": err.message})

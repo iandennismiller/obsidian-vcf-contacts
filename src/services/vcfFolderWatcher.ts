@@ -771,7 +771,7 @@ export class VCFolderWatcher {
 
     try {
       // Generate VCF content using the existing toString function
-      const { vcards, errors } = await vcard.toString([contactFile]);
+      const { vcards, errors } = await vcard.toString([contactFile], this.app);
       
       if (errors.length > 0) {
         loggingService.warning(`Error generating VCF for ${contactFile.name}: ${errors.map(e => e.message).join(', ')}`);
