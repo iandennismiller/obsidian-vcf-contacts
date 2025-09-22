@@ -40,7 +40,8 @@ const mockSettings: ContactsPluginSettings = {
   vcfWatchPollingInterval: 30,
   vcfWriteBackEnabled: false,
   vcfIgnoreFilenames: [],
-  vcfIgnoreUIDs: []
+  vcfIgnoreUIDs: [],
+  logLevel: 'INFO',
 };
 
 // Mock VCF content with REV field

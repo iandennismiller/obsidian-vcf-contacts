@@ -19,6 +19,7 @@ const mockSettings: ContactsPluginSettings = {
   vcfIgnoreFilenames: [],
   vcfIgnoreUIDs: [],
   enableSync: true,
+  logLevel: 'INFO',
 };
 
 describe('sharedSppContext', () => {
