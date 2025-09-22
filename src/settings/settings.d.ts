@@ -5,5 +5,6 @@ export interface ContactsPluginSettings {
   vcfWatchFolder: string;
   vcfWatchEnabled: boolean;
   vcfWatchPollingInterval: number;
+  vcfWriteBackEnabled: boolean;
   [key: string]: string|boolean|number;
 }

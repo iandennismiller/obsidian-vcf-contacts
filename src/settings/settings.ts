@@ -18,6 +18,7 @@ export const DEFAULT_SETTINGS: ContactsPluginSettings = {
   vcfWatchFolder: "",
   vcfWatchEnabled: false,
   vcfWatchPollingInterval: 30,
+  vcfWriteBackEnabled: false,
   ...insightsSettingDefaults
 }
 
@@ -156,6 +157,19 @@ export class ContactsSettingTab extends PluginSettingTab {
             setSettings(this.plugin.settings);
           }
         }));
+
+    // VCF Write Back Toggle
+    new Setting(containerEl)
+      .setName("Enable VCF Write Back")
+      .setDesc("When enabled, changes to contacts in Obsidian will be written back to the corresponding VCF files in the watched folder. Disable to prevent any modifications to VCF files.")
+      .addToggle(toggle =>
+        toggle
+          .setValue(this.plugin.settings.vcfWriteBackEnabled)
+          .onChange(async (value) => {
+            this.plugin.settings.vcfWriteBackEnabled = value;
+            await this.plugin.saveSettings();
+            setSettings(this.plugin.settings);
+          }));
 
   }
 }

@@ -15,6 +15,7 @@ const mockSettings: ContactsPluginSettings = {
   vcfWatchFolder: '',
   vcfWatchEnabled: false,
   vcfWatchPollingInterval: 30,
+  vcfWriteBackEnabled: false,
   enableSync: true,
 };
 
