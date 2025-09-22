@@ -9,12 +9,11 @@ import { createContactFile } from 'src/file/file';
 
 // Mock the dependencies
 vi.mock('obsidian', async () => {
-  const actual = await vi.importActual('obsidian');
+  const actual = await vi.importActual('obsidian') as any;
   return {
     ...actual,
     Notice: vi.fn(),
     Vault: {
-      ...actual.Vault,
       recurseChildren: vi.fn()
     }
   };
@@ -93,7 +92,7 @@ END:VCARD`;
       };
 
       // Mock VCF parsing
-      vi.mocked(mockApp.vault?.adapter.read).mockResolvedValue(vcfContent);
+      vi.mocked(mockApp.vault!.adapter.read).mockResolvedValue(vcfContent);
       vi.mocked(vcard.parse).mockImplementation(async function* () {
         yield ['john-doe', expectedRecord];
       });
@@ -103,7 +102,7 @@ END:VCARD`;
       vi.mocked(Vault.recurseChildren).mockImplementation((folder, callback) => {
         // No existing files
       });
-      vi.mocked(mockApp.metadataCache?.getFileCache).mockReturnValue(null);
+      vi.mocked(mockApp.metadataCache!.getFileCache).mockReturnValue(null);
 
       // Start the service and trigger a scan
       vcfWatcherService.start();
@@ -137,13 +136,13 @@ END:VCARD`;
       };
 
       // Mock VCF parsing
-      vi.mocked(mockApp.vault?.adapter.read).mockResolvedValue(vcfContent);
+      vi.mocked(mockApp.vault!.adapter.read).mockResolvedValue(vcfContent);
       vi.mocked(vcard.parse).mockImplementation(async function* () {
         yield ['existing-contact', expectedRecord];
       });
 
       // Mock only one VCF file for this test
-      vi.mocked(mockApp.vault?.adapter.list).mockResolvedValue({ 
+      vi.mocked(mockApp.vault!.adapter.list).mockResolvedValue({ 
         files: ['/test/vcf/existing-contact.vcf'], 
         folders: [] 
       });
@@ -159,7 +158,7 @@ END:VCARD`;
       });
 
       // Mock existing contacts check (contact exists with this UID)
-      vi.mocked(mockApp.metadataCache?.getFileCache).mockReturnValue({ 
+      vi.mocked(mockApp.metadataCache!.getFileCache).mockReturnValue({ 
         frontmatter: { UID: 'existing-uid' } 
       });
 
@@ -190,14 +189,14 @@ END:VCARD`;
       };
 
       // Mock VCF parsing
-      vi.mocked(mockApp.vault?.adapter.read).mockResolvedValue(vcfContent);
+      vi.mocked(mockApp.vault!.adapter.read).mockResolvedValue(vcfContent);
       vi.mocked(vcard.parse).mockImplementation(async function* () {
         yield ['no-uid-contact', expectedRecord];
       });
       vi.mocked(mdRender).mockReturnValue('---\nFN: No UID Contact\n---\n#### Notes\n\n#Contact');
 
       // Mock no existing contacts
-      vi.mocked(mockApp.metadataCache?.getFileCache).mockReturnValue(null);
+      vi.mocked(mockApp.metadataCache!.getFileCache).mockReturnValue(null);
 
       // Start the service and trigger a scan
       vcfWatcherService.start();
@@ -226,14 +225,14 @@ END:VCARD`;
       };
 
       // Mock VCF parsing without slug
-      vi.mocked(mockApp.vault?.adapter.read).mockResolvedValue(vcfContent);
+      vi.mocked(mockApp.vault!.adapter.read).mockResolvedValue(vcfContent);
       vi.mocked(vcard.parse).mockImplementation(async function* () {
         yield [undefined, expectedRecord]; // No slug generated
       });
       vi.mocked(mdRender).mockReturnValue('---\nN.FN: Doe\n---\n#### Notes\n\n#Contact');
 
       // Mock no existing contacts
-      vi.mocked(mockApp.metadataCache?.getFileCache).mockReturnValue(null);
+      vi.mocked(mockApp.metadataCache!.getFileCache).mockReturnValue(null);
 
       // Start the service and trigger a scan
       vcfWatcherService.start();
@@ -259,7 +258,7 @@ UID:urn:uuid:222
 END:VCARD`;
 
       // Mock different content for different files
-      vi.mocked(mockApp.vault?.adapter.read)
+      vi.mocked(mockApp.vault!.adapter.read)
         .mockResolvedValueOnce(vcfContent1)
         .mockResolvedValueOnce(vcfContent2);
 
@@ -274,7 +273,7 @@ END:VCARD`;
       vi.mocked(mdRender).mockReturnValue('---\nFN: Contact\n---\n#### Notes\n\n#Contact');
 
       // Mock no existing contacts
-      vi.mocked(mockApp.metadataCache?.getFileCache).mockReturnValue(null);
+      vi.mocked(mockApp.metadataCache!.getFileCache).mockReturnValue(null);
 
       // Start the service and trigger a scan
       vcfWatcherService.start();
@@ -289,7 +288,7 @@ END:VCARD`;
 
   describe('error handling', () => {
     it('should handle VCF parsing errors gracefully', async () => {
-      vi.mocked(mockApp.vault?.adapter.read).mockRejectedValue(new Error('Read error'));
+      vi.mocked(mockApp.vault!.adapter.read).mockRejectedValue(new Error('Read error'));
 
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
@@ -307,7 +306,7 @@ END:VCARD`;
     });
 
     it('should handle folder access errors gracefully', async () => {
-      vi.mocked(mockApp.vault?.adapter.list).mockRejectedValue(new Error('Folder not accessible'));
+      vi.mocked(mockApp.vault!.adapter.list).mockRejectedValue(new Error('Folder not accessible'));
 
       const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
