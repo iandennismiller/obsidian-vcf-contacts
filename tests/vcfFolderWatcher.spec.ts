@@ -25,7 +25,9 @@ const mockSettings: ContactsPluginSettings = {
   vcfWatchFolder: "/test/vcf/folder",
   vcfWatchEnabled: true,
   vcfWatchPollingInterval: 30,
-  vcfWriteBackEnabled: false
+  vcfWriteBackEnabled: false,
+  vcfIgnoreFilenames: [],
+  vcfIgnoreUIDs: []
 };
 
 // Mock VCF content with REV field

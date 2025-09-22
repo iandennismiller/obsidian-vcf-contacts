@@ -6,5 +6,7 @@ export interface ContactsPluginSettings {
   vcfWatchEnabled: boolean;
   vcfWatchPollingInterval: number;
   vcfWriteBackEnabled: boolean;
-  [key: string]: string|boolean|number;
+  vcfIgnoreFilenames: string[];
+  vcfIgnoreUIDs: string[];
+  [key: string]: string|boolean|number|string[];
 }
