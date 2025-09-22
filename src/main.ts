@@ -6,6 +6,7 @@ import { CONTACTS_VIEW_CONFIG } from "src/util/constants";
 import myScrollTo from "src/util/myScrollTo";
 import { VCFolderWatcher } from "src/services/vcfFolderWatcher";
 import { onSettingsChange } from "src/context/sharedSettingsContext";
+import { loggingService } from "src/services/loggingService";
 
 import { ContactsSettingTab, DEFAULT_SETTINGS } from './settings/settings';
 import { ContactsPluginSettings } from  './settings/settings.d';
@@ -18,6 +19,8 @@ export default class ContactsPlugin extends Plugin {
 	async onload() {
 
 		await this.loadSettings();
+		
+		loggingService.info("VCF Contacts plugin loaded");
 		
 		// Initialize VCF folder watcher
 		this.vcfWatcher = new VCFolderWatcher(this.app, this.settings);

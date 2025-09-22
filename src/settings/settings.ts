@@ -1,4 +1,4 @@
-import { App, PluginSettingTab, Setting } from "obsidian";
+import { App, PluginSettingTab, Setting, Notice, Modal } from "obsidian";
 import { setSettings } from "src/context/sharedSettingsContext";
 import { InsighSettingProperties } from "src/insights/insight.d";
 import { insightService } from "src/insights/insightService";
@@ -19,6 +19,8 @@ export const DEFAULT_SETTINGS: ContactsPluginSettings = {
   vcfWatchEnabled: false,
   vcfWatchPollingInterval: 30,
   vcfWriteBackEnabled: false,
+  vcfIgnoreFilenames: [],
+  vcfIgnoreUIDs: [],
   ...insightsSettingDefaults
 }
 
@@ -171,5 +173,119 @@ export class ContactsSettingTab extends PluginSettingTab {
             setSettings(this.plugin.settings);
           }));
 
+    // Ignore Lists Section
+    const ignoreTitle = containerEl.createEl("h3", { text: "Ignore Lists" });
+    ignoreTitle.style.marginTop = "2em";
+
+    // Ignored Filenames
+    const ignoreFilenamesDesc = document.createDocumentFragment();
+    ignoreFilenamesDesc.append(
+      "VCF filenames to ignore during sync (one per line).",
+      ignoreFilenamesDesc.createEl("br"),
+      "Use this for known malformed files or files controlled by CardDAV services."
+    );
+
+    new Setting(containerEl)
+      .setName("Ignored VCF Filenames")
+      .setDesc(ignoreFilenamesDesc)
+      .addTextArea(textArea => {
+        textArea
+          .setPlaceholder("filename1.vcf\nfilename2.vcf")
+          .setValue(this.plugin.settings.vcfIgnoreFilenames.join('\n'))
+          .onChange(async (value) => {
+            this.plugin.settings.vcfIgnoreFilenames = value
+              .split('\n')
+              .map(line => line.trim())
+              .filter(line => line.length > 0);
+            await this.plugin.saveSettings();
+            setSettings(this.plugin.settings);
+          });
+        textArea.inputEl.rows = 4;
+        textArea.inputEl.style.width = "100%";
+      });
+
+    // Ignored UIDs
+    const ignoreUIDsDesc = document.createDocumentFragment();
+    ignoreUIDsDesc.append(
+      "Contact UIDs to ignore during sync (one per line).",
+      ignoreUIDsDesc.createEl("br"),
+      "Use this for contacts that cause sync problems."
+    );
+
+    new Setting(containerEl)
+      .setName("Ignored Contact UIDs")
+      .setDesc(ignoreUIDsDesc)
+      .addTextArea(textArea => {
+        textArea
+          .setPlaceholder("UID-1234-5678\nUID-ABCD-EFGH")
+          .setValue(this.plugin.settings.vcfIgnoreUIDs.join('\n'))
+          .onChange(async (value) => {
+            this.plugin.settings.vcfIgnoreUIDs = value
+              .split('\n')
+              .map(line => line.trim())
+              .filter(line => line.length > 0);
+            await this.plugin.saveSettings();
+            setSettings(this.plugin.settings);
+          });
+        textArea.inputEl.rows = 4;
+        textArea.inputEl.style.width = "100%";
+      });
+
+    // Logging Section
+    const loggingTitle = containerEl.createEl("h3", { text: "Logging" });
+    loggingTitle.style.marginTop = "2em";
+
+    // Log viewer
+    const logDesc = document.createDocumentFragment();
+    logDesc.append(
+      "View internal logs from VCF folder sync operations.",
+      logDesc.createEl("br"),
+      "Log buffer size: 64KB (older entries are automatically removed)."
+    );
+
+    const logSetting = new Setting(containerEl)
+      .setName("Internal Logs")
+      .setDesc(logDesc);
+
+    // Add buttons for log management
+    logSetting
+      .addButton(button => {
+        button
+          .setButtonText("View Logs")
+          .onClick(() => {
+            this.showLogsModal();
+          });
+      })
+      .addButton(button => {
+        button
+          .setButtonText("Clear Logs")
+          .onClick(() => {
+            const { loggingService } = require("src/services/loggingService");
+            loggingService.clearLogs();
+            new Notice("Logs cleared");
+          });
+      });
+
+  }
+
+  private showLogsModal(): void {
+    const { loggingService } = require("src/services/loggingService");
+    const logs = loggingService.getLogsAsString();
+    
+    const modal = new (require("obsidian").Modal)(this.app);
+    modal.titleEl.setText("VCF Sync Logs");
+    
+    const content = modal.contentEl;
+    content.empty();
+    
+    const textArea = content.createEl("textarea");
+    textArea.value = logs || "No logs available";
+    textArea.readOnly = true;
+    textArea.style.width = "100%";
+    textArea.style.height = "400px";
+    textArea.style.fontFamily = "monospace";
+    textArea.style.fontSize = "12px";
+    
+    modal.open();
   }
 }
