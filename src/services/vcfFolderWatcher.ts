@@ -5,6 +5,7 @@ import { mdRender } from "src/contacts/contactMdTemplate";
 import { ContactsPluginSettings } from "src/settings/settings.d";
 import { loggingService } from "src/services/loggingService";
 import * as path from 'path';
+import * as fs from 'fs/promises';
 
 export interface VCFFileInfo {
   path: string;
@@ -33,6 +34,9 @@ export class VCFolderWatcher {
 
     // Stop any existing watcher
     this.stop();
+
+    // Wait a bit for Obsidian to fully initialize the metadata cache
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
     // Initialize existing UIDs from Obsidian contacts
     await this.initializeExistingUIDs();
@@ -79,16 +83,16 @@ export class VCFolderWatcher {
 
     // Log configuration changes
     if (this.settings.vcfWatchEnabled !== newSettings.vcfWatchEnabled) {
-      loggingService.info(`VCF watch enabled changed: ${this.settings.vcfWatchEnabled} → ${newSettings.vcfWatchEnabled}`);
+      loggingService.debug(`VCF watch enabled changed: ${this.settings.vcfWatchEnabled} → ${newSettings.vcfWatchEnabled}`);
     }
     if (this.settings.vcfWatchFolder !== newSettings.vcfWatchFolder) {
-      loggingService.info(`VCF watch folder changed: ${this.settings.vcfWatchFolder} → ${newSettings.vcfWatchFolder}`);
+      loggingService.debug(`VCF watch folder changed: ${this.settings.vcfWatchFolder} → ${newSettings.vcfWatchFolder}`);
     }
     if (this.settings.vcfWatchPollingInterval !== newSettings.vcfWatchPollingInterval) {
-      loggingService.info(`VCF polling interval changed: ${this.settings.vcfWatchPollingInterval}s → ${newSettings.vcfWatchPollingInterval}s`);
+      loggingService.debug(`VCF polling interval changed: ${this.settings.vcfWatchPollingInterval}s → ${newSettings.vcfWatchPollingInterval}s`);
     }
     if (this.settings.vcfWriteBackEnabled !== newSettings.vcfWriteBackEnabled) {
-      loggingService.info(`VCF write-back enabled changed: ${this.settings.vcfWriteBackEnabled} → ${newSettings.vcfWriteBackEnabled}`);
+      loggingService.debug(`VCF write-back enabled changed: ${this.settings.vcfWriteBackEnabled} → ${newSettings.vcfWriteBackEnabled}`);
     }
 
     this.settings = newSettings;
@@ -103,55 +107,156 @@ export class VCFolderWatcher {
     this.existingUIDs.clear();
     this.contactFiles.clear();
     
+    loggingService.info("Building UID cache from existing contacts...");
+    
     try {
       const contactsFolder = this.settings.contactsFolder || '/';
+      loggingService.debug(`Contacts folder path: "${contactsFolder}"`);
+      
       const folder = this.app.vault.getAbstractFileByPath(contactsFolder);
       
       if (!folder) {
+        loggingService.warning(`Contacts folder not found: ${contactsFolder}`);
         return;
       }
 
-      const files = this.app.vault.getMarkdownFiles().filter(file => 
+      const allMarkdownFiles = this.app.vault.getMarkdownFiles();
+      loggingService.debug(`Total markdown files in vault: ${allMarkdownFiles.length}`);
+      
+      const files = allMarkdownFiles.filter(file => 
         file.path.startsWith(contactsFolder)
       );
+      loggingService.debug(`Markdown files in contacts folder: ${files.length}`);
+
+      let filesWithUID = 0;
+      let filesWithoutUID = 0;
+      let metadataCacheIssues = 0;
 
       for (const file of files) {
         try {
           const cache = this.app.metadataCache.getFileCache(file);
+          if (!cache) {
+            metadataCacheIssues++;
+            loggingService.debug(`No metadata cache for file: ${file.path}`);
+            
+            // Fallback: try to read the file content directly
+            try {
+              const content = await this.app.vault.read(file);
+              const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
+              if (frontmatterMatch) {
+                const frontmatterText = frontmatterMatch[1];
+                const uidMatch = frontmatterText.match(/^UID:\s*(.+)$/m);
+                if (uidMatch) {
+                  const uid = uidMatch[1].trim();
+                  this.existingUIDs.add(uid);
+                  this.contactFiles.set(uid, file);
+                  filesWithUID++;
+                  loggingService.debug(`Found UID "${uid}" via direct read from file: ${file.path}`);
+                  continue;
+                }
+              }
+            } catch (readError) {
+              loggingService.debug(`Failed to read file directly: ${file.path} - ${readError.message}`);
+            }
+            continue;
+          }
+          
           const uid = cache?.frontmatter?.UID;
           if (uid) {
             this.existingUIDs.add(uid);
             this.contactFiles.set(uid, file);
+            filesWithUID++;
+            loggingService.debug(`Found UID "${uid}" in file: ${file.path}`);
+          } else {
+            filesWithoutUID++;
+            loggingService.debug(`No UID found in file: ${file.path}`);
           }
         } catch (error) {
           console.warn(`Error reading UID from ${file.path}:`, error);
+          metadataCacheIssues++;
         }
       }
 
-      console.log(`Initialized ${this.existingUIDs.size} existing contact UIDs`);
+      loggingService.info(`UID cache built successfully: ${this.existingUIDs.size} existing contacts indexed`);
+      loggingService.debug(`Files with UID: ${filesWithUID}, without UID: ${filesWithoutUID}, metadata issues: ${metadataCacheIssues}`);
     } catch (error) {
       console.error('Error initializing existing UIDs:', error);
+      loggingService.error(`Failed to build UID cache: ${error.message}`);
     }
   }
 
   private async findContactFileByUID(uid: string): Promise<TFile | null> {
+    loggingService.debug(`Looking for contact with UID: "${uid}"`);
+    
+    // First check the cached contactFiles map
+    const cachedFile = this.contactFiles.get(uid);
+    if (cachedFile) {
+      loggingService.debug(`Found cached file for UID "${uid}": ${cachedFile.path}`);
+      // Verify the file still exists and has the correct UID
+      try {
+        const cache = this.app.metadataCache.getFileCache(cachedFile);
+        const fileUID = cache?.frontmatter?.UID;
+        if (fileUID === uid) {
+          loggingService.debug(`Cache verification successful for UID "${uid}"`);
+          return cachedFile;
+        } else {
+          loggingService.debug(`Cache verification failed for UID "${uid}": file UID is "${fileUID}"`);
+        }
+      } catch (error) {
+        console.warn(`Error verifying cached file ${cachedFile.path}:`, error);
+        loggingService.debug(`Cache verification error for UID "${uid}": ${error.message}`);
+      }
+      // Remove stale cache entry
+      this.contactFiles.delete(uid);
+      loggingService.debug(`Removed stale cache entry for UID "${uid}"`);
+    } else {
+      loggingService.debug(`No cached file found for UID "${uid}"`);
+    }
+
+    // Fall back to searching all files if not in cache or cache is stale
     try {
       const contactsFolder = this.settings.contactsFolder || '/';
       const files = this.app.vault.getMarkdownFiles().filter(file => 
         file.path.startsWith(contactsFolder)
       );
 
+      loggingService.debug(`Searching ${files.length} files in "${contactsFolder}" for UID "${uid}"`);
+
       for (const file of files) {
         try {
           const cache = this.app.metadataCache.getFileCache(file);
-          const fileUID = cache?.frontmatter?.UID;
+          let fileUID = cache?.frontmatter?.UID;
+          
+          // If metadata cache doesn't have the UID, try reading the file directly
+          if (!fileUID) {
+            try {
+              const content = await this.app.vault.read(file);
+              const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
+              if (frontmatterMatch) {
+                const frontmatterText = frontmatterMatch[1];
+                const uidMatch = frontmatterText.match(/^UID:\s*(.+)$/m);
+                if (uidMatch) {
+                  fileUID = uidMatch[1].trim();
+                  loggingService.debug(`Found UID "${fileUID}" via direct read from ${file.path}`);
+                }
+              }
+            } catch (readError) {
+              loggingService.debug(`Failed to read file ${file.path} directly: ${readError.message}`);
+            }
+          }
+          
           if (fileUID === uid) {
+            // Update the cache
+            this.contactFiles.set(uid, file);
+            loggingService.debug(`Found matching file for UID "${uid}": ${file.path}`);
             return file;
           }
         } catch (error) {
           console.warn(`Error reading UID from ${file.path}:`, error);
         }
       }
+      
+      loggingService.debug(`No file found for UID "${uid}" after searching ${files.length} files`);
     } catch (error) {
       console.error('Error finding contact file by UID:', error);
     }
@@ -221,10 +326,11 @@ export class VCFolderWatcher {
     try {
       const folderPath = this.settings.vcfWatchFolder;
       
-      // Check if folder exists using Obsidian's adapter
-      const exists = await this.app.vault.adapter.exists(folderPath);
-      if (!exists) {
-        loggingService.warn(`VCF watch folder does not exist: ${folderPath}`);
+      // Check if folder exists using Node.js fs API
+      try {
+        await fs.access(folderPath);
+      } catch (error) {
+        loggingService.warning(`VCF watch folder does not exist: ${folderPath}`);
         return;
       }
 
@@ -232,11 +338,11 @@ export class VCFolderWatcher {
       const files = await this.listVCFFiles(folderPath);
       
       if (files.length === 0) {
-        loggingService.info(`No VCF files found in ${folderPath}`);
+        loggingService.debug(`No VCF files found in ${folderPath}`);
         return;
       }
 
-      loggingService.info(`Scanning ${files.length} VCF files in ${folderPath}`);
+      loggingService.debug(`Scanning ${files.length} VCF files in ${folderPath}`);
       
       for (const filePath of files) {
         await this.processVCFFile(filePath);
@@ -250,8 +356,10 @@ export class VCFolderWatcher {
 
   private async listVCFFiles(folderPath: string): Promise<string[]> {
     try {
-      const entries = await this.app.vault.adapter.list(folderPath);
-      return entries.files.filter(file => file.toLowerCase().endsWith('.vcf'));
+      const entries = await fs.readdir(folderPath, { withFileTypes: true });
+      return entries
+        .filter(entry => entry.isFile() && entry.name.toLowerCase().endsWith('.vcf'))
+        .map(entry => path.join(folderPath, entry.name));
     } catch (error) {
       console.error('Error listing VCF files:', error);
       return [];
@@ -263,29 +371,29 @@ export class VCFolderWatcher {
       // Check if this filename should be ignored
       const filename = path.basename(filePath);
       if (this.settings.vcfIgnoreFilenames.includes(filename)) {
-        loggingService.info(`Skipping ignored VCF file: ${filename}`);
+        loggingService.debug(`Skipping ignored VCF file: ${filename}`);
         return;
       }
 
       // Get file stats
-      const stat = await this.app.vault.adapter.stat(filePath);
+      const stat = await fs.stat(filePath);
       if (!stat) {
         return;
       }
 
       const known = this.knownFiles.get(filePath);
       
-      // Skip if file hasn't changed
-      if (known && known.lastModified >= stat.mtime) {
+      // Skip if file hasn't changed - use stat.mtimeMs for more precise comparison
+      if (known && known.lastModified >= stat.mtimeMs) {
         return;
       }
 
-      loggingService.info(`Processing VCF file: ${filename}`);
+      loggingService.debug(`Processing VCF file: ${filename}`);
 
       // Read and parse VCF file
-      const content = await this.app.vault.adapter.read(filePath);
+      const content = await fs.readFile(filePath, 'utf-8');
       if (!content) {
-        loggingService.warn(`Empty or unreadable VCF file: ${filename}`);
+        loggingService.warning(`Empty or unreadable VCF file: ${filename}`);
         return;
       }
 
@@ -298,7 +406,7 @@ export class VCFolderWatcher {
         if (slug && record.UID) {
           // Check if this UID should be ignored
           if (this.settings.vcfIgnoreUIDs.includes(record.UID)) {
-            loggingService.info(`Skipping ignored UID: ${record.UID}`);
+            loggingService.debug(`Skipping ignored UID: ${record.UID}`);
             skipped++;
             continue;
           }
@@ -316,7 +424,7 @@ export class VCFolderWatcher {
               // Add UID to our tracking set
               this.existingUIDs.add(record.UID);
               imported++;
-              loggingService.info(`Imported new contact: ${slug} (UID: ${record.UID})`);
+              loggingService.debug(`Imported new contact: ${slug} (UID: ${record.UID})`);
             } catch (error) {
               console.warn(`Error importing contact from ${filePath}:`, error);
               loggingService.error(`Failed to import contact ${slug} from ${filename}: ${error.message}`);
@@ -330,7 +438,7 @@ export class VCFolderWatcher {
               try {
                 await this.updateExistingContact(record, existingFile, slug);
                 updated++;
-                loggingService.info(`Updated existing contact: ${slug} (UID: ${record.UID})`);
+                loggingService.debug(`Updated existing contact: ${slug} (UID: ${record.UID})`);
               } catch (error) {
                 console.warn(`Error updating contact from ${filePath}:`, error);
                 loggingService.error(`Failed to update contact ${slug} from ${filename}: ${error.message}`);
@@ -342,14 +450,14 @@ export class VCFolderWatcher {
           }
         } else {
           skipped++;
-          loggingService.warn(`Skipping VCF entry without valid slug or UID in ${filename}`);
+          loggingService.debug(`Skipping VCF entry without valid slug or UID in ${filename}`);
         }
       }
 
       // Update our tracking
       this.knownFiles.set(filePath, {
         path: filePath,
-        lastModified: stat.mtime,
+        lastModified: stat.mtimeMs,
         uid: undefined // We don't store individual UIDs here since a file can contain multiple
       });
 
@@ -359,7 +467,7 @@ export class VCFolderWatcher {
         if (imported > 0) actions.push(`imported ${imported}`);
         if (updated > 0) actions.push(`updated ${updated}`);
         new Notice(`VCF Watcher: ${actions.join(', ')} contact(s) from ${filePath.split('/').pop()}`);
-        loggingService.info(`VCF processing complete for ${filename}: ${imported} imported, ${updated} updated, ${skipped} skipped`);
+        loggingService.debug(`VCF processing complete for ${filename}: ${imported} imported, ${updated} updated, ${skipped} skipped`);
       }
 
       if (imported > 0 || updated > 0 || skipped > 0) {
@@ -502,14 +610,14 @@ export class VCFolderWatcher {
       const vcfWithRev = vcards.replace('END:VCARD', `REV:${timestamp}\nEND:VCARD`);
 
       // Write to filesystem
-      await this.app.vault.adapter.write(targetPath, vcfWithRev);
+      await fs.writeFile(targetPath, vcfWithRev, 'utf-8');
       
       // Update our known files tracking
-      const stat = await this.app.vault.adapter.stat(targetPath);
+      const stat = await fs.stat(targetPath);
       if (stat) {
         this.knownFiles.set(targetPath, {
           path: targetPath,
-          lastModified: stat.mtime,
+          lastModified: stat.mtimeMs,
           uid: uid
         });
       }
@@ -532,7 +640,7 @@ export class VCFolderWatcher {
       
       for (const filePath of vcfFiles) {
         try {
-          const content = await this.app.vault.adapter.read(filePath);
+          const content = await fs.readFile(filePath, 'utf-8');
           if (content.includes(`UID:${uid}`)) {
             return filePath;
           }

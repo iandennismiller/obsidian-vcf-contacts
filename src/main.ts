@@ -20,6 +20,9 @@ export default class ContactsPlugin extends Plugin {
 
 		await this.loadSettings();
 		
+		// Set log level from settings
+		loggingService.setLogLevel(this.settings.logLevel);
+		
 		loggingService.info("VCF Contacts plugin loaded");
 		
 		// Initialize VCF folder watcher
@@ -28,6 +31,9 @@ export default class ContactsPlugin extends Plugin {
 
 		// Listen for settings changes to update watcher
 		this.settingsUnsubscribe = onSettingsChange(async (newSettings) => {
+			// Update log level when settings change
+			loggingService.setLogLevel(newSettings.logLevel);
+			
 			if (this.vcfWatcher) {
 				await this.vcfWatcher.updateSettings(newSettings);
 			}
