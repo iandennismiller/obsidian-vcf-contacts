@@ -80,16 +80,16 @@ export class VCFolderWatcher {
 
     // Log configuration changes
     if (this.settings.vcfWatchEnabled !== newSettings.vcfWatchEnabled) {
-      loggingService.info(`VCF watch enabled changed: ${this.settings.vcfWatchEnabled} → ${newSettings.vcfWatchEnabled}`);
+      loggingService.debug(`VCF watch enabled changed: ${this.settings.vcfWatchEnabled} → ${newSettings.vcfWatchEnabled}`);
     }
     if (this.settings.vcfWatchFolder !== newSettings.vcfWatchFolder) {
-      loggingService.info(`VCF watch folder changed: ${this.settings.vcfWatchFolder} → ${newSettings.vcfWatchFolder}`);
+      loggingService.debug(`VCF watch folder changed: ${this.settings.vcfWatchFolder} → ${newSettings.vcfWatchFolder}`);
     }
     if (this.settings.vcfWatchPollingInterval !== newSettings.vcfWatchPollingInterval) {
-      loggingService.info(`VCF polling interval changed: ${this.settings.vcfWatchPollingInterval}s → ${newSettings.vcfWatchPollingInterval}s`);
+      loggingService.debug(`VCF polling interval changed: ${this.settings.vcfWatchPollingInterval}s → ${newSettings.vcfWatchPollingInterval}s`);
     }
     if (this.settings.vcfWriteBackEnabled !== newSettings.vcfWriteBackEnabled) {
-      loggingService.info(`VCF write-back enabled changed: ${this.settings.vcfWriteBackEnabled} → ${newSettings.vcfWriteBackEnabled}`);
+      loggingService.debug(`VCF write-back enabled changed: ${this.settings.vcfWriteBackEnabled} → ${newSettings.vcfWriteBackEnabled}`);
     }
 
     this.settings = newSettings;
@@ -104,11 +104,14 @@ export class VCFolderWatcher {
     this.existingUIDs.clear();
     this.contactFiles.clear();
     
+    loggingService.info("Building UID cache from existing contacts...");
+    
     try {
       const contactsFolder = this.settings.contactsFolder || '/';
       const folder = this.app.vault.getAbstractFileByPath(contactsFolder);
       
       if (!folder) {
+        loggingService.warn(`Contacts folder not found: ${contactsFolder}`);
         return;
       }
 
@@ -129,9 +132,10 @@ export class VCFolderWatcher {
         }
       }
 
-      console.log(`Initialized ${this.existingUIDs.size} existing contact UIDs`);
+      loggingService.info(`UID cache built successfully: ${this.existingUIDs.size} existing contacts indexed`);
     } catch (error) {
       console.error('Error initializing existing UIDs:', error);
+      loggingService.error(`Failed to build UID cache: ${error.message}`);
     }
   }
 
@@ -254,11 +258,11 @@ export class VCFolderWatcher {
       const files = await this.listVCFFiles(folderPath);
       
       if (files.length === 0) {
-        loggingService.info(`No VCF files found in ${folderPath}`);
+        loggingService.debug(`No VCF files found in ${folderPath}`);
         return;
       }
 
-      loggingService.info(`Scanning ${files.length} VCF files in ${folderPath}`);
+      loggingService.debug(`Scanning ${files.length} VCF files in ${folderPath}`);
       
       for (const filePath of files) {
         await this.processVCFFile(filePath);
@@ -287,7 +291,7 @@ export class VCFolderWatcher {
       // Check if this filename should be ignored
       const filename = path.basename(filePath);
       if (this.settings.vcfIgnoreFilenames.includes(filename)) {
-        loggingService.info(`Skipping ignored VCF file: ${filename}`);
+        loggingService.debug(`Skipping ignored VCF file: ${filename}`);
         return;
       }
 
@@ -304,7 +308,7 @@ export class VCFolderWatcher {
         return;
       }
 
-      loggingService.info(`Processing VCF file: ${filename}`);
+      loggingService.debug(`Processing VCF file: ${filename}`);
 
       // Read and parse VCF file
       const content = await fs.readFile(filePath, 'utf-8');
@@ -322,7 +326,7 @@ export class VCFolderWatcher {
         if (slug && record.UID) {
           // Check if this UID should be ignored
           if (this.settings.vcfIgnoreUIDs.includes(record.UID)) {
-            loggingService.info(`Skipping ignored UID: ${record.UID}`);
+            loggingService.debug(`Skipping ignored UID: ${record.UID}`);
             skipped++;
             continue;
           }
@@ -340,7 +344,7 @@ export class VCFolderWatcher {
               // Add UID to our tracking set
               this.existingUIDs.add(record.UID);
               imported++;
-              loggingService.info(`Imported new contact: ${slug} (UID: ${record.UID})`);
+              loggingService.debug(`Imported new contact: ${slug} (UID: ${record.UID})`);
             } catch (error) {
               console.warn(`Error importing contact from ${filePath}:`, error);
               loggingService.error(`Failed to import contact ${slug} from ${filename}: ${error.message}`);
@@ -354,7 +358,7 @@ export class VCFolderWatcher {
               try {
                 await this.updateExistingContact(record, existingFile, slug);
                 updated++;
-                loggingService.info(`Updated existing contact: ${slug} (UID: ${record.UID})`);
+                loggingService.debug(`Updated existing contact: ${slug} (UID: ${record.UID})`);
               } catch (error) {
                 console.warn(`Error updating contact from ${filePath}:`, error);
                 loggingService.error(`Failed to update contact ${slug} from ${filename}: ${error.message}`);
@@ -366,7 +370,7 @@ export class VCFolderWatcher {
           }
         } else {
           skipped++;
-          loggingService.warn(`Skipping VCF entry without valid slug or UID in ${filename}`);
+          loggingService.debug(`Skipping VCF entry without valid slug or UID in ${filename}`);
         }
       }
 
@@ -383,7 +387,7 @@ export class VCFolderWatcher {
         if (imported > 0) actions.push(`imported ${imported}`);
         if (updated > 0) actions.push(`updated ${updated}`);
         new Notice(`VCF Watcher: ${actions.join(', ')} contact(s) from ${filePath.split('/').pop()}`);
-        loggingService.info(`VCF processing complete for ${filename}: ${imported} imported, ${updated} updated, ${skipped} skipped`);
+        loggingService.debug(`VCF processing complete for ${filename}: ${imported} imported, ${updated} updated, ${skipped} skipped`);
       }
 
       if (imported > 0 || updated > 0 || skipped > 0) {

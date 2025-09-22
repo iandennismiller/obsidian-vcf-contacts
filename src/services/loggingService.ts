@@ -1,6 +1,6 @@
 export interface LogEntry {
   timestamp: Date;
-  level: 'INFO' | 'WARN' | 'ERROR';
+  level: 'DEBUG' | 'INFO' | 'WARN' | 'ERROR';
   message: string;
 }
 
@@ -9,7 +9,7 @@ export class LoggingService {
   private readonly maxSizeBytes = 64 * 1024; // 64KB
   private readonly cleanupSizeBytes = 4 * 1024; // 4KB to discard when limit exceeded
 
-  log(level: 'INFO' | 'WARN' | 'ERROR', message: string): void {
+  log(level: 'DEBUG' | 'INFO' | 'WARN' | 'ERROR', message: string): void {
     const entry: LogEntry = {
       timestamp: new Date(),
       level,
@@ -18,6 +18,10 @@ export class LoggingService {
     
     this.logs.push(entry);
     this.enforceMaxSize();
+  }
+
+  debug(message: string): void {
+    this.log('DEBUG', message);
   }
 
   info(message: string): void {
