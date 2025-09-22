@@ -13,18 +13,21 @@ import { getFrontmatterFromFiles, updateFrontMatterValue } from './contactFrontm
 import { 
   parseRelatedField, 
   formatRelatedField, 
+  formatNameBasedRelatedField,
   getComplementRelationship,
   renderRelationshipMarkdown,
   parseRelationshipMarkdown,
   ParsedRelation
 } from './relationships';
 import { parseKey } from './contactDataKeys';
+import { loggingService } from '../services/loggingService';
 
 export interface ContactRelationship {
-  contactFile: TFile;
+  contactFile?: TFile; // Optional since contact might not exist yet
   contactName: string;
-  uid: string;
+  uid?: string; // Optional for name-based relationships
   relationshipType: string;
+  isNameBased: boolean;
 }
 
 export class RelationshipManager {
@@ -51,15 +54,27 @@ export class RelationshipManager {
       if (keyObj.key === 'RELATED') {
         const parsedRelation = parseRelatedField(value, keyObj.type);
         if (parsedRelation) {
-          // Find the contact file for this UID
-          const relatedContact = await this.findContactByUID(parsedRelation.uid, allContactFiles);
-          if (relatedContact) {
+          if (parsedRelation.isNameBased) {
+            // Name-based relationship - contact might not exist
+            const relatedContact = await this.findContactByName(parsedRelation.name!, allContactFiles);
             relationships.push({
-              contactFile: relatedContact,
-              contactName: this.getContactDisplayName(relatedContact),
-              uid: parsedRelation.uid,
-              relationshipType: parsedRelation.type
+              contactFile: relatedContact || undefined,
+              contactName: parsedRelation.name!,
+              relationshipType: parsedRelation.type,
+              isNameBased: true
             });
+          } else {
+            // UID-based relationship
+            const relatedContact = await this.findContactByUID(parsedRelation.uid!, allContactFiles);
+            if (relatedContact) {
+              relationships.push({
+                contactFile: relatedContact,
+                contactName: this.getContactDisplayName(relatedContact),
+                uid: parsedRelation.uid!,
+                relationshipType: parsedRelation.type,
+                isNameBased: false
+              });
+            }
           }
         }
       }
@@ -95,6 +110,58 @@ export class RelationshipManager {
   }
 
   /**
+   * Adds a name-based relationship when the target contact doesn't exist yet.
+   */
+  async addNameBasedRelationship(
+    sourceFile: TFile,
+    targetName: string,
+    relationshipType: string
+  ): Promise<void> {
+    // Add name-based relationship to source contact
+    await this.addNameBasedRelationshipToContact(sourceFile, targetName, relationshipType);
+  }
+
+  /**
+   * Attempts to upgrade name-based relationships to UID-based when contacts are found.
+   */
+  async upgradeNameBasedRelationships(contactFile: TFile): Promise<void> {
+    const frontmatter = this.app.metadataCache.getFileCache(contactFile)?.frontmatter;
+    if (!frontmatter) return;
+
+    const allContactFiles = await this.getAllContactFiles();
+    const upgrades: Array<{key: string, oldValue: string, newValue: string}> = [];
+
+    for (const [key, value] of Object.entries(frontmatter)) {
+      if (typeof value !== 'string') continue;
+      
+      const keyObj = parseKey(key);
+      if (keyObj.key === 'RELATED') {
+        const parsedRelation = parseRelatedField(value, keyObj.type);
+        if (parsedRelation && parsedRelation.isNameBased) {
+          // Check if the contact now exists
+          const targetFile = await this.findContactByName(parsedRelation.name!, allContactFiles);
+          if (targetFile) {
+            const targetUID = await this.getContactUID(targetFile);
+            if (targetUID) {
+              const newValue = formatRelatedField(targetUID);
+              upgrades.push({key, oldValue: value, newValue});
+            }
+          }
+        }
+      }
+    }
+
+    // Apply upgrades
+    for (const upgrade of upgrades) {
+      await updateFrontMatterValue(contactFile, upgrade.key, upgrade.newValue, this.app);
+    }
+
+    if (upgrades.length > 0) {
+      loggingService.info(`Upgraded ${upgrades.length} name-based relationships to UID-based for ${contactFile.basename}`);
+    }
+  }
+
+  /**
    * Removes a relationship between two contacts and maintains bidirectional consistency.
    */
   async removeRelationship(
@@ -116,6 +183,17 @@ export class RelationshipManager {
         await this.removeRelationshipFromContact(targetFile, sourceUID, complementType);
       }
     }
+  }
+
+  /**
+   * Removes a name-based relationship from a contact.
+   */
+  async removeNameBasedRelationship(
+    sourceFile: TFile,
+    targetName: string,
+    relationshipType: string
+  ): Promise<void> {
+    await this.removeNameBasedRelationshipFromContact(sourceFile, targetName, relationshipType);
   }
 
   /**
@@ -170,19 +248,30 @@ export class RelationshipManager {
 
     // Remove old relationships
     for (const rel of toRemove) {
-      await this.removeRelationship(contactFile, rel.uid, rel.relationshipType);
+      if (rel.isNameBased) {
+        await this.removeNameBasedRelationship(contactFile, rel.contactName, rel.relationshipType);
+      } else if (rel.uid) {
+        await this.removeRelationship(contactFile, rel.uid, rel.relationshipType);
+      }
     }
 
     // Add new relationships
     for (const rel of toAdd) {
       const targetFile = await this.findContactByName(rel.contactName);
       if (targetFile) {
+        // Contact exists - use UID-based relationship
         const targetUID = await this.getContactUID(targetFile);
         if (targetUID) {
           await this.addRelationship(contactFile, targetUID, rel.relationshipType);
         }
+      } else {
+        // Contact doesn't exist - use name-based relationship
+        await this.addNameBasedRelationship(contactFile, rel.contactName, rel.relationshipType);
       }
     }
+
+    // After syncing, try to upgrade any name-based relationships
+    await this.upgradeNameBasedRelationships(contactFile);
   }
 
   /**
@@ -206,6 +295,25 @@ export class RelationshipManager {
 
     const formattedUID = formatRelatedField(targetUID);
     await updateFrontMatterValue(contactFile, relationshipKey, formattedUID, this.app);
+  }
+
+  private async addNameBasedRelationshipToContact(
+    contactFile: TFile, 
+    targetName: string, 
+    relationshipType: string
+  ): Promise<void> {
+    const frontmatter = this.app.metadataCache.getFileCache(contactFile)?.frontmatter || {};
+    let relationshipKey = `RELATED[${relationshipType.toLowerCase()}]`;
+    
+    // Check if this key already exists, if so, add an index
+    let index = 1;
+    while (frontmatter[relationshipKey]) {
+      relationshipKey = `RELATED[${index}:${relationshipType.toLowerCase()}]`;
+      index++;
+    }
+
+    const formattedName = formatNameBasedRelatedField(targetName);
+    await updateFrontMatterValue(contactFile, relationshipKey, formattedName, this.app);
   }
 
   private async removeRelationshipFromContact(
@@ -232,6 +340,30 @@ export class RelationshipManager {
     }
   }
 
+  private async removeNameBasedRelationshipFromContact(
+    contactFile: TFile, 
+    targetName: string, 
+    relationshipType: string
+  ): Promise<void> {
+    const frontmatter = this.app.metadataCache.getFileCache(contactFile)?.frontmatter;
+    if (!frontmatter) return;
+
+    const formattedName = formatNameBasedRelatedField(targetName);
+    
+    // Find and remove the matching RELATED field
+    for (const [key, value] of Object.entries(frontmatter)) {
+      if (typeof value !== 'string') continue;
+      
+      const keyObj = parseKey(key);
+      if (keyObj.key === 'RELATED' && 
+          keyObj.type?.toLowerCase() === relationshipType.toLowerCase() &&
+          value === formattedName) {
+        await updateFrontMatterValue(contactFile, key, '', this.app);
+        break;
+      }
+    }
+  }
+
   private async getAllContactFiles(): Promise<TFile[]> {
     const contactsFolder = this.app.vault.getAllLoadedFiles()
       .filter(file => file instanceof TFile && file.extension === 'md') as TFile[];
@@ -250,9 +382,9 @@ export class RelationshipManager {
     return null;
   }
 
-  private async findContactByName(name: string): Promise<TFile | null> {
-    const contactFiles = await this.getAllContactFiles();
-    for (const file of contactFiles) {
+  private async findContactByName(name: string, contactFiles?: TFile[]): Promise<TFile | null> {
+    const files = contactFiles || await this.getAllContactFiles();
+    for (const file of files) {
       const displayName = this.getContactDisplayName(file);
       if (displayName === name) {
         return file;

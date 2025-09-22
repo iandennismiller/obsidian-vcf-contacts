@@ -52,6 +52,9 @@ export class RelationshipSyncService {
    * Handles file modification events to detect relationship changes.
    */
   async handleFileModification(contactFile: TFile): Promise<void> {
+    // First, try to upgrade any name-based relationships that might now have available UIDs
+    await this.relationshipManager.upgradeNameBasedRelationships(contactFile);
+    
     // Check if the file has relationship changes in the markdown
     const content = await this.app.vault.read(contactFile);
     const relationshipsSection = this.extractRelationshipsSection(content);
@@ -71,6 +74,10 @@ export class RelationshipSyncService {
       if (hasChanges) {
         await this.syncRelationshipsFromContent(contactFile);
       }
+    } else {
+      // Even if there's no relationships section, we should still try to upgrade
+      // and update the section with any existing relationships
+      await this.updateRelationshipsSection(contactFile);
     }
   }
 

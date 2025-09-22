@@ -76,27 +76,46 @@ export function isValidRelationshipType(relationshipType: string): boolean {
 }
 
 /**
- * Parses a vCard RELATED field value to extract UID and type.
- * Format: RELATED;TYPE=friend:urn:uuid:03a0e51f-...
+ * Parses a vCard RELATED field value to extract UID/name and type.
+ * Format: RELATED;TYPE=friend:urn:uuid:03a0e51f-... (UID-based)
+ * Format: RELATED;TYPE=friend:name:John Smith (name-based for missing contacts)
  */
 export interface ParsedRelation {
-  uid: string;
+  uid?: string;
+  name?: string;
   type: string;
+  isNameBased: boolean;
 }
 
 export function parseRelatedField(fieldValue: string, fieldType?: string): ParsedRelation | null {
   // Handle URN format: urn:uuid:xxxx-xxxx-xxxx
-  let uid = fieldValue;
   if (fieldValue.startsWith('urn:uuid:')) {
-    uid = fieldValue.substring(9); // Remove 'urn:uuid:' prefix
+    const uid = fieldValue.substring(9); // Remove 'urn:uuid:' prefix
+    const type = fieldType || 'related';
+    return {
+      uid: uid.trim(),
+      type: type.toLowerCase(),
+      isNameBased: false
+    };
   }
   
-  // Use the type from the field parameters, defaulting to 'related'
-  const type = fieldType || 'related';
+  // Handle name-based format: name:John Smith
+  if (fieldValue.startsWith('name:')) {
+    const name = fieldValue.substring(5); // Remove 'name:' prefix
+    const type = fieldType || 'related';
+    return {
+      name: name.trim(),
+      type: type.toLowerCase(),
+      isNameBased: true
+    };
+  }
   
+  // Legacy handling - assume it's a UID without urn:uuid prefix
+  const type = fieldType || 'related';
   return {
-    uid: uid.trim(),
-    type: type.toLowerCase()
+    uid: fieldValue.trim(),
+    type: type.toLowerCase(),
+    isNameBased: false
   };
 }
 
@@ -113,30 +132,39 @@ export function formatRelatedField(uid: string): string {
 }
 
 /**
+ * Formats a name-based relationship for vCard RELATED field.
+ * Used when the target contact doesn't exist yet.
+ */
+export function formatNameBasedRelatedField(name: string): string {
+  return `name:${name}`;
+}
+
+/**
  * Renders a relationship in human-readable format for markdown.
- * Format: "[[ContactName]] is the parent of CurrentContact"
+ * Format: "- Friend [[ContactName]]"
  */
 export function renderRelationshipMarkdown(
   contactName: string,
   relationshipType: string,
   currentContactName: string
 ): string {
-  const article = ['a', 'e', 'i', 'o', 'u'].includes(relationshipType[0]?.toLowerCase()) ? 'an' : 'a';
-  return `- [[${contactName}]] is ${article} ${relationshipType} of ${currentContactName}`;
+  // Capitalize the first letter of the relationship type
+  const capitalizedType = relationshipType.charAt(0).toUpperCase() + relationshipType.slice(1).toLowerCase();
+  return `- ${capitalizedType} [[${contactName}]]`;
 }
 
 /**
  * Parses a relationship markdown line to extract contact name and relationship type.
  * Handles formats like:
- * - [[ContactName]] is a friend of CurrentContact
- * - [[ContactName]] is the parent of CurrentContact
+ * - Friend [[ContactName]]
+ * - Parent [[ContactName]]
  */
 export function parseRelationshipMarkdown(line: string): { contactName: string; relationshipType: string } | null {
-  const match = line.match(/^-\s*\[\[([^\]]+)\]\]\s+is\s+(?:a|an|the)\s+([^\s]+)\s+of\s+(.+)$/);
+  const match = line.match(/^-\s*([^\s\[]+)\s*\[\[([^\]]+)\]\]$/);
   if (match) {
     return {
-      contactName: match[1].trim(),
-      relationshipType: match[2].trim().toLowerCase()
+      contactName: match[2].trim(),
+      relationshipType: match[1].trim().toLowerCase()
     };
   }
   return null;

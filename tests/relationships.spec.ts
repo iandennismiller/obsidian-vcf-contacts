@@ -10,6 +10,7 @@ import {
   isValidRelationshipType,
   parseRelatedField,
   formatRelatedField,
+  formatNameBasedRelatedField,
   renderRelationshipMarkdown,
   parseRelationshipMarkdown
 } from '../src/contacts/relationships';
@@ -51,7 +52,8 @@ describe('RELATED Field Parsing', () => {
     const result = parseRelatedField('urn:uuid:12345-abcde-67890', 'friend');
     expect(result).toEqual({
       uid: '12345-abcde-67890',
-      type: 'friend'
+      type: 'friend',
+      isNameBased: false
     });
   });
 
@@ -59,7 +61,17 @@ describe('RELATED Field Parsing', () => {
     const result = parseRelatedField('12345-abcde-67890', 'parent');
     expect(result).toEqual({
       uid: '12345-abcde-67890',
-      type: 'parent'
+      type: 'parent',
+      isNameBased: false
+    });
+  });
+
+  it('should parse name-based format correctly', () => {
+    const result = parseRelatedField('name:John Smith', 'friend');
+    expect(result).toEqual({
+      name: 'John Smith',
+      type: 'friend',
+      isNameBased: true
     });
   });
 
@@ -67,7 +79,8 @@ describe('RELATED Field Parsing', () => {
     const result = parseRelatedField('12345-abcde-67890');
     expect(result).toEqual({
       uid: '12345-abcde-67890',
-      type: 'related'
+      type: 'related',
+      isNameBased: false
     });
   });
 
@@ -75,34 +88,38 @@ describe('RELATED Field Parsing', () => {
     expect(formatRelatedField('12345-abcde-67890')).toBe('urn:uuid:12345-abcde-67890');
     expect(formatRelatedField('urn:uuid:12345-abcde-67890')).toBe('urn:uuid:12345-abcde-67890');
   });
+
+  it('should format name-based relationships correctly', () => {
+    expect(formatNameBasedRelatedField('John Smith')).toBe('name:John Smith');
+  });
 });
 
 describe('Relationship Markdown', () => {
   it('should render relationship markdown correctly', () => {
     expect(renderRelationshipMarkdown('John Doe', 'friend', 'Jane Smith'))
-      .toBe('- [[John Doe]] is a friend of Jane Smith');
+      .toBe('- Friend [[John Doe]]');
     
     expect(renderRelationshipMarkdown('Bob Johnson', 'parent', 'Alice Johnson'))
-      .toBe('- [[Bob Johnson]] is a parent of Alice Johnson');
+      .toBe('- Parent [[Bob Johnson]]');
       
     expect(renderRelationshipMarkdown('Eve Wilson', 'uncle', 'Charlie Wilson'))
-      .toBe('- [[Eve Wilson]] is an uncle of Charlie Wilson');
+      .toBe('- Uncle [[Eve Wilson]]');
   });
 
   it('should parse relationship markdown correctly', () => {
-    const result1 = parseRelationshipMarkdown('- [[John Doe]] is a friend of Jane Smith');
+    const result1 = parseRelationshipMarkdown('- Friend [[John Doe]]');
     expect(result1).toEqual({
       contactName: 'John Doe',
       relationshipType: 'friend'
     });
 
-    const result2 = parseRelationshipMarkdown('- [[Bob Johnson]] is the parent of Alice Johnson');
+    const result2 = parseRelationshipMarkdown('- Parent [[Bob Johnson]]');
     expect(result2).toEqual({
       contactName: 'Bob Johnson',
       relationshipType: 'parent'
     });
 
-    const result3 = parseRelationshipMarkdown('- [[Eve Wilson]] is an uncle of Charlie Wilson');
+    const result3 = parseRelationshipMarkdown('- Uncle [[Eve Wilson]]');
     expect(result3).toEqual({
       contactName: 'Eve Wilson',
       relationshipType: 'uncle'
@@ -115,11 +132,42 @@ describe('Relationship Markdown', () => {
     expect(parseRelationshipMarkdown('')).toBeNull();
   });
 
+  it('should handle case insensitive input but capitalize output', () => {
+    expect(renderRelationshipMarkdown('John Doe', 'friend', 'Jane Smith'))
+      .toBe('- Friend [[John Doe]]');
+    
+    expect(renderRelationshipMarkdown('John Doe', 'FRIEND', 'Jane Smith'))
+      .toBe('- Friend [[John Doe]]');
+      
+    expect(renderRelationshipMarkdown('John Doe', 'fRiEnD', 'Jane Smith'))
+      .toBe('- Friend [[John Doe]]');
+  });
+
   it('should handle names with special characters', () => {
-    const result = parseRelationshipMarkdown('- [[O\'Connor, Sean]] is a friend of Jane Smith');
+    const result = parseRelationshipMarkdown('- Friend [[O\'Connor, Sean]]');
     expect(result).toEqual({
       contactName: 'O\'Connor, Sean',
       relationshipType: 'friend'
+    });
+  });
+
+  it('should parse case insensitive relationship types', () => {
+    const result1 = parseRelationshipMarkdown('- friend [[John Doe]]');
+    expect(result1).toEqual({
+      contactName: 'John Doe',
+      relationshipType: 'friend'
+    });
+
+    const result2 = parseRelationshipMarkdown('- PARENT [[Bob Johnson]]');
+    expect(result2).toEqual({
+      contactName: 'Bob Johnson',
+      relationshipType: 'parent'
+    });
+
+    const result3 = parseRelationshipMarkdown('- Uncle [[Eve Wilson]]');
+    expect(result3).toEqual({
+      contactName: 'Eve Wilson',
+      relationshipType: 'uncle'
     });
   });
 });

@@ -8,7 +8,8 @@ import {
   renderRelationshipMarkdown,
   getComplementRelationship,
   parseRelatedField,
-  formatRelatedField
+  formatRelatedField,
+  formatNameBasedRelatedField
 } from '../src/contacts/relationships';
 
 describe('End-to-End Relationship Processing', () => {
@@ -27,7 +28,7 @@ describe('End-to-End Relationship Processing', () => {
     const contactName = 'Jane Smith';
     const currentContactName = 'John Doe';
     const markdown = renderRelationshipMarkdown(contactName, relationshipType, currentContactName);
-    expect(markdown).toBe('- [[Jane Smith]] is a friend of John Doe');
+    expect(markdown).toBe('- Friend [[Jane Smith]]');
 
     // 3. Parse back from markdown
     const parsedMarkdown = parseRelationshipMarkdown(markdown);
@@ -38,7 +39,7 @@ describe('End-to-End Relationship Processing', () => {
 
     // 4. Format back to vCard
     if (parsedRelation) {
-      const formattedUID = formatRelatedField(parsedRelation.uid);
+      const formattedUID = formatRelatedField(parsedRelation.uid!);
       expect(formattedUID).toBe('urn:uuid:12345-abcde-67890');
     }
   });
@@ -58,8 +59,8 @@ describe('End-to-End Relationship Processing', () => {
     const parentMarkdown = renderRelationshipMarkdown('Bob Johnson', 'parent', 'Alice Johnson');
     const childMarkdown = renderRelationshipMarkdown('Alice Johnson', 'child', 'Bob Johnson');
     
-    expect(parentMarkdown).toBe('- [[Bob Johnson]] is a parent of Alice Johnson');
-    expect(childMarkdown).toBe('- [[Alice Johnson]] is a child of Bob Johnson');
+    expect(parentMarkdown).toBe('- Parent [[Bob Johnson]]');
+    expect(childMarkdown).toBe('- Child [[Alice Johnson]]');
   });
 
   it('should handle complex relationship scenarios', () => {
@@ -76,11 +77,11 @@ describe('End-to-End Relationship Processing', () => {
     );
 
     expect(markdownLines).toEqual([
-      '- [[Mary Wilson]] is a spouse of John Wilson',
-      '- [[Tommy Wilson]] is a child of John Wilson',
-      '- [[Sally Wilson]] is a child of John Wilson',
-      '- [[Robert Wilson]] is a parent of John Wilson',
-      '- [[Dave Smith]] is a friend of John Wilson'
+      '- Spouse [[Mary Wilson]]',
+      '- Child [[Tommy Wilson]]',
+      '- Child [[Sally Wilson]]',
+      '- Parent [[Robert Wilson]]',
+      '- Friend [[Dave Smith]]'
     ]);
 
     // Test parsing all back
@@ -99,18 +100,18 @@ describe('End-to-End Relationship Processing', () => {
     // Test names with special characters
     const specialName = "O'Connor, Sean-Michael Jr.";
     const markdown = renderRelationshipMarkdown(specialName, 'colleague', 'Jane Doe');
-    expect(markdown).toBe("- [[O'Connor, Sean-Michael Jr.]] is a colleague of Jane Doe");
+    expect(markdown).toBe("- Colleague [[O'Connor, Sean-Michael Jr.]]");
     
     const parsed = parseRelationshipMarkdown(markdown);
     expect(parsed?.contactName).toBe("O'Connor, Sean-Michael Jr.");
     expect(parsed?.relationshipType).toBe('colleague');
 
-    // Test articles (a vs an)
+    // Test case handling
     const uncleMarkdown = renderRelationshipMarkdown('Uncle Bob', 'uncle', 'Little Tim');
-    expect(uncleMarkdown).toBe('- [[Uncle Bob]] is an uncle of Little Tim');
+    expect(uncleMarkdown).toBe('- Uncle [[Uncle Bob]]');
 
     const friendMarkdown = renderRelationshipMarkdown('Friend Joe', 'friend', 'Little Tim');
-    expect(friendMarkdown).toBe('- [[Friend Joe]] is a friend of Little Tim');
+    expect(friendMarkdown).toBe('- Friend [[Friend Joe]]');
   });
 });
 
@@ -127,8 +128,8 @@ Some personal notes here.
 
 ## Relationships
 
-- [[Old Friend]] is a friend of John Doe
-- [[Former Boss]] is a manager of John Doe
+- Friend [[Old Friend]]
+- Manager [[Former Boss]]
 
 More content here.
 
@@ -137,9 +138,9 @@ More content here.
 
     const newRelationships = `## Relationships
 
-- [[New Friend]] is a friend of John Doe
-- [[Current Boss]] is a manager of John Doe
-- [[Spouse]] is a spouse of John Doe
+- Friend [[New Friend]]
+- Manager [[Current Boss]]
+- Spouse [[Spouse]]
 
 `;
 
@@ -148,16 +149,16 @@ More content here.
     const relationshipsEnd = originalContent.indexOf('\nMore content');
     const relationshipsSection = originalContent.substring(relationshipsStart, relationshipsEnd);
     
-    expect(relationshipsSection).toContain('- [[Old Friend]] is a friend of John Doe');
-    expect(relationshipsSection).toContain('- [[Former Boss]] is a manager of John Doe');
+    expect(relationshipsSection).toContain('- Friend [[Old Friend]]');
+    expect(relationshipsSection).toContain('- Manager [[Former Boss]]');
 
     // Test replacement
     const relationshipsSectionRegex = /^## Relationships\s*\n[\s\S]*?(?=\nMore content)/m;
     const updatedContent = originalContent.replace(relationshipsSectionRegex, newRelationships.trim());
-    expect(updatedContent).toContain('- [[New Friend]] is a friend of John Doe');
-    expect(updatedContent).toContain('- [[Current Boss]] is a manager of John Doe');
-    expect(updatedContent).toContain('- [[Spouse]] is a spouse of John Doe');
-    expect(updatedContent).not.toContain('- [[Old Friend]] is a friend of John Doe');
+    expect(updatedContent).toContain('- Friend [[New Friend]]');
+    expect(updatedContent).toContain('- Manager [[Current Boss]]');
+    expect(updatedContent).toContain('- Spouse [[Spouse]]');
+    expect(updatedContent).not.toContain('- Friend [[Old Friend]]');
     expect(updatedContent).toContain('#### Notes');
     expect(updatedContent).toContain('#Contact #Work');
   });
@@ -175,7 +176,7 @@ Some notes
 
     const relationshipsSection = `## Relationships
 
-- [[John Doe]] is a friend of Jane Smith
+- Friend [[John Doe]]
 
 `;
 
@@ -190,7 +191,7 @@ Some notes
         contentWithoutRelationships.slice(hashtagStart);
       
       expect(updatedContent).toContain('## Relationships');
-      expect(updatedContent).toContain('- [[John Doe]] is a friend of Jane Smith');
+      expect(updatedContent).toContain('- Friend [[John Doe]]');
       expect(updatedContent).toContain('#Contact #Friend');
       
       // Verify order is maintained
@@ -198,5 +199,28 @@ Some notes
       const hashtagIndex = updatedContent.indexOf('#Contact #Friend');
       expect(relationshipsIndex).toBeLessThan(hashtagIndex);
     }
+  });
+});
+
+describe('Name-based Relationships', () => {
+  it('should handle parsing name-based RELATED fields', () => {
+    const result = parseRelatedField('name:John Smith', 'friend');
+    expect(result).toEqual({
+      name: 'John Smith',
+      type: 'friend',
+      isNameBased: true
+    });
+  });
+
+  it('should format name-based relationships correctly', () => {
+    expect(formatNameBasedRelatedField('John Smith')).toBe('name:John Smith');
+    expect(formatNameBasedRelatedField('O\'Connor, Sean')).toBe('name:O\'Connor, Sean');
+  });
+
+  it('should render name-based relationships same as UID-based', () => {
+    const markdown1 = renderRelationshipMarkdown('John Smith', 'friend', 'Jane Doe');
+    const markdown2 = renderRelationshipMarkdown('John Smith', 'friend', 'Jane Doe');
+    expect(markdown1).toBe(markdown2);
+    expect(markdown1).toBe('- Friend [[John Smith]]');
   });
 });
