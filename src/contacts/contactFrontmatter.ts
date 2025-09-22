@@ -1,4 +1,4 @@
-import { parseYaml, stringifyYaml, TFile } from "obsidian";
+import { parseYaml, stringifyYaml, TFile, App } from "obsidian";
 import { getApp } from "src/context/sharedAppContext";
 
 export type Contact = {
@@ -21,9 +21,10 @@ export async function getFrontmatterFromFiles(files: TFile[]) {
   return contactsData;
 }
 
-export async function updateFrontMatterValue(file: TFile, key: string, value: string) {
-  const app = getApp();
-	const content = await app.vault.read(file);
+export async function updateFrontMatterValue(file: TFile, key: string, value: string, app?: App) {
+  // Use provided app instance or fall back to shared context
+  const appInstance = app || getApp();
+	const content = await appInstance.vault.read(file);
 
 	const match = content.match(/^---\n([\s\S]*?)\n---\n?/);
 
@@ -40,5 +41,5 @@ export async function updateFrontMatterValue(file: TFile, key: string, value: st
 	const newFrontMatter = '---\n' + stringifyYaml(yamlObj) + '---\n';
 	const newContent = newFrontMatter + body;
 
-	await app.vault.modify(file, newContent);
+	await appInstance.vault.modify(file, newContent);
 }

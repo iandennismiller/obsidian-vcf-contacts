@@ -6,6 +6,7 @@ import { CONTACTS_VIEW_CONFIG } from "src/util/constants";
 import myScrollTo from "src/util/myScrollTo";
 import { VCFolderWatcher } from "src/services/vcfFolderWatcher";
 import { onSettingsChange } from "src/context/sharedSettingsContext";
+import { setApp, clearApp } from "src/context/sharedAppContext";
 import { loggingService } from "src/services/loggingService";
 
 import { ContactsSettingTab, DEFAULT_SETTINGS } from './settings/settings';
@@ -17,6 +18,8 @@ export default class ContactsPlugin extends Plugin {
 	private settingsUnsubscribe: (() => void) | null = null;
 
 	async onload() {
+		// Set up app context for shared utilities
+		setApp(this.app);
 
 		await this.loadSettings();
 		
@@ -72,6 +75,9 @@ export default class ContactsPlugin extends Plugin {
 	}
 
 	onunload() {
+		// Clean up app context
+		clearApp();
+
 		// Clean up VCF folder watcher
 		if (this.vcfWatcher) {
 			this.vcfWatcher.stop();

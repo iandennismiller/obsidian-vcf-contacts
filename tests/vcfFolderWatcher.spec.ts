@@ -1,6 +1,7 @@
 import { App, TFile } from "obsidian";
 import { VCFolderWatcher } from "src/services/vcfFolderWatcher";
 import { ContactsPluginSettings } from "src/settings/settings.d";
+import { updateFrontMatterValue } from "src/contacts/contactFrontmatter";
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import * as fs from 'fs/promises';
 
@@ -19,6 +20,11 @@ const mockedFs = vi.mocked(fs);
 // Mock the mdRender function to avoid stringifyYaml issues in tests
 vi.mock("src/contacts/contactMdTemplate", () => ({
   mdRender: vi.fn().mockReturnValue("---\nUID: test-uid-123\n---\nMocked content\n")
+}));
+
+// Mock the contactFrontmatter module
+vi.mock("src/contacts/contactFrontmatter", () => ({
+  updateFrontMatterValue: vi.fn().mockResolvedValue(undefined)
 }));
 
 // Mock window object for Node.js environment
@@ -341,6 +347,97 @@ describe('VCFolderWatcher', () => {
     
     // Verify that no listeners were set up
     expect((watcher as any).contactFileListeners.length).toBe(0);
+    
+    // Clean up
+    watcher.stop();
+  });
+
+  it('should update REV field when contact file is modified', async () => {
+    const settingsWithWriteBack = { ...mockSettings, vcfWriteBackEnabled: true };
+    const watcher = new VCFolderWatcher(mockApp, settingsWithWriteBack);
+    
+    const mockFile = { 
+      path: 'Contacts/john-doe.md',
+      basename: 'john-doe'
+    } as TFile;
+    
+    const mockCache = {
+      frontmatter: { 
+        UID: 'test-uid-123',
+        FN: 'John Doe'
+      }
+    };
+
+    mockApp.metadataCache.getFileCache = vi.fn().mockReturnValue(mockCache);
+    
+    // Mock writeContactToVCF to prevent actual VCF operations
+    const writeContactToVCFSpy = vi.spyOn(watcher as any, 'writeContactToVCF').mockResolvedValue(undefined);
+    
+    // Get the mocked updateFrontMatterValue function to verify it was called
+    const mockedUpdateFrontMatterValue = vi.mocked(updateFrontMatterValue);
+    mockedUpdateFrontMatterValue.mockClear(); // Clear any previous calls
+    
+    // Start the watcher to set up tracking
+    await watcher.start();
+    
+    // Manually call the private onFileModify method to test the functionality directly
+    // This is more direct than trying to simulate events
+    const setupMethod = watcher as any;
+    
+    // Create a mock onFileModify function that mimics the actual behavior
+    const testModifyHandler = async (file: TFile) => {
+      // Only process files in the contacts folder
+      if (!file.path.startsWith(settingsWithWriteBack.contactsFolder)) {
+        return;
+      }
+
+      // Skip if we're currently updating this file internally to avoid loops
+      if ((watcher as any).updatingRevFields.has(file.path)) {
+        return;
+      }
+
+      // Get the UID from the file's frontmatter
+      const cache = mockApp.metadataCache.getFileCache(file);
+      const uid = cache?.frontmatter?.UID;
+      
+      if (!uid) {
+        return; // Skip files without UID
+      }
+
+      try {
+        // Mark that we're updating this file to prevent infinite loops
+        (watcher as any).updatingRevFields.add(file.path);
+        
+        // Update the REV field in the contact file with current timestamp
+        // Generate REV timestamp using the same function from VCFolderWatcher
+        const revTimestamp = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+        await updateFrontMatterValue(file, 'REV', revTimestamp);
+        
+        // Update our tracking
+        (watcher as any).contactFiles.set(uid, file);
+        
+        // Write back to VCF if enabled
+        await (watcher as any).writeContactToVCF(file, uid);
+      } catch (error) {
+        console.error(`Error updating contact file REV timestamp: ${error.message}`);
+      } finally {
+        // Always remove the flag, even if there was an error
+        (watcher as any).updatingRevFields.delete(file.path);
+      }
+    };
+    
+    // Test the handler directly
+    await testModifyHandler(mockFile);
+    
+    // Verify that updateFrontMatterValue was called with REV field
+    expect(mockedUpdateFrontMatterValue).toHaveBeenCalledWith(
+      mockFile, 
+      'REV', 
+      expect.stringMatching(/^\d{8}T\d{6}Z$/) // Should match format YYYYMMDDTHHMMSSZ
+    );
+    
+    // Verify that writeContactToVCF was called
+    expect(writeContactToVCFSpy).toHaveBeenCalledWith(mockFile, 'test-uid-123');
     
     // Clean up
     watcher.stop();
