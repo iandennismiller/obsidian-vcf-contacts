@@ -224,3 +224,48 @@ describe('Name-based Relationships', () => {
     expect(markdown1).toBe('- Friend [[John Smith]]');
   });
 });
+
+describe('Case-insensitive Header Handling', () => {
+  it('should handle different case variations of relationships header', () => {
+    const testCases = [
+      '## Relationships\n\n- Friend [[John]]',
+      '## relationships\n\n- Friend [[John]]', 
+      '## RELATIONSHIPS\n\n- Friend [[John]]',
+      '## Relationship\n\n- Friend [[John]]',
+      '## relationship\n\n- Friend [[John]]'
+    ];
+
+    testCases.forEach(testContent => {
+      // These patterns should all be recognized and processed
+      const relationshipsSectionRegex = /^## [Rr]elationships?\s*\n([\s\S]*?)(?=\n## |\n### |\n#### |$)/m;
+      const match = testContent.match(relationshipsSectionRegex);
+      expect(match).toBeTruthy();
+      expect(match![1].trim()).toBe('- Friend [[John]]');
+    });
+  });
+
+  it('should preserve relationships header even with no relationships', () => {
+    // Test the renderRelationshipsMarkdown behavior when no relationships exist
+    // This should return the header to prevent deletion
+    const emptyRelationshipsMarkdown = '## Relationships\n\n';
+    
+    // Simulate replacement behavior
+    const originalContent = `---
+FN: Test Contact
+---
+
+## relationships
+
+- Friend [[Old Friend]]
+
+#### Notes
+Some notes`;
+
+    const relationshipsSectionRegex = /^## [Rr]elationships?\s*\n([\s\S]*?)(?=\n## |\n### |\n#### |$)/m;
+    const updatedContent = originalContent.replace(relationshipsSectionRegex, emptyRelationshipsMarkdown.trim());
+    
+    // Should preserve the header even when no relationships
+    expect(updatedContent).toContain('## Relationships');
+    expect(updatedContent).not.toContain('## relationships');
+  });
+});

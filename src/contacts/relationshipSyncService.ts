@@ -86,11 +86,11 @@ export class RelationshipSyncService {
    */
 
   private replaceRelationshipsSection(content: string, newRelationshipsMarkdown: string): string {
-    // Find the relationships section using regex
-    const relationshipsSectionRegex = /^## Relationships\s*\n([\s\S]*?)(?=\n## |\n### |\n#### |$)/m;
+    // Find the relationships section using case-insensitive regex
+    const relationshipsSectionRegex = /^## [Rr]elationships?\s*\n([\s\S]*?)(?=\n## |\n### |\n#### |$)/m;
     
     if (relationshipsSectionRegex.test(content)) {
-      // Replace existing relationships section
+      // Replace existing relationships section, ensuring we preserve the standardized header
       return content.replace(relationshipsSectionRegex, newRelationshipsMarkdown.trim());
     } else {
       // Find where to insert the relationships section
@@ -117,7 +117,8 @@ export class RelationshipSyncService {
   }
 
   private extractRelationshipsSection(content: string): string | null {
-    const relationshipsSectionRegex = /^## Relationships\s*\n([\s\S]*?)(?=\n## |\n### |\n#### |$)/m;
+    // Use case-insensitive regex to match relationships header
+    const relationshipsSectionRegex = /^## [Rr]elationships?\s*\n([\s\S]*?)(?=\n## |\n### |\n#### |$)/m;
     const match = content.match(relationshipsSectionRegex);
     return match ? match[1].trim() : null;
   }

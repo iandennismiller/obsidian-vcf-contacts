@@ -204,7 +204,8 @@ export class RelationshipManager {
     const currentContactName = this.getContactDisplayName(contactFile);
     
     if (relationships.length === 0) {
-      return '';
+      // Return header with empty content instead of empty string to preserve the section
+      return `## Relationships\n\n`;
     }
 
     const lines = relationships.map(rel => 
