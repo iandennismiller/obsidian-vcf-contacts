@@ -136,6 +136,24 @@ export class VCFolderWatcher {
   }
 
   private async findContactFileByUID(uid: string): Promise<TFile | null> {
+    // First check the cached contactFiles map
+    const cachedFile = this.contactFiles.get(uid);
+    if (cachedFile) {
+      // Verify the file still exists and has the correct UID
+      try {
+        const cache = this.app.metadataCache.getFileCache(cachedFile);
+        const fileUID = cache?.frontmatter?.UID;
+        if (fileUID === uid) {
+          return cachedFile;
+        }
+      } catch (error) {
+        console.warn(`Error verifying cached file ${cachedFile.path}:`, error);
+      }
+      // Remove stale cache entry
+      this.contactFiles.delete(uid);
+    }
+
+    // Fall back to searching all files if not in cache or cache is stale
     try {
       const contactsFolder = this.settings.contactsFolder || '/';
       const files = this.app.vault.getMarkdownFiles().filter(file => 
@@ -147,6 +165,8 @@ export class VCFolderWatcher {
           const cache = this.app.metadataCache.getFileCache(file);
           const fileUID = cache?.frontmatter?.UID;
           if (fileUID === uid) {
+            // Update the cache
+            this.contactFiles.set(uid, file);
             return file;
           }
         } catch (error) {
