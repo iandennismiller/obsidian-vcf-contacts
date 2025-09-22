@@ -61,10 +61,10 @@ export class RelationshipSyncService {
       const lines = relationshipsSection.split('\n').filter(line => line.trim().startsWith('-'));
       const currentRelationships = await this.relationshipManager.getContactRelationships(contactFile);
       
-      // Check if there are any differences
+      // Parse relationships from markdown
       const markdownRelationships = lines
         .map(line => parseRelationshipMarkdown(line))
-        .filter(rel => rel !== null);
+        .filter(rel => rel !== null) as Array<{ contactName: string; relationshipType: string }>;
       
       const hasChanges = this.hasRelationshipChanges(currentRelationships, markdownRelationships);
       

@@ -9,7 +9,7 @@
  */
 
 import { App, TFile } from 'obsidian';
-import { getFrontmatterFromFiles, updateFrontMatterValue } from '../contactFrontmatter';
+import { getFrontmatterFromFiles, updateFrontMatterValue } from './contactFrontmatter';
 import { 
   parseRelatedField, 
   formatRelatedField, 
@@ -17,8 +17,8 @@ import {
   renderRelationshipMarkdown,
   parseRelationshipMarkdown,
   ParsedRelation
-} from '../relationships';
-import { parseKey } from '../contactDataKeys';
+} from './relationships';
+import { parseKey } from './contactDataKeys';
 
 export interface ContactRelationship {
   contactFile: TFile;
@@ -195,12 +195,12 @@ export class RelationshipManager {
     relationshipType: string
   ): Promise<void> {
     const frontmatter = this.app.metadataCache.getFileCache(contactFile)?.frontmatter || {};
-    let relationshipKey = `RELATED[${relationshipType.toUpperCase()}]`;
+    let relationshipKey = `RELATED[${relationshipType.toLowerCase()}]`;
     
     // Check if this key already exists, if so, add an index
     let index = 1;
     while (frontmatter[relationshipKey]) {
-      relationshipKey = `RELATED[${index}:${relationshipType.toUpperCase()}]`;
+      relationshipKey = `RELATED[${index}:${relationshipType.toLowerCase()}]`;
       index++;
     }
 
@@ -237,7 +237,7 @@ export class RelationshipManager {
       .filter(file => file instanceof TFile && file.extension === 'md') as TFile[];
     
     const contactFiles = await getFrontmatterFromFiles(contactsFolder);
-    return contactFiles.map(contact => contact.file);
+    return contactFiles.map((contact: any) => contact.file);
   }
 
   private async findContactByUID(uid: string, contactFiles: TFile[]): Promise<TFile | null> {

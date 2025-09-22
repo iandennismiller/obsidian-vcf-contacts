@@ -22,6 +22,7 @@ export async function createEmpty() {
     "ORG": "",
     "ROLE": "",
     "CATEGORIES": "",
+    "UID": `urn:uuid:${crypto.randomUUID()}`,
     "VERSION": "4.0"
   }
   return await ensureHasName(vCardObject);
