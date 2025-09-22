@@ -15,6 +15,9 @@ const insightsSettingDefaults = insightsSetting.reduce((acc:Record<string, strin
 export const DEFAULT_SETTINGS: ContactsPluginSettings = {
   contactsFolder: "",
   defaultHashtag: "",
+  vcfWatchFolder: "",
+  vcfWatchEnabled: false,
+  vcfWatchPollingInterval: 30,
   ...insightsSettingDefaults
 }
 
@@ -100,6 +103,59 @@ export class ContactsSettingTab extends PluginSettingTab {
               }));
       }
     })
+
+    // VCF Folder Watching Settings
+    const vcfWatchingTitle = containerEl.createEl("h3", { text: "VCF Folder Watching" });
+    vcfWatchingTitle.style.marginTop = "2em";
+
+    // VCF Watch Folder
+    const vcfFolderDesc = document.createDocumentFragment();
+    vcfFolderDesc.append(
+      "Local filesystem folder to watch for VCF files.",
+      vcfFolderDesc.createEl("br"),
+      "Can be outside of your Obsidian vault. Leave empty to disable."
+    );
+
+    new Setting(containerEl)
+      .setName("VCF Watch Folder")
+      .setDesc(vcfFolderDesc)
+      .addText(text => text
+        .setPlaceholder("Example: /Users/username/Documents/Contacts")
+        .setValue(this.plugin.settings.vcfWatchFolder)
+        .onChange(async (value) => {
+          this.plugin.settings.vcfWatchFolder = value;
+          await this.plugin.saveSettings();
+          setSettings(this.plugin.settings);
+        }));
+
+    // VCF Watch Enabled Toggle
+    new Setting(containerEl)
+      .setName("Enable VCF Folder Watching")
+      .setDesc("When enabled, the plugin will automatically import new VCF files from the watched folder.")
+      .addToggle(toggle =>
+        toggle
+          .setValue(this.plugin.settings.vcfWatchEnabled)
+          .onChange(async (value) => {
+            this.plugin.settings.vcfWatchEnabled = value;
+            await this.plugin.saveSettings();
+            setSettings(this.plugin.settings);
+          }));
+
+    // VCF Watch Polling Interval
+    new Setting(containerEl)
+      .setName("Polling Interval (seconds)")
+      .setDesc("How often to check the VCF folder for changes. Minimum 10 seconds.")
+      .addText(text => text
+        .setPlaceholder("30")
+        .setValue(String(this.plugin.settings.vcfWatchPollingInterval))
+        .onChange(async (value) => {
+          const numValue = parseInt(value, 10);
+          if (!isNaN(numValue) && numValue >= 10) {
+            this.plugin.settings.vcfWatchPollingInterval = numValue;
+            await this.plugin.saveSettings();
+            setSettings(this.plugin.settings);
+          }
+        }));
 
   }
 }
