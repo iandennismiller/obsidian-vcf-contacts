@@ -791,9 +791,17 @@ export class VCFolderWatcher {
         targetPath = path.join(this.settings.vcfWatchFolder, `${sanitizedName}.vcf`);
       }
 
-      // Add REV field with current timestamp for sync tracking
+      // Add REV field with current timestamp for sync tracking (only if not already present)
       const timestamp = generateRevTimestamp();
-      const vcfWithRev = vcards.replace('END:VCARD', `REV:${timestamp}\nEND:VCARD`);
+      let vcfWithRev: string;
+      
+      if (vcards.includes('REV:')) {
+        // REV field already exists (from frontmatter), just use the generated VCF as-is
+        vcfWithRev = vcards;
+      } else {
+        // No REV field exists, add one
+        vcfWithRev = vcards.replace('END:VCARD', `REV:${timestamp}\nEND:VCARD`);
+      }
 
       // Write to filesystem
       await fs.writeFile(targetPath, vcfWithRev, 'utf-8');
