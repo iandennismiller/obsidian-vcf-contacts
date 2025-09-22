@@ -1,6 +1,6 @@
 import "src/insights/insightLoading";
 
-import { Plugin, TFile } from 'obsidian';
+import { Plugin, TFile, WorkspaceLeaf } from 'obsidian';
 import { ContactsView } from "src/ui/sidebar/sidebarView";
 import { CONTACTS_VIEW_CONFIG } from "src/util/constants";
 import myScrollTo from "src/util/myScrollTo";
@@ -18,6 +18,8 @@ export default class ContactsPlugin extends Plugin {
 	private vcfWatcher: VCFolderWatcher | null = null;
 	private settingsUnsubscribe: (() => void) | null = null;
 	private relationshipSyncService: RelationshipSyncService | null = null;
+	private pendingSyncFiles = new Set<string>();
+	private syncDebounceTimer: number | null = null;
 
 	async onload() {
 		// Set up app context for shared utilities
@@ -37,12 +39,20 @@ export default class ContactsPlugin extends Plugin {
 		this.vcfWatcher = new VCFolderWatcher(this.app, this.settings);
 		await this.vcfWatcher.start();
 
-		// Listen for file modification events to sync relationships
+		// Listen for when the active leaf changes (when user switches away from a file)
+		// This is more appropriate than 'modify' events which fire too frequently
+		this.registerEvent(
+			this.app.workspace.on('active-leaf-change', (leaf) => {
+				this.handleActiveLeafChange(leaf);
+			})
+		);
+
+		// Also listen for modify events to track which contact files have changes
+		// but don't sync immediately - just mark them as needing sync
 		this.registerEvent(
 			this.app.vault.on('modify', (file) => {
 				if (file instanceof TFile && file.extension === 'md') {
-					// Check if this is a contact file and handle relationship changes
-					this.handleContactFileModification(file);
+					this.markContactFileForSync(file);
 				}
 			})
 		);
@@ -101,6 +111,12 @@ export default class ContactsPlugin extends Plugin {
 		// Clean up app context
 		clearApp();
 
+		// Clean up debounce timer
+		if (this.syncDebounceTimer) {
+			window.clearTimeout(this.syncDebounceTimer);
+			this.syncDebounceTimer = null;
+		}
+
 		// Clean up VCF folder watcher
 		if (this.vcfWatcher) {
 			this.vcfWatcher.stop();
@@ -117,18 +133,49 @@ export default class ContactsPlugin extends Plugin {
 		}
 	}
 
-	private async handleContactFileModification(file: TFile) {
+	private markContactFileForSync(file: TFile) {
 		try {
 			// Check if this file has contact frontmatter
 			const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter;
 			if (frontmatter && (frontmatter['N.GN'] || frontmatter['FN'])) {
-				// This is a contact file, handle potential relationship changes
-				if (this.relationshipSyncService) {
-					await this.relationshipSyncService.handleFileModification(file);
-				}
+				// This is a contact file, mark it for sync when user switches away
+				this.pendingSyncFiles.add(file.path);
 			}
 		} catch (error) {
-			loggingService.warn(`Error handling contact file modification: ${error.message}`);
+			loggingService.warn(`Error marking contact file for sync: ${error.message}`);
+		}
+	}
+
+	private handleActiveLeafChange(leaf: WorkspaceLeaf | null) {
+		try {
+			// Get the previous active file and sync it if it was a contact file with pending changes
+			const previousFile = this.app.workspace.getActiveFile();
+			
+			// Debounce the sync to avoid excessive calls when user rapidly switches between files
+			if (this.syncDebounceTimer) {
+				window.clearTimeout(this.syncDebounceTimer);
+			}
+
+			this.syncDebounceTimer = window.setTimeout(async () => {
+				// Sync any pending contact files
+				if (this.pendingSyncFiles.size > 0 && this.relationshipSyncService) {
+					const filesToSync = Array.from(this.pendingSyncFiles);
+					this.pendingSyncFiles.clear();
+
+					for (const filePath of filesToSync) {
+						const file = this.app.vault.getAbstractFileByPath(filePath);
+						if (file instanceof TFile) {
+							await this.relationshipSyncService.handleFileModification(file);
+						}
+					}
+
+					if (filesToSync.length > 0) {
+						loggingService.info(`Synced relationships for ${filesToSync.length} contact file(s)`);
+					}
+				}
+			}, 500); // Wait 500ms after the user stops switching files
+		} catch (error) {
+			loggingService.warn(`Error handling active leaf change: ${error.message}`);
 		}
 	}
 
