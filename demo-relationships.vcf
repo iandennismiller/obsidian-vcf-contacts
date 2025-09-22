@@ -1,0 +1,76 @@
+BEGIN:VCARD
+VERSION:4.0
+FN:John Smith
+N:Smith;John;Michael;;
+UID:urn:uuid:john-smith-12345
+EMAIL;TYPE=work:john@company.com
+EMAIL;TYPE=home:john.smith@personal.com
+TEL;TYPE=cell:+1-555-123-4567
+TEL;TYPE=work:+1-555-987-6543
+ORG:Tech Corporation
+TITLE:Senior Developer
+ROLE:Software Engineer
+BDAY:1985-06-15
+RELATED;TYPE=spouse:urn:uuid:jane-smith-67890
+RELATED;TYPE=child:urn:uuid:tommy-smith-11111
+RELATED;TYPE=child:urn:uuid:sally-smith-22222
+RELATED;TYPE=parent:urn:uuid:robert-smith-33333
+RELATED;TYPE=friend:urn:uuid:mike-johnson-44444
+RELATED;TYPE=colleague:urn:uuid:sarah-wilson-55555
+END:VCARD
+
+BEGIN:VCARD
+VERSION:4.0
+FN:Jane Smith
+N:Smith;Jane;Elizabeth;;
+UID:urn:uuid:jane-smith-67890
+EMAIL;TYPE=work:jane@hospital.com
+EMAIL;TYPE=home:jane.smith@personal.com
+TEL;TYPE=cell:+1-555-234-5678
+ORG:City Hospital
+TITLE:Nurse Manager
+BDAY:1987-03-22
+RELATED;TYPE=spouse:urn:uuid:john-smith-12345
+RELATED;TYPE=child:urn:uuid:tommy-smith-11111
+RELATED;TYPE=child:urn:uuid:sally-smith-22222
+RELATED;TYPE=friend:urn:uuid:linda-brown-66666
+END:VCARD
+
+BEGIN:VCARD
+VERSION:4.0
+FN:Tommy Smith
+N:Smith;Tommy;;;
+UID:urn:uuid:tommy-smith-11111
+EMAIL;TYPE=home:tommy@email.com
+TEL;TYPE=cell:+1-555-345-6789
+BDAY:2010-09-10
+RELATED;TYPE=parent:urn:uuid:john-smith-12345
+RELATED;TYPE=parent:urn:uuid:jane-smith-67890
+RELATED;TYPE=sibling:urn:uuid:sally-smith-22222
+END:VCARD
+
+BEGIN:VCARD
+VERSION:4.0
+FN:Sally Smith
+N:Smith;Sally;;;
+UID:urn:uuid:sally-smith-22222
+EMAIL;TYPE=home:sally@email.com
+TEL;TYPE=cell:+1-555-456-7890
+BDAY:2012-12-05
+RELATED;TYPE=parent:urn:uuid:john-smith-12345
+RELATED;TYPE=parent:urn:uuid:jane-smith-67890
+RELATED;TYPE=sibling:urn:uuid:tommy-smith-11111
+END:VCARD
+
+BEGIN:VCARD
+VERSION:4.0
+FN:Mike Johnson
+N:Johnson;Mike;;;
+UID:urn:uuid:mike-johnson-44444
+EMAIL;TYPE=work:mike@company.com
+TEL;TYPE=cell:+1-555-567-8901
+ORG:Tech Corporation
+TITLE:Team Lead
+RELATED;TYPE=friend:urn:uuid:john-smith-12345
+RELATED;TYPE=colleague:urn:uuid:john-smith-12345
+END:VCARD

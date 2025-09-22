@@ -37,8 +37,10 @@ describe('End-to-End Relationship Processing', () => {
     });
 
     // 4. Format back to vCard
-    const formattedUID = formatRelatedField(parsedRelation.uid);
-    expect(formattedUID).toBe('urn:uuid:12345-abcde-67890');
+    if (parsedRelation) {
+      const formattedUID = formatRelatedField(parsedRelation.uid);
+      expect(formattedUID).toBe('urn:uuid:12345-abcde-67890');
+    }
   });
 
   it('should handle bidirectional relationships correctly', () => {
