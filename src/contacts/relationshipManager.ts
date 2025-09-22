@@ -106,6 +106,10 @@ export class RelationshipManager {
     const sourceUID = await this.getContactUID(sourceFile);
     if (sourceUID) {
       await this.addRelationshipToContact(targetFile, sourceUID, complementType);
+      
+      // Update the target contact's relationships section to reflect the new relationship
+      // This is a "system update" so we re-render from frontmatter
+      await this.updateAffectedContactRelationships(targetFile);
     }
   }
 
@@ -181,6 +185,10 @@ export class RelationshipManager {
       const sourceUID = await this.getContactUID(sourceFile);
       if (sourceUID) {
         await this.removeRelationshipFromContact(targetFile, sourceUID, complementType);
+        
+        // Update the target contact's relationships section to reflect the removal
+        // This is a "system update" so we re-render from frontmatter
+        await this.updateAffectedContactRelationships(targetFile);
       }
     }
   }
@@ -411,5 +419,59 @@ export class RelationshipManager {
     
     // Strip urn:uuid: prefix if present for consistent handling
     return uid.startsWith('urn:uuid:') ? uid.substring(9) : uid;
+  }
+
+  /**
+   * Updates the relationships section for a contact that was affected by bidirectional sync.
+   * This re-renders the relationships section from frontmatter data.
+   */
+  private async updateAffectedContactRelationships(contactFile: TFile): Promise<void> {
+    try {
+      const content = await this.app.vault.read(contactFile);
+      const relationshipsMarkdown = await this.renderRelationshipsMarkdown(contactFile);
+      
+      const updatedContent = this.replaceRelationshipsSection(content, relationshipsMarkdown);
+      
+      if (updatedContent !== content) {
+        await this.app.vault.modify(contactFile, updatedContent);
+      }
+    } catch (error) {
+      loggingService.warn(`Error updating affected contact relationships: ${error.message}`);
+    }
+  }
+
+  /**
+   * Replaces the relationships section in the content with new markdown.
+   * This is similar to the method in RelationshipSyncService but kept here to avoid circular deps.
+   */
+  private replaceRelationshipsSection(content: string, newRelationshipsMarkdown: string): string {
+    // Find the relationships section using case-insensitive regex
+    const relationshipsSectionRegex = /^## [Rr]elationships?\s*\n([\s\S]*?)(?=\n## |\n### |\n#### |$)/m;
+    
+    if (relationshipsSectionRegex.test(content)) {
+      // Replace existing relationships section, ensuring we preserve the standardized header
+      return content.replace(relationshipsSectionRegex, newRelationshipsMarkdown.trim());
+    } else {
+      // Find where to insert the relationships section
+      // Look for the Notes section or other common sections
+      const notesSectionRegex = /^#### Notes\s*\n([\s\S]*?)(?=\n## |\n### |\n#### |$)/m;
+      const match = content.match(notesSectionRegex);
+      
+      if (match) {
+        // Insert after the Notes section
+        const notesEnd = match.index! + match[0].length;
+        return content.slice(0, notesEnd) + '\n\n' + newRelationshipsMarkdown + content.slice(notesEnd);
+      } else {
+        // Insert before the final hashtags if no Notes section
+        const hashtagMatch = content.match(/\n(#\w+[\s#\w]*)\s*$/);
+        if (hashtagMatch) {
+          const hashtagStart = hashtagMatch.index!;
+          return content.slice(0, hashtagStart) + '\n\n' + newRelationshipsMarkdown + content.slice(hashtagStart);
+        } else {
+          // Append at the end
+          return content + '\n\n' + newRelationshipsMarkdown;
+        }
+      }
+    }
   }
 }

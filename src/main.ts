@@ -236,10 +236,8 @@ export default class ContactsPlugin extends Plugin {
 			}
 
 			// First, sync from markdown to frontmatter (in case user made changes)
-			await this.relationshipSyncService.syncRelationshipsFromContent(activeFile);
-			
-			// Then, sync from frontmatter to markdown (to ensure consistency and show any upgrades)
-			await this.relationshipSyncService.updateRelationshipsSection(activeFile);
+			// For manual refresh, we want to re-render after sync to show upgrades and consistency
+			await this.relationshipSyncService.syncRelationshipsFromContent(activeFile, true);
 
 			loggingService.info(`Refreshed relationships for ${activeFile.basename}`);
 		} catch (error) {

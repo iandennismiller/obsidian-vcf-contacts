@@ -36,15 +36,20 @@ export class RelationshipSyncService {
 
   /**
    * Syncs relationship changes from the markdown content back to frontmatter.
+   * @param contactFile The contact file to sync
+   * @param reRenderAfterSync Whether to re-render the relationships section after sync (default: false for user edits)
    */
-  async syncRelationshipsFromContent(contactFile: TFile): Promise<void> {
+  async syncRelationshipsFromContent(contactFile: TFile, reRenderAfterSync: boolean = false): Promise<void> {
     const content = await this.app.vault.read(contactFile);
     const relationshipsSection = this.extractRelationshipsSection(content);
     
     if (relationshipsSection) {
       await this.relationshipManager.syncRelationshipsFromMarkdown(contactFile, relationshipsSection);
-      // After syncing to frontmatter, update the relationships section to ensure consistency
-      await this.updateRelationshipsSection(contactFile);
+      
+      // Only re-render if explicitly requested (e.g., during manual refresh commands)
+      if (reRenderAfterSync) {
+        await this.updateRelationshipsSection(contactFile);
+      }
     }
   }
 
@@ -72,7 +77,8 @@ export class RelationshipSyncService {
       const hasChanges = this.hasRelationshipChanges(currentRelationships, markdownRelationships);
       
       if (hasChanges) {
-        await this.syncRelationshipsFromContent(contactFile);
+        // When user is editing, don't re-render immediately - respect their markdown changes
+        await this.syncRelationshipsFromContent(contactFile, false);
       }
     } else {
       // Even if there's no relationships section, we should still try to upgrade
