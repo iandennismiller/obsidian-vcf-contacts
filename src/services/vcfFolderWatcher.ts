@@ -679,7 +679,7 @@ export class VCFolderWatcher {
         
         // Update the REV field in the contact file with current timestamp
         const revTimestamp = generateRevTimestamp();
-        await updateFrontMatterValue(file, 'REV', revTimestamp);
+        await updateFrontMatterValue(file, 'REV', revTimestamp, this.app);
         
         // Wait a brief moment for the metadata cache to update after the file modification
         await new Promise(resolve => setTimeout(resolve, 50));
