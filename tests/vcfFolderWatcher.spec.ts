@@ -3,6 +3,11 @@ import { VCFolderWatcher } from "src/services/vcfFolderWatcher";
 import { ContactsPluginSettings } from "src/settings/settings.d";
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
+// Mock the mdRender function to avoid stringifyYaml issues in tests
+vi.mock("src/contacts/contactMdTemplate", () => ({
+  mdRender: vi.fn().mockReturnValue("---\nUID: test-uid-123\n---\nMocked content\n")
+}));
+
 // Mock window object for Node.js environment
 const mockWindow = {
   setInterval: vi.fn(),
@@ -22,13 +27,24 @@ const mockSettings: ContactsPluginSettings = {
   vcfWatchPollingInterval: 30
 };
 
-// Mock VCF content
+// Mock VCF content with REV field
 const mockVCFContent = `BEGIN:VCARD
 VERSION:4.0
 UID:test-uid-123
 FN:John Doe
 N:Doe;John;;;
 EMAIL:john@example.com
+REV:20240101T120000Z
+END:VCARD`;
+
+// Mock VCF content with updated REV field
+const mockVCFContentUpdated = `BEGIN:VCARD
+VERSION:4.0
+UID:test-uid-123
+FN:John Smith
+N:Smith;John;;;
+EMAIL:john.smith@example.com
+REV:20240201T120000Z
 END:VCARD`;
 
 describe('VCFolderWatcher', () => {
@@ -145,5 +161,137 @@ describe('VCFolderWatcher', () => {
     watcher.stop();
     
     expect(mockWindow.clearInterval).toHaveBeenCalledWith(mockIntervalId);
+  });
+
+  it('should find contact file by UID', async () => {
+    const mockFile = { path: 'Contacts/john-doe.md' } as TFile;
+    const mockCache = {
+      frontmatter: { UID: 'test-uid-123' }
+    };
+
+    mockApp.vault.getMarkdownFiles = vi.fn().mockReturnValue([mockFile]);
+    mockApp.metadataCache.getFileCache = vi.fn().mockReturnValue(mockCache);
+
+    const foundFile = await (watcher as any).findContactFileByUID('test-uid-123');
+    
+    expect(foundFile).toBe(mockFile);
+    expect(mockApp.metadataCache.getFileCache).toHaveBeenCalledWith(mockFile);
+  });
+
+  it('should detect when VCF contact should be updated based on REV field', async () => {
+    const mockFile = { path: 'Contacts/john-doe.md' } as TFile;
+    const mockCache = {
+      frontmatter: { 
+        UID: 'test-uid-123',
+        REV: '20240101T120000Z' // Older REV
+      }
+    };
+    const vcfRecord = {
+      UID: 'test-uid-123',
+      REV: '20240201T120000Z' // Newer REV
+    };
+
+    mockApp.metadataCache.getFileCache = vi.fn().mockReturnValue(mockCache);
+
+    const shouldUpdate = await (watcher as any).shouldUpdateContact(vcfRecord, mockFile);
+    
+    expect(shouldUpdate).toBe(true);
+  });
+
+  it('should not update when VCF REV is older than existing', async () => {
+    const mockFile = { path: 'Contacts/john-doe.md' } as TFile;
+    const mockCache = {
+      frontmatter: { 
+        UID: 'test-uid-123',
+        REV: '20240201T120000Z' // Newer REV
+      }
+    };
+    const vcfRecord = {
+      UID: 'test-uid-123',
+      REV: '20240101T120000Z' // Older REV
+    };
+
+    mockApp.metadataCache.getFileCache = vi.fn().mockReturnValue(mockCache);
+
+    const shouldUpdate = await (watcher as any).shouldUpdateContact(vcfRecord, mockFile);
+    
+    expect(shouldUpdate).toBe(false);
+  });
+
+  it('should update existing contact and rename file if name changed', async () => {
+    const mockFile = { 
+      path: 'Contacts/john-doe.md',
+      name: 'john-doe.md'
+    } as TFile;
+    
+    const vcfRecord = {
+      UID: 'test-uid-123',
+      FN: 'John Smith',
+      'N.FN': 'Smith',
+      'N.GN': 'John',
+      REV: '20240201T120000Z'
+    };
+
+    mockApp.vault.rename = vi.fn().mockResolvedValue(undefined);
+    mockApp.vault.modify = vi.fn().mockResolvedValue(undefined);
+
+    await (watcher as any).updateExistingContact(vcfRecord, mockFile, 'john-smith');
+    
+    expect(mockApp.vault.rename).toHaveBeenCalledWith(mockFile, 'Contacts/john-smith.md');
+    expect(mockApp.vault.modify).toHaveBeenCalledWith(mockFile, expect.any(String));
+  });
+
+  it('should handle complete update workflow with REV comparison', async () => {
+    const mockFile = { 
+      path: 'Contacts/john-doe.md',
+      name: 'john-doe.md'
+    } as TFile;
+    
+    const mockCache = {
+      frontmatter: { 
+        UID: 'test-uid-123',
+        REV: '20240101T120000Z' // Older REV
+      }
+    };
+
+    // Mock the find contact file method
+    const findContactSpy = vi.spyOn(watcher as any, 'findContactFileByUID').mockResolvedValue(mockFile);
+    const shouldUpdateSpy = vi.spyOn(watcher as any, 'shouldUpdateContact').mockResolvedValue(true);
+    const updateSpy = vi.spyOn(watcher as any, 'updateExistingContact').mockResolvedValue(undefined);
+
+    mockApp.vault.adapter.exists = vi.fn().mockResolvedValue(true);
+    mockApp.vault.adapter.list = vi.fn().mockResolvedValue({ 
+      files: ['/test/vcf/folder/contact.vcf'] 
+    });
+    mockApp.vault.adapter.stat = vi.fn().mockResolvedValue({ mtime: Date.now() });
+    mockApp.vault.adapter.read = vi.fn().mockResolvedValue(mockVCFContentUpdated);
+    mockApp.vault.getAbstractFileByPath = vi.fn().mockReturnValue({});
+    mockApp.vault.getMarkdownFiles = vi.fn().mockReturnValue([]);
+
+    await (watcher as any).processVCFFile('/test/vcf/folder/contact.vcf');
+    
+    expect(findContactSpy).toHaveBeenCalledWith('test-uid-123');
+    expect(shouldUpdateSpy).toHaveBeenCalled();
+    expect(updateSpy).toHaveBeenCalled();
+  });
+
+  it('should parse REV dates correctly in various formats', () => {
+    const watcher = new VCFolderWatcher(mockApp, mockSettings);
+    
+    // Test vCard format
+    const date1 = (watcher as any).parseRevisionDate('20240101T120000Z');
+    expect(date1).toEqual(new Date('2024-01-01T12:00:00Z'));
+    
+    // Test ISO format
+    const date2 = (watcher as any).parseRevisionDate('2024-01-01T12:00:00Z');
+    expect(date2).toEqual(new Date('2024-01-01T12:00:00Z'));
+    
+    // Test invalid format
+    const date3 = (watcher as any).parseRevisionDate('invalid-date');
+    expect(date3).toBeNull();
+    
+    // Test empty string
+    const date4 = (watcher as any).parseRevisionDate('');
+    expect(date4).toBeNull();
   });
 });

@@ -145,15 +145,20 @@ This feature enables background monitoring of a specified folder for new VCF fil
 
 - The plugin periodically scans the specified folder for `.vcf` files
 - Each VCF file is parsed to extract contact information
-- Only contacts with unique UIDs (not already in your vault) are imported
+- For new contacts (unique UIDs not already in your vault), they are imported automatically
+- For existing contacts, the plugin compares REV (revision) timestamps:
+  - If the VCF file has a newer REV timestamp than the corresponding Obsidian contact, the contact is updated
+  - If the contact name changes during an update, the file is automatically renamed
 - File modification times are tracked to avoid re-processing unchanged files
 - New contacts are created in your configured contacts folder
-- You'll receive notifications when new contacts are imported
+- You'll receive notifications when new contacts are imported or existing ones are updated
 
 #### Benefits
 
 - **Automated Sync**: No manual importing needed when new VCF files appear
+- **Smart Updates**: Automatically updates existing contacts when VCF files have newer revision timestamps
 - **Duplicate Prevention**: Uses UID tracking to avoid creating duplicate contacts
+- **Intelligent Renaming**: Automatically renames contact files when names change during updates
 - **Efficient Processing**: Only processes new or modified files
 - **Cross-Platform**: Works with any local filesystem folder
 - **Configurable**: Adjust polling frequency based on your needs

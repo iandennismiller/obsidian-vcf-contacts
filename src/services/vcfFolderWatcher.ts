@@ -100,6 +100,89 @@ export class VCFolderWatcher {
     }
   }
 
+  private async findContactFileByUID(uid: string): Promise<TFile | null> {
+    try {
+      const contactsFolder = this.settings.contactsFolder || '/';
+      const files = this.app.vault.getMarkdownFiles().filter(file => 
+        file.path.startsWith(contactsFolder)
+      );
+
+      for (const file of files) {
+        try {
+          const cache = this.app.metadataCache.getFileCache(file);
+          const fileUID = cache?.frontmatter?.UID;
+          if (fileUID === uid) {
+            return file;
+          }
+        } catch (error) {
+          console.warn(`Error reading UID from ${file.path}:`, error);
+        }
+      }
+    } catch (error) {
+      console.error('Error finding contact file by UID:', error);
+    }
+    
+    return null;
+  }
+
+  private parseRevisionDate(revString?: string): Date | null {
+    if (!revString) return null;
+    
+    try {
+      // REV field can be in various formats like ISO 8601 or timestamp
+      // Handle common vCard REV format: 20240101T120000Z
+      let dateString = revString;
+      
+      // If it's in vCard format (YYYYMMDDTHHMMSSZ), convert to ISO format
+      if (/^\d{8}T\d{6}Z?$/.test(revString)) {
+        const year = revString.substring(0, 4);
+        const month = revString.substring(4, 6);
+        const day = revString.substring(6, 8);
+        const hour = revString.substring(9, 11);
+        const minute = revString.substring(11, 13);
+        const second = revString.substring(13, 15);
+        dateString = `${year}-${month}-${day}T${hour}:${minute}:${second}Z`;
+      }
+      
+      const date = new Date(dateString);
+      return isNaN(date.getTime()) ? null : date;
+    } catch (error) {
+      console.warn('Error parsing REV date:', revString, error);
+      return null;
+    }
+  }
+
+  private async shouldUpdateContact(vcfRecord: any, existingFile: TFile): Promise<boolean> {
+    try {
+      const cache = this.app.metadataCache.getFileCache(existingFile);
+      const existingRev = cache?.frontmatter?.REV;
+      const vcfRev = vcfRecord.REV;
+
+      // If either REV is missing, we can't compare - skip update
+      if (!existingRev || !vcfRev) {
+        console.log(`Missing REV field: existing=${existingRev}, vcf=${vcfRev}`);
+        return false;
+      }
+
+      const existingRevDate = this.parseRevisionDate(existingRev);
+      const vcfRevDate = this.parseRevisionDate(vcfRev);
+
+      // If we can't parse either date, skip update
+      if (!existingRevDate || !vcfRevDate) {
+        console.log(`Failed to parse dates: existing=${existingRevDate}, vcf=${vcfRevDate}`);
+        return false;
+      }
+
+      // Update if VCF REV is newer than existing REV
+      const shouldUpdate = vcfRevDate > existingRevDate;
+      console.log(`REV comparison: VCF ${vcfRev} (${vcfRevDate.toISOString()}) vs existing ${existingRev} (${existingRevDate.toISOString()}) -> ${shouldUpdate}`);
+      return shouldUpdate;
+    } catch (error) {
+      console.warn(`Error comparing REV fields for ${existingFile.path}:`, error);
+      return false;
+    }
+  }
+
   private async scanVCFFolder(): Promise<void> {
     try {
       const folderPath = this.settings.vcfWatchFolder;
@@ -154,13 +237,16 @@ export class VCFolderWatcher {
       }
 
       let imported = 0;
+      let updated = 0;
       let skipped = 0;
 
-      // Parse VCF content and import new contacts
+      // Parse VCF content and process contacts
       for await (const [slug, record] of vcard.parse(content)) {
         if (slug && record.UID) {
-          // Check if we already have a contact with this UID
-          if (!this.existingUIDs.has(record.UID)) {
+          const existingFile = await this.findContactFileByUID(record.UID);
+          
+          if (!existingFile) {
+            // New contact - import it
             try {
               const mdContent = mdRender(record, this.settings.defaultHashtag);
               const filename = slug + '.md';
@@ -175,7 +261,20 @@ export class VCFolderWatcher {
               skipped++;
             }
           } else {
-            skipped++;
+            // Existing contact - check if we should update it
+            const shouldUpdate = await this.shouldUpdateContact(record, existingFile);
+            
+            if (shouldUpdate) {
+              try {
+                await this.updateExistingContact(record, existingFile, slug);
+                updated++;
+              } catch (error) {
+                console.warn(`Error updating contact from ${filePath}:`, error);
+                skipped++;
+              }
+            } else {
+              skipped++;
+            }
           }
         } else {
           skipped++;
@@ -189,17 +288,47 @@ export class VCFolderWatcher {
         uid: undefined // We don't store individual UIDs here since a file can contain multiple
       });
 
-      // Show notification if contacts were imported
-      if (imported > 0) {
-        new Notice(`VCF Watcher: Imported ${imported} new contact(s) from ${filePath.split('/').pop()}`);
+      // Show notification if contacts were processed
+      if (imported > 0 || updated > 0) {
+        const actions = [];
+        if (imported > 0) actions.push(`imported ${imported}`);
+        if (updated > 0) actions.push(`updated ${updated}`);
+        new Notice(`VCF Watcher: ${actions.join(', ')} contact(s) from ${filePath.split('/').pop()}`);
       }
 
-      if (imported > 0 || skipped > 0) {
-        console.log(`VCF Watcher processed ${filePath}: ${imported} imported, ${skipped} skipped`);
+      if (imported > 0 || updated > 0 || skipped > 0) {
+        console.log(`VCF Watcher processed ${filePath}: ${imported} imported, ${updated} updated, ${skipped} skipped`);
       }
 
     } catch (error) {
       console.error(`Error processing VCF file ${filePath}:`, error);
+    }
+  }
+
+  private async updateExistingContact(vcfRecord: any, existingFile: TFile, newSlug: string): Promise<void> {
+    try {
+      // Generate new content
+      const newMdContent = mdRender(vcfRecord, this.settings.defaultHashtag);
+      
+      // Check if the filename should change based on the new data
+      const newFilename = newSlug + '.md';
+      const currentFilename = existingFile.name;
+      
+      if (currentFilename !== newFilename) {
+        // File needs to be renamed
+        const newPath = existingFile.path.replace(currentFilename, newFilename);
+        
+        // Use Obsidian's rename API
+        await this.app.vault.rename(existingFile, newPath);
+        console.log(`Renamed contact file from ${currentFilename} to ${newFilename}`);
+      }
+      
+      // Update the file content with new data
+      await this.app.vault.modify(existingFile, newMdContent);
+      
+    } catch (error) {
+      console.error(`Error updating existing contact:`, error);
+      throw error;
     }
   }
 }
