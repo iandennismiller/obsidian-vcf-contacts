@@ -2,6 +2,19 @@ import { App, TFile } from "obsidian";
 import { VCFolderWatcher } from "src/services/vcfFolderWatcher";
 import { ContactsPluginSettings } from "src/settings/settings.d";
 import { describe, expect, it, vi, beforeEach } from 'vitest';
+import * as fs from 'fs/promises';
+
+// Mock fs/promises module
+vi.mock('fs/promises', () => ({
+  access: vi.fn(),
+  readdir: vi.fn(),
+  stat: vi.fn(),
+  readFile: vi.fn(),
+  writeFile: vi.fn()
+}));
+
+// Get the mocked fs functions
+const mockedFs = vi.mocked(fs);
 
 // Mock the mdRender function to avoid stringifyYaml issues in tests
 vi.mock("src/contacts/contactMdTemplate", () => ({
@@ -124,21 +137,23 @@ describe('VCFolderWatcher', () => {
   });
 
   it('should process VCF files and detect new contacts', async () => {
-    const mockStat = { mtime: Date.now() };
+    const mockStat = { mtimeMs: Date.now() };
     
-    mockApp.vault.adapter.exists = vi.fn().mockResolvedValue(true);
-    mockApp.vault.adapter.list = vi.fn().mockResolvedValue({ 
-      files: ['/test/vcf/folder/contact.vcf'] 
-    });
-    mockApp.vault.adapter.stat = vi.fn().mockResolvedValue(mockStat);
-    mockApp.vault.adapter.read = vi.fn().mockResolvedValue(mockVCFContent);
+    // Mock fs operations instead of adapter operations
+    mockedFs.access.mockResolvedValue(undefined); // fs.access returns void when successful
+    mockedFs.readdir.mockResolvedValue([
+      { name: 'contact.vcf', isFile: () => true } as any
+    ]);
+    mockedFs.stat.mockResolvedValue(mockStat as any);
+    mockedFs.readFile.mockResolvedValue(mockVCFContent);
+    
     mockApp.vault.getAbstractFileByPath = vi.fn().mockReturnValue({});
     mockApp.vault.getMarkdownFiles = vi.fn().mockReturnValue([]);
 
     await watcher.start();
     
-    expect(mockApp.vault.adapter.list).toHaveBeenCalledWith('/test/vcf/folder');
-    expect(mockApp.vault.adapter.read).toHaveBeenCalledWith('/test/vcf/folder/contact.vcf');
+    expect(mockedFs.readdir).toHaveBeenCalledWith('/test/vcf/folder', { withFileTypes: true });
+    expect(mockedFs.readFile).toHaveBeenCalledWith('/test/vcf/folder/contact.vcf', 'utf-8');
   });
 
   it('should handle settings updates correctly', async () => {
@@ -265,12 +280,10 @@ describe('VCFolderWatcher', () => {
     const shouldUpdateSpy = vi.spyOn(watcher as any, 'shouldUpdateContact').mockResolvedValue(true);
     const updateSpy = vi.spyOn(watcher as any, 'updateExistingContact').mockResolvedValue(undefined);
 
-    mockApp.vault.adapter.exists = vi.fn().mockResolvedValue(true);
-    mockApp.vault.adapter.list = vi.fn().mockResolvedValue({ 
-      files: ['/test/vcf/folder/contact.vcf'] 
-    });
-    mockApp.vault.adapter.stat = vi.fn().mockResolvedValue({ mtime: Date.now() });
-    mockApp.vault.adapter.read = vi.fn().mockResolvedValue(mockVCFContentUpdated);
+    // Mock fs operations instead of adapter operations
+    mockedFs.stat.mockResolvedValue({ mtimeMs: Date.now() } as any);
+    mockedFs.readFile.mockResolvedValue(mockVCFContentUpdated);
+    
     mockApp.vault.getAbstractFileByPath = vi.fn().mockReturnValue({});
     mockApp.vault.getMarkdownFiles = vi.fn().mockReturnValue([]);
 

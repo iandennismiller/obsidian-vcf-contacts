@@ -5,6 +5,7 @@ import { mdRender } from "src/contacts/contactMdTemplate";
 import { ContactsPluginSettings } from "src/settings/settings.d";
 import { loggingService } from "src/services/loggingService";
 import * as path from 'path';
+import * as fs from 'fs/promises';
 
 export interface VCFFileInfo {
   path: string;
@@ -221,9 +222,10 @@ export class VCFolderWatcher {
     try {
       const folderPath = this.settings.vcfWatchFolder;
       
-      // Check if folder exists using Obsidian's adapter
-      const exists = await this.app.vault.adapter.exists(folderPath);
-      if (!exists) {
+      // Check if folder exists using Node.js fs API
+      try {
+        await fs.access(folderPath);
+      } catch (error) {
         loggingService.warn(`VCF watch folder does not exist: ${folderPath}`);
         return;
       }
@@ -250,8 +252,10 @@ export class VCFolderWatcher {
 
   private async listVCFFiles(folderPath: string): Promise<string[]> {
     try {
-      const entries = await this.app.vault.adapter.list(folderPath);
-      return entries.files.filter(file => file.toLowerCase().endsWith('.vcf'));
+      const entries = await fs.readdir(folderPath, { withFileTypes: true });
+      return entries
+        .filter(entry => entry.isFile() && entry.name.toLowerCase().endsWith('.vcf'))
+        .map(entry => path.join(folderPath, entry.name));
     } catch (error) {
       console.error('Error listing VCF files:', error);
       return [];
@@ -268,22 +272,22 @@ export class VCFolderWatcher {
       }
 
       // Get file stats
-      const stat = await this.app.vault.adapter.stat(filePath);
+      const stat = await fs.stat(filePath);
       if (!stat) {
         return;
       }
 
       const known = this.knownFiles.get(filePath);
       
-      // Skip if file hasn't changed
-      if (known && known.lastModified >= stat.mtime) {
+      // Skip if file hasn't changed - use stat.mtimeMs for more precise comparison
+      if (known && known.lastModified >= stat.mtimeMs) {
         return;
       }
 
       loggingService.info(`Processing VCF file: ${filename}`);
 
       // Read and parse VCF file
-      const content = await this.app.vault.adapter.read(filePath);
+      const content = await fs.readFile(filePath, 'utf-8');
       if (!content) {
         loggingService.warn(`Empty or unreadable VCF file: ${filename}`);
         return;
@@ -349,7 +353,7 @@ export class VCFolderWatcher {
       // Update our tracking
       this.knownFiles.set(filePath, {
         path: filePath,
-        lastModified: stat.mtime,
+        lastModified: stat.mtimeMs,
         uid: undefined // We don't store individual UIDs here since a file can contain multiple
       });
 
@@ -502,14 +506,14 @@ export class VCFolderWatcher {
       const vcfWithRev = vcards.replace('END:VCARD', `REV:${timestamp}\nEND:VCARD`);
 
       // Write to filesystem
-      await this.app.vault.adapter.write(targetPath, vcfWithRev);
+      await fs.writeFile(targetPath, vcfWithRev, 'utf-8');
       
       // Update our known files tracking
-      const stat = await this.app.vault.adapter.stat(targetPath);
+      const stat = await fs.stat(targetPath);
       if (stat) {
         this.knownFiles.set(targetPath, {
           path: targetPath,
-          lastModified: stat.mtime,
+          lastModified: stat.mtimeMs,
           uid: uid
         });
       }
@@ -532,7 +536,7 @@ export class VCFolderWatcher {
       
       for (const filePath of vcfFiles) {
         try {
-          const content = await this.app.vault.adapter.read(filePath);
+          const content = await fs.readFile(filePath, 'utf-8');
           if (content.includes(`UID:${uid}`)) {
             return filePath;
           }

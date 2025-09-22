@@ -2,6 +2,29 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { VCFolderWatcher } from 'src/services/vcfFolderWatcher';
 import type { ContactsPluginSettings } from 'src/settings/settings.d';
 import type { App } from 'obsidian';
+import * as fs from 'fs/promises';
+
+// Mock fs/promises module
+vi.mock('fs/promises', () => ({
+  access: vi.fn(),
+  readdir: vi.fn(),
+  stat: vi.fn(),
+  readFile: vi.fn(),
+  writeFile: vi.fn()
+}));
+
+// Get the mocked fs functions
+const mockedFs = vi.mocked(fs);
+
+// Mock window object for Node.js environment
+const mockWindow = {
+  setInterval: vi.fn(),
+  clearInterval: vi.fn()
+};
+Object.defineProperty(global, 'window', {
+  value: mockWindow,
+  writable: true
+});
 
 // Mock the logging service
 vi.mock('src/services/loggingService', () => ({
@@ -77,17 +100,15 @@ describe('VCFolderWatcher - Ignore Functionality', () => {
   it('should respect ignored filenames setting', async () => {
     const { loggingService } = await import('src/services/loggingService');
     
-    // Mock file system operations
-    mockApp.vault.adapter.exists = vi.fn().mockResolvedValue(true);
-    mockApp.vault.adapter.list = vi.fn().mockResolvedValue({
-      files: [
-        '/test/vcf/folder/ignored.vcf',
-        '/test/vcf/folder/normal.vcf',
-        '/test/vcf/folder/malformed.vcf'
-      ]
-    });
-    mockApp.vault.adapter.stat = vi.fn().mockResolvedValue({ mtime: Date.now() });
-    mockApp.vault.adapter.read = vi.fn().mockResolvedValue('mock vcf content');
+    // Mock file system operations using fs mocks
+    mockedFs.access.mockResolvedValue(undefined);
+    mockedFs.readdir.mockResolvedValue([
+      { name: 'ignored.vcf', isFile: () => true },
+      { name: 'normal.vcf', isFile: () => true },
+      { name: 'malformed.vcf', isFile: () => true }
+    ] as any);
+    mockedFs.stat.mockResolvedValue({ mtimeMs: Date.now() } as any);
+    mockedFs.readFile.mockResolvedValue('mock vcf content');
 
     // Mock vcard parsing to return empty for ignored files
     const { vcard } = await import('src/contacts/vcard');
@@ -110,13 +131,13 @@ describe('VCFolderWatcher - Ignore Functionality', () => {
     const { loggingService } = await import('src/services/loggingService');
     const { vcard } = await import('src/contacts/vcard');
     
-    // Mock file system operations
-    mockApp.vault.adapter.exists = vi.fn().mockResolvedValue(true);
-    mockApp.vault.adapter.list = vi.fn().mockResolvedValue({
-      files: ['/test/vcf/folder/contact.vcf']
-    });
-    mockApp.vault.adapter.stat = vi.fn().mockResolvedValue({ mtime: Date.now() });
-    mockApp.vault.adapter.read = vi.fn().mockResolvedValue('mock vcf content');
+    // Mock file system operations using fs mocks
+    mockedFs.access.mockResolvedValue(undefined);
+    mockedFs.readdir.mockResolvedValue([
+      { name: 'contact.vcf', isFile: () => true }
+    ] as any);
+    mockedFs.stat.mockResolvedValue({ mtimeMs: Date.now() } as any);
+    mockedFs.readFile.mockResolvedValue('mock vcf content');
 
     // Mock vcard parsing to return contacts with different UIDs
     vcard.parse = vi.fn().mockImplementation(async function* (content) {
