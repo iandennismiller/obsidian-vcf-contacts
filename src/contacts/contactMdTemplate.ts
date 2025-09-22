@@ -3,7 +3,7 @@ import { stringifyYaml } from "obsidian";
 const nameKeys = ["N", "FN"];
 const priorityKeys = [
   "EMAIL", "TEL", "BDAY","URL",
-  "ORG", "TITLE", "ROLE", "PHOTO"
+  "ORG", "TITLE", "ROLE", "PHOTO", "RELATED"
 ];
 const adrKeys = [
   "ADR"
@@ -90,6 +90,9 @@ export function mdRender(record: Record<string, any>, hashtags: string): string 
 ${stringifyYaml(frontmatter)}---
 #### Notes
 ${myNote}
+
+## Relationships
+
 
 
 ${hashtags} ${additionalTags}

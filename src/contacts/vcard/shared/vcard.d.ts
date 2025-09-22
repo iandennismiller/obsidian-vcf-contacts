@@ -28,7 +28,8 @@ export enum VCardSupportedKey {
 	TZ = "Time Zone",
 	UID = "Unique Identifier",
 	URL = "Website URL",
-  SOCIALPROFILE = "Social Profile"
+  SOCIALPROFILE = "Social Profile",
+	RELATED = "Related Contact"
 }
 
 export interface VCardForObsidianRecord {
