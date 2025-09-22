@@ -24,7 +24,8 @@ const mockSettings: ContactsPluginSettings = {
   defaultHashtag: "#contact",
   vcfWatchFolder: "/test/vcf/folder",
   vcfWatchEnabled: true,
-  vcfWatchPollingInterval: 30
+  vcfWatchPollingInterval: 30,
+  vcfWriteBackEnabled: false
 };
 
 // Mock VCF content with REV field
@@ -61,10 +62,13 @@ describe('VCFolderWatcher', () => {
           exists: vi.fn(),
           list: vi.fn(),
           stat: vi.fn(),
-          read: vi.fn()
+          read: vi.fn(),
+          write: vi.fn()
         },
         getAbstractFileByPath: vi.fn(),
-        getMarkdownFiles: vi.fn(() => [])
+        getMarkdownFiles: vi.fn(() => []),
+        on: vi.fn(),
+        off: vi.fn()
       },
       metadataCache: {
         getFileCache: vi.fn()
@@ -293,5 +297,36 @@ describe('VCFolderWatcher', () => {
     // Test empty string
     const date4 = (watcher as any).parseRevisionDate('');
     expect(date4).toBeNull();
+  });
+
+  it('should set up contact file tracking when write-back is enabled', async () => {
+    const settingsWithWriteBack = { ...mockSettings, vcfWriteBackEnabled: true };
+    const watcher = new VCFolderWatcher(mockApp, settingsWithWriteBack);
+    
+    // Start watcher which should set up contact tracking
+    await watcher.start();
+    
+    // Verify that listeners were set up (checking internals)
+    expect((watcher as any).contactFileListeners.length).toBeGreaterThan(0);
+    
+    // Clean up
+    watcher.stop();
+    
+    // Verify listeners were cleaned up
+    expect((watcher as any).contactFileListeners.length).toBe(0);
+  });
+
+  it('should not set up contact file tracking when write-back is disabled', async () => {
+    const settingsWithoutWriteBack = { ...mockSettings, vcfWriteBackEnabled: false };
+    const watcher = new VCFolderWatcher(mockApp, settingsWithoutWriteBack);
+    
+    // Start watcher which should NOT set up contact tracking
+    await watcher.start();
+    
+    // Verify that no listeners were set up
+    expect((watcher as any).contactFileListeners.length).toBe(0);
+    
+    // Clean up
+    watcher.stop();
   });
 });

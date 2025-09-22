@@ -3,6 +3,7 @@ import { vcard } from "src/contacts/vcard";
 import { createContactFile } from "src/file/file";
 import { mdRender } from "src/contacts/contactMdTemplate";
 import { ContactsPluginSettings } from "src/settings/settings.d";
+import * as path from 'path';
 
 export interface VCFFileInfo {
   path: string;
@@ -16,6 +17,8 @@ export class VCFolderWatcher {
   private intervalId: number | null = null;
   private knownFiles = new Map<string, VCFFileInfo>();
   private existingUIDs = new Set<string>();
+  private contactFiles = new Map<string, TFile>(); // Track contact files by UID
+  private contactFileListeners: (() => void)[] = []; // Track registered listeners
 
   constructor(app: App, settings: ContactsPluginSettings) {
     this.app = app;
@@ -35,6 +38,11 @@ export class VCFolderWatcher {
 
     console.log(`Starting VCF folder watcher: ${this.settings.vcfWatchFolder}`);
     
+    // Set up contact file change tracking for write-back
+    if (this.settings.vcfWriteBackEnabled) {
+      this.setupContactFileTracking();
+    }
+    
     // Initial scan
     await this.scanVCFFolder();
 
@@ -51,13 +59,17 @@ export class VCFolderWatcher {
       this.intervalId = null;
       console.log('Stopped VCF folder watcher');
     }
+    
+    // Clean up contact file listeners
+    this.cleanupContactFileTracking();
   }
 
   async updateSettings(newSettings: ContactsPluginSettings): Promise<void> {
     const shouldRestart = 
       this.settings.vcfWatchEnabled !== newSettings.vcfWatchEnabled ||
       this.settings.vcfWatchFolder !== newSettings.vcfWatchFolder ||
-      this.settings.vcfWatchPollingInterval !== newSettings.vcfWatchPollingInterval;
+      this.settings.vcfWatchPollingInterval !== newSettings.vcfWatchPollingInterval ||
+      this.settings.vcfWriteBackEnabled !== newSettings.vcfWriteBackEnabled;
 
     this.settings = newSettings;
 
@@ -69,6 +81,7 @@ export class VCFolderWatcher {
 
   private async initializeExistingUIDs(): Promise<void> {
     this.existingUIDs.clear();
+    this.contactFiles.clear();
     
     try {
       const contactsFolder = this.settings.contactsFolder || '/';
@@ -88,6 +101,7 @@ export class VCFolderWatcher {
           const uid = cache?.frontmatter?.UID;
           if (uid) {
             this.existingUIDs.add(uid);
+            this.contactFiles.set(uid, file);
           }
         } catch (error) {
           console.warn(`Error reading UID from ${file.path}:`, error);
@@ -330,5 +344,153 @@ export class VCFolderWatcher {
       console.error(`Error updating existing contact:`, error);
       throw error;
     }
+  }
+
+  private setupContactFileTracking(): void {
+    if (!this.settings.contactsFolder) {
+      return;
+    }
+
+    const onFileModify = async (file: TFile) => {
+      // Only process files in the contacts folder
+      if (!file.path.startsWith(this.settings.contactsFolder)) {
+        return;
+      }
+
+      // Get the UID from the file's frontmatter
+      const cache = this.app.metadataCache.getFileCache(file);
+      const uid = cache?.frontmatter?.UID;
+      
+      if (!uid) {
+        return; // Skip files without UID
+      }
+
+      // Update our tracking
+      this.contactFiles.set(uid, file);
+      
+      // Write back to VCF if enabled
+      await this.writeContactToVCF(file, uid);
+    };
+
+    const onFileRename = async (file: TFile, oldPath: string) => {
+      // Handle renamed files in contacts folder
+      if (file.path.startsWith(this.settings.contactsFolder)) {
+        const cache = this.app.metadataCache.getFileCache(file);
+        const uid = cache?.frontmatter?.UID;
+        
+        if (uid) {
+          this.contactFiles.set(uid, file);
+          await this.writeContactToVCF(file, uid);
+        }
+      }
+    };
+
+    const onFileDelete = (file: TFile) => {
+      // Remove from tracking when deleted
+      if (file.path.startsWith(this.settings.contactsFolder)) {
+        const cache = this.app.metadataCache.getFileCache(file);
+        const uid = cache?.frontmatter?.UID;
+        
+        if (uid) {
+          this.contactFiles.delete(uid);
+          // Note: We don't delete the VCF file as it might be the source of truth
+        }
+      }
+    };
+
+    // Register listeners
+    this.app.vault.on('modify', onFileModify);
+    this.app.vault.on('rename', onFileRename);
+    this.app.vault.on('delete', onFileDelete);
+
+    // Store cleanup functions
+    this.contactFileListeners.push(
+      () => this.app.vault.off('modify', onFileModify),
+      () => this.app.vault.off('rename', onFileRename),
+      () => this.app.vault.off('delete', onFileDelete)
+    );
+  }
+
+  private cleanupContactFileTracking(): void {
+    // Remove all listeners
+    this.contactFileListeners.forEach(cleanup => cleanup());
+    this.contactFileListeners = [];
+  }
+
+  private async writeContactToVCF(contactFile: TFile, uid: string): Promise<void> {
+    if (!this.settings.vcfWriteBackEnabled || !this.settings.vcfWatchFolder) {
+      return;
+    }
+
+    try {
+      // Generate VCF content using the existing toString function
+      const { vcards, errors } = await vcard.toString([contactFile]);
+      
+      if (errors.length > 0) {
+        console.warn(`Error generating VCF for ${contactFile.name}:`, errors);
+        return;
+      }
+
+      // Find corresponding VCF file by UID
+      const vcfFilePath = await this.findVCFFileByUID(uid);
+      let targetPath: string;
+
+      if (vcfFilePath) {
+        // Update existing VCF file
+        targetPath = vcfFilePath;
+      } else {
+        // Create new VCF file
+        const sanitizedName = contactFile.basename.replace(/[^a-zA-Z0-9-_]/g, '_');
+        targetPath = path.join(this.settings.vcfWatchFolder, `${sanitizedName}.vcf`);
+      }
+
+      // Add REV field with current timestamp for sync tracking
+      const timestamp = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+      const vcfWithRev = vcards.replace('END:VCARD', `REV:${timestamp}\nEND:VCARD`);
+
+      // Write to filesystem
+      await this.app.vault.adapter.write(targetPath, vcfWithRev);
+      
+      // Update our known files tracking
+      const stat = await this.app.vault.adapter.stat(targetPath);
+      if (stat) {
+        this.knownFiles.set(targetPath, {
+          path: targetPath,
+          lastModified: stat.mtime,
+          uid: uid
+        });
+      }
+
+      console.log(`Wrote contact ${contactFile.basename} to VCF: ${targetPath}`);
+      
+    } catch (error) {
+      console.error(`Error writing contact to VCF:`, error);
+      new Notice(`Failed to write contact ${contactFile.basename} to VCF folder: ${error.message}`);
+    }
+  }
+
+  private async findVCFFileByUID(uid: string): Promise<string | null> {
+    if (!this.settings.vcfWatchFolder) {
+      return null;
+    }
+
+    try {
+      const vcfFiles = await this.listVCFFiles(this.settings.vcfWatchFolder);
+      
+      for (const filePath of vcfFiles) {
+        try {
+          const content = await this.app.vault.adapter.read(filePath);
+          if (content.includes(`UID:${uid}`)) {
+            return filePath;
+          }
+        } catch (error) {
+          console.warn(`Error reading VCF file ${filePath}:`, error);
+        }
+      }
+    } catch (error) {
+      console.warn(`Error searching for VCF file with UID ${uid}:`, error);
+    }
+
+    return null;
   }
 }
