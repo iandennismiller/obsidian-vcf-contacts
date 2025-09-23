@@ -29,6 +29,7 @@ export class RelationshipEventManager {
   private processingFiles: Set<string> = new Set();
   private currentContactFile: TFile | null = null;
   private syncCheckInterval: number | null = null;
+  private modifyDebounceTimers: Map<string, number> = new Map();
 
   constructor(app: App) {
     this.app = app;
@@ -46,6 +47,11 @@ export class RelationshipEventManager {
     this.eventRefs.push(
       // Handle active leaf change - sync Related list to front matter for previous file
       this.app.workspace.on('active-leaf-change', this.handleActiveLeafChange.bind(this))
+    );
+
+    this.eventRefs.push(
+      // Handle file modification - watch for Related list changes
+      this.app.vault.on('modify', this.handleFileModify.bind(this))
     );
 
     this.eventRefs.push(
@@ -140,6 +146,12 @@ export class RelationshipEventManager {
       clearInterval(this.syncCheckInterval);
       this.syncCheckInterval = null;
     }
+
+    // Clear all modify debounce timers
+    for (const timer of this.modifyDebounceTimers.values()) {
+      clearTimeout(timer);
+    }
+    this.modifyDebounceTimers.clear();
     
     this.eventRefs.forEach(ref => this.app.workspace.offref(ref));
     this.eventRefs = [];
@@ -226,6 +238,157 @@ export class RelationshipEventManager {
     } finally {
       this.processingFiles.delete(fileId);
     }
+  }
+
+  /**
+   * Handle file modification - watch for Related list changes
+   */
+  private async handleFileModify(file: TFile): Promise<void> {
+    if (!this.isEnabled || !this.isContactFile(file)) {
+      return;
+    }
+
+    const fileId = file.path;
+    
+    // Debounce rapid modifications (user typing)
+    if (this.modifyDebounceTimers.has(fileId)) {
+      clearTimeout(this.modifyDebounceTimers.get(fileId)!);
+    }
+
+    const timer = setTimeout(async () => {
+      this.modifyDebounceTimers.delete(fileId);
+      await this.processRelatedListChanges(file);
+    }, 1000) as any; // 1 second debounce
+
+    this.modifyDebounceTimers.set(fileId, timer);
+  }
+
+  /**
+   * Process Related list changes and sync to front matter
+   */
+  private async processRelatedListChanges(file: TFile): Promise<void> {
+    if (this.processingFiles.has(file.path)) {
+      return;
+    }
+
+    try {
+      this.processingFiles.add(file.path);
+
+      // Read current file content
+      const content = await this.app.vault.read(file);
+      const relatedInfo = findRelatedHeading(content);
+
+      if (!relatedInfo.found) {
+        return; // No Related section to process
+      }
+
+      // Parse the Related list from markdown
+      const listEntries = parseRelationshipList(relatedInfo.content);
+      
+      // Filter for valid relationship entries with existing contacts
+      const validRelationships = [];
+      for (const entry of listEntries) {
+        if (entry.relationship && entry.contactName) {
+          // Check if the target contact exists and has a UID
+          const targetContactId = await this.findContactIdByName(entry.contactName);
+          if (targetContactId) {
+            validRelationships.push({
+              kind: entry.relationship,
+              target: targetContactId,
+              key: '' // Will be generated when converting to front matter
+            });
+          }
+        }
+      }
+
+      // Get current front matter relationships
+      const frontMatter = this.app.metadataCache.getFileCache(file)?.frontmatter;
+      if (!frontMatter) {
+        return;
+      }
+
+      const currentRelationships = parseRelatedFromFrontMatter(frontMatter);
+
+      // Check if there are differences
+      if (this.relationshipsChanged(currentRelationships, validRelationships)) {
+        // Update front matter with new relationships
+        await updateContactRelatedFrontMatter(file, validRelationships);
+        
+        // Update the graph
+        const contactId = loadContactIntoGraph(file, frontMatter);
+        
+        loggingService.info(`Synced Related list changes to front matter for ${file.name}`);
+      }
+
+    } catch (error) {
+      loggingService.error(`Error processing Related list changes for ${file.name}: ${error}`);
+    } finally {
+      this.processingFiles.delete(file.path);
+    }
+  }
+
+  /**
+   * Find contact ID by display name
+   */
+  private async findContactIdByName(contactName: string): Promise<string | null> {
+    // First try to find in the relationship graph
+    const contactIds = relationshipGraphService.getAllContactIds();
+    
+    for (const contactId of contactIds) {
+      const contactNode = relationshipGraphService.getContactNode(contactId);
+      if (contactNode && contactNode.fullName === contactName) {
+        return contactId;
+      }
+    }
+
+    // If not found in graph, search through all contact files
+    const contactFiles = this.app.vault.getMarkdownFiles().filter(file => this.isContactFile(file));
+    
+    for (const file of contactFiles) {
+      const frontMatter = this.app.metadataCache.getFileCache(file)?.frontmatter;
+      if (frontMatter) {
+        const fullName = getContactFullNameFromFrontMatter(frontMatter);
+        if (fullName === contactName) {
+          const uid = getContactUidFromFrontMatter(frontMatter);
+          if (uid) {
+            return `urn:uuid:${uid}`;
+          } else {
+            return `name:${fullName}`;
+          }
+        }
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Compare two relationship arrays to detect changes
+   */
+  private relationshipsChanged(
+    current: Array<{ kind: string; target: string; key: string }>,
+    updated: Array<{ kind: string; target: string; key: string }>
+  ): boolean {
+    if (current.length !== updated.length) {
+      return true;
+    }
+
+    // Create normalized sets for comparison
+    const currentSet = new Set(current.map(rel => `${rel.kind}:${rel.target}`));
+    const updatedSet = new Set(updated.map(rel => `${rel.kind}:${rel.target}`));
+
+    // Check if sets are equal
+    if (currentSet.size !== updatedSet.size) {
+      return true;
+    }
+
+    for (const item of currentSet) {
+      if (!updatedSet.has(item)) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   /**
