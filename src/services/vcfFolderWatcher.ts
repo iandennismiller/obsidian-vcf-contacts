@@ -51,6 +51,7 @@ export class VCFolderWatcher {
   private contactFiles = new Map<string, TFile>(); // Track contact files by UID
   private contactFileListeners: (() => void)[] = []; // Track registered listeners
   private updatingRevFields = new Set<string>(); // Track files being updated internally to prevent loops
+  private writeBackDebounceTimers = new Map<string, NodeJS.Timeout>(); // Debounce write-back operations
 
   /**
    * Creates a new VCF folder watcher instance.
@@ -641,6 +642,54 @@ export class VCFolderWatcher {
   }
 
   /**
+   * Debounced write-back operation to prevent multiple rapid updates
+   * 
+   * @param file - The contact file to write back
+   * @param uid - The UID of the contact
+   */
+  private debouncedWriteBack(file: TFile, uid: string): void {
+    // Clear any existing timer for this file
+    const existingTimer = this.writeBackDebounceTimers.get(file.path);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+    }
+
+    // Set a new timer to debounce write-back operations (1 second minimum)
+    const timer = setTimeout(async () => {
+      try {
+        // Mark that we're updating this file to prevent infinite loops
+        this.updatingRevFields.add(file.path);
+        RelationshipSync.markFileAsUpdating(file.path);
+        
+        // Update the REV field in the contact file with current timestamp
+        const revTimestamp = generateRevTimestamp();
+        await updateFrontMatterValue(file, 'REV', revTimestamp, this.app);
+        
+        // Wait a brief moment for the metadata cache to update after the file modification
+        await new Promise(resolve => setTimeout(resolve, 50));
+        
+        // Update our tracking
+        this.contactFiles.set(uid, file);
+        
+        // Write back to VCF (this is the main reason we updated REV)
+        await this.writeContactToVCF(file, uid);
+        
+        loggingService.debug(`Debounced write-back completed for ${file.basename} (UID: ${uid})`);
+      } catch (error) {
+        loggingService.error(`Error in debounced write-back for ${file.basename}: ${error.message}`);
+      } finally {
+        // Always remove the flags and timer, even if there was an error
+        this.updatingRevFields.delete(file.path);
+        RelationshipSync.unmarkFileAsUpdating(file.path);
+        this.writeBackDebounceTimers.delete(file.path);
+      }
+    }, 1000); // 1 second debounce
+
+    this.writeBackDebounceTimers.set(file.path, timer);
+    loggingService.debug(`Scheduled debounced write-back for ${file.basename} (UID: ${uid}) in 1 second`);
+  }
+
+  /**
    * Sets up file change tracking for contact files to enable write-back to VCF.
    * 
    * Registers listeners for:
@@ -685,33 +734,8 @@ export class VCFolderWatcher {
         return;
       }
 
-      try {
-        // Mark that we're updating this file to prevent infinite loops
-        this.updatingRevFields.add(file.path);
-        // Also coordinate with relationship system
-        RelationshipSync.markFileAsUpdating(file.path);
-        
-        // Update the REV field in the contact file with current timestamp
-        const revTimestamp = generateRevTimestamp();
-        await updateFrontMatterValue(file, 'REV', revTimestamp, this.app);
-        
-        // Wait a brief moment for the metadata cache to update after the file modification
-        await new Promise(resolve => setTimeout(resolve, 50));
-        
-        // Update our tracking
-        this.contactFiles.set(uid, file);
-        
-        // Write back to VCF (this is the main reason we updated REV)
-        await this.writeContactToVCF(file, uid);
-        
-        loggingService.debug(`Updated contact file REV timestamp for ${file.basename} (UID: ${uid}) - write-back enabled`);
-      } catch (error) {
-        loggingService.error(`Error updating contact file REV timestamp: ${error.message}`);
-      } finally {
-        // Always remove the flags, even if there was an error
-        this.updatingRevFields.delete(file.path);
-        RelationshipSync.unmarkFileAsUpdating(file.path);
-      }
+      // Use debounced write-back to prevent rapid-fire updates
+      this.debouncedWriteBack(file, uid);
     };
 
     const onFileRename = async (file: TFile) => {
@@ -763,6 +787,12 @@ export class VCFolderWatcher {
     // Remove all listeners
     this.contactFileListeners.forEach(cleanup => cleanup());
     this.contactFileListeners = [];
+    
+    // Clear all pending write-back debounce timers
+    this.writeBackDebounceTimers.forEach(timer => clearTimeout(timer));
+    this.writeBackDebounceTimers.clear();
+    
+    loggingService.debug('Cleaned up contact file tracking and debounce timers');
   }
 
   /**
