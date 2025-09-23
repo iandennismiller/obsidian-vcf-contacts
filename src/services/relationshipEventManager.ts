@@ -16,6 +16,7 @@ import {
   updateRelatedSection,
   cleanupRelatedHeading
 } from 'src/util/relationshipMarkdown';
+import { revDebouncer } from 'src/util/revDebouncer';
 
 /**
  * Manages relationship synchronization between markdown lists and front matter
@@ -26,6 +27,7 @@ export class RelationshipEventManager {
   private eventRefs: EventRef[] = [];
   private isEnabled: boolean = true;
   private processingFiles: Set<string> = new Set();
+  private currentContactFile: TFile | null = null;
 
   constructor(app: App) {
     this.app = app;
@@ -46,6 +48,11 @@ export class RelationshipEventManager {
     );
 
     this.eventRefs.push(
+      // Handle file close - sync Related list to front matter
+      this.app.workspace.on('file-open', this.handleFileClose.bind(this))
+    );
+
+    this.eventRefs.push(
       // Handle file deletion - remove from graph
       this.app.vault.on('delete', this.handleFileDelete.bind(this))
     );
@@ -57,8 +64,12 @@ export class RelationshipEventManager {
    * Stop listening to events
    */
   stop(): void {
+    // Cancel all pending REV updates when stopping
+    revDebouncer.cancelAllUpdates();
+    
     this.eventRefs.forEach(ref => this.app.workspace.offref(ref));
     this.eventRefs = [];
+    this.currentContactFile = null;
     loggingService.info('Relationship event manager stopped');
   }
 
@@ -77,6 +88,14 @@ export class RelationshipEventManager {
     if (!this.isEnabled || !file || !this.isContactFile(file)) {
       return;
     }
+
+    // Sync previous contact file if switching between contacts
+    if (this.currentContactFile && this.currentContactFile !== file) {
+      await this.syncRelatedListToFrontMatter(this.currentContactFile);
+    }
+
+    // Update current contact file
+    this.currentContactFile = file;
 
     const fileId = file.path;
     if (this.processingFiles.has(fileId)) {
@@ -128,6 +147,21 @@ export class RelationshipEventManager {
   }
 
   /**
+   * Handle file close event - sync Related list to front matter when leaving contact
+   */
+  private async handleFileClose(file: TFile | null): Promise<void> {
+    if (!this.isEnabled) {
+      return;
+    }
+
+    // If we're leaving a contact file, sync it
+    if (this.currentContactFile && this.currentContactFile !== file) {
+      await this.syncRelatedListToFrontMatter(this.currentContactFile);
+      this.currentContactFile = null;
+    }
+  }
+
+  /**
    * Handle active leaf change - sync Related list to front matter for previous file
    */
   private async handleActiveLeafChange(leaf: WorkspaceLeaf | null): Promise<void> {
@@ -135,10 +169,20 @@ export class RelationshipEventManager {
       return;
     }
 
-    // Get the previously active file from workspace history
+    // Get the currently active file
     const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
-    if (activeView?.file) {
-      await this.syncRelatedListToFrontMatter(activeView.file);
+    const activeFile = activeView?.file;
+
+    // If we're switching away from a contact file, sync it
+    if (this.currentContactFile && this.currentContactFile !== activeFile) {
+      await this.syncRelatedListToFrontMatter(this.currentContactFile);
+    }
+
+    // Update current contact file
+    if (activeFile && this.isContactFile(activeFile)) {
+      this.currentContactFile = activeFile;
+    } else {
+      this.currentContactFile = null;
     }
   }
 

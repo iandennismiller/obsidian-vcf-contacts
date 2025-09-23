@@ -4,6 +4,7 @@ import { parseKey } from 'src/contacts/contactDataKeys';
 import { getBaseRelationshipKind } from 'src/util/relationshipKinds';
 import { relationshipGraphService } from 'src/services/relationshipGraph';
 import { loggingService } from 'src/services/loggingService';
+import { revDebouncer } from 'src/util/revDebouncer';
 
 export interface RelationshipFrontMatterEntry {
   kind: string;
@@ -129,13 +130,15 @@ export async function updateContactRelatedFrontMatter(
   const newRelatedEntries = relationshipsToFrontMatter(relationships);
   Object.assign(yamlObj, newRelatedEntries);
 
-  // Update REV field with current timestamp
-  yamlObj.REV = new Date().toISOString();
-
+  // Don't update REV immediately - schedule debounced update instead
   const newFrontMatter = '---\n' + stringifyYaml(yamlObj) + '---\n';
   const newContent = newFrontMatter + body;
 
   await app.vault.modify(file, newContent);
+  
+  // Schedule debounced REV update
+  revDebouncer.scheduleRevUpdate(file);
+  
   loggingService.info(`Updated RELATED front matter for ${file.name}`);
 }
 

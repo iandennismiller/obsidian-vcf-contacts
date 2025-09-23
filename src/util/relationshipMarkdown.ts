@@ -4,6 +4,7 @@ import { getBaseRelationshipKind, getGenderedRelationshipKind, inferGenderFromRe
 import { RelationshipFrontMatterEntry } from 'src/util/relationshipFrontMatter';
 import { relationshipGraphService } from 'src/services/relationshipGraph';
 import { loggingService } from 'src/services/loggingService';
+import { updateFrontMatterValue } from 'src/contacts/contactFrontmatter';
 
 export interface RelationshipListEntry {
   kind: string;
@@ -130,11 +131,13 @@ export function relationshipListToFrontMatter(
 
       // Infer gender if relationship kind is gendered
       const inferredGender = inferGenderFromRelationshipKind(rel.kind);
-      if (inferredGender && targetFrontMatter) {
+      if (inferredGender && targetFrontMatter && !targetFrontMatter.GENDER) {
         // Update target contact's gender if not already set
-        if (!targetFrontMatter.GENDER) {
-          // This would require updating the target file, but for now we'll log it
-          loggingService.info(`Could infer gender ${inferredGender} for ${rel.targetName} from relationship ${rel.kind}`);
+        try {
+          await updateFrontMatterValue(targetFile, 'GENDER', inferredGender);
+          loggingService.info(`Inferred and set gender ${inferredGender} for ${rel.targetName} from relationship ${rel.kind}`);
+        } catch (error) {
+          loggingService.warn(`Could not update gender for ${rel.targetName}: ${error}`);
         }
       }
     } else {
