@@ -36,6 +36,13 @@ export async function updateFrontMatterValue(file: TFile, key: string, value: st
 		body = content.slice(match[0].length);
 	}
 
+	// Check if the value would actually change
+	const currentValue = yamlObj[key];
+	if (currentValue === value) {
+		// Value is already the same, no need to modify the file
+		return;
+	}
+
 	yamlObj[key] = value;
 
 	const newFrontMatter = '---\n' + stringifyYaml(yamlObj) + '---\n';

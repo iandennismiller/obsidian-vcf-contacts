@@ -661,20 +661,21 @@ export class VCFolderWatcher {
         this.updatingRevFields.add(file.path);
         RelationshipSync.markFileAsUpdating(file.path);
         
-        // Update the REV field in the contact file with current timestamp
-        const revTimestamp = generateRevTimestamp();
-        await updateFrontMatterValue(file, 'REV', revTimestamp, this.app);
-        
-        // Wait a brief moment for the metadata cache to update after the file modification
-        await new Promise(resolve => setTimeout(resolve, 50));
-        
         // Update our tracking
         this.contactFiles.set(uid, file);
         
-        // Write back to VCF (this is the main reason we updated REV)
-        await this.writeContactToVCF(file, uid);
+        // First, try to write back to VCF and see if there are any changes
+        const writeBackResult = await this.writeContactToVCF(file, uid);
         
-        loggingService.debug(`Debounced write-back completed for ${file.basename} (UID: ${uid})`);
+        // Only update REV if the VCF write-back actually made changes
+        if (writeBackResult) {
+          const revTimestamp = generateRevTimestamp();
+          await updateFrontMatterValue(file, 'REV', revTimestamp, this.app);
+          loggingService.debug(`Debounced write-back completed with REV update for ${file.basename} (UID: ${uid})`);
+        } else {
+          loggingService.debug(`Debounced write-back completed with no changes for ${file.basename} (UID: ${uid})`);
+        }
+        
       } catch (error) {
         loggingService.error(`Error in debounced write-back for ${file.basename}: ${error.message}`);
       } finally {
@@ -809,9 +810,9 @@ export class VCFolderWatcher {
    * @param uid - The UID of the contact
    * @returns Promise that resolves when write-back is complete
    */
-  private async writeContactToVCF(contactFile: TFile, uid: string): Promise<void> {
+  private async writeContactToVCF(contactFile: TFile, uid: string): Promise<boolean> {
     if (!this.settings.vcfWriteBackEnabled || !this.settings.vcfWatchFolder) {
-      return;
+      return false;
     }
 
     try {
@@ -820,7 +821,7 @@ export class VCFolderWatcher {
       
       if (errors.length > 0) {
         loggingService.warning(`Error generating VCF for ${contactFile.name}: ${errors.map(e => e.message).join(', ')}`);
-        return;
+        return false;
       }
 
       // Find corresponding VCF file by UID
@@ -848,24 +849,43 @@ export class VCFolderWatcher {
         vcfWithRev = vcards.replace('END:VCARD', `REV:${timestamp}\nEND:VCARD`);
       }
 
-      // Write to filesystem
-      await fs.writeFile(targetPath, vcfWithRev, 'utf-8');
-      
-      // Update our known files tracking
-      const stat = await fs.stat(targetPath);
-      if (stat) {
-        this.knownFiles.set(targetPath, {
-          path: targetPath,
-          lastModified: stat.mtimeMs,
-          uid: uid
-        });
+      // Check if the content is different from what's already in the file
+      let hasChanges = true;
+      if (vcfFilePath) {
+        try {
+          const existingContent = await fs.readFile(targetPath, 'utf-8');
+          if (existingContent === vcfWithRev) {
+            hasChanges = false;
+            loggingService.debug(`No changes detected for VCF file ${targetPath}, skipping write`);
+          }
+        } catch (error) {
+          // If we can't read the existing file, assume changes are needed
+          hasChanges = true;
+        }
       }
 
-      console.log(`Wrote contact ${contactFile.basename} to VCF: ${targetPath}`);
+      if (hasChanges) {
+        // Write to filesystem
+        await fs.writeFile(targetPath, vcfWithRev, 'utf-8');
+        
+        // Update our known files tracking
+        const stat = await fs.stat(targetPath);
+        if (stat) {
+          this.knownFiles.set(targetPath, {
+            path: targetPath,
+            lastModified: stat.mtimeMs,
+            uid: uid
+          });
+        }
+
+        loggingService.debug(`Wrote contact ${contactFile.basename} to VCF: ${targetPath}`);
+      }
+
+      return hasChanges;
       
     } catch (error) {
       loggingService.error(`Error writing contact to VCF: ${error.message}`);
-      new Notice(`Failed to write contact ${contactFile.basename} to VCF folder: ${error.message}`);
+      return false;
     }
   }
 
