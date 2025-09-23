@@ -1,10 +1,11 @@
 import "src/insights/insightLoading";
 
-import { Plugin } from 'obsidian';
+import { Plugin, TFile, TFolder } from 'obsidian';
 import { ContactsView } from "src/ui/sidebar/sidebarView";
 import { CONTACTS_VIEW_CONFIG } from "src/util/constants";
 import myScrollTo from "src/util/myScrollTo";
 import { VCFolderWatcher } from "src/services/vcfFolderWatcher";
+import { RelationshipManager } from "src/services/relationshipManager";
 import { onSettingsChange } from "src/context/sharedSettingsContext";
 import { setApp, clearApp } from "src/context/sharedAppContext";
 import { loggingService } from "src/services/loggingService";
@@ -15,6 +16,7 @@ import { ContactsPluginSettings } from  './settings/settings.d';
 export default class ContactsPlugin extends Plugin {
 	settings: ContactsPluginSettings;
 	private vcfWatcher: VCFolderWatcher | null = null;
+	private relationshipManager: RelationshipManager | null = null;
 	private settingsUnsubscribe: (() => void) | null = null;
 
 	async onload() {
@@ -31,6 +33,20 @@ export default class ContactsPlugin extends Plugin {
 		// Initialize VCF folder watcher
 		this.vcfWatcher = new VCFolderWatcher(this.app, this.settings);
 		await this.vcfWatcher.start();
+
+		// Initialize relationship manager
+		this.relationshipManager = new RelationshipManager(this.app);
+		this.relationshipManager.initialize();
+
+		// Load existing relationships into the graph
+		if (this.settings.contactsFolder) {
+			const contactsFolder = this.app.vault.getAbstractFileByPath(this.settings.contactsFolder);
+			if (contactsFolder instanceof TFolder) {
+				const contactFiles = contactsFolder.children.filter((f: any) => f instanceof TFile) as TFile[];
+				await this.relationshipManager.loadAllRelationships(contactFiles);
+				await this.relationshipManager.checkAndRepairConsistency(contactFiles);
+			}
+		}
 
 		// Listen for settings changes to update watcher
 		this.settingsUnsubscribe = onSettingsChange(async (newSettings) => {
@@ -82,6 +98,12 @@ export default class ContactsPlugin extends Plugin {
 		if (this.vcfWatcher) {
 			this.vcfWatcher.stop();
 			this.vcfWatcher = null;
+		}
+
+		// Clean up relationship manager
+		if (this.relationshipManager) {
+			this.relationshipManager.cleanup();
+			this.relationshipManager = null;
 		}
 
 		// Unsubscribe from settings changes

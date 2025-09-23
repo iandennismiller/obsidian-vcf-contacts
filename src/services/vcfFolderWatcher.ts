@@ -1,5 +1,5 @@
 import * as fs from 'fs/promises';
-import { App, Notice, TFile } from 'obsidian';
+import { App, Notice, TFile, debounce } from 'obsidian';
 import * as path from 'path';
 import { mdRender } from "src/contacts/contactMdTemplate";
 import { updateFrontMatterValue } from "src/contacts/contactFrontmatter";
@@ -50,6 +50,7 @@ export class VCFolderWatcher {
   private contactFiles = new Map<string, TFile>(); // Track contact files by UID
   private contactFileListeners: (() => void)[] = []; // Track registered listeners
   private updatingRevFields = new Set<string>(); // Track files being updated internally to prevent loops
+  private debouncedWriteBack = new Map<string, () => void>(); // Debounced VCF write back by UID
 
   /**
    * Creates a new VCF folder watcher instance.
@@ -687,8 +688,8 @@ export class VCFolderWatcher {
         // Update our tracking
         this.contactFiles.set(uid, file);
         
-        // Write back to VCF if enabled (metadata cache should be updated now)
-        await this.writeContactToVCF(file, uid);
+        // Write back to VCF if enabled (debounced to prevent rapid repeated writes)
+        this.debouncedVCFWriteBack(file, uid);
         
         loggingService.debug(`Updated contact file REV timestamp for ${file.basename} (UID: ${uid})`);
       } catch (error) {
@@ -707,7 +708,7 @@ export class VCFolderWatcher {
         
         if (uid) {
           this.contactFiles.set(uid, file);
-          await this.writeContactToVCF(file, uid);
+          this.debouncedVCFWriteBack(file, uid);
         }
       }
     };
@@ -748,6 +749,28 @@ export class VCFolderWatcher {
     // Remove all listeners
     this.contactFileListeners.forEach(cleanup => cleanup());
     this.contactFileListeners = [];
+  }
+
+  /**
+   * Debounced VCF write back to prevent excessive writes
+   */
+  private debouncedVCFWriteBack(contactFile: TFile, uid: string): void {
+    const key = uid;
+    
+    if (!this.debouncedWriteBack.has(key)) {
+      this.debouncedWriteBack.set(key, debounce(async () => {
+        try {
+          await this.writeContactToVCF(contactFile, uid);
+        } catch (error) {
+          loggingService.error(`Error in debounced VCF write back for ${contactFile.path}: ${error.message}`);
+        }
+      }, 1000)); // 1 second debounce as specified
+    }
+    
+    const debouncedFn = this.debouncedWriteBack.get(key);
+    if (debouncedFn) {
+      debouncedFn();
+    }
   }
 
   /**
