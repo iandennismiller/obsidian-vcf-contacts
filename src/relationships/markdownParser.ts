@@ -2,9 +2,52 @@
  * Utilities for parsing and rendering the Related section in contact markdown notes
  */
 
+import { parseNamespaceValue, createNamespaceValue } from './namespaceUtils';
+
 export interface RelatedListItem {
   kind: string;
   target: string;
+}
+
+/**
+ * Convert a namespace value to display name for markdown
+ */
+export function namespaceToDisplayName(namespaceValue: string, getContactByUid?: (uid: string) => { fullName: string } | null): string {
+  const parsed = parseNamespaceValue(namespaceValue);
+  
+  if (!parsed) {
+    return namespaceValue; // Fallback to original value
+  }
+  
+  switch (parsed.type) {
+    case 'name':
+      return parsed.identifier;
+    case 'urn:uuid':
+    case 'uid':
+      // Try to get the full name from the contact
+      if (getContactByUid) {
+        const contact = getContactByUid(parsed.identifier);
+        return contact ? contact.fullName : parsed.identifier;
+      }
+      return parsed.identifier;
+    default:
+      return namespaceValue;
+  }
+}
+
+/**
+ * Convert a display name to namespace value for frontmatter storage
+ */
+export function displayNameToNamespace(displayName: string, getContactByName?: (name: string) => { uid?: string; fullName: string } | null): string {
+  if (getContactByName) {
+    const contact = getContactByName(displayName);
+    if (contact) {
+      return createNamespaceValue(contact.uid, contact.fullName, true);
+    }
+  }
+  
+  // Contact doesn't exist, use name namespace
+  return createNamespaceValue(undefined, displayName, false);
 }
 
 /**

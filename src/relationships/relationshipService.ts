@@ -13,7 +13,9 @@ import {
   parseRelatedSection, 
   updateRelatedSection, 
   cleanupRelatedHeadings,
-  RelatedListItem
+  RelatedListItem,
+  displayNameToNamespace,
+  namespaceToDisplayName
 } from './markdownParser';
 import { updateFrontMatterValue } from '../contacts/contactFrontmatter';
 import { getApp } from '../context/sharedAppContext';
@@ -108,6 +110,7 @@ export class RelationshipService {
 
     // Add new relationships
     for (const { kind, target } of relatedItems) {
+      // Convert display name to actual contact lookup
       const targetNodeId = this.graph.findContact(target);
       
       if (targetNodeId) {
@@ -186,14 +189,14 @@ export class RelationshipService {
     // Get current relationships from graph
     const relationships = this.graph.getRelationshipsForContact(nodeId);
     
-    // Get target's gender for rendering relationships
+    // Convert to display format for markdown
     const relatedItems: RelatedListItem[] = relationships.map(({ targetNode, relationship }) => {
       const targetGender = this.getContactGender(targetNode);
       const renderedKind = renderRelationshipKind(relationship.genderless, targetGender);
       
       return {
         kind: renderedKind,
-        target: targetNode.fullName
+        target: targetNode.fullName // Use fullName for display in markdown
       };
     });
     

@@ -1,6 +1,7 @@
 import { TFile } from 'obsidian';
 import { RelationshipGraph, ContactNode, RelationshipEdge } from './relationshipGraph';
 import { renderRelationshipKind, Gender } from './relationshipMapping';
+import { createNamespaceValue, parseNamespaceValue, findContactByNamespace } from './namespaceUtils';
 
 export interface RelationshipFrontMatterEntry {
   kind: string;
@@ -70,10 +71,19 @@ export function syncContactToFrontMatter(
 ): Record<string, string> {
   const relationships = graph.getRelationshipsForContact(contactNodeId);
   
-  const frontMatterRelationships = relationships.map(({ targetNode, relationship }) => ({
-    kind: renderRelationshipKind(relationship.genderless, targetGender),
-    target: targetNode.fullName
-  }));
+  const frontMatterRelationships = relationships.map(({ targetNode, relationship }) => {
+    // Create namespace value based on target contact's UID and existence
+    const namespaceValue = createNamespaceValue(
+      targetNode.uid,
+      targetNode.fullName,
+      true // Contact exists since it's in the graph
+    );
+    
+    return {
+      kind: renderRelationshipKind(relationship.genderless, targetGender),
+      target: namespaceValue
+    };
+  });
   
   return relationshipsToFrontMatter(frontMatterRelationships);
 }
@@ -96,8 +106,12 @@ export function syncFrontMatterToGraph(
   const relationships = parseRelatedFromFrontMatter(frontMatter);
   
   for (const { kind, target } of relationships) {
-    // Find target contact in graph
-    const targetNodeId = graph.findContact(target);
+    // Find target contact in graph using namespace value
+    const targetNodeId = findContactByNamespace(
+      target,
+      (uid: string) => graph.findContact(uid),
+      (name: string) => graph.findContact(name)
+    );
     
     if (targetNodeId) {
       const relationshipEdge: RelationshipEdge = {

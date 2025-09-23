@@ -24,6 +24,15 @@ export {
   parseRelatedListItem,
   renderRelatedSection,
   updateRelatedSection,
-  cleanupRelatedHeadings
+  cleanupRelatedHeadings,
+  namespaceToDisplayName,
+  displayNameToNamespace
 } from './markdownParser';
 export type { RelatedListItem } from './markdownParser';
+export {
+  isValidUUID,
+  parseNamespaceValue,
+  createNamespaceValue,
+  extractDisplayName,
+  findContactByNamespace
+} from './namespaceUtils';

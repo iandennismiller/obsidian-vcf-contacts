@@ -50,8 +50,9 @@ END:VCARD`;
         getFileCache: () => ({
           frontmatter: {
             FN: 'John Doe',
-            'RELATED[friend]': 'Jane Smith',
-            'RELATED[spouse]': 'Mary Doe',
+            UID: '03a0e51f-d1aa-4385-8a53-e29025acd8af',
+            'RELATED[friend]': 'urn:uuid:456e8400-e29b-41d4-a716-446655440000',
+            'RELATED[spouse]': 'name:Mary Doe',
             VERSION: '4.0'
           }
         })
@@ -62,8 +63,8 @@ END:VCARD`;
     
     const { vcards } = await vcard.toString([mockFile], mockApp as any);
     
-    expect(vcards).toContain('RELATED;TYPE=friend:Jane Smith');
-    expect(vcards).toContain('RELATED;TYPE=spouse:Mary Doe');
+    expect(vcards).toContain('RELATED;TYPE=friend:urn:uuid:456e8400-e29b-41d4-a716-446655440000');
+    expect(vcards).toContain('RELATED;TYPE=spouse:name:Mary Doe');
   });
 
   it('should handle multiple RELATED fields of the same type', async () => {

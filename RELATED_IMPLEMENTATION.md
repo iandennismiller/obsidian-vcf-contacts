@@ -76,22 +76,30 @@ The implementation adds comprehensive support for managing contact relationships
 
 ## Frontmatter Format
 
-Relationships are stored in frontmatter using indexed keys:
+Relationships are stored in frontmatter using indexed keys with namespace values:
 
 ```yaml
-# Single relationship
-RELATED[friend]: John Doe
+# Single relationship with UUID
+RELATED[friend]: urn:uuid:03a0e51f-d1aa-4385-8a53-e29025acd8af
 
 # Multiple relationships of same type
-RELATED[friend]: Alice Smith
-RELATED[1:friend]: Bob Johnson
-RELATED[2:friend]: Carol Davis
+RELATED[friend]: urn:uuid:456e8400-e29b-41d4-a716-446655440000
+RELATED[1:friend]: name:Bob Johnson
+RELATED[2:friend]: uid:custom-id-123
 
 # Different relationship types
-RELATED[parent]: Mary Doe
-RELATED[sibling]: Jane Doe
-RELATED[colleague]: Mike Smith
+RELATED[parent]: urn:uuid:789e8400-e29b-41d4-a716-446655440000
+RELATED[sibling]: name:Jane Doe
+RELATED[colleague]: uid:work-id-456
 ```
+
+### Namespace Format
+
+The values use specific namespace formats to unambiguously identify contacts:
+
+- **`urn:uuid:`** - Used when the contact has a valid UUID as UID
+- **`uid:`** - Used when the contact has a UID that's not blank and unique but not a valid UUID  
+- **`name:`** - Used when the other contact note doesn't exist in Obsidian yet or has no UID
 
 ## Markdown Format
 
@@ -108,13 +116,13 @@ Relationships are displayed in a standardized Related section:
 
 ## vCard Format
 
-Relationships are exported as RELATED fields:
+Relationships are exported as RELATED fields with namespace values:
 
 ```
-RELATED;TYPE=friend:John Doe
-RELATED;TYPE=parent:Mary Doe
-RELATED;TYPE=sibling:Jane Doe
-RELATED;TYPE=colleague:Mike Smith
+RELATED;TYPE=friend:urn:uuid:03a0e51f-d1aa-4385-8a53-e29025acd8af
+RELATED;TYPE=parent:name:Mary Doe
+RELATED;TYPE=sibling:uid:custom-id-123
+RELATED;TYPE=colleague:urn:uuid:456e8400-e29b-41d4-a716-446655440000
 ```
 
 ## Relationship Mappings

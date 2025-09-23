@@ -97,14 +97,15 @@ Bob is John's brother.
 3. The plugin should parse the relationships and add them to the front matter
 4. Check the front matter for entries like:
    ```yaml
-   RELATED[friend]: Jane Smith
-   RELATED[brother]: Bob Doe
+   RELATED[friend]: urn:uuid:jane-smith-uid-456
+   RELATED[brother]: urn:uuid:bob-doe-uid-789
    ```
+   Note: The values use namespace format based on the target contact's UID type
 
 ### 2. Bidirectional Relationship Sync
 1. In John Doe's file, add a new relationship: `- spouse [[Mary Doe]]`
 2. When you save/close the file, the plugin should:
-   - Add `RELATED[spouse]: Mary Doe` to John's front matter
+   - Add `RELATED[spouse]: urn:uuid:mary-doe-uid` or `name:Mary Doe` to John's front matter
    - If Mary Doe exists as a contact, update her relationships
 
 ### 3. Gendered Relationship Handling
@@ -119,8 +120,8 @@ Bob is John's brother.
 1. Export contacts to vCard format
 2. Check that RELATED fields are included:
    ```
-   RELATED;TYPE=friend:Jane Smith
-   RELATED;TYPE=brother:Bob Doe
+   RELATED;TYPE=friend:urn:uuid:jane-smith-uid-456
+   RELATED;TYPE=brother:urn:uuid:bob-doe-uid-789
    ```
 
 ### 5. vCard Import with RELATED Fields
@@ -129,8 +130,8 @@ Bob is John's brother.
    BEGIN:VCARD
    VERSION:4.0
    FN:Test Contact
-   RELATED;TYPE=friend:John Doe
-   RELATED;TYPE=colleague:Jane Smith
+   RELATED;TYPE=friend:urn:uuid:john-doe-uid-123
+   RELATED;TYPE=colleague:name:Jane Smith
    END:VCARD
    ```
 2. Import this vCard
