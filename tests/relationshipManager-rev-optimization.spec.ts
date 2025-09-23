@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { RelationshipManager } from '../src/services/relationshipManager';
+import { RelationshipEventManager } from '../src/services/relationshipEventManager';
 
 // Mock all external dependencies
 vi.mock('obsidian', () => ({
@@ -25,6 +26,12 @@ vi.mock('../src/services/loggingService', () => ({
 vi.mock('../src/contacts/contactFrontmatter', () => ({
   getFrontmatterFromFiles: vi.fn(() => Promise.resolve([])),
   updateFrontMatterValue: vi.fn(),
+}));
+
+vi.mock('../src/services/relationshipListManager', () => ({
+  RelationshipListManager: vi.fn().mockImplementation(() => ({
+    parseRelationshipList: vi.fn(() => []),
+  })),
 }));
 
 const mockApp = {
@@ -110,41 +117,62 @@ describe('RelationshipManager REV Optimization', () => {
     });
   });
 
-  describe('REV timestamp update behavior', () => {
-    it('should demonstrate that REV is only updated when RELATED fields change', () => {
-      // This test documents the expected behavior that REV timestamp
-      // should only be updated when RELATED fields actually change
-      
-      const testCases = [
-        {
-          name: 'No changes',
-          existing: { 'RELATED[friend]': 'urn:uuid:123' },
-          newFields: { 'RELATED[friend]': 'urn:uuid:123' },
-          shouldUpdateREV: false
-        },
-        {
-          name: 'Value changed',
-          existing: { 'RELATED[friend]': 'urn:uuid:123' },
-          newFields: { 'RELATED[friend]': 'urn:uuid:456' },
-          shouldUpdateREV: true
-        },
-        {
-          name: 'Field added',
-          existing: { 'RELATED[friend]': 'urn:uuid:123' },
-          newFields: { 'RELATED[friend]': 'urn:uuid:123', 'RELATED[colleague]': 'urn:uuid:789' },
-          shouldUpdateREV: true
-        }
-      ];
+  describe('Related section change detection', () => {
+    it('should only trigger sync when Related section content actually changes', () => {
+      const content1 = `# Contact
 
-      testCases.forEach(testCase => {
-        const hasChanges = (relationshipManager as any).haveRelatedFieldsChanged(
-          testCase.existing, 
-          testCase.newFields
-        );
-        
-        expect(hasChanges).toBe(testCase.shouldUpdateREV);
-        console.log(`✅ ${testCase.name}: REV should ${testCase.shouldUpdateREV ? '' : 'not '}be updated`);
-      });
+## Related
+
+- friend [[John Doe]]
+- colleague [[Jane Smith]]
+
+## Notes`;
+
+      const content2 = `# Contact
+
+## Related
+
+- friend [[John Doe]]
+- colleague [[Jane Smith]]
+
+## Notes
+Some additional notes here.`;
+
+      const content3 = `# Contact
+
+## Related
+
+- friend [[John Doe]]
+- colleague [[Jane Smith]]
+- mentor [[Bob Wilson]]
+
+## Notes`;
+
+      const eventManager = new RelationshipEventManager(relationshipManager, mockApp as any);
+      
+      const hash1 = (eventManager as any).extractRelatedSectionContent(content1);
+      const hash2 = (eventManager as any).extractRelatedSectionContent(content2);
+      const hash3 = (eventManager as any).extractRelatedSectionContent(content3);
+
+      // Same Related section, different notes - should not trigger update
+      expect(hash1).toBe(hash2);
+      
+      // Different Related section - should trigger update
+      expect(hash1).not.toBe(hash3);
+      
+      console.log('✅ Related section change detection working correctly');
+    });
+
+    it('should handle empty Related sections', () => {
+      const contentWithoutRelated = `# Contact
+
+## Notes
+Just some notes.`;
+
+      const eventManager = new RelationshipEventManager(relationshipManager, mockApp as any);
+      const hash = (eventManager as any).extractRelatedSectionContent(contentWithoutRelated);
+      
+      expect(hash).toBe('');
     });
   });
 });

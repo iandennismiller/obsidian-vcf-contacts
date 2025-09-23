@@ -15,6 +15,7 @@ export class RelationshipEventManager {
   private eventRefs: EventRef[] = [];
   private openFiles: Set<string> = new Set();
   private debounceTimeouts: Map<string, NodeJS.Timeout> = new Map();
+  private lastRelatedSectionContent: Map<string, string> = new Map(); // Track last known Related section content
   private readonly DEBOUNCE_DELAY = 1000; // 1 second
 
   constructor(relationshipManager: RelationshipManager, app?: App) {
@@ -98,6 +99,14 @@ export class RelationshipEventManager {
   private async onFileOpen(file: TFile): Promise<void> {
     try {
       await this.listManager.updateRelatedSection(file);
+      
+      // Initialize the Related section content cache
+      const content = await this.app.vault.read(file);
+      if (this.hasRelatedSection(content)) {
+        const relatedContent = this.extractRelatedSectionContent(content);
+        this.lastRelatedSectionContent.set(file.path, relatedContent);
+      }
+      
       loggingService.debug(`Updated Related section for ${file.name} on open`);
     } catch (error) {
       loggingService.error(`Error updating Related section on file open: ${error.message}`);
@@ -110,10 +119,26 @@ export class RelationshipEventManager {
   private async onFileClose(file: TFile): Promise<void> {
     try {
       await this.listManager.syncListToFrontmatter(file);
+      
+      // Clear the Related section content cache for closed files
+      this.lastRelatedSectionContent.delete(file.path);
+      
       loggingService.debug(`Synced Related list to front matter for ${file.name} on close`);
     } catch (error) {
       loggingService.error(`Error syncing Related list on file close: ${error.message}`);
     }
+  }
+
+  /**
+   * Extract the Related section content from markdown
+   */
+  private extractRelatedSectionContent(content: string): string {
+    const relatedSection = this.listManager.parseRelationshipList(content);
+    // Create a normalized string representation for comparison
+    return relatedSection
+      .map(rel => `${rel.relationshipType}:${rel.contactName}`)
+      .sort()
+      .join('|');
   }
 
   /**
@@ -124,9 +149,15 @@ export class RelationshipEventManager {
       // Check if the Related section was modified
       const content = await this.app.vault.read(file);
       if (this.hasRelatedSection(content)) {
-        // Light sync - only update if there are actual relationship changes
-        await this.listManager.syncListToFrontmatter(file);
-        loggingService.debug(`Synced Related list changes for ${file.name}`);
+        const currentRelatedContent = this.extractRelatedSectionContent(content);
+        const lastKnownContent = this.lastRelatedSectionContent.get(file.path) || '';
+        
+        // Only sync if the Related section content actually changed
+        if (currentRelatedContent !== lastKnownContent) {
+          this.lastRelatedSectionContent.set(file.path, currentRelatedContent);
+          await this.listManager.syncListToFrontmatter(file);
+          loggingService.debug(`Synced Related list changes for ${file.name} - content changed`);
+        }
       }
     } catch (error) {
       loggingService.error(`Error handling file modification: ${error.message}`);
@@ -211,6 +242,7 @@ export class RelationshipEventManager {
   cleanup(): void {
     this.unregisterEvents();
     this.openFiles.clear();
+    this.lastRelatedSectionContent.clear();
   }
 
   /**
