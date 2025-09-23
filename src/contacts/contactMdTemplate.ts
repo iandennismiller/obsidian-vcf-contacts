@@ -67,6 +67,44 @@ function sortedPriorityItems(record: Record<string, any>)  {
   );
 }
 
+function sortRelatedItems(items: { [key: string]: any }): { [key: string]: any } {
+  const relatedEntries: [string, any][] = [];
+  const otherEntries: [string, any][] = [];
+
+  // Separate RELATED fields from other fields
+  Object.entries(items).forEach(([key, value]) => {
+    if (key.startsWith('RELATED')) {
+      relatedEntries.push([key, value]);
+    } else {
+      otherEntries.push([key, value]);
+    }
+  });
+
+  // Sort RELATED fields by value (the actual reference) for consistent ordering
+  relatedEntries.sort((a, b) => {
+    // Extract the relationship type from the key for secondary sorting
+    const typeA = a[0].match(/RELATED\[(?:\d+:)?([^\]]+)\]/)?.[1] || '';
+    const typeB = b[0].match(/RELATED\[(?:\d+:)?([^\]]+)\]/)?.[1] || '';
+    
+    // First sort by relationship type, then by value
+    const typeCompare = typeA.localeCompare(typeB);
+    return typeCompare !== 0 ? typeCompare : a[1].toString().localeCompare(b[1].toString());
+  });
+
+  // Reconstruct the object with sorted RELATED fields first, then other fields
+  const result: { [key: string]: any } = {};
+  
+  relatedEntries.forEach(([key, value]) => {
+    result[key] = value;
+  });
+  
+  otherEntries.forEach(([key, value]) => {
+    result[key] = value;
+  });
+
+  return result;
+}
+
 export function mdRender(record: Record<string, any>, hashtags: string): string {
 	const { NOTE, ...recordWithoutNote } = record;
   const groups = groupVCardFields(recordWithoutNote)
@@ -83,7 +121,7 @@ export function mdRender(record: Record<string, any>, hashtags: string): string 
 		...sortNameItems(groups.name),
 		...sortedPriorityItems(groups.priority),
 		...groups.address,
-		...groups.other
+		...sortRelatedItems(groups.other)
 	};
 
 	return `---

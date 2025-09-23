@@ -8,6 +8,7 @@ import { VCardForObsidianRecord } from "src/contacts/vcard/shared/vcard.d";
 import { createContactFile } from "src/file/file";
 import { loggingService } from "src/services/loggingService";
 import { ContactsPluginSettings } from "src/settings/settings.d";
+import { FileUpdateCoordinator } from "./fileUpdateCoordinator";
 
 /**
  * Information about a VCF file being tracked by the watcher
@@ -51,6 +52,7 @@ export class VCFolderWatcher {
   private contactFileListeners: (() => void)[] = []; // Track registered listeners
   private updatingRevFields = new Set<string>(); // Track files being updated internally to prevent loops
   private debouncedWriteBack = new Map<string, () => void>(); // Debounced VCF write back by UID
+  private fileCoordinator: FileUpdateCoordinator;
 
   /**
    * Creates a new VCF folder watcher instance.

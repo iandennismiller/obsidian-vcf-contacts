@@ -4,6 +4,7 @@ import { RelationshipGraph } from "./relationshipGraph";
 import { RelationshipSync } from "./relationshipSync";
 import { updateFrontMatterValue } from "src/contacts/contactFrontmatter";
 import { loggingService } from "./loggingService";
+import { FileUpdateCoordinator } from "./fileUpdateCoordinator";
 
 export interface RelationshipListItem {
   kind: string;
@@ -18,6 +19,7 @@ export class RelationshipManager {
   private app: App;
   private graph: RelationshipGraph;
   private relationshipSync: RelationshipSync;
+  private fileCoordinator: FileUpdateCoordinator;
   private isUpdatingNote = new Set<string>(); // Track files being updated to prevent loops
   private debouncedSyncFromList: Map<string, () => void> = new Map();
 
@@ -25,6 +27,7 @@ export class RelationshipManager {
     this.app = app || getApp();
     this.graph = new RelationshipGraph();
     this.relationshipSync = new RelationshipSync(this.graph);
+    this.fileCoordinator = FileUpdateCoordinator.getInstance();
   }
 
   /**
@@ -181,7 +184,14 @@ export class RelationshipManager {
    * Sync relationships from markdown list to front matter and graph
    */
   private async syncRelationshipsFromList(file: TFile): Promise<void> {
+    // Skip if already being updated by our own tracking
     if (this.isUpdatingNote.has(file.path)) {
+      return;
+    }
+
+    // Skip if file is being updated by another service (VCFolderWatcher)
+    if (this.fileCoordinator.isFileBeingUpdated(file.path)) {
+      loggingService.debug(`Skipping relationship sync for ${file.path} - file is being updated by another service`);
       return;
     }
     
@@ -195,42 +205,44 @@ export class RelationshipManager {
     const uid = frontMatter.UID;
     const name = frontMatter.FN || file.basename;
     
-    try {
-      const content = await this.app.vault.read(file);
-      const relationships = this.parseRelationshipsList(content);
-      
-      // Clear existing relationships for this contact in the graph
-      const existingRelationships = this.graph.getContactRelationships(uid, name);
-      existingRelationships.forEach(rel => {
-        this.graph.removeRelationship(uid, name, rel.targetUid, rel.targetName, rel.relationshipKind);
-      });
-      
-      // Add new relationships from the list
-      let hasChanges = false;
-      for (const rel of relationships) {
-        if (rel.valid) {
-          // Find the contact by name to get their UID
-          const targetContact = await this.findContactByName(rel.contactName);
-          if (targetContact) {
-            this.graph.addRelationship(uid, name, targetContact.uid, targetContact.name, rel.kind);
-            hasChanges = true;
+    await this.fileCoordinator.withExclusiveAccess(file.path, async () => {
+      try {
+        const content = await this.app.vault.read(file);
+        const relationships = this.parseRelationshipsList(content);
+        
+        // Clear existing relationships for this contact in the graph
+        const existingRelationships = this.graph.getContactRelationships(uid, name);
+        existingRelationships.forEach(rel => {
+          this.graph.removeRelationship(uid, name, rel.targetUid, rel.targetName, rel.relationshipKind);
+        });
+        
+        // Add new relationships from the list
+        let hasChanges = false;
+        for (const rel of relationships) {
+          if (rel.valid) {
+            // Find the contact by name to get their UID
+            const targetContact = await this.findContactByName(rel.contactName);
+            if (targetContact) {
+              this.graph.addRelationship(uid, name, targetContact.uid, targetContact.name, rel.kind);
+              hasChanges = true;
+            }
           }
         }
-      }
-      
-      if (hasChanges) {
-        // Update this contact's front matter
-        await this.relationshipSync.updateContactRelatedFields(file, uid, name, this.app);
         
-        // Update REV field
-        const revTimestamp = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-        await updateFrontMatterValue(file, 'REV', revTimestamp, this.app);
-        
-        loggingService.debug(`Updated relationships for ${name}`);
+        if (hasChanges) {
+          // Update this contact's front matter
+          await this.relationshipSync.updateContactRelatedFields(file, uid, name, this.app);
+          
+          // Update REV field
+          const revTimestamp = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+          await updateFrontMatterValue(file, 'REV', revTimestamp, this.app);
+          
+          loggingService.debug(`Updated relationships for ${name}`);
+        }
+      } catch (error) {
+        loggingService.error(`Error syncing relationships for ${file.path}: ${error.message}`);
       }
-    } catch (error) {
-      loggingService.error(`Error syncing relationships for ${file.path}: ${error.message}`);
-    }
+    });
   }
 
   /**
