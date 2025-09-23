@@ -190,6 +190,13 @@ export class RelationshipListManager {
   }
 
   /**
+   * Check if a file is currently being processed
+   */
+  isProcessing(filePath: string): boolean {
+    return this.processingFiles.has(filePath);
+  }
+
+  /**
    * Update or create Related section in a contact note
    */
   async updateRelatedSection(file: TFile, forceAddHeading: boolean = false): Promise<void> {
@@ -321,51 +328,41 @@ export class RelationshipListManager {
         // Now sync this contact's front matter (this will only update REV if changes are detected)
         await this.relationshipManager.syncGraphToFrontmatter(file);
         
-        // IMPORTANT: Propagate changes to related contacts
+        // IMPORTANT: Propagate changes to related contacts with processing locks
         // When relationships change from the markdown list, we need to update related contacts too
+        const affectedContacts = new Set<string>();
+        
+        // Collect all affected contact UIDs (both current and previous relationships)
         for (const rel of currentRelationshipsByUid) {
-          // Find the target contact file by UID
-          const targetFiles = this.app.vault.getMarkdownFiles().filter(f => 
-            f.path.startsWith('Contacts/') || this.isContactFile(f)
-          );
-          
-          for (const targetFile of targetFiles) {
-            const targetFrontmatter = this.app.metadataCache.getFileCache(targetFile)?.frontmatter;
-            const targetUid = targetFrontmatter?.UID;
-            if (targetUid === rel.targetUid) {
-              // Sync the target contact's front matter and Related section
-              await this.relationshipManager.syncGraphToContactNote(targetFile);
-              break;
-            }
-          }
+          affectedContacts.add(rel.targetUid);
+        }
+        for (const rel of existingGraphRelationships) {
+          affectedContacts.add(rel.targetContact);
         }
         
-        // Also handle removed relationships - check if any previous relationships were removed
-        for (const rel of existingGraphRelationships) {
-          const stillExists = currentRelationshipsByUid.some(current => 
-            current.targetUid === rel.targetContact && current.relationshipType === rel.relationshipType
-          );
-          
-          if (!stillExists) {
-            // This relationship was removed, update the target contact
-            const targetFiles = this.app.vault.getMarkdownFiles().filter(f => 
-              f.path.startsWith('Contacts/') || this.isContactFile(f)
-            );
-            
-            for (const targetFile of targetFiles) {
-              const targetFrontmatter = this.app.metadataCache.getFileCache(targetFile)?.frontmatter;
-              const targetUid = targetFrontmatter?.UID;
-              if (targetUid === rel.targetContact) {
-                // Sync the target contact's front matter and Related section
-                await this.relationshipManager.syncGraphToContactNote(targetFile);
-                break;
-              }
+        // Update all affected contacts, but mark them as processing to prevent cascades
+        for (const contactUid of affectedContacts) {
+          const targetFile = await this.findContactByUid(contactUid);
+          if (targetFile && !this.processingFiles.has(targetFile.path)) {
+            // Mark the target file as processing before updating to prevent cascade
+            this.processingFiles.add(targetFile.path);
+            try {
+              // Sync the target contact's front matter and Related section
+              await this.relationshipManager.syncGraphToContactNote(targetFile);
+            } finally {
+              // Remove processing lock after a delay to ensure file operations complete
+              setTimeout(() => {
+                this.processingFiles.delete(targetFile.path);
+              }, 1000);
             }
           }
         }
       }
     } finally {
-      this.processingFiles.delete(file.path);
+      // Remove processing lock after a delay to ensure all operations complete
+      setTimeout(() => {
+        this.processingFiles.delete(file.path);
+      }, 1000);
     }
   }
 
@@ -414,6 +411,24 @@ export class RelationshipListManager {
           (frontmatter?.['N.GN'] && frontmatter?.['N.FN'] && 
            `${frontmatter['N.GN']} ${frontmatter['N.FN']}` === name) ||
           file.basename === name) {
+        return file;
+      }
+    }
+    
+    return null;
+  }
+
+  /**
+   * Find a contact file by UID
+   */
+  private async findContactByUid(uid: string): Promise<TFile | null> {
+    const contactFiles = this.app.vault.getMarkdownFiles().filter(file => 
+      file.path.startsWith('Contacts/') || this.isContactFile(file)
+    );
+
+    for (const file of contactFiles) {
+      const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter;
+      if (frontmatter?.UID === uid) {
         return file;
       }
     }

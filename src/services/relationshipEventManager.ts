@@ -97,8 +97,14 @@ export class RelationshipEventManager {
    * Handle file open - sync front matter to Related list
    */
   private async onFileOpen(file: TFile): Promise<void> {
+    // Skip if we're already processing this file to prevent cascades
+    if (this.listManager.isProcessing(file.path)) {
+      return;
+    }
+
     try {
       // Always ensure the Related section exists when opening a contact file
+      // But don't force it if the file is being actively processed
       await this.listManager.updateRelatedSection(file, true);
       
       // Initialize the Related section content cache
