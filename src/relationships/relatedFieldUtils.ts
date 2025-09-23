@@ -19,13 +19,21 @@ export interface ParsedRelatedField {
  */
 export function parseRelatedField(fieldValue: string, fieldKey: string): ParsedRelatedField | null {
   try {
-    // Extract TYPE parameter from the key (e.g., RELATED;TYPE=friend -> friend)
-    const typeMatch = fieldKey.match(/TYPE=([^;,\]]+)/i);
-    if (!typeMatch) {
+    let relationshipType: string;
+    
+    // Extract TYPE parameter from the key
+    // Handle both vCard format (RELATED;TYPE=friend) and front matter format (RELATED[friend])
+    const vCardTypeMatch = fieldKey.match(/TYPE=([^;,\]]+)/i);
+    const frontMatterTypeMatch = fieldKey.match(/RELATED\[(?:\d+:)?([^\]]+)\]/i);
+    
+    if (vCardTypeMatch) {
+      relationshipType = vCardTypeMatch[1].toLowerCase();
+    } else if (frontMatterTypeMatch) {
+      relationshipType = frontMatterTypeMatch[1].toLowerCase();
+    } else {
       return null;
     }
     
-    const relationshipType = typeMatch[1].toLowerCase();
     const normalizedType = GENDERED_TO_NEUTRAL[relationshipType] || relationshipType;
 
     // Parse the value to extract namespace and reference

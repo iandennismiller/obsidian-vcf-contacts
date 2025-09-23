@@ -24,3 +24,6 @@ data.json
 
 # Claude
 .claude
+
+# Demo/test files
+demo-relationships/

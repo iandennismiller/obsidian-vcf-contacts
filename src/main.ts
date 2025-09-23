@@ -1,6 +1,6 @@
 import "src/insights/insightLoading";
 
-import { Plugin } from 'obsidian';
+import { Plugin, Notice, TFile } from 'obsidian';
 import { ContactsView } from "src/ui/sidebar/sidebarView";
 import { CONTACTS_VIEW_CONFIG } from "src/util/constants";
 import myScrollTo from "src/util/myScrollTo";
@@ -8,6 +8,7 @@ import { VCFolderWatcher } from "src/services/vcfFolderWatcher";
 import { onSettingsChange } from "src/context/sharedSettingsContext";
 import { setApp, clearApp } from "src/context/sharedAppContext";
 import { loggingService } from "src/services/loggingService";
+import { RelationshipEventHandler, VCFDropHandler } from "src/relationships";
 
 import { ContactsSettingTab, DEFAULT_SETTINGS } from './settings/settings';
 import { ContactsPluginSettings } from  './settings/settings.d';
@@ -16,6 +17,8 @@ export default class ContactsPlugin extends Plugin {
 	settings: ContactsPluginSettings;
 	private vcfWatcher: VCFolderWatcher | null = null;
 	private settingsUnsubscribe: (() => void) | null = null;
+	private relationshipHandler: RelationshipEventHandler | null = null;
+	private vcfDropHandler: VCFDropHandler | null = null;
 
 	async onload() {
 		// Set up app context for shared utilities
@@ -32,6 +35,22 @@ export default class ContactsPlugin extends Plugin {
 		this.vcfWatcher = new VCFolderWatcher(this.app, this.settings);
 		await this.vcfWatcher.start();
 
+		// Initialize relationship management system
+		this.relationshipHandler = new RelationshipEventHandler(this.app);
+		await this.relationshipHandler.initialize();
+
+		// Initialize VCF drop handler
+		this.vcfDropHandler = new VCFDropHandler(this.settings.vcfWatchFolder, this.app);
+
+		// Register VCF file drop event handler
+		this.registerEvent(
+			this.app.vault.on('create', (file) => {
+				if (file instanceof TFile && file.path.toLowerCase().endsWith('.vcf') && this.vcfDropHandler) {
+					this.vcfDropHandler.handleVCFDrop(file);
+				}
+			})
+		);
+
 		// Listen for settings changes to update watcher
 		this.settingsUnsubscribe = onSettingsChange(async (newSettings) => {
 			// Update log level when settings change
@@ -39,6 +58,11 @@ export default class ContactsPlugin extends Plugin {
 			
 			if (this.vcfWatcher) {
 				await this.vcfWatcher.updateSettings(newSettings);
+			}
+
+			// Update VCF drop handler folder path
+			if (this.vcfDropHandler) {
+				this.vcfDropHandler.updateVCFFolder(newSettings.vcfWatchFolder);
 			}
 		});
 
@@ -71,6 +95,18 @@ export default class ContactsPlugin extends Plugin {
       },
     });
 
+    this.addCommand({
+      id: 'contacts-sync-relationships',
+      name: "Sync All Relationships",
+      callback: async () => {
+        if (this.relationshipHandler) {
+          await this.relationshipHandler.forceConsistencyCheck();
+          const stats = this.relationshipHandler.getStats();
+          new Notice(`Relationship sync complete: ${stats.nodes} contacts, ${stats.edges} relationships`);
+        }
+      },
+    });
+
 
 	}
 
@@ -78,11 +114,20 @@ export default class ContactsPlugin extends Plugin {
 		// Clean up app context
 		clearApp();
 
+		// Clean up relationship handler
+		if (this.relationshipHandler) {
+			this.relationshipHandler.cleanup();
+			this.relationshipHandler = null;
+		}
+
 		// Clean up VCF folder watcher
 		if (this.vcfWatcher) {
 			this.vcfWatcher.stop();
 			this.vcfWatcher = null;
 		}
+
+		// Clean up VCF drop handler
+		this.vcfDropHandler = null;
 
 		// Unsubscribe from settings changes
 		if (this.settingsUnsubscribe) {
