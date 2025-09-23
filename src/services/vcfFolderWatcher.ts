@@ -64,6 +64,13 @@ export class VCFolderWatcher {
   }
 
   /**
+   * Get current settings (for VCF drop handler)
+   */
+  getSettings(): ContactsPluginSettings {
+    return this.settings;
+  }
+
+  /**
    * Starts the VCF folder watcher service.
    * 
    * This method:

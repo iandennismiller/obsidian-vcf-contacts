@@ -6,6 +6,7 @@ import { CONTACTS_VIEW_CONFIG } from "src/util/constants";
 import myScrollTo from "src/util/myScrollTo";
 import { VCFolderWatcher } from "src/services/vcfFolderWatcher";
 import { RelationshipManager } from "src/services/relationshipManager";
+import { VCFDropHandler } from "src/services/vcfDropHandler";
 import { onSettingsChange } from "src/context/sharedSettingsContext";
 import { setApp, clearApp } from "src/context/sharedAppContext";
 import { loggingService } from "src/services/loggingService";
@@ -17,6 +18,7 @@ export default class ContactsPlugin extends Plugin {
 	settings: ContactsPluginSettings;
 	private vcfWatcher: VCFolderWatcher | null = null;
 	private relationshipManager: RelationshipManager | null = null;
+	private vcfDropHandler: VCFDropHandler | null = null;
 	private settingsUnsubscribe: (() => void) | null = null;
 
 	async onload() {
@@ -37,6 +39,10 @@ export default class ContactsPlugin extends Plugin {
 		// Initialize relationship manager
 		this.relationshipManager = new RelationshipManager(this.app);
 		this.relationshipManager.initialize();
+
+		// Initialize VCF drop handler
+		this.vcfDropHandler = new VCFDropHandler(this.app, this.vcfWatcher, this.relationshipManager);
+		this.vcfDropHandler.initialize();
 
 		// Load existing relationships into the graph
 		if (this.settings.contactsFolder) {
@@ -104,6 +110,12 @@ export default class ContactsPlugin extends Plugin {
 		if (this.relationshipManager) {
 			this.relationshipManager.cleanup();
 			this.relationshipManager = null;
+		}
+
+		// Clean up VCF drop handler
+		if (this.vcfDropHandler) {
+			this.vcfDropHandler.cleanup();
+			this.vcfDropHandler = null;
 		}
 
 		// Unsubscribe from settings changes
