@@ -27,6 +27,8 @@ export class RelationshipSync {
   private app: App;
   private syncInProgress = new Set<string>();  // Prevent cascade loops
   private debounceTimers = new Map<string, NodeJS.Timeout>();
+  // Add shared tracking with VCF folder watcher to prevent conflicts
+  private static globalUpdatingFiles = new Set<string>();
 
   constructor(app?: App) {
     this.app = app || getApp();
@@ -120,6 +122,7 @@ export class RelationshipSync {
    */
   private async performSyncFromMarkdown(file: TFile, uid: string, options: RelationshipSyncOptions): Promise<void> {
     this.syncInProgress.add(uid);
+    RelationshipSync.globalUpdatingFiles.add(file.path);
 
     try {
       const content = await this.app.vault.read(file);
@@ -181,6 +184,7 @@ export class RelationshipSync {
 
     } finally {
       this.syncInProgress.delete(uid);
+      RelationshipSync.globalUpdatingFiles.delete(file.path);
     }
   }
 
@@ -190,6 +194,11 @@ export class RelationshipSync {
   async syncFromFrontMatterToMarkdown(file: TFile): Promise<void> {
     const uid = await this.getContactUid(file);
     if (!uid) return;
+
+    // Skip if file is being updated by another system (like VCF folder watcher)
+    if (RelationshipSync.globalUpdatingFiles.has(file.path)) {
+      return;
+    }
 
     const frontMatter = this.app.metadataCache.getFileCache(file)?.frontmatter;
     if (!frontMatter) return;
@@ -233,7 +242,8 @@ export class RelationshipSync {
 
     if (newContent !== content) {
       await this.app.vault.modify(file, newContent);
-      await this.updateRevTimestamp(file);
+      // Don't update REV here - let the front matter update handle it
+      // This prevents double REV updates when both markdown and front matter change
     }
   }
 
@@ -248,6 +258,7 @@ export class RelationshipSync {
     if (!match) return;
 
     const yamlObj = parseYaml(match[1]) || {};
+    const originalYaml = JSON.stringify(yamlObj); // For comparison
     
     // Remove existing RELATED fields
     Object.keys(yamlObj).forEach(key => {
@@ -259,14 +270,23 @@ export class RelationshipSync {
     // Add new RELATED fields
     Object.assign(yamlObj, relatedFrontMatter);
 
-    // Update REV timestamp
-    yamlObj.REV = new Date().toISOString();
+    // Only update REV if we actually changed the front matter content
+    const newYaml = JSON.stringify(yamlObj);
+    const hasChanges = originalYaml !== newYaml;
+                      
+    if (hasChanges) {
+      // Update REV timestamp only when there are actual changes
+      yamlObj.REV = new Date().toISOString();
+    }
 
     const body = content.slice(match[0].length);
     const newFrontMatter = '---\n' + stringifyYaml(yamlObj) + '---\n';
     const newContent = newFrontMatter + body;
 
-    await this.app.vault.modify(file, newContent);
+    // Only modify if content actually changed
+    if (newContent !== content) {
+      await this.app.vault.modify(file, newContent);
+    }
   }
 
   /**
@@ -395,5 +415,26 @@ export class RelationshipSync {
     this.syncInProgress.clear();
     this.debounceTimers.forEach(timer => clearTimeout(timer));
     this.debounceTimers.clear();
+  }
+
+  /**
+   * Check if a file is currently being updated by the relationship system
+   */
+  static isFileBeingUpdated(filePath: string): boolean {
+    return RelationshipSync.globalUpdatingFiles.has(filePath);
+  }
+
+  /**
+   * Mark a file as being updated (for external coordination)
+   */
+  static markFileAsUpdating(filePath: string): void {
+    RelationshipSync.globalUpdatingFiles.add(filePath);
+  }
+
+  /**
+   * Unmark a file as being updated (for external coordination)
+   */
+  static unmarkFileAsUpdating(filePath: string): void {
+    RelationshipSync.globalUpdatingFiles.delete(filePath);
   }
 }

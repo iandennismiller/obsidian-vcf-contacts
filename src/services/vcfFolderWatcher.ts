@@ -7,6 +7,7 @@ import { vcard } from "src/contacts/vcard";
 import { VCardForObsidianRecord } from "src/contacts/vcard/shared/vcard.d";
 import { createContactFile } from "src/file/file";
 import { loggingService } from "src/services/loggingService";
+import { RelationshipSync } from "src/relationships/relationshipSync";
 import { ContactsPluginSettings } from "src/settings/settings.d";
 
 /**
@@ -665,6 +666,11 @@ export class VCFolderWatcher {
         return;
       }
 
+      // Skip if the relationship system is currently updating this file
+      if (RelationshipSync.isFileBeingUpdated(file.path)) {
+        return;
+      }
+
       // Get the UID from the file's frontmatter
       const cache = this.app.metadataCache.getFileCache(file);
       const uid = cache?.frontmatter?.UID;
@@ -673,9 +679,17 @@ export class VCFolderWatcher {
         return; // Skip files without UID
       }
 
+      // Only update REV and write back if VCF write-back is enabled
+      // This prevents unnecessary REV updates from internal changes
+      if (!this.settings.vcfWriteBackEnabled) {
+        return;
+      }
+
       try {
         // Mark that we're updating this file to prevent infinite loops
         this.updatingRevFields.add(file.path);
+        // Also coordinate with relationship system
+        RelationshipSync.markFileAsUpdating(file.path);
         
         // Update the REV field in the contact file with current timestamp
         const revTimestamp = generateRevTimestamp();
@@ -687,15 +701,16 @@ export class VCFolderWatcher {
         // Update our tracking
         this.contactFiles.set(uid, file);
         
-        // Write back to VCF if enabled (metadata cache should be updated now)
+        // Write back to VCF (this is the main reason we updated REV)
         await this.writeContactToVCF(file, uid);
         
-        loggingService.debug(`Updated contact file REV timestamp for ${file.basename} (UID: ${uid})`);
+        loggingService.debug(`Updated contact file REV timestamp for ${file.basename} (UID: ${uid}) - write-back enabled`);
       } catch (error) {
         loggingService.error(`Error updating contact file REV timestamp: ${error.message}`);
       } finally {
-        // Always remove the flag, even if there was an error
+        // Always remove the flags, even if there was an error
         this.updatingRevFields.delete(file.path);
+        RelationshipSync.unmarkFileAsUpdating(file.path);
       }
     };
 

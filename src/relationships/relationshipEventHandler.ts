@@ -162,6 +162,11 @@ export class RelationshipEventHandler {
   private async handleFileModification(file: TFile): Promise<void> {
     if (!this.isEnabled) return;
 
+    // Skip if file is being updated by another system (VCF folder watcher)
+    if (RelationshipSync.isFileBeingUpdated(file.path)) {
+      return;
+    }
+
     try {
       const content = await this.app.vault.read(file);
       const { relatedLines } = extractRelatedSection(content);
