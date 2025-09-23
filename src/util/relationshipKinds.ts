@@ -77,6 +77,26 @@ const RELATIONSHIP_MAPPINGS: Record<string, RelationshipMapping> = {
   }
 };
 
+// Define reciprocal relationship mappings
+const RECIPROCAL_RELATIONSHIPS: Record<string, string> = {
+  // Family relationships that are reciprocal
+  'parent': 'child',
+  'child': 'parent',
+  'sibling': 'sibling',
+  'spouse': 'spouse',
+  'grandparent': 'grandchild',
+  'grandchild': 'grandparent',
+  'auncle': 'auncle', // Aunt/uncle relationship is reciprocal with itself
+  
+  // Social relationships that are typically reciprocal
+  'friend': 'friend',
+  'colleague': 'colleague',
+  'acquaintance': 'acquaintance',
+  'neighbor': 'neighbor'
+  
+  // Note: 'contact' is not reciprocal - it's more of a one-way acknowledgment
+};
+
 // Reverse mapping from gendered terms to base terms
 const GENDERED_TO_BASE: Record<string, string> = {};
 Object.values(RELATIONSHIP_MAPPINGS).forEach(mapping => {
@@ -163,4 +183,20 @@ export function getSupportedRelationshipKinds(): string[] {
 export function isValidRelationshipKind(kind: string): boolean {
   const lowerKind = kind.toLowerCase();
   return getSupportedRelationshipKinds().some(k => k.toLowerCase() === lowerKind);
+}
+
+/**
+ * Get the reciprocal relationship kind for a given relationship
+ */
+export function getReciprocalRelationshipKind(kind: string): string | null {
+  const baseKind = getBaseRelationshipKind(kind);
+  return RECIPROCAL_RELATIONSHIPS[baseKind] || null;
+}
+
+/**
+ * Check if a relationship kind should have a reciprocal relationship
+ */
+export function shouldHaveReciprocalRelationship(kind: string): boolean {
+  const baseKind = getBaseRelationshipKind(kind);
+  return baseKind in RECIPROCAL_RELATIONSHIPS;
 }

@@ -106,6 +106,15 @@ export default class ContactsPlugin extends Plugin {
       },
     });
 
+    this.addCommand({
+      id: 'relationships-verify-backlinks',
+      name: "Verify Relationship Backlinks",
+      callback: async () => {
+        const { relationshipGraphService } = await import('src/services/relationshipGraph');
+        await relationshipGraphService.verifyAndAddMissingBacklinks();
+      },
+    });
+
 
 	}
 

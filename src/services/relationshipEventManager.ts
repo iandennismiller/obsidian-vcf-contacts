@@ -58,6 +58,27 @@ export class RelationshipEventManager {
     );
 
     loggingService.info('Relationship event manager started');
+    
+    // Perform initial setup after a brief delay to ensure everything is loaded
+    setTimeout(() => {
+      this.performInitialSetup();
+    }, 1000);
+  }
+
+  /**
+   * Perform initial setup including backlink verification
+   */
+  private async performInitialSetup(): Promise<void> {
+    try {
+      loggingService.info('Performing initial relationship setup');
+      
+      // Load all contacts into the graph
+      await this.syncAllContacts();
+      
+      loggingService.info('Initial relationship setup completed');
+    } catch (error) {
+      loggingService.error(`Error during initial relationship setup: ${error}`);
+    }
   }
 
   /**
@@ -337,6 +358,9 @@ export class RelationshipEventManager {
 
     // Verify and sync all contacts in graph with their front matter after loading
     await relationshipGraphService.syncAllContactsWithFrontMatter();
+
+    // Verify and add missing reciprocal relationships (backlinks)
+    await relationshipGraphService.verifyAndAddMissingBacklinks();
 
     loggingService.info('Completed contact sync');
   }

@@ -262,6 +262,85 @@ export class RelationshipGraphService {
   }
 
   /**
+   * Verify and add missing reciprocal relationships (backlinks)
+   * This ensures that if contact A has a relationship with contact B,
+   * then contact B has the appropriate reciprocal relationship with contact A
+   */
+  async verifyAndAddMissingBacklinks(): Promise<void> {
+    const { updateContactRelatedFrontMatter } = await import('src/util/relationshipFrontMatter');
+    const { getReciprocalRelationshipKind, shouldHaveReciprocalRelationship } = await import('src/util/relationshipKinds');
+    const { getApp } = await import('src/context/sharedAppContext');
+    
+    const contactIds = this.getAllContactIds();
+    let backlinksAdded = 0;
+    let errorCount = 0;
+
+    loggingService.info(`Verifying reciprocal relationships for ${contactIds.length} contacts`);
+
+    for (const sourceContactId of contactIds) {
+      try {
+        const sourceNode = this.getContactNode(sourceContactId);
+        if (!sourceNode?.file) {
+          continue;
+        }
+
+        const sourceRelationships = this.getContactRelationships(sourceContactId);
+
+        for (const relationship of sourceRelationships) {
+          const { kind, targetContactId } = relationship;
+
+          // Check if this relationship type should have a reciprocal
+          if (!shouldHaveReciprocalRelationship(kind)) {
+            continue;
+          }
+
+          // Get the reciprocal relationship kind
+          const reciprocalKind = getReciprocalRelationshipKind(kind);
+          if (!reciprocalKind) {
+            continue;
+          }
+
+          // Check if target contact exists
+          const targetNode = this.getContactNode(targetContactId);
+          if (!targetNode?.file) {
+            // Target contact doesn't exist as a file, skip
+            continue;
+          }
+
+          // Check if reciprocal relationship exists
+          const targetRelationships = this.getContactRelationships(targetContactId);
+          const hasReciprocal = targetRelationships.some(rel => 
+            rel.targetContactId === sourceContactId && rel.kind === reciprocalKind
+          );
+
+          if (!hasReciprocal) {
+            // Add the missing reciprocal relationship to the graph
+            this.addRelationship(targetContactId, sourceContactId, reciprocalKind);
+
+            // Update the target contact's front matter
+            const updatedTargetRelationships = this.getContactRelationships(targetContactId);
+            const syncedRelationships = updatedTargetRelationships.map(rel => ({
+              kind: rel.kind,
+              target: rel.targetContactId,
+              key: '' // Will be generated when converting to front matter
+            }));
+
+            await updateContactRelatedFrontMatter(targetNode.file, syncedRelationships);
+            backlinksAdded++;
+
+            loggingService.info(`Added missing reciprocal relationship: ${targetNode.fullName} -[${reciprocalKind}]-> ${sourceNode.fullName}`);
+          }
+        }
+      } catch (error) {
+        errorCount++;
+        loggingService.error(`Error verifying backlinks for contact ${sourceContactId}: ${error}`);
+      }
+    }
+
+    loggingService.info(`Backlink verification completed: ${backlinksAdded} backlinks added, ${errorCount} errors`);
+  }
+
+  /**
    * Compare graph relationships with front matter relationships
    * Returns true if they differ and sync is needed
    */
