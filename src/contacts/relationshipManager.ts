@@ -114,7 +114,7 @@ export class RelationshipManager {
       
       // Update the target contact's relationships section to reflect the new relationship
       // This is a "system update" so we re-render from frontmatter
-      await this.updateAffectedContactRelationships(targetFile);
+      await this.updateAffectedContactRelationships(sourceFile, targetFile);
     }
   }
 
@@ -193,7 +193,7 @@ export class RelationshipManager {
         
         // Update the target contact's relationships section to reflect the removal
         // This is a "system update" so we re-render from frontmatter
-        await this.updateAffectedContactRelationships(targetFile);
+        await this.updateAffectedContactRelationships(sourceFile, targetFile);
       }
     }
   }
