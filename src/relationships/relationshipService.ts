@@ -71,7 +71,27 @@ export class RelationshipService {
   }
 
   /**
-   * Sync relationships from markdown content to front matter and graph
+   * Sync relationships from front matter to markdown (when opening a file)
+   */
+  async syncFromFrontMatter(file: TFile, app?: App): Promise<void> {
+    const appInstance = app || getApp();
+    const frontMatter = appInstance.metadataCache.getFileCache(file)?.frontmatter;
+    
+    if (!frontMatter) {
+      return;
+    }
+
+    const nodeId = getContactIdentifier(frontMatter);
+    
+    // Sync front matter relationships to graph
+    syncFrontMatterToGraph(this.graph, nodeId, frontMatter);
+    
+    // Update markdown Related section based on graph
+    await this.updateContactMarkdown(file, nodeId, app);
+  }
+
+  /**
+   * Sync relationships from markdown content to front matter and graph (when closing a file)
    */
   async syncFromMarkdown(file: TFile, app?: App): Promise<void> {
     const appInstance = app || getApp();

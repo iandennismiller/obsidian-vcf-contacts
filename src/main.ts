@@ -11,6 +11,9 @@ import { loggingService } from "src/services/loggingService";
 import { RelationshipService } from "src/relationships/relationshipService";
 import { getFrontmatterFromFiles } from "src/contacts/contactFrontmatter";
 import { findContactFiles } from "src/file/file";
+import { vcard } from "src/contacts/vcard";
+import { mdRender } from "src/contacts/contactMdTemplate";
+import { updateFrontMatterValue } from "src/contacts/contactFrontmatter";
 
 import { ContactsSettingTab, DEFAULT_SETTINGS } from './settings/settings';
 import { ContactsPluginSettings } from  './settings/settings.d';
@@ -175,16 +178,32 @@ export default class ContactsPlugin extends Plugin {
 			})
 		);
 
+		// Listen for file creations and drops (including VCF drops)
+		this.registerEvent(
+			this.app.vault.on('create', async (file) => {
+				if (file instanceof TFile) {
+					await this.onFileCreate(file);
+				}
+			})
+		);
+
 		// Listen for active leaf changes to sync relationships when switching files
 		this.registerEvent(
 			this.app.workspace.on('active-leaf-change', async () => {
 				const previousFile = this.lastActiveFile;
 				const currentFile = this.app.workspace.getActiveFile();
-				this.lastActiveFile = currentFile;
 				
+				// Handle file close event for previous file
 				if (previousFile && this.isContactFile(previousFile)) {
 					await this.onFileClose(previousFile);
 				}
+				
+				// Handle file open event for current file
+				if (currentFile && this.isContactFile(currentFile)) {
+					await this.onFileOpen(currentFile);
+				}
+				
+				this.lastActiveFile = currentFile;
 			})
 		);
 	}
@@ -238,6 +257,142 @@ export default class ContactsPlugin extends Plugin {
 			}
 		} catch (error) {
 			loggingService.error(`Failed to remove contact from relationship graph for ${file.path}: ${error instanceof Error ? error.message : String(error)}`);
+		}
+	}
+
+	/**
+	 * Handle file open events for relationship syncing (frontmatter → Related list)
+	 */
+	private async onFileOpen(file: TFile) {
+		if (!this.isContactFile(file)) {
+			return;
+		}
+
+		try {
+			await this.relationshipService.syncFromFrontMatter(file, this.app);
+		} catch (error) {
+			loggingService.error(`Failed to sync relationships from frontmatter for ${file.path}: ${error instanceof Error ? error.message : String(error)}`);
+		}
+	}
+
+	/**
+	 * Handle file creation events (including VCF drops)
+	 */
+	private async onFileCreate(file: TFile) {
+		try {
+			// Handle VCF file drops
+			if (file.extension === 'vcf') {
+				await this.handleVCFDrop(file);
+				return;
+			}
+
+			// Handle contact file creation
+			if (this.isContactFile(file)) {
+				const frontMatter = this.app.metadataCache.getFileCache(file)?.frontmatter;
+				if (frontMatter) {
+					this.relationshipService.updateContact(file, frontMatter);
+				}
+			}
+		} catch (error) {
+			loggingService.error(`Failed to handle file creation for ${file.path}: ${error instanceof Error ? error.message : String(error)}`);
+		}
+	}
+
+	/**
+	 * Handle VCF file drops - copy to VCF folder and remove from vault
+	 */
+	private async handleVCFDrop(file: TFile) {
+		try {
+			// Check if this is a VCF file dropped into the vault (not in VCF folder)
+			const vcfFolderPath = this.settings.vcfWatchFolder;
+			if (!vcfFolderPath || file.path.startsWith(vcfFolderPath)) {
+				return; // Already in VCF folder or no VCF folder configured
+			}
+
+			loggingService.info(`VCF file dropped: ${file.path}, moving to VCF folder`);
+
+			// Read the VCF content
+			const vcfContent = await this.app.vault.read(file);
+			
+			// Determine target path in VCF folder
+			const fileName = file.name;
+			const targetPath = `${vcfFolderPath}/${fileName}`;
+
+			// Check if file already exists in VCF folder
+			const existingFile = this.app.vault.getAbstractFileByPath(targetPath);
+			
+			if (existingFile instanceof TFile) {
+				// File exists, check for differences
+				const existingContent = await this.app.vault.read(existingFile);
+				
+				if (existingContent !== vcfContent) {
+					// Content is different, update existing file and sync to contact
+					await this.app.vault.modify(existingFile, vcfContent);
+					loggingService.info(`Updated existing VCF file: ${targetPath}`);
+					
+					// Parse the VCF and update corresponding contact note
+					await this.updateContactFromVCF(vcfContent, fileName);
+				} else {
+					loggingService.info(`VCF file ${fileName} already exists with same content`);
+				}
+			} else {
+				// File doesn't exist, create it
+				await this.app.vault.create(targetPath, vcfContent);
+				loggingService.info(`Created new VCF file: ${targetPath}`);
+				
+				// Parse the VCF and create/update corresponding contact note
+				await this.updateContactFromVCF(vcfContent, fileName);
+			}
+
+			// Remove the dropped file from vault
+			await this.app.vault.delete(file);
+			loggingService.info(`Removed dropped VCF file from vault: ${file.path}`);
+
+		} catch (error) {
+			loggingService.error(`Failed to handle VCF drop for ${file.path}: ${error instanceof Error ? error.message : String(error)}`);
+		}
+	}
+
+	/**
+	 * Update contact note from VCF content
+	 */
+	private async updateContactFromVCF(vcfContent: string, fileName: string) {
+		try {
+			// Parse the VCF content
+			const contacts = [];
+			for await (const [slug, vCardObject] of vcard.parse(vcfContent)) {
+				if (slug && vCardObject) {
+					contacts.push({ slug, data: vCardObject });
+				}
+			}
+
+			// Update or create contact notes for each contact in the VCF
+			for (const { slug, data } of contacts) {
+				const contactPath = `${this.settings.contactsFolder}/${slug}.md`;
+				const existingFile = this.app.vault.getAbstractFileByPath(contactPath);
+
+				if (existingFile instanceof TFile) {
+					// Contact exists, check for differences and update
+					const existingFrontMatter = this.app.metadataCache.getFileCache(existingFile)?.frontmatter;
+					
+					if (existingFrontMatter) {
+						// Compare and update different fields
+						for (const [key, value] of Object.entries(data)) {
+							if (existingFrontMatter[key] !== value) {
+								await updateFrontMatterValue(existingFile, key, value.toString(), this.app);
+								loggingService.info(`Updated field ${key} for contact ${slug}`);
+							}
+						}
+					}
+				} else {
+					// Contact doesn't exist, create it
+					const contactContent = mdRender(data);
+					await this.app.vault.create(contactPath, contactContent);
+					loggingService.info(`Created new contact from VCF: ${slug}`);
+				}
+			}
+		} catch (error) {
+			loggingService.error(`Failed to update contact from VCF ${fileName}: ${error instanceof Error ? error.message : String(error)}`);
 		}
 	}
 
