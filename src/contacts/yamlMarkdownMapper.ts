@@ -23,6 +23,7 @@ export interface RelationshipData {
 
 /**
  * Extracts all RELATED fields from frontmatter and converts to relationship data.
+ * Handles both indexed and non-indexed RELATED entries.
  */
 export function extractRelationshipsFromYAML(frontmatter: any): RelationshipData[] {
   if (!frontmatter) return [];
@@ -34,8 +35,11 @@ export function extractRelationshipsFromYAML(frontmatter: any): RelationshipData
       continue;
     }
     
-    // Extract relationship type from key: RELATED[friend] -> friend
-    const typeMatch = key.match(/^RELATED\[([^\]]+)\](?:\[(\d+)\])?$/);
+    // Extract relationship type from key, handling both indexed and non-indexed formats:
+    // RELATED[friend] -> friend
+    // RELATED[1:friend] -> friend  
+    // RELATED[2:friend] -> friend
+    const typeMatch = key.match(/^RELATED\[(?:\d+:)?([^\]]+)\]$/);
     if (!typeMatch) continue;
     
     const relationshipType = typeMatch[1];
@@ -67,10 +71,13 @@ export function extractRelationshipsFromYAML(frontmatter: any): RelationshipData
 /**
  * Converts relationship data to YAML frontmatter entries.
  * Only creates entries for relationships with valid values.
+ * Handles multiple relationships of same type with proper indexing.
  */
 export function relationshipsToYAML(relationships: RelationshipData[]): Record<string, string> {
   const yamlData: Record<string, string> = {};
-  const typeCounts: Record<string, number> = {};
+  
+  // Group relationships by type to handle indexing
+  const relationshipsByType: Record<string, RelationshipData[]> = {};
   
   for (const rel of relationships) {
     // Skip relationships without valid data
@@ -78,28 +85,39 @@ export function relationshipsToYAML(relationships: RelationshipData[]): Record<s
       continue;
     }
     
-    // Generate unique key for this relationship type
-    const baseKey = `RELATED[${rel.relationshipType}]`;
-    let key = baseKey;
-    
-    if (typeCounts[rel.relationshipType]) {
-      typeCounts[rel.relationshipType]++;
-      key = `${baseKey}[${typeCounts[rel.relationshipType]}]`;
-    } else {
-      typeCounts[rel.relationshipType] = 1;
+    if (!relationshipsByType[rel.relationshipType]) {
+      relationshipsByType[rel.relationshipType] = [];
     }
-    
-    // Generate value based on relationship type
-    let value: string;
-    if (rel.isNameBased || !rel.uid) {
-      value = formatNameBasedRelatedField(rel.contactName);
-    } else {
-      value = formatRelatedField(rel.uid);
-    }
-    
-    // Only add non-empty values
-    if (value && value !== 'name:' && value !== 'urn:uuid:') {
-      yamlData[key] = value;
+    relationshipsByType[rel.relationshipType].push(rel);
+  }
+  
+  // Generate YAML keys with proper indexing
+  for (const [type, rels] of Object.entries(relationshipsByType)) {
+    for (let i = 0; i < rels.length; i++) {
+      const rel = rels[i];
+      
+      // Generate key with proper indexing
+      let key: string;
+      if (i === 0 && rels.length === 1) {
+        // Single relationship of this type: RELATED[friend]
+        key = `RELATED[${type}]`;
+      } else {
+        // Multiple relationships: RELATED[1:friend], RELATED[2:friend], etc.
+        key = `RELATED[${i + 1}:${type}]`;
+      }
+      
+      // Generate value based on relationship type
+      let value: string;
+      if (rel.isNameBased || !rel.uid) {
+        value = formatNameBasedRelatedField(rel.contactName);
+      } else {
+        value = formatRelatedField(rel.uid);
+      }
+      
+      // Only add non-empty values
+      if (value && value !== 'name:' && value !== 'urn:uuid:') {
+        yamlData[key] = value;
+      }
     }
   }
   
@@ -210,7 +228,33 @@ export async function clearRelatedFieldsFromYAML(file: TFile, app: App): Promise
 }
 
 /**
- * Updates frontmatter with relationship data, removing empty fields.
+ * Sanitizes RELATED frontmatter to ensure clean array indexing.
+ * This handles cases where array indices may have gaps or be out of order.
+ */
+export async function sanitizeRelatedArrays(file: TFile, app: App): Promise<void> {
+  const frontmatter = app.metadataCache.getFileCache(file)?.frontmatter;
+  if (!frontmatter) return;
+  
+  // Extract all RELATED fields
+  const relationships = extractRelationshipsFromYAML(frontmatter);
+  
+  if (relationships.length > 0) {
+    // Clear and rebuild with clean indexing
+    await clearRelatedFieldsFromYAML(file, app);
+    
+    // Add back with proper indexing
+    const cleanYamlData = relationshipsToYAML(relationships);
+    
+    for (const [key, value] of Object.entries(cleanYamlData)) {
+      if (value && value !== 'name:' && value !== 'urn:uuid:') {
+        await updateFrontMatterValue(file, key, value, app);
+      }
+    }
+  }
+}
+
+/**
+ * Updates frontmatter with relationship data, removing empty fields and sanitizing arrays.
  */
 export async function updateYAMLWithRelationships(
   file: TFile, 
@@ -220,7 +264,7 @@ export async function updateYAMLWithRelationships(
   // First, clear all existing RELATED fields
   await clearRelatedFieldsFromYAML(file, app);
   
-  // Then add new relationships
+  // Then add new relationships with clean indexing
   const yamlData = relationshipsToYAML(relationships);
   
   for (const [key, value] of Object.entries(yamlData)) {
@@ -232,12 +276,16 @@ export async function updateYAMLWithRelationships(
 
 /**
  * Complete bidirectional sync: YAML → Markdown
+ * Includes sanitization of RELATED arrays before processing.
  */
 export async function syncYAMLToMarkdown(
   file: TFile, 
   app: App,
   contactNameResolver: (uid: string) => Promise<string | null>
 ): Promise<void> {
+  // First sanitize RELATED arrays to ensure clean indexing
+  await sanitizeRelatedArrays(file, app);
+  
   const frontmatter = app.metadataCache.getFileCache(file)?.frontmatter;
   const content = await app.vault.read(file);
   const currentContactName = file.basename;
@@ -263,6 +311,7 @@ export async function syncYAMLToMarkdown(
 
 /**
  * Complete bidirectional sync: Markdown → YAML
+ * Includes sanitization of RELATED arrays after processing.
  */
 export async function syncMarkdownToYAML(
   file: TFile, 
@@ -284,4 +333,7 @@ export async function syncMarkdownToYAML(
   }
   
   await updateYAMLWithRelationships(file, relationships, app);
+  
+  // Sanitize arrays after updating to ensure clean indexing
+  await sanitizeRelatedArrays(file, app);
 }

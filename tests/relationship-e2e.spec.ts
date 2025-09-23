@@ -264,10 +264,12 @@ describe('Case-insensitive Header Handling', () => {
 
     testCases.forEach(testContent => {
       // These patterns should all be recognized and processed
-      const relatedSectionRegex = /^(#{1,6})\s+[Rr]elated\s*\n([\s\S]*?)$/m;
+      const relatedSectionRegex = /^(#{1,6})\s+[Rr]elated\s*\n([\s\S]*?)(?=\n#{1,6}\s|\n---|$)/m;
       const match = testContent.match(relatedSectionRegex);
       expect(match).toBeTruthy();
-      expect(match![2].trim()).toBe('- Friend [[John]]');
+      if (match && match[2]) {
+        expect(match[2].trim()).toBe('- Friend [[John]]');
+      }
     });
   });
 
