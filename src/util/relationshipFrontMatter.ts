@@ -87,8 +87,10 @@ export function relationshipsToFrontMatter(relationships: RelationshipFrontMatte
 
   // Generate front matter entries
   Object.entries(kindGroups).forEach(([kind, targets]) => {
-    targets.forEach(target => {
-      const key = generateRelationshipFrontMatterKey(kind, usedKeys);
+    targets.forEach((target, index) => {
+      const key = index === 0 
+        ? `RELATED[${kind}]` 
+        : `RELATED[${index}:${kind}]`;
       usedKeys.push(key);
       frontMatter[key] = `RELATED;TYPE=${kind}:${target}`;
     });
