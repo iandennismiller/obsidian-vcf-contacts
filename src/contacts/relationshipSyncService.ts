@@ -10,6 +10,12 @@
 import { App, TFile } from 'obsidian';
 import { RelationshipManager } from './relationshipManager';
 import { parseRelationshipMarkdown } from './relationships';
+import { 
+  syncYAMLToMarkdown, 
+  syncMarkdownToYAML,
+  extractRelationshipsFromMarkdown,
+  replaceRelationshipsInMarkdown
+} from './yamlMarkdownMapper';
 
 export class RelationshipSyncService {
   private app: App;
@@ -24,14 +30,9 @@ export class RelationshipSyncService {
    * Updates the relationships section in a contact note based on frontmatter.
    */
   async updateRelationshipsSection(contactFile: TFile): Promise<void> {
-    const content = await this.app.vault.read(contactFile);
-    const relationshipsMarkdown = await this.relationshipManager.renderRelationshipsMarkdown(contactFile);
-    
-    const updatedContent = this.replaceRelationshipsSection(content, relationshipsMarkdown);
-    
-    if (updatedContent !== content) {
-      await this.app.vault.modify(contactFile, updatedContent);
-    }
+    await syncYAMLToMarkdown(contactFile, this.app, async (uid: string) => {
+      return await this.relationshipManager.getContactNameByUID(uid);
+    });
   }
 
   /**
@@ -40,16 +41,13 @@ export class RelationshipSyncService {
    * @param reRenderAfterSync Whether to re-render the relationships section after sync (default: false for user edits)
    */
   async syncRelationshipsFromContent(contactFile: TFile, reRenderAfterSync: boolean = false): Promise<void> {
-    const content = await this.app.vault.read(contactFile);
-    const relationshipsSection = this.extractRelationshipsSection(content);
+    await syncMarkdownToYAML(contactFile, this.app, async (contactName: string) => {
+      return await this.relationshipManager.getContactUIDByName(contactName);
+    });
     
-    if (relationshipsSection) {
-      await this.relationshipManager.syncRelationshipsFromMarkdown(contactFile, relationshipsSection);
-      
-      // Only re-render if explicitly requested (e.g., during manual refresh commands)
-      if (reRenderAfterSync) {
-        await this.updateRelationshipsSection(contactFile);
-      }
+    // Only re-render if explicitly requested (e.g., during manual refresh commands)
+    if (reRenderAfterSync) {
+      await this.updateRelationshipsSection(contactFile);
     }
   }
 
@@ -62,17 +60,11 @@ export class RelationshipSyncService {
     
     // Check if the file has relationship changes in the markdown
     const content = await this.app.vault.read(contactFile);
-    const relationshipsSection = this.extractRelationshipsSection(content);
+    const markdownRelationships = extractRelationshipsFromMarkdown(content);
     
-    if (relationshipsSection) {
-      // Parse the relationships from markdown
-      const lines = relationshipsSection.split('\n').filter(line => line.trim().startsWith('-'));
+    if (markdownRelationships.length > 0) {
+      // Parse the relationships from current frontmatter
       const currentRelationships = await this.relationshipManager.getContactRelationships(contactFile);
-      
-      // Parse relationships from markdown
-      const markdownRelationships = lines
-        .map(line => parseRelationshipMarkdown(line))
-        .filter(rel => rel !== null) as Array<{ contactName: string; relationshipType: string }>;
       
       const hasChanges = this.hasRelationshipChanges(currentRelationships, markdownRelationships);
       
@@ -85,50 +77,6 @@ export class RelationshipSyncService {
       // and update the section with any existing relationships
       await this.updateRelationshipsSection(contactFile);
     }
-  }
-
-  /**
-   * Private helper methods
-   */
-
-  private replaceRelationshipsSection(content: string, newRelationshipsMarkdown: string): string {
-    // Find the related section using case-insensitive regex that can match any header level and position
-    const relatedSectionRegex = /^(#{1,6})\s+[Rr]elated\s*\n([\s\S]*?)(?=\n#{1,6}\s|\n---|$)/m;
-    
-    if (relatedSectionRegex.test(content)) {
-      // Replace existing related section, preserving the original header level but standardizing the name
-      return content.replace(relatedSectionRegex, (match, headerLevel) => {
-        return `${headerLevel} Related\n\n${newRelationshipsMarkdown.replace(/^## Related\n\n/, '')}`;
-      });
-    } else {
-      // Find where to insert the related section
-      // Look for the Notes section or other common sections
-      const notesSectionRegex = /^#### Notes\s*\n([\s\S]*?)(?=\n## |\n### |\n#### |$)/m;
-      const match = content.match(notesSectionRegex);
-      
-      if (match) {
-        // Insert after the Notes section
-        const notesEnd = match.index! + match[0].length;
-        return content.slice(0, notesEnd) + '\n\n' + newRelationshipsMarkdown + content.slice(notesEnd);
-      } else {
-        // Insert before the final hashtags if no Notes section
-        const hashtagMatch = content.match(/\n(#\w+[\s#\w]*)\s*$/);
-        if (hashtagMatch) {
-          const hashtagStart = hashtagMatch.index!;
-          return content.slice(0, hashtagStart) + '\n\n' + newRelationshipsMarkdown + content.slice(hashtagStart);
-        } else {
-          // Append at the end
-          return content + '\n\n' + newRelationshipsMarkdown;
-        }
-      }
-    }
-  }
-
-  private extractRelationshipsSection(content: string): string | null {
-    // Use case-insensitive regex to match related header at any level and position
-    const relatedSectionRegex = /^(#{1,6})\s+[Rr]elated\s*\n([\s\S]*?)(?=\n#{1,6}\s|\n---|$)/m;
-    const match = content.match(relatedSectionRegex);
-    return match ? match[2].trim() : null;
   }
 
   private hasRelationshipChanges(

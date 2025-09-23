@@ -21,6 +21,11 @@ import {
 } from './relationships';
 import { parseKey } from './contactDataKeys';
 import { loggingService } from '../services/loggingService';
+import { 
+  extractRelationshipsFromYAML,
+  updateYAMLWithRelationships,
+  RelationshipData 
+} from './yamlMarkdownMapper';
 
 export interface ContactRelationship {
   contactFile?: TFile; // Optional since contact might not exist yet
@@ -490,7 +495,7 @@ export class RelationshipManager {
     
     // Remove empty RELATED fields
     for (const key of keysToRemove) {
-      await updateFrontMatterValue(contactFile, key, null, this.app);
+      await updateFrontMatterValue(contactFile, key, '', this.app);
     }
   }
 
@@ -525,5 +530,23 @@ export class RelationshipManager {
         }
       }
     }
+  }
+
+  /**
+   * Gets the contact name by UID for the YAML mapper.
+   */
+  async getContactNameByUID(uid: string): Promise<string | null> {
+    const contactFiles = await this.getAllContactFiles();
+    const contactFile = await this.findContactByUID(uid, contactFiles);
+    return contactFile ? this.getContactDisplayName(contactFile) : null;
+  }
+
+  /**
+   * Gets the contact UID by name for the YAML mapper.
+   */
+  async getContactUIDByName(contactName: string): Promise<string | null> {
+    const contactFiles = await this.getAllContactFiles();
+    const contactFile = await this.findContactByName(contactName, contactFiles);
+    return contactFile ? await this.getContactUID(contactFile) : null;
   }
 }

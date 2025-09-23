@@ -21,7 +21,8 @@ describe('End-to-End Relationship Processing', () => {
     const parsedRelation = parseRelatedField(vCardValue, relationshipType);
     expect(parsedRelation).toEqual({
       uid: '12345-abcde-67890',
-      type: 'friend'
+      type: 'friend',
+      isNameBased: false
     });
 
     // 2. Render as markdown
@@ -256,14 +257,14 @@ describe('Sync Direction Control', () => {
 describe('Case-insensitive Header Handling', () => {
   it('should handle different case variations of related header', () => {
     const testCases = [
-      '## Related\n\n- Friend [[John]]',
-      '## related\n\n- Friend [[John]]', 
-      '## RELATED\n\n- Friend [[John]]'
+      '## Related\n\n- Friend [[John]]\n',
+      '## related\n\n- Friend [[John]]\n', 
+      '## RELATED\n\n- Friend [[John]]\n'
     ];
 
     testCases.forEach(testContent => {
       // These patterns should all be recognized and processed
-      const relatedSectionRegex = /^(#{1,6})\s+[Rr]elated\s*\n([\s\S]*?)(?=\n#{1,6}\s|\n---|$)/m;
+      const relatedSectionRegex = /^(#{1,6})\s+[Rr]elated\s*\n([\s\S]*?)$/m;
       const match = testContent.match(relatedSectionRegex);
       expect(match).toBeTruthy();
       expect(match![2].trim()).toBe('- Friend [[John]]');
