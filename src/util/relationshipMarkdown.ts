@@ -179,8 +179,26 @@ export function frontMatterToRelationshipList(
         targetName = targetNode.fullName;
         targetGender = targetNode.gender || null;
       } else {
-        // Fallback to value if we can't find the contact
-        targetName = targetRef.value;
+        // Try to find the contact file by UID to get the proper name
+        let targetFile: TFile | null = null;
+        
+        if (targetRef.namespace === 'urn:uuid' || targetRef.namespace === 'uid') {
+          targetFile = findContactByUid(targetRef.value);
+        }
+        
+        if (targetFile) {
+          const app = getApp();
+          const frontMatter = app.metadataCache.getFileCache(targetFile)?.frontmatter;
+          if (frontMatter) {
+            targetName = frontMatter.FN || frontMatter['N.FN'] || targetRef.value;
+            targetGender = frontMatter.GENDER || null;
+          } else {
+            targetName = targetRef.value;
+          }
+        } else {
+          // Fallback to value if we can't find the contact
+          targetName = targetRef.value;
+        }
       }
     }
 
@@ -263,6 +281,23 @@ export function findContactByName(name: string): TFile | null {
   for (const file of files) {
     const frontMatter = app.metadataCache.getFileCache(file)?.frontmatter;
     if (frontMatter && (frontMatter.FN === name || frontMatter['N.FN'] === name)) {
+      return file;
+    }
+  }
+  
+  return null;
+}
+
+/**
+ * Find contact file by UID
+ */
+export function findContactByUid(uid: string): TFile | null {
+  const app = getApp();
+  const files = app.vault.getMarkdownFiles();
+  
+  for (const file of files) {
+    const frontMatter = app.metadataCache.getFileCache(file)?.frontmatter;
+    if (frontMatter && frontMatter.UID === uid) {
       return file;
     }
   }
