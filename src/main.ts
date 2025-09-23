@@ -5,6 +5,8 @@ import { ContactsView } from "src/ui/sidebar/sidebarView";
 import { CONTACTS_VIEW_CONFIG } from "src/util/constants";
 import myScrollTo from "src/util/myScrollTo";
 import { VCFolderWatcher } from "src/services/vcfFolderWatcher";
+import { RelationshipManager } from "src/services/relationshipManager";
+import { RelationshipEventManager } from "src/services/relationshipEventManager";
 import { onSettingsChange } from "src/context/sharedSettingsContext";
 import { setApp, clearApp } from "src/context/sharedAppContext";
 import { loggingService } from "src/services/loggingService";
@@ -15,6 +17,7 @@ import { ContactsPluginSettings } from  './settings/settings.d';
 export default class ContactsPlugin extends Plugin {
 	settings: ContactsPluginSettings;
 	private vcfWatcher: VCFolderWatcher | null = null;
+	private relationshipEventManager: RelationshipEventManager | null = null;
 	private settingsUnsubscribe: (() => void) | null = null;
 
 	async onload() {
@@ -31,6 +34,16 @@ export default class ContactsPlugin extends Plugin {
 		// Initialize VCF folder watcher
 		this.vcfWatcher = new VCFolderWatcher(this.app, this.settings);
 		await this.vcfWatcher.start();
+
+		// Initialize relationship management system
+		try {
+			const relationshipManager = new RelationshipManager(this.app);
+			this.relationshipEventManager = new RelationshipEventManager(relationshipManager, this.app);
+			await this.relationshipEventManager.initialize();
+			loggingService.info("Relationship management system initialized");
+		} catch (error) {
+			loggingService.error(`Failed to initialize relationship system: ${error.message}`);
+		}
 
 		// Listen for settings changes to update watcher
 		this.settingsUnsubscribe = onSettingsChange(async (newSettings) => {
@@ -77,6 +90,12 @@ export default class ContactsPlugin extends Plugin {
 	onunload() {
 		// Clean up app context
 		clearApp();
+
+		// Clean up relationship event manager
+		if (this.relationshipEventManager) {
+			this.relationshipEventManager.cleanup();
+			this.relationshipEventManager = null;
+		}
 
 		// Clean up VCF folder watcher
 		if (this.vcfWatcher) {
