@@ -248,6 +248,47 @@ export class RelationshipSync {
   }
 
   /**
+   * Normalize front matter for comparison by treating arrays as sets
+   * This ensures that order differences don't trigger unnecessary updates
+   */
+  private normalizeFrontMatterForComparison(yamlObj: any): string {
+    // Create a deep copy to avoid modifying the original
+    const normalized = JSON.parse(JSON.stringify(yamlObj));
+    
+    // Group RELATED fields by type and sort them
+    const relatedFields: { [type: string]: string[] } = {};
+    const nonRelatedFields: Record<string, any> = {};
+    
+    Object.keys(normalized).forEach(key => {
+      if (key.startsWith('RELATED')) {
+        // Extract relationship type from key like "RELATED[friend]" or "RELATED[1:friend]"
+        const typeMatch = key.match(/RELATED(?:\[\d*:?([^\]]+)\])?/);
+        const relType = typeMatch ? typeMatch[1] || 'default' : 'default';
+        
+        if (!relatedFields[relType]) {
+          relatedFields[relType] = [];
+        }
+        relatedFields[relType].push(normalized[key]);
+      } else {
+        nonRelatedFields[key] = normalized[key];
+      }
+    });
+    
+    // Sort arrays within each relationship type to make comparison order-independent
+    Object.keys(relatedFields).forEach(type => {
+      relatedFields[type].sort();
+    });
+    
+    // Create normalized object with sorted RELATED fields
+    const normalizedObj = {
+      ...nonRelatedFields,
+      _relatedFields: relatedFields // Use a special key to group related fields
+    };
+    
+    return JSON.stringify(normalizedObj);
+  }
+
+  /**
    * Update contact front matter with relationships
    */
   private async updateContactFrontMatter(file: TFile, uid: string, relationships: RelationshipTriple[]): Promise<void> {
@@ -258,7 +299,7 @@ export class RelationshipSync {
     if (!match) return;
 
     const yamlObj = parseYaml(match[1]) || {};
-    const originalYaml = JSON.stringify(yamlObj); // For comparison
+    const originalNormalized = this.normalizeFrontMatterForComparison(yamlObj);
     
     // Remove existing RELATED fields
     Object.keys(yamlObj).forEach(key => {
@@ -270,12 +311,12 @@ export class RelationshipSync {
     // Add new RELATED fields
     Object.assign(yamlObj, relatedFrontMatter);
 
-    // Only update REV if we actually changed the front matter content
-    const newYaml = JSON.stringify(yamlObj);
-    const hasChanges = originalYaml !== newYaml;
+    // Compare normalized versions to detect meaningful changes
+    const newNormalized = this.normalizeFrontMatterForComparison(yamlObj);
+    const hasChanges = originalNormalized !== newNormalized;
                       
     if (hasChanges) {
-      // Update REV timestamp only when there are actual changes
+      // Update REV timestamp only when there are actual meaningful changes
       yamlObj.REV = new Date().toISOString();
     }
 
@@ -350,18 +391,27 @@ export class RelationshipSync {
    * Propagate relationship changes to related contacts
    */
   private async propagateToRelatedContacts(relationships: RelationshipTriple[]): Promise<void> {
-    for (const rel of relationships) {
-      // Find the related contact file and sync its front matter
-      const contacts = this.app.vault.getMarkdownFiles();
-      for (const file of contacts) {
-        const frontMatter = this.app.metadataCache.getFileCache(file)?.frontmatter;
-        if (this.isContactFile(frontMatter)) {
-          const uid = frontMatter?.UID || file.basename;
-          if (uid === rel.object) {
-            await this.syncFromFrontMatterToMarkdown(file);
-            break;
-          }
-        }
+    // Collect unique contact UIDs to avoid processing the same contact multiple times
+    const uniqueContactUIDs = new Set<string>();
+    relationships.forEach(rel => uniqueContactUIDs.add(rel.object));
+
+    const contacts = this.app.vault.getMarkdownFiles();
+    const contactsByUID = new Map<string, TFile>();
+    
+    // Build a map of contacts by UID for efficient lookup
+    for (const file of contacts) {
+      const frontMatter = this.app.metadataCache.getFileCache(file)?.frontmatter;
+      if (this.isContactFile(frontMatter)) {
+        const uid = frontMatter?.UID || file.basename;
+        contactsByUID.set(uid, file);
+      }
+    }
+
+    // Process each unique contact only once
+    for (const uid of uniqueContactUIDs) {
+      const file = contactsByUID.get(uid);
+      if (file) {
+        await this.syncFromFrontMatterToMarkdown(file);
       }
     }
   }
@@ -372,12 +422,18 @@ export class RelationshipSync {
   async ensureConsistency(): Promise<void> {
     const missing = this.graph.findMissingReciprocalRelationships();
     
+    // Track processed contacts to avoid duplicates
+    const processedContacts = new Set<string>();
+    
     for (const rel of missing) {
       // Add the missing relationship to the graph
       this.graph.addRelationship(rel.subject, rel.object, rel.relationshipKind);
       
-      // Update the front matter of the affected contact
-      await this.syncContactFrontMatterFromGraph(rel.subject);
+      // Only update front matter if we haven't processed this contact yet
+      if (!processedContacts.has(rel.subject)) {
+        await this.syncContactFrontMatterFromGraph(rel.subject);
+        processedContacts.add(rel.subject);
+      }
     }
   }
 
