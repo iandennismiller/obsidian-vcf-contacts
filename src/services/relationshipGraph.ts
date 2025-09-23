@@ -198,4 +198,55 @@ export class RelationshipGraph {
     this.graph.clear();
     this.graph.import(data);
   }
+
+  /**
+   * Get reciprocal relationship type for bidirectional relationships
+   */
+  static getReciprocalRelationshipType(relationshipType: string): string | null {
+    const reciprocalMap: Record<string, string> = {
+      'friend': 'friend',
+      'colleague': 'colleague',
+      'neighbor': 'neighbor',
+      'partner': 'partner',
+      'spouse': 'spouse',
+      'parent': 'child',
+      'child': 'parent',
+      'sibling': 'sibling',
+      'cousin': 'cousin',
+      'auncle': 'nibling', // aunt/uncle -> niece/nephew
+      'nibling': 'auncle'
+    };
+    
+    return reciprocalMap[relationshipType] || null;
+  }
+
+  /**
+   * Add a relationship with automatic reciprocal handling
+   */
+  addRelationshipWithReciprocal(sourceId: string, targetId: string, relationshipType: string): void {
+    // Add the primary relationship
+    this.addRelationship(sourceId, targetId, relationshipType);
+    
+    // Check if this relationship type should have a reciprocal
+    const reciprocalType = RelationshipGraph.getReciprocalRelationshipType(relationshipType);
+    if (reciprocalType) {
+      // Add the reciprocal relationship
+      this.addRelationship(targetId, sourceId, reciprocalType);
+    }
+  }
+
+  /**
+   * Remove a relationship with automatic reciprocal handling
+   */
+  removeRelationshipWithReciprocal(sourceId: string, targetId: string, relationshipType: string): void {
+    // Remove the primary relationship
+    this.removeRelationship(sourceId, targetId, relationshipType);
+    
+    // Check if this relationship type should have a reciprocal
+    const reciprocalType = RelationshipGraph.getReciprocalRelationshipType(relationshipType);
+    if (reciprocalType) {
+      // Remove the reciprocal relationship
+      this.removeRelationship(targetId, sourceId, reciprocalType);
+    }
+  }
 }

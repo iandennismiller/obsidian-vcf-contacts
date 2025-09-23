@@ -395,8 +395,8 @@ export class RelationshipManager {
     const normalizedType = RelationshipGraph.normalizeRelationshipType(relationshipType);
     const genderImplication = RelationshipGraph.getGenderFromRelationship(relationshipType);
     
-    // Add relationship to graph
-    this.graph.addRelationship(sourceUid, targetUid, normalizedType);
+    // Add relationship to graph with reciprocal handling
+    this.graph.addRelationshipWithReciprocal(sourceUid, targetUid, normalizedType);
     
     // Update gender if implied
     if (genderImplication && !targetFrontmatter?.GENDER) {

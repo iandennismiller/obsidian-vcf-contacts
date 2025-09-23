@@ -309,17 +309,60 @@ export class RelationshipListManager {
         if (graph.getAllContacts().includes(sourceUid)) {
           const currentGraphRels = graph.getContactRelationships(sourceUid);
           for (const rel of currentGraphRels) {
-            graph.removeRelationship(rel.sourceContact, rel.targetContact, rel.relationshipType);
+            graph.removeRelationshipWithReciprocal(rel.sourceContact, rel.targetContact, rel.relationshipType);
           }
         }
 
-        // Add new relationships to graph
+        // Add new relationships to graph with reciprocal handling
         for (const rel of currentRelationshipsByUid) {
-          graph.addRelationship(sourceUid, rel.targetUid, rel.relationshipType);
+          graph.addRelationshipWithReciprocal(sourceUid, rel.targetUid, rel.relationshipType);
         }
 
         // Now sync this contact's front matter (this will only update REV if changes are detected)
         await this.relationshipManager.syncGraphToFrontmatter(file);
+        
+        // IMPORTANT: Propagate changes to related contacts
+        // When relationships change from the markdown list, we need to update related contacts too
+        for (const rel of currentRelationshipsByUid) {
+          // Find the target contact file by UID
+          const targetFiles = this.app.vault.getMarkdownFiles().filter(f => 
+            f.path.startsWith('Contacts/') || this.isContactFile(f)
+          );
+          
+          for (const targetFile of targetFiles) {
+            const targetFrontmatter = this.app.metadataCache.getFileCache(targetFile)?.frontmatter;
+            const targetUid = targetFrontmatter?.UID;
+            if (targetUid === rel.targetUid) {
+              // Sync the target contact's front matter and Related section
+              await this.relationshipManager.syncGraphToContactNote(targetFile);
+              break;
+            }
+          }
+        }
+        
+        // Also handle removed relationships - check if any previous relationships were removed
+        for (const rel of existingGraphRelationships) {
+          const stillExists = currentRelationshipsByUid.some(current => 
+            current.targetUid === rel.targetContact && current.relationshipType === rel.relationshipType
+          );
+          
+          if (!stillExists) {
+            // This relationship was removed, update the target contact
+            const targetFiles = this.app.vault.getMarkdownFiles().filter(f => 
+              f.path.startsWith('Contacts/') || this.isContactFile(f)
+            );
+            
+            for (const targetFile of targetFiles) {
+              const targetFrontmatter = this.app.metadataCache.getFileCache(targetFile)?.frontmatter;
+              const targetUid = targetFrontmatter?.UID;
+              if (targetUid === rel.targetContact) {
+                // Sync the target contact's front matter and Related section
+                await this.relationshipManager.syncGraphToContactNote(targetFile);
+                break;
+              }
+            }
+          }
+        }
       }
     } finally {
       this.processingFiles.delete(file.path);
