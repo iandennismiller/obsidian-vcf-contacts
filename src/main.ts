@@ -97,6 +97,15 @@ export default class ContactsPlugin extends Plugin {
       },
     });
 
+    this.addCommand({
+      id: 'relationships-verify-sync',
+      name: "Verify Relationship Graph Sync",
+      callback: async () => {
+        const { relationshipGraphService } = await import('src/services/relationshipGraph');
+        await relationshipGraphService.syncAllContactsWithFrontMatter(true); // Force sync
+      },
+    });
+
 
 	}
 

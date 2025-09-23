@@ -22,6 +22,8 @@ export interface ContactNode {
  */
 export class RelationshipGraphService {
   private graph: DirectedGraph<ContactNode, RelationshipEdge>;
+  private lastSyncTime: number = 0;
+  private readonly syncThrottleMs: number = 5000; // 5 seconds between sync operations
 
   constructor() {
     this.graph = new DirectedGraph();
@@ -186,6 +188,113 @@ export class RelationshipGraphService {
       nodeCount: this.graph.order,
       edgeCount: this.graph.size
     };
+  }
+
+  /**
+   * Verify and sync all contacts in the graph with their front matter
+   * This ensures the graph and front matter are in sync for all contacts
+   * Throttled to prevent excessive sync operations
+   */
+  async syncAllContactsWithFrontMatter(force: boolean = false): Promise<void> {
+    const now = Date.now();
+    
+    // Throttle sync operations unless forced
+    if (!force && (now - this.lastSyncTime) < this.syncThrottleMs) {
+      loggingService.info(`Skipping sync - throttled (last sync ${Math.floor((now - this.lastSyncTime) / 1000)}s ago)`);
+      return;
+    }
+
+    this.lastSyncTime = now;
+    
+    const { updateContactRelatedFrontMatter } = await import('src/util/relationshipFrontMatter');
+    const { parseRelatedFromFrontMatter } = await import('src/util/relationshipFrontMatter');
+    const { getApp } = await import('src/context/sharedAppContext');
+    
+    const contactIds = this.getAllContactIds();
+    let syncedCount = 0;
+    let errorCount = 0;
+
+    loggingService.info(`Starting sync verification for ${contactIds.length} contacts in graph`);
+
+    for (const contactId of contactIds) {
+      try {
+        const contactNode = this.getContactNode(contactId);
+        if (!contactNode?.file) {
+          continue;
+        }
+
+        // Get current relationships from graph
+        const graphRelationships = this.getContactRelationships(contactId);
+        
+        // Get current relationships from front matter
+        const app = getApp();
+        const frontMatter = app.metadataCache.getFileCache(contactNode.file)?.frontmatter;
+        if (!frontMatter) {
+          continue;
+        }
+
+        const frontMatterRelationships = parseRelatedFromFrontMatter(frontMatter);
+
+        // Compare and check if sync is needed
+        const needsSync = this.compareRelationships(graphRelationships, frontMatterRelationships);
+
+        if (needsSync) {
+          // Convert graph relationships to front matter format
+          const syncedRelationships = graphRelationships.map(rel => ({
+            kind: rel.kind,
+            target: rel.targetContactId,
+            key: '' // Will be generated when converting to front matter
+          }));
+
+          // Update the contact's front matter
+          await updateContactRelatedFrontMatter(contactNode.file, syncedRelationships);
+          syncedCount++;
+          
+          loggingService.info(`Synced front matter for contact: ${contactNode.fullName}`);
+        }
+      } catch (error) {
+        errorCount++;
+        loggingService.error(`Error syncing contact ${contactId}: ${error}`);
+      }
+    }
+
+    loggingService.info(`Graph sync completed: ${syncedCount} contacts synced, ${errorCount} errors`);
+  }
+
+  /**
+   * Compare graph relationships with front matter relationships
+   * Returns true if they differ and sync is needed
+   */
+  private compareRelationships(
+    graphRelationships: Array<{ kind: string; targetContactId: string }>,
+    frontMatterRelationships: Array<{ kind: string; target: string }>
+  ): boolean {
+    // Quick length check
+    if (graphRelationships.length !== frontMatterRelationships.length) {
+      return true;
+    }
+
+    // Create normalized sets for comparison
+    const graphSet = new Set(
+      graphRelationships.map(rel => `${rel.kind}:${rel.targetContactId}`)
+    );
+    
+    const frontMatterSet = new Set(
+      frontMatterRelationships.map(rel => `${rel.kind}:${rel.target}`)
+    );
+
+    // Check if sets are equal
+    if (graphSet.size !== frontMatterSet.size) {
+      return true;
+    }
+
+    for (const item of graphSet) {
+      if (!frontMatterSet.has(item)) {
+        return true;
+      }
+    }
+
+    return false;
   }
 }
 

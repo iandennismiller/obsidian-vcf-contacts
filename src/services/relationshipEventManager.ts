@@ -248,6 +248,9 @@ export class RelationshipEventManager {
       // Propagate changes to related contacts
       await this.propagateRelationshipChanges(file, frontMatterEntries);
 
+      // Verify and sync all contacts in graph with their front matter
+      await relationshipGraphService.syncAllContactsWithFrontMatter();
+
       loggingService.info(`Synced Related list to front matter for ${file.name}`);
     } catch (error) {
       loggingService.error(`Error syncing Related list for ${file.name}: ${error}`);
@@ -331,6 +334,9 @@ export class RelationshipEventManager {
         loggingService.error(`Error syncing contact ${file.name}: ${error}`);
       }
     }
+
+    // Verify and sync all contacts in graph with their front matter after loading
+    await relationshipGraphService.syncAllContactsWithFrontMatter();
 
     loggingService.info('Completed contact sync');
   }
