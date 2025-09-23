@@ -8,7 +8,7 @@ import { VCFolderWatcher } from "src/services/vcfFolderWatcher";
 import { onSettingsChange } from "src/context/sharedSettingsContext";
 import { setApp, clearApp } from "src/context/sharedAppContext";
 import { loggingService } from "src/services/loggingService";
-import { RelationshipSyncService } from "src/contacts/relationshipSyncService";
+import { GraphRelationshipManager } from "src/contacts/graphRelationshipManager";
 
 import { ContactsSettingTab, DEFAULT_SETTINGS } from './settings/settings';
 import { ContactsPluginSettings } from  './settings/settings.d';
@@ -17,7 +17,7 @@ export default class ContactsPlugin extends Plugin {
 	settings: ContactsPluginSettings;
 	private vcfWatcher: VCFolderWatcher | null = null;
 	private settingsUnsubscribe: (() => void) | null = null;
-	private relationshipSyncService: RelationshipSyncService | null = null;
+	private graphRelationshipManager: GraphRelationshipManager | null = null;
 	private pendingSyncFiles = new Set<string>();
 	private syncDebounceTimer: number | null = null;
 
@@ -32,8 +32,9 @@ export default class ContactsPlugin extends Plugin {
 		
 		loggingService.info("VCF Contacts plugin loaded");
 		
-		// Initialize relationship sync service
-		this.relationshipSyncService = new RelationshipSyncService(this.app);
+		// Initialize graph-based relationship manager
+		this.graphRelationshipManager = new GraphRelationshipManager(this.app);
+		await this.graphRelationshipManager.initialize();
 		
 		// Initialize VCF folder watcher
 		this.vcfWatcher = new VCFolderWatcher(this.app, this.settings);
@@ -121,6 +122,22 @@ export default class ContactsPlugin extends Plugin {
       },
     });
 
+    this.addCommand({
+      id: 'contacts-clear-sync-locks-debug',
+      name: "Clear Relationship Sync Locks (Debug)",
+      callback: () => {
+        this.clearRelationshipSyncLocks();
+      },
+    });
+
+    this.addCommand({
+      id: 'contacts-validate-graph-debug',
+      name: "Validate Relationship Graph (Debug)",
+      callback: async () => {
+        await this.validateRelationshipGraph();
+      },
+    });
+
 
 	}
 
@@ -140,8 +157,8 @@ export default class ContactsPlugin extends Plugin {
 			this.vcfWatcher = null;
 		}
 
-		// Clean up relationship sync service
-		this.relationshipSyncService = null;
+		// Clean up graph relationship manager
+		this.graphRelationshipManager = null;
 
 		// Unsubscribe from settings changes
 		if (this.settingsUnsubscribe) {
@@ -154,7 +171,7 @@ export default class ContactsPlugin extends Plugin {
 		try {
 			// Check if this file has contact frontmatter
 			const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter;
-			if (frontmatter && (frontmatter['N.GN'] || frontmatter['FN'])) {
+			if (frontmatter && (frontmatter.UID || frontmatter.uid)) {
 				// This is a contact file, mark it for sync when user switches away
 				this.pendingSyncFiles.add(file.path);
 			}
@@ -167,9 +184,9 @@ export default class ContactsPlugin extends Plugin {
 		try {
 			// Check if this is a contact file
 			const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter;
-			if (frontmatter && (frontmatter['N.GN'] || frontmatter['FN']) && this.relationshipSyncService) {
-				// This is a contact file - sync frontmatter to note content
-				await this.relationshipSyncService.updateRelationshipsSection(file);
+			if (frontmatter && (frontmatter.UID || frontmatter.uid) && this.graphRelationshipManager) {
+				// This is a contact file - sync graph to note content
+				await this.graphRelationshipManager.syncOnFileOpen(file);
 			}
 		} catch (error) {
 			loggingService.warn(`Error handling file open: ${error.message}`);
@@ -188,14 +205,15 @@ export default class ContactsPlugin extends Plugin {
 
 			this.syncDebounceTimer = window.setTimeout(async () => {
 				// Sync any pending contact files
-				if (this.pendingSyncFiles.size > 0 && this.relationshipSyncService) {
+				if (this.pendingSyncFiles.size > 0 && this.graphRelationshipManager) {
 					const filesToSync = Array.from(this.pendingSyncFiles);
 					this.pendingSyncFiles.clear();
 
 					for (const filePath of filesToSync) {
 						const file = this.app.vault.getAbstractFileByPath(filePath);
 						if (file instanceof TFile) {
-							await this.relationshipSyncService.handleFileModification(file);
+							const fileContent = await this.app.vault.read(file);
+							await this.graphRelationshipManager.syncFromUserMarkdownEdit(file, fileContent);
 						}
 					}
 
@@ -211,27 +229,18 @@ export default class ContactsPlugin extends Plugin {
 
 	private async updateAllContactRelationships() {
 		try {
-			if (!this.relationshipSyncService) {
+			if (!this.graphRelationshipManager) {
 				return;
 			}
 
-			// Get all contact files
-			const allFiles = this.app.vault.getMarkdownFiles();
-			const contactFiles = [];
+			// Update all contacts using the graph-based manager
+			const result = await this.graphRelationshipManager.updateAllContacts();
 
-			for (const file of allFiles) {
-				const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter;
-				if (frontmatter && (frontmatter['N.GN'] || frontmatter['FN'])) {
-					contactFiles.push(file);
-				}
+			if (result.success) {
+				loggingService.info(`Updated relationships for ${result.filesUpdated.length} contacts`);
+			} else {
+				loggingService.warn(`Error updating contacts: ${result.errors.join(', ')}`);
 			}
-
-			// Update relationships for all contact files
-			for (const file of contactFiles) {
-				await this.relationshipSyncService.updateRelationshipsSection(file);
-			}
-
-			loggingService.info(`Updated relationships for ${contactFiles.length} contacts`);
 		} catch (error) {
 			loggingService.warn(`Error updating all contact relationships: ${error.message}`);
 		}
@@ -239,7 +248,7 @@ export default class ContactsPlugin extends Plugin {
 
 	private async refreshCurrentContactRelationships() {
 		try {
-			if (!this.relationshipSyncService) {
+			if (!this.graphRelationshipManager) {
 				return;
 			}
 
@@ -252,15 +261,19 @@ export default class ContactsPlugin extends Plugin {
 
 			// Check if it's a contact file
 			const frontmatter = this.app.metadataCache.getFileCache(activeFile)?.frontmatter;
-			if (!frontmatter || (!frontmatter['N.GN'] && !frontmatter['FN'])) {
+			if (!frontmatter || (!frontmatter.UID && !frontmatter.uid)) {
 				loggingService.warn('Active file is not a contact file');
 				return;
 			}
 
-			// For manual refresh, we want to re-render after sync to show upgrades and consistency
-			await this.relationshipSyncService.syncRelationshipsFromContent(activeFile, true);
+			// Manual refresh with full bidirectional sync
+			const result = await this.graphRelationshipManager.manualRefresh(activeFile);
 
-			loggingService.info(`Refreshed relationships for ${activeFile.basename}`);
+			if (result.success) {
+				loggingService.info(`Refreshed relationships for ${activeFile.basename}`);
+			} else {
+				loggingService.warn(`Error refreshing relationships: ${result.errors.join(', ')}`);
+			}
 		} catch (error) {
 			loggingService.warn(`Error refreshing current contact relationships: ${error.message}`);
 		}
@@ -272,8 +285,8 @@ export default class ContactsPlugin extends Plugin {
 	 */
 	private clearRelationshipSyncLocks() {
 		try {
-			if (this.relationshipSyncService) {
-				this.relationshipSyncService.clearSyncLocks();
+			if (this.graphRelationshipManager) {
+				this.graphRelationshipManager.clearAllLocks();
 				loggingService.info('Cleared all relationship sync locks');
 			}
 		} catch (error) {
@@ -286,15 +299,20 @@ export default class ContactsPlugin extends Plugin {
 	 */
 	private async validateRelationshipGraph() {
 		try {
-			if (!this.relationshipSyncService) {
+			if (!this.graphRelationshipManager) {
 				return;
 			}
 
-			const isConsistent = await this.relationshipSyncService.validateGraphConsistency();
-			if (isConsistent) {
+			const validation = this.graphRelationshipManager.validateGraph();
+			const stats = this.graphRelationshipManager.getGraphStats();
+			
+			loggingService.info(`Graph stats: ${stats.nodes} nodes, ${stats.edges} edges, ${stats.phantomNodes} phantom nodes`);
+			
+			if (validation.isValid) {
 				loggingService.info('Relationship graph is consistent');
 			} else {
-				loggingService.warn('Relationship graph has inconsistencies - check logs for details');
+				loggingService.warn(`Relationship graph has ${validation.issues.length} issue(s):`);
+				validation.issues.forEach(issue => loggingService.warn(`  - ${issue}`));
 			}
 		} catch (error) {
 			loggingService.warn(`Error validating relationship graph: ${error.message}`);
