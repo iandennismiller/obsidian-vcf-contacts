@@ -216,6 +216,50 @@ export class RelationshipManager {
   }
 
   /**
+   * Update both front matter and Related section when relationships change
+   */
+  async syncGraphToContactNote(contactFile: TFile): Promise<void> {
+    await this.syncGraphToFrontmatter(contactFile);
+    
+    // Also update the Related section in the markdown to ensure it has the heading
+    // and reflects the current relationships
+    const content = await this.app.vault.read(contactFile);
+    const hasRelatedSection = /^#{1,6}\s+related\s*$/im.test(content);
+    
+    // If there are relationships or no Related section exists, update/add it
+    const uid = this.extractUid(this.app.metadataCache.getFileCache(contactFile)?.frontmatter);
+    if (uid) {
+      const relationships = this.graph.getContactRelationships(uid);
+      if (relationships.length > 0 || !hasRelatedSection) {
+        // Import RelationshipListManager to update the section
+        // We'll create a minimal update here to avoid circular dependencies
+        await this.ensureRelatedSectionExists(contactFile);
+      }
+    }
+  }
+
+  /**
+   * Ensure a Related section exists in the contact note
+   */
+  private async ensureRelatedSectionExists(contactFile: TFile): Promise<void> {
+    const content = await this.app.vault.read(contactFile);
+    const hasRelatedSection = /^#{1,6}\s+related\s*$/im.test(content);
+    
+    if (!hasRelatedSection) {
+      // Add a Related section if it doesn't exist
+      const newSection = [
+        '',
+        '## Related',
+        '',
+        ''
+      ];
+      
+      const newContent = content + '\n' + newSection.join('\n');
+      await this.app.vault.modify(contactFile, newContent);
+    }
+  }
+
+  /**
    * Create a contact reference string for RELATED field value
    */
   private async createContactReference(targetUid: string): Promise<string | null> {
@@ -359,9 +403,9 @@ export class RelationshipManager {
       await updateFrontMatterValue(targetFile, 'GENDER', genderImplication);
     }
 
-    // Sync both contacts' front matter
-    await this.syncGraphToFrontmatter(sourceFile);
-    await this.syncGraphToFrontmatter(targetFile);
+    // Sync both contacts' front matter and Related sections
+    await this.syncGraphToContactNote(sourceFile);
+    await this.syncGraphToContactNote(targetFile);
   }
 
   /**

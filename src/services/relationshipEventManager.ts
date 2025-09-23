@@ -98,7 +98,8 @@ export class RelationshipEventManager {
    */
   private async onFileOpen(file: TFile): Promise<void> {
     try {
-      await this.listManager.updateRelatedSection(file);
+      // Always ensure the Related section exists when opening a contact file
+      await this.listManager.updateRelatedSection(file, true);
       
       // Initialize the Related section content cache
       const content = await this.app.vault.read(file);

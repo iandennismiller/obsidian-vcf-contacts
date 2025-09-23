@@ -192,7 +192,7 @@ export class RelationshipListManager {
   /**
    * Update or create Related section in a contact note
    */
-  async updateRelatedSection(file: TFile): Promise<void> {
+  async updateRelatedSection(file: TFile, forceAddHeading: boolean = false): Promise<void> {
     if (this.processingFiles.has(file.path)) {
       return; // Avoid recursive updates
     }
@@ -203,7 +203,7 @@ export class RelationshipListManager {
       const content = await this.app.vault.read(file);
       const relationshipList = await this.generateRelationshipList(file);
       
-      const updatedContent = this.injectRelatedSection(content, relationshipList);
+      const updatedContent = this.injectRelatedSection(content, relationshipList, forceAddHeading);
       
       // Only modify the file if the content actually changed
       if (updatedContent !== content) {
@@ -217,7 +217,7 @@ export class RelationshipListManager {
   /**
    * Inject or update the Related section in markdown content
    */
-  private injectRelatedSection(content: string, relationshipList: string): string {
+  private injectRelatedSection(content: string, relationshipList: string, forceAddHeading: boolean = false): string {
     const lines = content.split('\n');
     const relatedSection = this.findRelatedSection(content);
 
@@ -243,8 +243,8 @@ export class RelationshipListManager {
 
       return newContent;
     } else {
-      // Add new Related section
-      if (relationshipList.trim()) {
+      // Add new Related section if there's content OR if forced to add heading
+      if (relationshipList.trim() || forceAddHeading) {
         const newSection = [
           '',
           '## Related',
