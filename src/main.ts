@@ -57,6 +57,15 @@ export default class ContactsPlugin extends Plugin {
 			})
 		);
 
+		// Listen for file open events to sync frontmatter to note content
+		this.registerEvent(
+			this.app.workspace.on('file-open', (file) => {
+				if (file instanceof TFile && file.extension === 'md') {
+					this.handleFileOpen(file);
+				}
+			})
+		);
+
 		// Listen for settings changes to update watcher
 		this.settingsUnsubscribe = onSettingsChange(async (newSettings) => {
 			// Update log level when settings change
@@ -151,6 +160,19 @@ export default class ContactsPlugin extends Plugin {
 			}
 		} catch (error) {
 			loggingService.warn(`Error marking contact file for sync: ${error.message}`);
+		}
+	}
+
+	private async handleFileOpen(file: TFile) {
+		try {
+			// Check if this is a contact file
+			const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter;
+			if (frontmatter && (frontmatter['N.GN'] || frontmatter['FN']) && this.relationshipSyncService) {
+				// This is a contact file - sync frontmatter to note content
+				await this.relationshipSyncService.updateRelationshipsSection(file);
+			}
+		} catch (error) {
+			loggingService.warn(`Error handling file open: ${error.message}`);
 		}
 	}
 

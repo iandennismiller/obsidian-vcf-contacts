@@ -213,14 +213,14 @@ export class RelationshipManager {
     
     if (relationships.length === 0) {
       // Return header with empty content instead of empty string to preserve the section
-      return `## Relationships\n\n`;
+      return `## Related\n\n`;
     }
 
     const lines = relationships.map(rel => 
       renderRelationshipMarkdown(rel.contactName, rel.relationshipType, currentContactName)
     );
 
-    return `## Relationships\n\n${lines.join('\n')}\n`;
+    return `## Related\n\n${lines.join('\n')}\n`;
   }
 
   /**
@@ -279,6 +279,9 @@ export class RelationshipManager {
       }
     }
 
+    // Clean up empty RELATED fields after all changes
+    await this.cleanupEmptyRelatedFields(contactFile);
+
     // After syncing, try to upgrade any name-based relationships
     await this.upgradeNameBasedRelationships(contactFile);
   }
@@ -293,6 +296,13 @@ export class RelationshipManager {
     relationshipType: string
   ): Promise<void> {
     const frontmatter = this.app.metadataCache.getFileCache(contactFile)?.frontmatter || {};
+    const formattedUID = formatRelatedField(targetUID);
+    
+    // Check if this exact relationship already exists (same URI + relationship type)
+    if (this.isDuplicateRelationship(frontmatter, formattedUID, relationshipType)) {
+      return; // Don't add duplicate
+    }
+    
     let relationshipKey = `RELATED[${relationshipType.toLowerCase()}]`;
     
     // Check if this key already exists, if so, add an index
@@ -302,7 +312,6 @@ export class RelationshipManager {
       index++;
     }
 
-    const formattedUID = formatRelatedField(targetUID);
     await updateFrontMatterValue(contactFile, relationshipKey, formattedUID, this.app);
   }
 
@@ -312,6 +321,13 @@ export class RelationshipManager {
     relationshipType: string
   ): Promise<void> {
     const frontmatter = this.app.metadataCache.getFileCache(contactFile)?.frontmatter || {};
+    const formattedName = formatNameBasedRelatedField(targetName);
+    
+    // Check if this exact relationship already exists (same name + relationship type)
+    if (this.isDuplicateRelationship(frontmatter, formattedName, relationshipType)) {
+      return; // Don't add duplicate
+    }
+    
     let relationshipKey = `RELATED[${relationshipType.toLowerCase()}]`;
     
     // Check if this key already exists, if so, add an index
@@ -321,7 +337,6 @@ export class RelationshipManager {
       index++;
     }
 
-    const formattedName = formatNameBasedRelatedField(targetName);
     await updateFrontMatterValue(contactFile, relationshipKey, formattedName, this.app);
   }
 
@@ -427,6 +442,9 @@ export class RelationshipManager {
    */
   private async updateAffectedContactRelationships(contactFile: TFile): Promise<void> {
     try {
+      // Clean up empty RELATED fields before rendering
+      await this.cleanupEmptyRelatedFields(contactFile);
+      
       const content = await this.app.vault.read(contactFile);
       const relationshipsMarkdown = await this.renderRelationshipsMarkdown(contactFile);
       
@@ -441,18 +459,52 @@ export class RelationshipManager {
   }
 
   /**
-   * Replaces the relationships section in the content with new markdown.
-   * This is similar to the method in RelationshipSyncService but kept here to avoid circular deps.
+   * Checks if a relationship already exists to prevent duplicates.
+   * Same URI/name + relationship type = duplicate.
    */
-  private replaceRelationshipsSection(content: string, newRelationshipsMarkdown: string): string {
-    // Find the relationships section using case-insensitive regex
-    const relationshipsSectionRegex = /^## [Rr]elationships?\s*\n([\s\S]*?)(?=\n## |\n### |\n#### |$)/m;
+  private isDuplicateRelationship(frontmatter: any, targetValue: string, relationshipType: string): boolean {
+    for (const [key, value] of Object.entries(frontmatter)) {
+      if (key.startsWith('RELATED[') && value === targetValue) {
+        // Extract the relationship type from the key
+        const match = key.match(/RELATED\[(?:\d+:)?([^\]]+)\]/);
+        if (match && match[1] === relationshipType.toLowerCase()) {
+          return true; // Duplicate found
+        }
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Cleans up empty RELATED fields from frontmatter during sync.
+   */
+  private async cleanupEmptyRelatedFields(contactFile: TFile): Promise<void> {
+    const frontmatter = this.app.metadataCache.getFileCache(contactFile)?.frontmatter || {};
+    const keysToRemove: string[] = [];
     
-    if (relationshipsSectionRegex.test(content)) {
-      // Replace existing relationships section, ensuring we preserve the standardized header
-      return content.replace(relationshipsSectionRegex, newRelationshipsMarkdown.trim());
+    for (const [key, value] of Object.entries(frontmatter)) {
+      if (key.startsWith('RELATED[') && (!value || value === '')) {
+        keysToRemove.push(key);
+      }
+    }
+    
+    // Remove empty RELATED fields
+    for (const key of keysToRemove) {
+      await updateFrontMatterValue(contactFile, key, null, this.app);
+    }
+  }
+
+  private replaceRelationshipsSection(content: string, newRelationshipsMarkdown: string): string {
+    // Find the related section using case-insensitive regex that can match any header level and position
+    const relatedSectionRegex = /^(#{1,6})\s+[Rr]elated\s*\n([\s\S]*?)(?=\n#{1,6}\s|\n---|$)/m;
+    
+    if (relatedSectionRegex.test(content)) {
+      // Replace existing related section, preserving the original header level but standardizing the name
+      return content.replace(relatedSectionRegex, (match, headerLevel) => {
+        return `${headerLevel} Related\n\n${newRelationshipsMarkdown.replace(/^## Related\n\n/, '')}`;
+      });
     } else {
-      // Find where to insert the relationships section
+      // Find where to insert the related section
       // Look for the Notes section or other common sections
       const notesSectionRegex = /^#### Notes\s*\n([\s\S]*?)(?=\n## |\n### |\n#### |$)/m;
       const match = content.match(notesSectionRegex);

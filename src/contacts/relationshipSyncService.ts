@@ -92,14 +92,16 @@ export class RelationshipSyncService {
    */
 
   private replaceRelationshipsSection(content: string, newRelationshipsMarkdown: string): string {
-    // Find the relationships section using case-insensitive regex
-    const relationshipsSectionRegex = /^## [Rr]elationships?\s*\n([\s\S]*?)(?=\n## |\n### |\n#### |$)/m;
+    // Find the related section using case-insensitive regex that can match any header level and position
+    const relatedSectionRegex = /^(#{1,6})\s+[Rr]elated\s*\n([\s\S]*?)(?=\n#{1,6}\s|\n---|$)/m;
     
-    if (relationshipsSectionRegex.test(content)) {
-      // Replace existing relationships section, ensuring we preserve the standardized header
-      return content.replace(relationshipsSectionRegex, newRelationshipsMarkdown.trim());
+    if (relatedSectionRegex.test(content)) {
+      // Replace existing related section, preserving the original header level but standardizing the name
+      return content.replace(relatedSectionRegex, (match, headerLevel) => {
+        return `${headerLevel} Related\n\n${newRelationshipsMarkdown.replace(/^## Related\n\n/, '')}`;
+      });
     } else {
-      // Find where to insert the relationships section
+      // Find where to insert the related section
       // Look for the Notes section or other common sections
       const notesSectionRegex = /^#### Notes\s*\n([\s\S]*?)(?=\n## |\n### |\n#### |$)/m;
       const match = content.match(notesSectionRegex);
@@ -123,10 +125,10 @@ export class RelationshipSyncService {
   }
 
   private extractRelationshipsSection(content: string): string | null {
-    // Use case-insensitive regex to match relationships header
-    const relationshipsSectionRegex = /^## [Rr]elationships?\s*\n([\s\S]*?)(?=\n## |\n### |\n#### |$)/m;
-    const match = content.match(relationshipsSectionRegex);
-    return match ? match[1].trim() : null;
+    // Use case-insensitive regex to match related header at any level and position
+    const relatedSectionRegex = /^(#{1,6})\s+[Rr]elated\s*\n([\s\S]*?)(?=\n#{1,6}\s|\n---|$)/m;
+    const match = content.match(relatedSectionRegex);
+    return match ? match[2].trim() : null;
   }
 
   private hasRelationshipChanges(

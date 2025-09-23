@@ -126,7 +126,7 @@ N.FN: Doe
 #### Notes
 Some personal notes here.
 
-## Relationships
+## Related
 
 - Friend [[Old Friend]]
 - Manager [[Former Boss]]
@@ -136,7 +136,7 @@ More content here.
 #Contact #Work
 `;
 
-    const newRelationships = `## Relationships
+    const newRelationships = `## Related
 
 - Friend [[New Friend]]
 - Manager [[Current Boss]]
@@ -145,16 +145,16 @@ More content here.
 `;
 
     // Test extraction - get the actual full relationships section
-    const relationshipsStart = originalContent.indexOf('## Relationships');
-    const relationshipsEnd = originalContent.indexOf('\nMore content');
-    const relationshipsSection = originalContent.substring(relationshipsStart, relationshipsEnd);
+    const relatedStart = originalContent.indexOf('## Related');
+    const relatedEnd = originalContent.indexOf('\nMore content');
+    const relatedSection = originalContent.substring(relatedStart, relatedEnd);
     
-    expect(relationshipsSection).toContain('- Friend [[Old Friend]]');
-    expect(relationshipsSection).toContain('- Manager [[Former Boss]]');
+    expect(relatedSection).toContain('- Friend [[Old Friend]]');
+    expect(relatedSection).toContain('- Manager [[Former Boss]]');
 
     // Test replacement
-    const relationshipsSectionRegex = /^## Relationships\s*\n[\s\S]*?(?=\nMore content)/m;
-    const updatedContent = originalContent.replace(relationshipsSectionRegex, newRelationships.trim());
+    const relatedSectionRegex = /^## Related\s*\n[\s\S]*?(?=\nMore content)/m;
+    const updatedContent = originalContent.replace(relatedSectionRegex, newRelationships.trim());
     expect(updatedContent).toContain('- Friend [[New Friend]]');
     expect(updatedContent).toContain('- Manager [[Current Boss]]');
     expect(updatedContent).toContain('- Spouse [[Spouse]]');
@@ -174,7 +174,7 @@ Some notes
 #Contact #Friend
 `;
 
-    const relationshipsSection = `## Relationships
+    const relationshipsSection = `## Related
 
 - Friend [[John Doe]]
 
@@ -190,12 +190,12 @@ Some notes
         '\n\n' + relationshipsSection + 
         contentWithoutRelationships.slice(hashtagStart);
       
-      expect(updatedContent).toContain('## Relationships');
+      expect(updatedContent).toContain('## Related');
       expect(updatedContent).toContain('- Friend [[John Doe]]');
       expect(updatedContent).toContain('#Contact #Friend');
       
       // Verify order is maintained
-      const relationshipsIndex = updatedContent.indexOf('## Relationships');
+      const relationshipsIndex = updatedContent.indexOf('## Related');
       const hashtagIndex = updatedContent.indexOf('#Contact #Friend');
       expect(relationshipsIndex).toBeLessThan(hashtagIndex);
     }
@@ -254,46 +254,113 @@ describe('Sync Direction Control', () => {
 });
 
 describe('Case-insensitive Header Handling', () => {
-  it('should handle different case variations of relationships header', () => {
+  it('should handle different case variations of related header', () => {
     const testCases = [
-      '## Relationships\n\n- Friend [[John]]',
-      '## relationships\n\n- Friend [[John]]', 
-      '## RELATIONSHIPS\n\n- Friend [[John]]',
-      '## Relationship\n\n- Friend [[John]]',
-      '## relationship\n\n- Friend [[John]]'
+      '## Related\n\n- Friend [[John]]',
+      '## related\n\n- Friend [[John]]', 
+      '## RELATED\n\n- Friend [[John]]'
     ];
 
     testCases.forEach(testContent => {
       // These patterns should all be recognized and processed
-      const relationshipsSectionRegex = /^## [Rr]elationships?\s*\n([\s\S]*?)(?=\n## |\n### |\n#### |$)/m;
-      const match = testContent.match(relationshipsSectionRegex);
+      const relatedSectionRegex = /^(#{1,6})\s+[Rr]elated\s*\n([\s\S]*?)(?=\n#{1,6}\s|\n---|$)/m;
+      const match = testContent.match(relatedSectionRegex);
       expect(match).toBeTruthy();
-      expect(match![1].trim()).toBe('- Friend [[John]]');
+      expect(match![2].trim()).toBe('- Friend [[John]]');
     });
   });
 
-  it('should preserve relationships header even with no relationships', () => {
+  it('should preserve related header even with no relationships', () => {
     // Test the renderRelationshipsMarkdown behavior when no relationships exist
     // This should return the header to prevent deletion
-    const emptyRelationshipsMarkdown = '## Relationships\n\n';
+    const emptyRelationshipsMarkdown = '## Related\n\n';
     
     // Simulate replacement behavior
     const originalContent = `---
 FN: Test Contact
 ---
 
-## relationships
+## related
 
 - Friend [[Old Friend]]
 
 #### Notes
 Some notes`;
 
-    const relationshipsSectionRegex = /^## [Rr]elationships?\s*\n([\s\S]*?)(?=\n## |\n### |\n#### |$)/m;
-    const updatedContent = originalContent.replace(relationshipsSectionRegex, emptyRelationshipsMarkdown.trim());
+    const relatedSectionRegex = /^(#{1,6})\s+[Rr]elated\s*\n([\s\S]*?)(?=\n#{1,6}\s|\n---|$)/m;
+    const updatedContent = originalContent.replace(relatedSectionRegex, (match, headerLevel) => {
+      return `${headerLevel} Related\n\n`;
+    });
     
     // Should preserve the header even when no relationships
-    expect(updatedContent).toContain('## Relationships');
-    expect(updatedContent).not.toContain('## relationships');
+    expect(updatedContent).toContain('## Related');
+    expect(updatedContent).not.toContain('## related');
+  });
+
+  it('should handle different header levels', () => {
+    const testCases = [
+      '# Related\n\n- Friend [[John]]',
+      '## Related\n\n- Friend [[John]]',
+      '### Related\n\n- Friend [[John]]',
+      '#### Related\n\n- Friend [[John]]'
+    ];
+
+    testCases.forEach(testContent => {
+      const relatedSectionRegex = /^(#{1,6})\s+[Rr]elated\s*\n([\s\S]*?)(?=\n#{1,6}\s|\n---|$)/m;
+      const match = testContent.match(relatedSectionRegex);
+      expect(match).toBeTruthy();
+      expect(match![2].trim()).toBe('- Friend [[John]]');
+    });
+  });
+});
+
+describe('Data Integrity Rules', () => {
+  it('should prevent duplicate relationships (same URI + type)', () => {
+    // This test validates the duplicate prevention logic
+    const frontmatter = {
+      'RELATED[friend]': 'urn:uuid:12345-abcde',
+      'RELATED[1:parent]': 'urn:uuid:67890-fghij'
+    };
+
+    // Helper method that would be used in actual implementation
+    const isDuplicate = (frontmatter: any, targetValue: string, relationshipType: string): boolean => {
+      for (const [key, value] of Object.entries(frontmatter)) {
+        if (key.startsWith('RELATED[') && value === targetValue) {
+          const match = key.match(/RELATED\[(?:\d+:)?([^\]]+)\]/);
+          if (match && match[1] === relationshipType.toLowerCase()) {
+            return true;
+          }
+        }
+      }
+      return false;
+    };
+
+    // Should detect duplicate
+    expect(isDuplicate(frontmatter, 'urn:uuid:12345-abcde', 'friend')).toBe(true);
+    
+    // Should allow same URI with different relationship type
+    expect(isDuplicate(frontmatter, 'urn:uuid:12345-abcde', 'colleague')).toBe(false);
+    
+    // Should allow different URI with same relationship type
+    expect(isDuplicate(frontmatter, 'urn:uuid:99999-zzzzz', 'friend')).toBe(false);
+  });
+
+  it('should identify empty RELATED fields for cleanup', () => {
+    const frontmatter = {
+      'RELATED[friend]': 'urn:uuid:12345-abcde',
+      'RELATED[parent]': '',
+      'RELATED[1:colleague]': null,
+      'RELATED[spouse]': 'urn:uuid:67890-fghij',
+      'FN': 'John Smith'
+    };
+
+    const emptyKeys: string[] = [];
+    for (const [key, value] of Object.entries(frontmatter)) {
+      if (key.startsWith('RELATED[') && (!value || value === '')) {
+        emptyKeys.push(key);
+      }
+    }
+
+    expect(emptyKeys).toEqual(['RELATED[parent]', 'RELATED[1:colleague]']);
   });
 });
