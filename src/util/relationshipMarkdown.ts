@@ -105,13 +105,13 @@ export function parseRelationshipList(content: string): RelationshipListEntry[] 
 /**
  * Convert relationship list entries to front matter entries
  */
-export function relationshipListToFrontMatter(
+export async function relationshipListToFrontMatter(
   relationships: RelationshipListEntry[]
-): RelationshipFrontMatterEntry[] {
+): Promise<RelationshipFrontMatterEntry[]> {
   const app = getApp();
   const frontMatterEntries: RelationshipFrontMatterEntry[] = [];
 
-  relationships.forEach(rel => {
+  for (const rel of relationships) {
     // Find the target contact file
     const targetFile = findContactByName(rel.targetName);
     let targetReference: string;
@@ -150,7 +150,7 @@ export function relationshipListToFrontMatter(
       target: targetReference,
       key: '' // Will be generated when converting to front matter
     });
-  });
+  }
 
   return frontMatterEntries;
 }

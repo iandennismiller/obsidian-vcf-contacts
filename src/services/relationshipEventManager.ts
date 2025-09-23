@@ -234,7 +234,7 @@ export class RelationshipEventManager {
       const listEntries = parseRelationshipList(relatedContent);
 
       // Convert to front matter entries
-      const frontMatterEntries = relationshipListToFrontMatter(listEntries);
+      const frontMatterEntries = await relationshipListToFrontMatter(listEntries);
 
       // Update front matter
       await updateContactRelatedFrontMatter(file, frontMatterEntries);
