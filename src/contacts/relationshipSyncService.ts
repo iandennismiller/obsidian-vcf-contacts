@@ -5,10 +5,12 @@
  * - Updating relationship markdown when frontmatter changes
  * - Parsing relationship changes from markdown and updating frontmatter
  * - Maintaining consistency between the relationships section and RELATED fields
+ * - Prevention of recursive sync loops through graph-based synchronization
  */
 
 import { App, TFile } from 'obsidian';
 import { RelationshipManager } from './relationshipManager';
+import { RelationshipGraphSync } from './relationshipGraphSync';
 import { parseRelationshipMarkdown } from './relationships';
 import { 
   syncYAMLToMarkdown, 
@@ -20,19 +22,20 @@ import {
 export class RelationshipSyncService {
   private app: App;
   private relationshipManager: RelationshipManager;
+  private graphSync: RelationshipGraphSync;
 
   constructor(app: App) {
     this.app = app;
     this.relationshipManager = new RelationshipManager(app);
+    this.graphSync = new RelationshipGraphSync(app);
   }
 
   /**
    * Updates the relationships section in a contact note based on frontmatter.
+   * Uses graph sync to prevent recursive updates.
    */
   async updateRelationshipsSection(contactFile: TFile): Promise<void> {
-    await syncYAMLToMarkdown(contactFile, this.app, async (uid: string) => {
-      return await this.relationshipManager.getContactNameByUID(uid);
-    });
+    await this.graphSync.syncFromFileOpen(contactFile);
   }
 
   /**
@@ -41,18 +44,18 @@ export class RelationshipSyncService {
    * @param reRenderAfterSync Whether to re-render the relationships section after sync (default: false for user edits)
    */
   async syncRelationshipsFromContent(contactFile: TFile, reRenderAfterSync: boolean = false): Promise<void> {
-    await syncMarkdownToYAML(contactFile, this.app, async (contactName: string) => {
-      return await this.relationshipManager.getContactUIDByName(contactName);
-    });
-    
-    // Only re-render if explicitly requested (e.g., during manual refresh commands)
     if (reRenderAfterSync) {
-      await this.updateRelationshipsSection(contactFile);
+      // Manual refresh - full graph sync
+      await this.graphSync.syncManualRefresh(contactFile);
+    } else {
+      // User edit - controlled propagation
+      await this.graphSync.syncFromUserEdit(contactFile);
     }
   }
 
   /**
    * Handles file modification events to detect relationship changes.
+   * Uses graph sync to prevent cascading updates.
    */
   async handleFileModification(contactFile: TFile): Promise<void> {
     // First, try to upgrade any name-based relationships that might now have available UIDs
@@ -69,14 +72,30 @@ export class RelationshipSyncService {
       const hasChanges = this.hasRelationshipChanges(currentRelationships, markdownRelationships);
       
       if (hasChanges) {
-        // When user is editing, don't re-render immediately - respect their markdown changes
-        await this.syncRelationshipsFromContent(contactFile, false);
+        // When user is editing, use controlled graph sync to prevent loops
+        await this.graphSync.syncFromUserEdit(contactFile);
       }
     } else {
       // Even if there's no relationships section, we should still try to upgrade
       // and update the section with any existing relationships
-      await this.updateRelationshipsSection(contactFile);
+      await this.graphSync.syncFromFileOpen(contactFile);
     }
+  }
+
+  /**
+   * Emergency function to clear all sync locks.
+   * Useful if the system gets into a deadlocked state.
+   */
+  clearSyncLocks(): void {
+    this.graphSync.clearAllLocks();
+  }
+
+  /**
+   * Validates relationship graph consistency.
+   * Useful for debugging and testing.
+   */
+  async validateGraphConsistency(): Promise<boolean> {
+    return await this.graphSync.validateGraphConsistency();
   }
 
   private hasRelationshipChanges(

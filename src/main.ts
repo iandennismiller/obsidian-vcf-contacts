@@ -257,13 +257,47 @@ export default class ContactsPlugin extends Plugin {
 				return;
 			}
 
-			// First, sync from markdown to frontmatter (in case user made changes)
 			// For manual refresh, we want to re-render after sync to show upgrades and consistency
 			await this.relationshipSyncService.syncRelationshipsFromContent(activeFile, true);
 
 			loggingService.info(`Refreshed relationships for ${activeFile.basename}`);
 		} catch (error) {
 			loggingService.warn(`Error refreshing current contact relationships: ${error.message}`);
+		}
+	}
+
+	/**
+	 * Emergency command to clear relationship sync locks.
+	 * Useful if the system gets stuck in a deadlocked state.
+	 */
+	private clearRelationshipSyncLocks() {
+		try {
+			if (this.relationshipSyncService) {
+				this.relationshipSyncService.clearSyncLocks();
+				loggingService.info('Cleared all relationship sync locks');
+			}
+		} catch (error) {
+			loggingService.warn(`Error clearing sync locks: ${error.message}`);
+		}
+	}
+
+	/**
+	 * Debugging command to validate relationship graph consistency.
+	 */
+	private async validateRelationshipGraph() {
+		try {
+			if (!this.relationshipSyncService) {
+				return;
+			}
+
+			const isConsistent = await this.relationshipSyncService.validateGraphConsistency();
+			if (isConsistent) {
+				loggingService.info('Relationship graph is consistent');
+			} else {
+				loggingService.warn('Relationship graph has inconsistencies - check logs for details');
+			}
+		} catch (error) {
+			loggingService.warn(`Error validating relationship graph: ${error.message}`);
 		}
 	}
 
