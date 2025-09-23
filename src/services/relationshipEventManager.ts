@@ -28,6 +28,7 @@ export class RelationshipEventManager {
   private isEnabled: boolean = true;
   private processingFiles: Set<string> = new Set();
   private currentContactFile: TFile | null = null;
+  private syncCheckInterval: number | null = null;
 
   constructor(app: App) {
     this.app = app;
@@ -48,8 +49,13 @@ export class RelationshipEventManager {
     );
 
     this.eventRefs.push(
-      // Handle file close - sync Related list to front matter
-      this.app.workspace.on('file-open', this.handleFileClose.bind(this))
+      // Handle layout change - can catch back/forward navigation
+      this.app.workspace.on('layout-change', this.handleLayoutChange.bind(this))
+    );
+
+    this.eventRefs.push(
+      // Handle window focus changes
+      this.app.workspace.on('window-close', this.handleWindowClose.bind(this))
     );
 
     this.eventRefs.push(
@@ -57,12 +63,53 @@ export class RelationshipEventManager {
       this.app.vault.on('delete', this.handleFileDelete.bind(this))
     );
 
+    // Add additional event listeners for better navigation detection
+    if (typeof window !== 'undefined') {
+      // Listen for browser back/forward button events
+      window.addEventListener('popstate', this.handlePopState.bind(this));
+      
+      // Listen for beforeunload to ensure sync before page closes
+      window.addEventListener('beforeunload', this.handleBeforeUnload.bind(this));
+      
+      // Listen for visibility change (tab switching, etc.)
+      document.addEventListener('visibilitychange', this.handleVisibilityChange.bind(this));
+    }
+
     loggingService.info('Relationship event manager started');
+    
+    // Start periodic sync check as backup
+    this.startPeriodicSyncCheck();
     
     // Perform initial setup after a brief delay to ensure everything is loaded
     setTimeout(() => {
       this.performInitialSetup();
     }, 1000);
+  }
+
+  /**
+   * Start periodic sync check to catch missed navigation events
+   */
+  private startPeriodicSyncCheck(): void {
+    // Check every 2 seconds if there's a file that needs syncing
+    this.syncCheckInterval = setInterval(async () => {
+      if (!this.isEnabled) {
+        return;
+      }
+
+      const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+      const activeFile = activeView?.file;
+
+      // If we have a tracked file but it's no longer active, sync it
+      if (this.currentContactFile && this.currentContactFile !== activeFile) {
+        await this.syncRelatedListToFrontMatter(this.currentContactFile);
+        this.currentContactFile = null;
+      }
+
+      // Update current contact file
+      if (activeFile && this.isContactFile(activeFile)) {
+        this.currentContactFile = activeFile;
+      }
+    }, 2000) as any;
   }
 
   /**
@@ -88,9 +135,23 @@ export class RelationshipEventManager {
     // Cancel all pending REV updates when stopping
     revDebouncer.cancelAllUpdates();
     
+    // Stop periodic sync check
+    if (this.syncCheckInterval) {
+      clearInterval(this.syncCheckInterval);
+      this.syncCheckInterval = null;
+    }
+    
     this.eventRefs.forEach(ref => this.app.workspace.offref(ref));
     this.eventRefs = [];
     this.currentContactFile = null;
+
+    // Clean up additional event listeners
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('popstate', this.handlePopState.bind(this));
+      window.removeEventListener('beforeunload', this.handleBeforeUnload.bind(this));
+      document.removeEventListener('visibilitychange', this.handleVisibilityChange.bind(this));
+    }
+    
     loggingService.info('Relationship event manager stopped');
   }
 
@@ -178,6 +239,108 @@ export class RelationshipEventManager {
     // If we're leaving a contact file, sync it
     if (this.currentContactFile && this.currentContactFile !== file) {
       await this.syncRelatedListToFrontMatter(this.currentContactFile);
+      this.currentContactFile = null;
+    }
+  }
+
+  /**
+   * Handle layout change - can catch navigation changes including back/forward
+   */
+  private async handleLayoutChange(): Promise<void> {
+    if (!this.isEnabled) {
+      return;
+    }
+
+    // Get the currently active file
+    const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+    const activeFile = activeView?.file;
+
+    // If we're switching away from a contact file, sync it
+    if (this.currentContactFile && this.currentContactFile !== activeFile) {
+      await this.syncRelatedListToFrontMatter(this.currentContactFile);
+    }
+
+    // Update current contact file
+    if (activeFile && this.isContactFile(activeFile)) {
+      this.currentContactFile = activeFile;
+    } else {
+      this.currentContactFile = null;
+    }
+  }
+
+  /**
+   * Handle window close event
+   */
+  private async handleWindowClose(): Promise<void> {
+    if (!this.isEnabled) {
+      return;
+    }
+
+    if (this.currentContactFile) {
+      await this.syncRelatedListToFrontMatter(this.currentContactFile);
+      this.currentContactFile = null;
+    }
+  }
+
+  /**
+   * Handle browser back/forward navigation
+   */
+  private async handlePopState(): Promise<void> {
+    if (!this.isEnabled) {
+      return;
+    }
+
+    // Small delay to allow Obsidian to process the navigation
+    setTimeout(async () => {
+      const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+      const activeFile = activeView?.file;
+
+      // If we're switching away from a contact file, sync it
+      if (this.currentContactFile && this.currentContactFile !== activeFile) {
+        await this.syncRelatedListToFrontMatter(this.currentContactFile);
+      }
+
+      // Update current contact file
+      if (activeFile && this.isContactFile(activeFile)) {
+        this.currentContactFile = activeFile;
+      } else {
+        this.currentContactFile = null;
+      }
+    }, 100);
+  }
+
+  /**
+   * Handle before page unload
+   */
+  private async handleBeforeUnload(): Promise<void> {
+    if (!this.isEnabled) {
+      return;
+    }
+
+    if (this.currentContactFile) {
+      await this.syncRelatedListToFrontMatter(this.currentContactFile);
+    }
+  }
+
+  /**
+   * Handle visibility change (tab switching, etc.)
+   */
+  private async handleVisibilityChange(): Promise<void> {
+    if (!this.isEnabled || document.hidden) {
+      return;
+    }
+
+    // When tab becomes visible again, check if we need to sync
+    const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+    const activeFile = activeView?.file;
+
+    if (this.currentContactFile && this.currentContactFile !== activeFile) {
+      await this.syncRelatedListToFrontMatter(this.currentContactFile);
+    }
+
+    if (activeFile && this.isContactFile(activeFile)) {
+      this.currentContactFile = activeFile;
+    } else {
       this.currentContactFile = null;
     }
   }
