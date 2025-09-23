@@ -8,6 +8,8 @@ import { VCFolderWatcher } from "src/services/vcfFolderWatcher";
 import { onSettingsChange } from "src/context/sharedSettingsContext";
 import { setApp, clearApp } from "src/context/sharedAppContext";
 import { loggingService } from "src/services/loggingService";
+import { RelationshipEventManager } from "src/services/relationshipEventManager";
+import { VCFDropHandler } from "src/services/vcfDropHandler";
 
 import { ContactsSettingTab, DEFAULT_SETTINGS } from './settings/settings';
 import { ContactsPluginSettings } from  './settings/settings.d';
@@ -15,6 +17,8 @@ import { ContactsPluginSettings } from  './settings/settings.d';
 export default class ContactsPlugin extends Plugin {
 	settings: ContactsPluginSettings;
 	private vcfWatcher: VCFolderWatcher | null = null;
+	private relationshipManager: RelationshipEventManager | null = null;
+	private vcfDropHandler: VCFDropHandler | null = null;
 	private settingsUnsubscribe: (() => void) | null = null;
 
 	async onload() {
@@ -32,6 +36,14 @@ export default class ContactsPlugin extends Plugin {
 		this.vcfWatcher = new VCFolderWatcher(this.app, this.settings);
 		await this.vcfWatcher.start();
 
+		// Initialize relationship manager
+		this.relationshipManager = new RelationshipEventManager(this.app);
+		this.relationshipManager.start();
+
+		// Initialize VCF drop handler
+		this.vcfDropHandler = new VCFDropHandler(this.app, this.settings);
+		this.vcfDropHandler.start();
+
 		// Listen for settings changes to update watcher
 		this.settingsUnsubscribe = onSettingsChange(async (newSettings) => {
 			// Update log level when settings change
@@ -39,6 +51,10 @@ export default class ContactsPlugin extends Plugin {
 			
 			if (this.vcfWatcher) {
 				await this.vcfWatcher.updateSettings(newSettings);
+			}
+
+			if (this.vcfDropHandler) {
+				this.vcfDropHandler.updateSettings(newSettings);
 			}
 		});
 
@@ -71,12 +87,34 @@ export default class ContactsPlugin extends Plugin {
       },
     });
 
+    this.addCommand({
+      id: 'relationships-sync',
+      name: "Sync All Relationships",
+      callback: async () => {
+        if (this.relationshipManager) {
+          await this.relationshipManager.syncAllContacts();
+        }
+      },
+    });
+
 
 	}
 
 	onunload() {
 		// Clean up app context
 		clearApp();
+
+		// Clean up VCF drop handler
+		if (this.vcfDropHandler) {
+			this.vcfDropHandler.stop();
+			this.vcfDropHandler = null;
+		}
+
+		// Clean up relationship manager
+		if (this.relationshipManager) {
+			this.relationshipManager.stop();
+			this.relationshipManager = null;
+		}
 
 		// Clean up VCF folder watcher
 		if (this.vcfWatcher) {
