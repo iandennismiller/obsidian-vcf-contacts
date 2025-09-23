@@ -268,7 +268,7 @@ export class RelationshipListManager {
     }
 
     const content = await this.app.vault.read(file);
-    const relationships = this.parseRelationshipList(content);
+    const currentRelationships = this.parseRelationshipList(content);
     
     // Convert to front matter relationships
     const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter;
@@ -276,13 +276,76 @@ export class RelationshipListManager {
     
     if (!sourceUid) return;
 
-    // Add relationships to graph and sync
-    for (const rel of relationships) {
+    // Get current graph relationships for this contact
+    const graph = this.relationshipManager.getGraph();
+    const existingGraphRelationships = graph.getAllContacts().includes(sourceUid) 
+      ? graph.getContactRelationships(sourceUid) 
+      : [];
+
+    // Convert current relationships to resolved UIDs for comparison
+    const currentRelationshipsByUid: Array<{relationshipType: string, targetUid: string}> = [];
+    for (const rel of currentRelationships) {
       const targetFile = await this.findContactByName(rel.contactName);
       if (targetFile) {
-        await this.relationshipManager.addRelationship(file, targetFile, rel.relationshipType);
+        const targetFrontmatter = this.app.metadataCache.getFileCache(targetFile)?.frontmatter;
+        const targetUid = targetFrontmatter?.UID;
+        if (targetUid) {
+          currentRelationshipsByUid.push({
+            relationshipType: rel.relationshipType,
+            targetUid: targetUid
+          });
+        }
       }
     }
+
+    // Check if relationships have actually changed
+    if (!this.areGraphRelationshipsEqual(existingGraphRelationships, currentRelationshipsByUid)) {
+      // Clear existing relationships from graph for this contact
+      if (graph.getAllContacts().includes(sourceUid)) {
+        const currentGraphRels = graph.getContactRelationships(sourceUid);
+        for (const rel of currentGraphRels) {
+          graph.removeRelationship(rel.sourceContact, rel.targetContact, rel.relationshipType);
+        }
+      }
+
+      // Add new relationships to graph
+      for (const rel of currentRelationshipsByUid) {
+        graph.addRelationship(sourceUid, rel.targetUid, rel.relationshipType);
+      }
+
+      // Now sync this contact's front matter (this will only update REV if changes are detected)
+      await this.relationshipManager.syncGraphToFrontmatter(file);
+    }
+  }
+
+  /**
+   * Compare graph relationships with current relationship list
+   */
+  private areGraphRelationshipsEqual(
+    graphRels: Array<{relationshipType: string, sourceContact: string, targetContact: string}>, 
+    currentRels: Array<{relationshipType: string, targetUid: string}>
+  ): boolean {
+    if (graphRels.length !== currentRels.length) {
+      return false;
+    }
+
+    // Sort both lists for comparison
+    const sortedGraph = [...graphRels].sort((a, b) => 
+      a.relationshipType.localeCompare(b.relationshipType) || a.targetContact.localeCompare(b.targetContact)
+    );
+    const sortedCurrent = [...currentRels].sort((a, b) => 
+      a.relationshipType.localeCompare(b.relationshipType) || a.targetUid.localeCompare(b.targetUid)
+    );
+
+    // Compare each relationship
+    for (let i = 0; i < sortedGraph.length; i++) {
+      if (sortedGraph[i].relationshipType !== sortedCurrent[i].relationshipType ||
+          sortedGraph[i].targetContact !== sortedCurrent[i].targetUid) {
+        return false;
+      }
+    }
+
+    return true;
   }
 
   /**

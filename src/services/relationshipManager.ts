@@ -260,32 +260,72 @@ export class RelationshipManager {
 
     let yamlObj = parseYaml(frontmatterMatch[1]) || {};
     
-    // Remove existing RELATED fields
+    // Capture existing RELATED fields for comparison
+    const existingRelatedFields: Record<string, string> = {};
     Object.keys(yamlObj).forEach(key => {
       if (key.startsWith('RELATED[')) {
+        existingRelatedFields[key] = yamlObj[key];
         delete yamlObj[key];
       }
     });
 
     // Add new RELATED fields
+    const newRelatedFields: Record<string, string> = {};
     for (const [relationshipType, references] of Object.entries(relationshipsByType)) {
       references.sort(); // Sort for consistency
       
       references.forEach((reference, index) => {
         const key = index === 0 ? `RELATED[${relationshipType}]` : `RELATED[${index}:${relationshipType}]`;
         yamlObj[key] = reference;
+        newRelatedFields[key] = reference;
       });
     }
 
-    // Update REV timestamp
-    yamlObj.REV = this.generateRevTimestamp();
+    // Check if RELATED fields actually changed
+    const relatedFieldsChanged = this.haveRelatedFieldsChanged(existingRelatedFields, newRelatedFields);
 
-    // Write back to file
-    const newFrontMatter = '---\n' + stringifyYaml(yamlObj) + '---\n';
-    const body = content.slice(frontmatterMatch[0].length);
-    const newContent = newFrontMatter + body;
+    // Only update REV timestamp if RELATED fields actually changed
+    if (relatedFieldsChanged) {
+      yamlObj.REV = this.generateRevTimestamp();
+    }
 
-    await this.app.vault.modify(file, newContent);
+    // Write back to file only if there were changes
+    if (relatedFieldsChanged) {
+      const newFrontMatter = '---\n' + stringifyYaml(yamlObj) + '---\n';
+      const body = content.slice(frontmatterMatch[0].length);
+      const newContent = newFrontMatter + body;
+
+      await this.app.vault.modify(file, newContent);
+    }
+  }
+
+  /**
+   * Check if RELATED fields have actually changed
+   */
+  private haveRelatedFieldsChanged(existing: Record<string, string>, newFields: Record<string, string>): boolean {
+    // Check if number of fields changed
+    const existingKeys = Object.keys(existing);
+    const newKeys = Object.keys(newFields);
+    
+    if (existingKeys.length !== newKeys.length) {
+      return true;
+    }
+
+    // Check if any field values changed
+    for (const key of newKeys) {
+      if (existing[key] !== newFields[key]) {
+        return true;
+      }
+    }
+
+    // Check if any existing keys are missing in new fields
+    for (const key of existingKeys) {
+      if (!(key in newFields)) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   /**
