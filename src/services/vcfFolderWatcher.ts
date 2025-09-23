@@ -50,6 +50,9 @@ export class VCFolderWatcher {
   private contactFiles = new Map<string, TFile>(); // Track contact files by UID
   private contactFileListeners: (() => void)[] = []; // Track registered listeners
   private updatingRevFields = new Set<string>(); // Track files being updated internally to prevent loops
+  private revUpdateTimeouts = new Map<string, NodeJS.Timeout>(); // Debounce REV updates
+  private lastFileHashes = new Map<string, string>(); // Track content hashes to detect real changes
+  private readonly REV_UPDATE_DEBOUNCE = 2000; // 2 second debounce for REV updates
 
   /**
    * Creates a new VCF folder watcher instance.
@@ -640,6 +643,44 @@ export class VCFolderWatcher {
   }
 
   /**
+   * Create a hash of file content to detect meaningful changes
+   */
+  private createContentHash(content: string): string {
+    // Simple hash function - we just need to detect changes
+    let hash = 0;
+    for (let i = 0; i < content.length; i++) {
+      const char = content.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32bit integer
+    }
+    return hash.toString();
+  }
+
+  /**
+   * Check if file content has meaningfully changed (excluding REV field)
+   */
+  private async hasContentChanged(file: TFile): Promise<boolean> {
+    try {
+      const content = await this.app.vault.read(file);
+      // Remove REV field for comparison to avoid detecting REV-only changes
+      const contentWithoutRev = content.replace(/^REV:\s*.*$/m, '');
+      const currentHash = this.createContentHash(contentWithoutRev);
+      const lastHash = this.lastFileHashes.get(file.path);
+      
+      if (lastHash && lastHash === currentHash) {
+        return false; // No meaningful change
+      }
+      
+      // Store new hash
+      this.lastFileHashes.set(file.path, currentHash);
+      return true;
+    } catch (error) {
+      loggingService.debug(`Error checking content change for ${file.path}: ${error.message}`);
+      return true; // Assume changed if we can't check
+    }
+  }
+
+  /**
    * Sets up file change tracking for contact files to enable write-back to VCF.
    * 
    * Registers listeners for:
@@ -673,30 +714,54 @@ export class VCFolderWatcher {
         return; // Skip files without UID
       }
 
-      try {
-        // Mark that we're updating this file to prevent infinite loops
-        this.updatingRevFields.add(file.path);
-        
-        // Update the REV field in the contact file with current timestamp
-        const revTimestamp = generateRevTimestamp();
-        await updateFrontMatterValue(file, 'REV', revTimestamp, this.app);
-        
-        // Wait a brief moment for the metadata cache to update after the file modification
-        await new Promise(resolve => setTimeout(resolve, 50));
-        
-        // Update our tracking
-        this.contactFiles.set(uid, file);
-        
-        // Write back to VCF if enabled (metadata cache should be updated now)
-        await this.writeContactToVCF(file, uid);
-        
-        loggingService.debug(`Updated contact file REV timestamp for ${file.basename} (UID: ${uid})`);
-      } catch (error) {
-        loggingService.error(`Error updating contact file REV timestamp: ${error.message}`);
-      } finally {
-        // Always remove the flag, even if there was an error
-        this.updatingRevFields.delete(file.path);
+      // Only update REV if write-back is enabled
+      if (!this.settings.vcfWriteBackEnabled) {
+        return; // Skip REV updates when write-back is disabled
       }
+
+      // Debounce REV updates to avoid excessive updates during editing
+      const filePath = file.path;
+      if (this.revUpdateTimeouts.has(filePath)) {
+        clearTimeout(this.revUpdateTimeouts.get(filePath)!);
+      }
+
+      const updateTimeout = setTimeout(async () => {
+        this.revUpdateTimeouts.delete(filePath);
+        
+        try {
+          // Check if content actually changed (excluding REV field)
+          const hasChanged = await this.hasContentChanged(file);
+          if (!hasChanged) {
+            loggingService.debug(`Skipping REV update for ${file.basename} - no meaningful content change`);
+            return;
+          }
+
+          // Mark that we're updating this file to prevent infinite loops
+          this.updatingRevFields.add(file.path);
+          
+          // Update the REV field in the contact file with current timestamp
+          const revTimestamp = generateRevTimestamp();
+          await updateFrontMatterValue(file, 'REV', revTimestamp, this.app);
+          
+          // Wait a brief moment for the metadata cache to update after the file modification
+          await new Promise(resolve => setTimeout(resolve, 50));
+        
+          // Update our tracking
+          this.contactFiles.set(uid, file);
+          
+          // Write back to VCF if enabled (metadata cache should be updated now)
+          await this.writeContactToVCF(file, uid);
+          
+          loggingService.debug(`Updated contact file REV timestamp for ${file.basename} (UID: ${uid})`);
+        } catch (error) {
+          loggingService.error(`Error updating contact file REV timestamp: ${error.message}`);
+        } finally {
+          // Always remove the flag, even if there was an error
+          this.updatingRevFields.delete(file.path);
+        }
+      }, this.REV_UPDATE_DEBOUNCE);
+
+      this.revUpdateTimeouts.set(filePath, updateTimeout);
     };
 
     const onFileRename = async (file: TFile) => {
@@ -748,6 +813,13 @@ export class VCFolderWatcher {
     // Remove all listeners
     this.contactFileListeners.forEach(cleanup => cleanup());
     this.contactFileListeners = [];
+    
+    // Clear any pending REV update timeouts
+    this.revUpdateTimeouts.forEach(timeout => clearTimeout(timeout));
+    this.revUpdateTimeouts.clear();
+    
+    // Clear file hash cache
+    this.lastFileHashes.clear();
   }
 
   /**
