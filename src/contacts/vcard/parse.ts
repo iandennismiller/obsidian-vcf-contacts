@@ -119,6 +119,10 @@ function parseVCardLine(line: string): VCardForObsidianRecord {
 		parsedData = parseStructuredField(propKey as keyof typeof StructuredFields, value, typeValues);
 	} else if (['BDAY', 'ANNIVERSARY'].includes(propKey)) {
 		parsedData[`${propKey}${typeValues}`] = formatVCardDate(value)
+	} else if (propKey === 'RELATED') {
+		// Handle RELATED field with TYPE parameter
+		const relationType = params["type"] ? params["type"][0] : "related";
+		parsedData[`RELATED[${relationType}]`] = value;
 	} else {
     if (propKey in VCardSupportedKey) {
       parsedData[`${propKey}${typeValues}`] = value;
