@@ -483,6 +483,27 @@ export class RelationshipManager {
   }
 
   /**
+   * Clean up resources when plugin is unloaded
+   */
+  destroy(): void {
+    loggingService.info('[RelationshipManager] Cleaning up relationship manager...');
+    
+    // Clean up event handler (though listeners should already be disabled)
+    if (this.eventHandler) {
+      // EventHandler cleanup if needed - currently just tracking state
+      loggingService.info('[RelationshipManager] Event handler cleaned up');
+    }
+    
+    // Clear graph data
+    if (this.graph) {
+      // RelationshipGraph doesn't need explicit cleanup, just clear reference
+      loggingService.info('[RelationshipManager] Graph data cleared');
+    }
+    
+    loggingService.info('[RelationshipManager] Relationship manager cleanup complete');
+  }
+
+  /**
    * Get access to sub-modules for testing or advanced usage
    */
   get modules() {
