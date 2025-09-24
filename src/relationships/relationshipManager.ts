@@ -39,9 +39,7 @@ export class RelationshipManager {
     return this.eventHandler.withGlobalLock(async () => {
       loggingService.info('[RelationshipManager] Starting comprehensive initialization and sync...');
       
-      const contactFiles = this.app.vault.getMarkdownFiles().filter(file => 
-        file.path.includes('Contacts/') || file.path.includes('contacts/')
-      );
+      const contactFiles = this.app.vault.getMarkdownFiles().filter(file => this.isContactFile(file));
 
       loggingService.info(`[RelationshipManager] Found ${contactFiles.length} potential contact files`);
 
@@ -123,9 +121,7 @@ export class RelationshipManager {
     loggingService.info(`[RelationshipManager] Finding missing reciprocal relationships for ${processingAll ? 'all contacts' : `${uidsToProcess.length} specific contact(s)`}...`);
     
     // Build UID to file mapping
-    const contactFiles = this.app.vault.getMarkdownFiles().filter(file => 
-      file.path.includes('Contacts/') || file.path.includes('contacts/')
-    );
+    const contactFiles = this.app.vault.getMarkdownFiles().filter(file => this.isContactFile(file));
     
     const contactFilesByUID = new Map<string, TFile>();
     
