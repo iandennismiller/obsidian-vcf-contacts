@@ -132,12 +132,29 @@ export class RelationshipManager {
 
     // Listen for when a file is opened to sync the previous file
     this.app.workspace.on('file-open', (file: TFile | null) => {
+      loggingService.info(`[RelationshipManager] file-open event: ${file?.path || 'null'}`);
       this.handleFileOpen(file);
     });
 
     // Listen for when the active leaf changes as a fallback
-    this.app.workspace.on('active-leaf-change', () => {
+    this.app.workspace.on('active-leaf-change', (leaf) => {
+      const file = leaf?.view && 'file' in leaf.view ? (leaf.view as any).file : null;
+      loggingService.info(`[RelationshipManager] active-leaf-change event: ${file?.path || 'null'}`);
       this.handleActiveLeafChange();
+    });
+
+    // Listen for editor changes with heavy debouncing for when users edit content
+    this.app.workspace.on('editor-change', (editor, info) => {
+      if (info.file && this.isContactFile(info.file)) {
+        loggingService.info(`[RelationshipManager] editor-change event: ${info.file.path}`);
+        this.handleEditorChange(info.file);
+      }
+    });
+
+    // Listen for layout changes that might indicate tab closing/reorganization
+    this.app.workspace.on('layout-change', () => {
+      loggingService.info(`[RelationshipManager] layout-change event`);
+      this.handleLayoutChange();
     });
 
     // Listen for window/app close events to sync current file
@@ -154,11 +171,14 @@ export class RelationshipManager {
   private handleFileOpen(file: TFile | null): void {
     const previousFile = this.currentContactFile;
     
+    loggingService.info(`[RelationshipManager] handleFileOpen: previous=${previousFile?.path || 'null'}, new=${file?.path || 'null'}`);
+    
     // Update current file tracking
     this.currentContactFile = this.isContactFile(file) ? file : null;
     
     // Sync the previous file if it was a contact file
     if (previousFile && !this.globalLock) {
+      loggingService.info(`[RelationshipManager] Syncing previous file: ${previousFile.path}`);
       this.debounceSync(previousFile, () => this.syncRelatedListToFrontmatter(previousFile), 800);
     }
   }
@@ -170,14 +190,68 @@ export class RelationshipManager {
     const previousFile = this.currentContactFile;
     const newFile = this.getActiveContactFile();
     
+    loggingService.info(`[RelationshipManager] handleActiveLeafChange: previous=${previousFile?.path || 'null'}, new=${newFile?.path || 'null'}`);
+    
     // Only update if we don't already have the right file tracked
     if (this.currentContactFile !== newFile) {
       this.currentContactFile = newFile;
       
       // Sync the previous file if it was a contact file
       if (previousFile && !this.globalLock) {
+        loggingService.info(`[RelationshipManager] Syncing previous file: ${previousFile.path}`);
         this.debounceSync(previousFile, () => this.syncRelatedListToFrontmatter(previousFile), 1000);
       }
+    }
+  }
+
+  /**
+   * Handle when editor content changes - sync current file with heavy debouncing
+   */
+  private handleEditorChange(file: TFile): void {
+    if (this.globalLock) return;
+    
+    loggingService.info(`[RelationshipManager] handleEditorChange: ${file.path}`);
+    
+    // Heavy debouncing for editor changes (5 seconds to avoid spam)
+    this.debounceSync(file, () => this.syncRelatedListToFrontmatter(file), 5000);
+  }
+
+  /**
+   * Handle layout changes that might indicate tab closing or reorganization
+   */
+  private handleLayoutChange(): void {
+    const currentFile = this.getActiveContactFile();
+    
+    // If we had a tracked contact file but now there's a different active file (or none),
+    // sync the previous file
+    if (this.currentContactFile && this.currentContactFile !== currentFile && !this.globalLock) {
+      loggingService.info(`[RelationshipManager] Layout change - syncing previous file: ${this.currentContactFile.path}`);
+      this.debounceSync(this.currentContactFile, () => this.syncRelatedListToFrontmatter(this.currentContactFile!), 500);
+    }
+    
+    // Update current file tracking
+    this.currentContactFile = currentFile;
+  }
+
+  /**
+   * Manually trigger sync for the currently active contact file
+   * This can be called as a fallback when automatic event listening fails
+   */
+  public async syncCurrentFile(): Promise<void> {
+    const currentFile = this.getActiveContactFile();
+    if (currentFile && !this.globalLock) {
+      loggingService.info(`[RelationshipManager] Manual sync triggered for: ${currentFile.path}`);
+      await this.syncRelatedListToFrontmatter(currentFile);
+    }
+  }
+
+  /**
+   * Manually trigger sync for a specific file
+   */
+  public async syncFile(file: TFile): Promise<void> {
+    if (this.isContactFile(file) && !this.globalLock) {
+      loggingService.info(`[RelationshipManager] Manual sync triggered for file: ${file.path}`);
+      await this.syncRelatedListToFrontmatter(file);
     }
   }
 
@@ -233,20 +307,34 @@ export class RelationshipManager {
    * Sync the Related list in markdown to frontmatter
    */
   private async syncRelatedListToFrontmatter(file: TFile): Promise<void> {
-    if (this.syncingFiles.has(file.path) || this.globalLock) return;
+    loggingService.info(`[RelationshipManager] syncRelatedListToFrontmatter called for: ${file.path}`);
+    
+    if (this.syncingFiles.has(file.path) || this.globalLock) {
+      loggingService.info(`[RelationshipManager] Skipping sync - already syncing or locked: ${file.path}`);
+      return;
+    }
 
     await this.withGlobalLock(async () => {
       const cache = this.app.metadataCache.getFileCache(file);
-      if (!cache?.frontmatter?.UID) return;
+      if (!cache?.frontmatter?.UID) {
+        loggingService.info(`[RelationshipManager] No UID in frontmatter: ${file.path}`);
+        return;
+      }
 
       const uid = cache.frontmatter.UID;
       const content = await this.app.vault.read(file);
       
+      loggingService.info(`[RelationshipManager] Processing relationships for UID: ${uid}`);
+      
       // Find and parse the Related section
       const relatedSection = this.extractRelatedSection(content);
-      if (!relatedSection) return;
+      if (!relatedSection) {
+        loggingService.info(`[RelationshipManager] No Related section found: ${file.path}`);
+        return;
+      }
 
       const relationships = this.parseRelatedSection(relatedSection);
+      loggingService.info(`[RelationshipManager] Found ${relationships.length} relationships in: ${file.path}`);
       
       this.syncingFiles.add(file.path);
       try {
@@ -255,6 +343,8 @@ export class RelationshipManager {
         
         // Update frontmatter to match graph
         await this.updateFrontmatterFromGraph(file, uid);
+        
+        loggingService.info(`[RelationshipManager] Successfully synced: ${file.path}`);
         
         // Schedule consistency check and propagation (debounced)
         this.scheduleConsistencyCheck();
