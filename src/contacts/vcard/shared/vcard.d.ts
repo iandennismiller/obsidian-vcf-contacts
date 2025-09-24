@@ -28,6 +28,7 @@ export enum VCardSupportedKey {
 	TZ = "Time Zone",
 	UID = "Unique Identifier",
 	URL = "Website URL",
+	RELATED = "Related Contact",
   SOCIALPROFILE = "Social Profile"
 }
 
