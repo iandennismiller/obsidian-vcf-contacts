@@ -50,6 +50,7 @@ export class VCFolderWatcher {
   private contactFiles = new Map<string, TFile>(); // Track contact files by UID
   private contactFileListeners: (() => void)[] = []; // Track registered listeners
   private updatingRevFields = new Set<string>(); // Track files being updated internally to prevent loops
+  private writeBackDebounceTimers = new Map<string, number>(); // Track debounce timers for write-back
 
   /**
    * Creates a new VCF folder watcher instance.
@@ -643,7 +644,7 @@ export class VCFolderWatcher {
    * Sets up file change tracking for contact files to enable write-back to VCF.
    * 
    * Registers listeners for:
-   * - File modification: Updates VCF when contact file is modified
+   * - File modification: Updates VCF when contact file is modified (debounced)
    * - File rename: Updates tracking when contact file is renamed
    * - File deletion: Removes from tracking when contact file is deleted
    * 
@@ -673,30 +674,8 @@ export class VCFolderWatcher {
         return; // Skip files without UID
       }
 
-      try {
-        // Mark that we're updating this file to prevent infinite loops
-        this.updatingRevFields.add(file.path);
-        
-        // Update the REV field in the contact file with current timestamp
-        const revTimestamp = generateRevTimestamp();
-        await updateFrontMatterValue(file, 'REV', revTimestamp, this.app);
-        
-        // Wait a brief moment for the metadata cache to update after the file modification
-        await new Promise(resolve => setTimeout(resolve, 50));
-        
-        // Update our tracking
-        this.contactFiles.set(uid, file);
-        
-        // Write back to VCF if enabled (metadata cache should be updated now)
-        await this.writeContactToVCF(file, uid);
-        
-        loggingService.debug(`Updated contact file REV timestamp for ${file.basename} (UID: ${uid})`);
-      } catch (error) {
-        loggingService.error(`Error updating contact file REV timestamp: ${error.message}`);
-      } finally {
-        // Always remove the flag, even if there was an error
-        this.updatingRevFields.delete(file.path);
-      }
+      // Debounce write-back to prevent excessive writes
+      this.debounceWriteBack(file, uid);
     };
 
     const onFileRename = async (file: TFile) => {
@@ -739,6 +718,50 @@ export class VCFolderWatcher {
   }
 
   /**
+   * Debounces write-back operations to prevent excessive VCF file writes.
+   * As per requirements, this should not happen more than once per second.
+   */
+  private debounceWriteBack(file: TFile, uid: string): void {
+    const key = file.path;
+    
+    // Clear existing timer for this file
+    if (this.writeBackDebounceTimers.has(key)) {
+      window.clearTimeout(this.writeBackDebounceTimers.get(key)!);
+    }
+    
+    // Set new timer (1 second debounce as per requirements)
+    const timerId = window.setTimeout(async () => {
+      try {
+        // Mark that we're updating this file to prevent infinite loops
+        this.updatingRevFields.add(file.path);
+        
+        // Update the REV field in the contact file with current timestamp
+        const revTimestamp = generateRevTimestamp();
+        await updateFrontMatterValue(file, 'REV', revTimestamp, this.app);
+        
+        // Wait a brief moment for the metadata cache to update after the file modification
+        await new Promise(resolve => setTimeout(resolve, 50));
+        
+        // Update our tracking
+        this.contactFiles.set(uid, file);
+        
+        // Write back to VCF if enabled (metadata cache should be updated now)
+        await this.writeContactToVCF(file, uid);
+        
+        loggingService.debug(`Updated contact file REV timestamp for ${file.basename} (UID: ${uid})`);
+      } catch (error) {
+        loggingService.error(`Error updating contact file REV timestamp: ${error.message}`);
+      } finally {
+        // Always remove the flag and timer, even if there was an error
+        this.updatingRevFields.delete(file.path);
+        this.writeBackDebounceTimers.delete(key);
+      }
+    }, 1000);
+    
+    this.writeBackDebounceTimers.set(key, timerId);
+  }
+
+  /**
    * Cleans up all file change tracking listeners.
    * 
    * Removes all registered event listeners to prevent memory leaks
@@ -748,6 +771,10 @@ export class VCFolderWatcher {
     // Remove all listeners
     this.contactFileListeners.forEach(cleanup => cleanup());
     this.contactFileListeners = [];
+    
+    // Clear all debounce timers
+    this.writeBackDebounceTimers.forEach((timerId: number) => window.clearTimeout(timerId));
+    this.writeBackDebounceTimers.clear();
   }
 
   /**

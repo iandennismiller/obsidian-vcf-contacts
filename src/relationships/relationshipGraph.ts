@@ -5,7 +5,7 @@
  * It provides bidirectional mapping between the graph structure and contact front matter.
  */
 
-import { DirectedGraph } from 'graphology';
+import { MultiDirectedGraph } from 'graphology';
 import type { TFile } from 'obsidian';
 import { Contact } from 'src/contacts';
 
@@ -52,10 +52,10 @@ const GENDERED_RELATIONSHIPS: Record<string, { baseKind: string; gender: 'male' 
  * Service for managing relationship graph using Graphology
  */
 export class RelationshipGraphService {
-  private graph: DirectedGraph;
+  private graph: MultiDirectedGraph;
   
   constructor() {
-    this.graph = new DirectedGraph();
+    this.graph = new MultiDirectedGraph();
   }
 
   /**
