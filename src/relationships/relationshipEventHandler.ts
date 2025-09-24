@@ -1,11 +1,13 @@
 import { TFile, App } from 'obsidian';
 import { loggingService } from '../services/loggingService';
+import { ContactUtils } from './contactUtils';
 
 /**
  * Manages event handling and lifecycle for relationship sync operations
  */
 export class RelationshipEventHandler {
   private app: App;
+  private contactUtils: ContactUtils;
   private syncingFiles = new Set<string>(); // Prevent infinite loops
   private debounceTimers = new Map<string, NodeJS.Timeout>();
   private globalLock = false; // Global lock for graph operations
@@ -21,8 +23,9 @@ export class RelationshipEventHandler {
   private onAppClose?: () => void;
   private onConsistencyCheck?: () => Promise<void>;
 
-  constructor(app: App) {
+  constructor(app: App, contactUtils: ContactUtils) {
     this.app = app;
+    this.contactUtils = contactUtils;
     
     // Try to get the current contact file, but handle cases where workspace is not available (e.g., tests)
     try {
@@ -34,43 +37,13 @@ export class RelationshipEventHandler {
 
   /**
    * Set up event listeners for relationship sync
+   * NOTE: Event listeners disabled per user request - sync only on initialization and manual command
    */
   setupEventListeners(): void {
-    if (!this.app.workspace) return; // Handle test environments gracefully
-
-    // Primary event: Listen for when files are opened (to sync the PREVIOUS file)
-    this.app.workspace.on('file-open', (file: TFile | null) => {
-      loggingService.info(`[RelationshipEventHandler] file-open event: ${file?.path || 'null'}`);
-      this.handleFileOpen(file);
-    });
-
-    // Fallback event: Listen for active leaf changes
-    this.app.workspace.on('active-leaf-change', (leaf) => {
-      loggingService.info(`[RelationshipEventHandler] active-leaf-change event`);
-      this.handleActiveLeafChange();
-    });
-
-    // Editor change event: Listen for content modifications (heavily debounced)
-    this.app.workspace.on('editor-change', (editor, view) => {
-      if (view.file) {
-        loggingService.info(`[RelationshipEventHandler] editor-change event: ${view.file.path}`);
-        this.handleEditorChange(view.file);
-      }
-    });
-
-    // Layout change event: Listen for tab closing/reorganization
-    this.app.workspace.on('layout-change', () => {
-      loggingService.info(`[RelationshipEventHandler] layout-change event`);
-      this.handleLayoutChange();
-    });
-
-    // App closing event: Sync current file when app closes
-    if (typeof window !== 'undefined') {
-      window.addEventListener('beforeunload', () => {
-        loggingService.info(`[RelationshipEventHandler] beforeunload event`);
-        this.handleAppClose();
-      });
-    }
+    // Event listeners have been removed - sync now only occurs:
+    // 1. Once during plugin initialization via initializeFromVault()
+    // 2. Manually via the "Sync Contact Relationships" command
+    loggingService.info(`[RelationshipEventHandler] Event listeners disabled - sync only on initialization and manual command`);
   }
 
   /**
@@ -96,14 +69,14 @@ export class RelationshipEventHandler {
     if (this.globalLock) return;
     
     // When opening a new file, sync the PREVIOUS file if it was a contact file
-    if (this.currentContactFile && this.isContactFile(this.currentContactFile)) {
+    if (this.currentContactFile && this.contactUtils.isContactFile(this.currentContactFile)) {
       const previousFile = this.currentContactFile;
       loggingService.info(`[RelationshipEventHandler] Syncing previous contact file: ${previousFile.path}`);
       this.debounceSync(previousFile, () => this.onFileOpen?.(previousFile), 800);
     }
     
     // Update current file tracking
-    this.currentContactFile = this.isContactFile(file) ? file : null;
+    this.currentContactFile = this.contactUtils.isContactFile(file) ? file : null;
     if (this.currentContactFile) {
       loggingService.info(`[RelationshipEventHandler] Tracking new contact file: ${this.currentContactFile.path}`);
     }
@@ -115,7 +88,7 @@ export class RelationshipEventHandler {
     const activeFile = this.getActiveContactFile();
     
     // If we switched to a different contact file, sync the previous one
-    if (this.currentContactFile && this.currentContactFile !== activeFile && this.isContactFile(this.currentContactFile)) {
+    if (this.currentContactFile && this.currentContactFile !== activeFile && this.contactUtils.isContactFile(this.currentContactFile)) {
       const previousFile = this.currentContactFile;
       loggingService.info(`[RelationshipEventHandler] Active leaf change - syncing previous file: ${previousFile.path}`);
       this.debounceSync(previousFile, () => this.onActiveLeafChange?.(), 1000);
@@ -125,7 +98,7 @@ export class RelationshipEventHandler {
   }
 
   private handleEditorChange(file: TFile): void {
-    if (!this.isContactFile(file) || this.globalLock) return;
+    if (!this.contactUtils.isContactFile(file) || this.globalLock) return;
     
     loggingService.info(`[RelationshipEventHandler] Editor change detected: ${file.path}`);
     // Heavy debounce for editor changes to avoid spam
@@ -136,7 +109,7 @@ export class RelationshipEventHandler {
     if (this.globalLock) return;
     
     // When layout changes (e.g., tab closing), sync current contact file
-    if (this.currentContactFile && this.isContactFile(this.currentContactFile)) {
+    if (this.currentContactFile && this.contactUtils.isContactFile(this.currentContactFile)) {
       loggingService.info(`[RelationshipEventHandler] Layout change - syncing current file: ${this.currentContactFile.path}`);
       this.debounceSync(this.currentContactFile, () => this.onLayoutChange?.(), 500);
     }
@@ -150,21 +123,6 @@ export class RelationshipEventHandler {
   }
 
   /**
-   * Check if a file is a contact file
-   */
-  private isContactFile(file: TFile | null): boolean {
-    if (!file) return false;
-    
-    // Check if it's in a contacts directory or has UID in front matter
-    if (file.path.includes('Contacts/') || file.path.includes('contacts/')) {
-      return true;
-    }
-    
-    const cache = this.app.metadataCache.getFileCache(file);
-    return !!(cache?.frontmatter?.UID);
-  }
-
-  /**
    * Get the currently active contact file
    */
   private getActiveContactFile(): TFile | null {
@@ -173,7 +131,7 @@ export class RelationshipEventHandler {
     if (!activeView || !activeView.file) return null;
 
     const file = activeView.file;
-    return this.isContactFile(file) ? file : null;
+    return this.contactUtils.isContactFile(file) ? file : null;
   }
 
   /**

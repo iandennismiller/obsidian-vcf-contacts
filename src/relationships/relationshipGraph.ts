@@ -285,6 +285,13 @@ export class RelationshipGraph {
   }
 
   /**
+   * Get all contact UIDs in the graph
+   */
+  getAllContactUIDs(): string[] {
+    return this.graph.nodes();
+  }
+
+  /**
    * Get all contacts in the graph
    */
   getAllContacts(): ContactNode[] {

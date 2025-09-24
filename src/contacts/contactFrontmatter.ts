@@ -36,7 +36,12 @@ export async function updateFrontMatterValue(file: TFile, key: string, value: st
 		body = content.slice(match[0].length);
 	}
 
-	yamlObj[key] = value;
+	if (value === '') {
+		// Remove the field entirely when value is empty string
+		delete yamlObj[key];
+	} else {
+		yamlObj[key] = value;
+	}
 
 	const newFrontMatter = '---\n' + stringifyYaml(yamlObj) + '---\n';
 	const newContent = newFrontMatter + body;

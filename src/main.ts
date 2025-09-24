@@ -37,7 +37,13 @@ export default class ContactsPlugin extends Plugin {
 		await this.vcfWatcher.start();
 
 		// Initialize relationship manager
-		this.relationshipManager = new RelationshipManager(this.app);
+		this.relationshipManager = new RelationshipManager(this.app, this.settings);
+		
+		// Wait for Obsidian to fully initialize the metadata cache (same pattern as VcfFolderWatcher)
+		loggingService.info('[ContactsPlugin] Waiting for Obsidian metadata cache to initialize...');
+		await new Promise(resolve => setTimeout(resolve, 1000));
+		loggingService.info('[ContactsPlugin] Metadata cache initialization delay complete, starting relationship sync...');
+		
 		await this.relationshipManager.initializeFromVault();
 
 		// Initialize VCF drop handler
@@ -84,7 +90,7 @@ export default class ContactsPlugin extends Plugin {
 
     this.addCommand({
       id: 'contacts-sync-relationships',
-      name: "Sync Contact Relationships",
+      name: "Sync Contact Relationships (Manual)",
       callback: async () => {
         if (this.relationshipManager) {
           await this.relationshipManager.syncCurrentFile();
