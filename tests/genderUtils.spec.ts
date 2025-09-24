@@ -120,6 +120,23 @@ describe('GenderUtils', () => {
     it('should handle undefined gender', () => {
       expect(formatRelationshipListItem('parent', 'Pat Doe', undefined)).toBe('- parent [[Pat Doe]]');
     });
+    
+    it('should not include colon in relationship format', () => {
+      // Regression test for the colon format issue
+      const result = formatRelationshipListItem('parent', 'John Doe');
+      expect(result).toBe('- parent [[John Doe]]');
+      expect(result).not.toContain(':'); // Should not contain a colon
+    });
+    
+    it('should format and parse relationship items correctly (round-trip)', () => {
+      // Test that formatted items can be correctly parsed back
+      const formatted = formatRelationshipListItem('parent', 'John Doe');
+      const parsed = parseRelationshipListItem(formatted);
+      
+      expect(parsed).not.toBeNull();
+      expect(parsed?.type).toBe('parent');
+      expect(parsed?.contactName).toBe('John Doe');
+    });
   });
 
   describe('normalizeGender', () => {

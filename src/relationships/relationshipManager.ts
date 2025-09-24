@@ -277,7 +277,7 @@ export class RelationshipManager {
         }
       }
       
-      const relationshipLine = `- ${type}: [[${contactName}]]`;
+      const relationshipLine = `- ${type} [[${contactName}]]`;
       
       if (relatedSectionStart === -1) {
         // No Related section exists, create it at the end
@@ -286,7 +286,7 @@ export class RelationshipManager {
         // Related section exists, check if relationship already exists
         const relatedLines = lines.slice(relatedSectionStart + 1, relatedSectionEnd);
         const alreadyExists = relatedLines.some(line => 
-          line.includes(`${type}:`) && line.includes(`[[${contactName}]]`)
+          line.includes(`${type} `) && line.includes(`[[${contactName}]]`)
         );
         
         if (!alreadyExists) {
