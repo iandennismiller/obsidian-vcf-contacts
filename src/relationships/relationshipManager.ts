@@ -81,10 +81,8 @@ export class RelationshipManager {
     
     for (const file of contactFiles) {
       try {
-        const cache = this.app.metadataCache.getFileCache(file);
-        if (!cache?.frontmatter?.UID) continue;
-        
-        const uid = cache.frontmatter.UID;
+        const uid = this.contactUtils.extractUIDFromFile(file);
+        if (!uid) continue;
         const content = await this.app.vault.read(file);
         
         // Parse relationships from Related list in content
@@ -134,9 +132,9 @@ export class RelationshipManager {
     const contactFilesByUID = new Map<string, TFile>();
     
     for (const file of contactFiles) {
-      const cache = this.app.metadataCache.getFileCache(file);
-      if (cache?.frontmatter?.UID) {
-        contactFilesByUID.set(cache.frontmatter.UID, file);
+      const uid = this.contactUtils.extractUIDFromFile(file);
+      if (uid) {
+        contactFilesByUID.set(uid, file);
       }
     }
     
@@ -336,13 +334,11 @@ export class RelationshipManager {
    */
   private async performComprehensiveFileSync(file: TFile): Promise<void> {
     await this.eventHandler.withGlobalLock(async () => {
-      const cache = this.app.metadataCache.getFileCache(file);
-      if (!cache?.frontmatter?.UID) {
+      const uid = this.contactUtils.extractUIDFromFile(file);
+      if (!uid) {
         loggingService.info(`[RelationshipManager] No UID in frontmatter: ${file.path}`);
         return;
       }
-
-      const uid = cache.frontmatter.UID;
       const content = await this.app.vault.read(file);
       
       loggingService.info(`[RelationshipManager] COMPREHENSIVE SYNC for UID: ${uid}`);
@@ -426,13 +422,11 @@ export class RelationshipManager {
     }
 
     await this.eventHandler.withGlobalLock(async () => {
-      const cache = this.app.metadataCache.getFileCache(file);
-      if (!cache?.frontmatter?.UID) {
+      const uid = this.contactUtils.extractUIDFromFile(file);
+      if (!uid) {
         loggingService.info(`[RelationshipManager] No UID in frontmatter: ${file.path}`);
         return;
       }
-
-      const uid = cache.frontmatter.UID;
       const content = await this.app.vault.read(file);
       
       loggingService.info(`[RelationshipManager] Processing relationships for UID: ${uid}`);
