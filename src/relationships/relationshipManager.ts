@@ -132,12 +132,8 @@ export class RelationshipManager {
       this.handleFileChange();
     });
 
-    // Listen for file modifications to update relationships
-    this.app.vault.on('modify', (file) => {
-      if (file instanceof TFile && file.extension === 'md') {
-        this.debounceSync(file, () => this.handleFileModified(file));
-      }
-    });
+    // Note: Removed 'modify' event listener to prevent cascading updates
+    // Only user-initiated events (like switching files) should trigger sync
   }
 
   /**
@@ -148,20 +144,6 @@ export class RelationshipManager {
     if (previousFile && !this.globalLock) {
       this.debounceSync(previousFile, () => this.syncRelatedListToFrontmatter(previousFile), 1500); // Longer delay for file change
     }
-  }
-
-  /**
-   * Handle file modification - update graph and sync relationships
-   */
-  private async handleFileModified(file: TFile): Promise<void> {
-    if (this.syncingFiles.has(file.path) || this.globalLock) {
-      return; // Skip to prevent infinite loops or race conditions
-    }
-
-    await this.withGlobalLock(async () => {
-      await this.loadContactIntoGraph(file);
-      await this.syncFrontmatterToRelatedList(file);
-    });
   }
 
   /**
