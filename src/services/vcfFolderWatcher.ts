@@ -63,6 +63,7 @@ export class VCFolderWatcher {
   constructor(app: App, settings: ContactsPluginSettings) {
     this.app = app;
     this.settings = settings;
+    this.fileCoordinator = FileUpdateCoordinator.getInstance();
   }
 
   /**
@@ -675,6 +676,12 @@ export class VCFolderWatcher {
         return;
       }
 
+      // Skip if file is being updated by RelationshipManager to prevent race condition
+      if (this.fileCoordinator.isFileBeingUpdated(file.path)) {
+        loggingService.debug(`Skipping VCF sync for ${file.path} - file is being updated by RelationshipManager`);
+        return;
+      }
+
       // Get the UID from the file's frontmatter
       const cache = this.app.metadataCache.getFileCache(file);
       const uid = cache?.frontmatter?.UID;
@@ -683,30 +690,32 @@ export class VCFolderWatcher {
         return; // Skip files without UID
       }
 
-      try {
-        // Mark that we're updating this file to prevent infinite loops
-        this.updatingRevFields.add(file.path);
-        
-        // Update the REV field in the contact file with current timestamp
-        const revTimestamp = generateRevTimestamp();
-        await updateFrontMatterValue(file, 'REV', revTimestamp, this.app);
-        
-        // Wait a brief moment for the metadata cache to update after the file modification
-        await new Promise(resolve => setTimeout(resolve, 50));
-        
-        // Update our tracking
-        this.contactFiles.set(uid, file);
-        
-        // Write back to VCF if enabled (debounced to prevent rapid repeated writes)
-        this.debouncedVCFWriteBack(file, uid);
-        
-        loggingService.debug(`Updated contact file REV timestamp for ${file.basename} (UID: ${uid})`);
-      } catch (error) {
-        loggingService.error(`Error updating contact file REV timestamp: ${error.message}`);
-      } finally {
-        // Always remove the flag, even if there was an error
-        this.updatingRevFields.delete(file.path);
-      }
+      await this.fileCoordinator.withExclusiveAccess(file.path, async () => {
+        try {
+          // Mark that we're updating this file to prevent infinite loops
+          this.updatingRevFields.add(file.path);
+          
+          // Update the REV field in the contact file with current timestamp
+          const revTimestamp = generateRevTimestamp();
+          await updateFrontMatterValue(file, 'REV', revTimestamp, this.app);
+          
+          // Wait a brief moment for the metadata cache to update after the file modification
+          await new Promise(resolve => setTimeout(resolve, 50));
+          
+          // Update our tracking
+          this.contactFiles.set(uid, file);
+          
+          // Write back to VCF if enabled (debounced to prevent rapid repeated writes)
+          this.debouncedVCFWriteBack(file, uid);
+          
+          loggingService.debug(`Updated contact file REV timestamp for ${file.basename} (UID: ${uid})`);
+        } catch (error) {
+          loggingService.error(`Error updating contact file REV timestamp: ${error.message}`);
+        } finally {
+          // Always remove the flag, even if there was an error
+          this.updatingRevFields.delete(file.path);
+        }
+      });
     };
 
     const onFileRename = async (file: TFile) => {
@@ -716,8 +725,10 @@ export class VCFolderWatcher {
         const uid = cache?.frontmatter?.UID;
         
         if (uid) {
-          this.contactFiles.set(uid, file);
-          this.debouncedVCFWriteBack(file, uid);
+          await this.fileCoordinator.withExclusiveAccess(file.path, async () => {
+            this.contactFiles.set(uid, file);
+            this.debouncedVCFWriteBack(file, uid);
+          });
         }
       }
     };
