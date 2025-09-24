@@ -3,6 +3,7 @@ import { RelationshipGraph, RelationshipType, Gender } from './relationshipGraph
 import { RelationshipSet } from './relationshipSet';
 import { updateFrontMatterValue } from '../contacts/contactFrontmatter';
 import { normalizeGender, formatRelationshipListItem } from './genderUtils';
+import { RelationshipContentParser } from './relationshipContentParser';
 import { loggingService } from '../services/loggingService';
 
 /**
@@ -11,10 +12,12 @@ import { loggingService } from '../services/loggingService';
 export class RelationshipSyncManager {
   private app: App;
   private graph: RelationshipGraph;
+  private contentParser: RelationshipContentParser;
 
   constructor(app: App, graph: RelationshipGraph) {
     this.app = app;
     this.graph = graph;
+    this.contentParser = new RelationshipContentParser(app);
   }
 
   /**
@@ -436,38 +439,6 @@ export class RelationshipSyncManager {
     return aSet.size === bSet.size && [...aSet].every(item => bSet.has(item));
   }
 
-  /**
-   * Extract the Related section from markdown content
-   */
-  private extractRelatedSection(content: string): string | null {
-    const relatedMatch = content.match(/^#{1,6}\s*related\s*$([^]*?)(?=^#{1,6}|$)/im);
-    return relatedMatch ? relatedMatch[1].trim() : null;
-  }
-
-  /**
-   * Parse relationships from Related section content
-   */
-  private parseRelatedSection(sectionContent: string): { type: RelationshipType; contactName: string; impliedGender?: Gender }[] {
-    const { parseRelationshipListItem } = require('./genderUtils');
-    const relationships: { type: RelationshipType; contactName: string; impliedGender?: Gender }[] = [];
-    
-    const lines = sectionContent.split('\n');
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (trimmed.startsWith('-') || trimmed.startsWith('*')) {
-        const parsed = parseRelationshipListItem(trimmed);
-        if (parsed) {
-          relationships.push({
-            type: parsed.type,
-            contactName: parsed.contactName,
-            impliedGender: parsed.impliedGender
-          });
-        }
-      }
-    }
-    
-    return relationships;
-  }
   getSyncStats(file: TFile): Promise<{
     frontMatterCount: number;
     graphCount: number;
@@ -501,9 +472,9 @@ export class RelationshipSyncManager {
 
         // Count Related list relationships
         const content = await this.app.vault.read(file);
-        const relatedSection = this.extractRelatedSection(content);
+        const relatedSection = this.contentParser.extractRelatedSection(content);
         if (relatedSection) {
-          const relatedListRelationships = this.parseRelatedSection(relatedSection);
+          const relatedListRelationships = this.contentParser.parseRelatedSection(relatedSection);
           stats.relatedListCount = relatedListRelationships.length;
         }
 

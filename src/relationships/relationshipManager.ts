@@ -58,7 +58,7 @@ export class RelationshipManager {
       
       // PHASE 3: Find and correct missing reciprocal relationships
       loggingService.info('[RelationshipManager] PHASE 3: Finding and correcting missing reciprocal relationships...');
-      await this.findAndCorrectMissingReciprocals(contactFiles);
+      await this.findAndCorrectMissingReciprocals();
       
       loggingService.info('[RelationshipManager] Comprehensive initialization and sync complete');
     });
@@ -111,12 +111,24 @@ export class RelationshipManager {
    * Find and correct missing reciprocal relationships
    * Ensures all relationships in the graph are bidirectional and reflected in both contacts
    */
-  private async findAndCorrectMissingReciprocals(contactFiles: TFile[]): Promise<void> {
-    loggingService.info(`[RelationshipManager] Finding missing reciprocal relationships...`);
+  /**
+   * Find and correct missing reciprocal relationships
+   * Ensures all relationships in the graph are bidirectional and reflected in both contacts
+   * @param sourceUIDs - Array of contact UIDs to process, or empty array to process all contacts
+   */
+  private async findAndCorrectMissingReciprocals(sourceUIDs: string[] = []): Promise<void> {
+    const processingAll = sourceUIDs.length === 0;
+    const uidsToProcess = processingAll ? this.graph.getAllContactUIDs() : sourceUIDs;
+    
+    loggingService.info(`[RelationshipManager] Finding missing reciprocal relationships for ${processingAll ? 'all contacts' : `${uidsToProcess.length} specific contact(s)`}...`);
+    
+    // Build UID to file mapping
+    const contactFiles = this.app.vault.getMarkdownFiles().filter(file => 
+      file.path.includes('Contacts/') || file.path.includes('contacts/')
+    );
     
     const contactFilesByUID = new Map<string, TFile>();
     
-    // Build UID to file mapping
     for (const file of contactFiles) {
       const cache = this.app.metadataCache.getFileCache(file);
       if (cache?.frontmatter?.UID) {
@@ -126,8 +138,8 @@ export class RelationshipManager {
     
     let addedReciprocals = 0;
     
-    // Check each relationship in the graph for missing reciprocals
-    for (const sourceUID of this.graph.getAllContactUIDs()) {
+    // Check each relationship in the specified UIDs for missing reciprocals
+    for (const sourceUID of uidsToProcess) {
       const relationships = this.graph.getContactRelationships(sourceUID);
       
       for (const relationship of relationships) {
@@ -346,7 +358,7 @@ export class RelationshipManager {
       
       // PHASE 2: Find and add missing reciprocal relationships
       loggingService.info(`[RelationshipManager] Phase 2: Finding and adding missing reciprocals for ${uid}`);
-      await this.findAndCorrectMissingReciprocalsForContact(uid);
+      await this.findAndCorrectMissingReciprocals([uid]);
       
       // PHASE 3: Propagate changes to related contacts' front matter
       loggingService.info(`[RelationshipManager] Phase 3: Propagating changes to related contacts`);
@@ -354,69 +366,6 @@ export class RelationshipManager {
       
       loggingService.info(`[RelationshipManager] Comprehensive sync complete for: ${file.path}`);
     });
-  }
-
-  /**
-   * Find and correct missing reciprocal relationships for a specific contact
-   */
-  private async findAndCorrectMissingReciprocalsForContact(sourceUID: string): Promise<void> {
-    const contactFiles = this.app.vault.getMarkdownFiles().filter(file => 
-      file.path.includes('Contacts/') || file.path.includes('contacts/')
-    );
-    
-    const contactFilesByUID = new Map<string, TFile>();
-    
-    // Build UID to file mapping
-    for (const file of contactFiles) {
-      const cache = this.app.metadataCache.getFileCache(file);
-      if (cache?.frontmatter?.UID) {
-        contactFilesByUID.set(cache.frontmatter.UID, file);
-      }
-    }
-    
-    let addedReciprocals = 0;
-    
-    // Check relationships from this contact for missing reciprocals
-    const relationships = this.graph.getContactRelationships(sourceUID);
-    
-    for (const relationship of relationships) {
-      const targetUID = relationship.targetUid;
-      const reciprocalType = this.getReciprocalRelationshipType(relationship.type);
-      
-      if (reciprocalType && contactFilesByUID.has(targetUID)) {
-        // Check if the reciprocal relationship exists
-        const targetRelationships = this.graph.getContactRelationships(targetUID);
-        const hasReciprocal = targetRelationships.some((r: { type: RelationshipType; targetUid: string; targetName: string }) => 
-          r.targetUid === sourceUID && r.type === reciprocalType
-        );
-        
-        if (!hasReciprocal) {
-          loggingService.info(`[RelationshipManager] Missing reciprocal: ${targetUID} should have ${reciprocalType} -> ${sourceUID}`);
-          
-          // Add the reciprocal relationship to the graph
-          const sourceFile = contactFilesByUID.get(sourceUID);
-          const targetFile = contactFilesByUID.get(targetUID);
-          
-          if (sourceFile && targetFile) {
-            const sourceCache = this.app.metadataCache.getFileCache(sourceFile);
-            const sourceName = sourceCache?.frontmatter?.FN || sourceFile.basename;
-            
-            // Add to graph - we know reciprocalType is non-null due to outer if check  
-            this.graph.addRelationship(targetUID, reciprocalType!, sourceUID);
-            
-            // Add to target file's front matter
-            await this.syncManager.addRelationshipToFrontMatter(targetFile, reciprocalType!, sourceName);
-            
-            // Add to target file's Related list
-            await this.addRelationshipToRelatedList(targetFile, reciprocalType!, sourceName);
-            
-            addedReciprocals++;
-          }
-        }
-      }
-    }
-    
-    loggingService.info(`[RelationshipManager] Added ${addedReciprocals} missing reciprocal relationships for ${sourceUID}`);
   }
 
   /**
