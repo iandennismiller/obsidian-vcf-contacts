@@ -44,9 +44,9 @@ export class RelationshipSyncManager {
       
       // Find the target contact to get proper UID/name for front matter
       const targetUid = await this.findOrCreateContactByName(rel.contactName);
-      const value = targetUid || rel.contactName; // Use UID if available, otherwise name
+      const value = this.formatRelatedValue(targetUid || '', rel.contactName);
       
-      loggingService.info(`[RelationshipSyncManager] Resolved contact: ${rel.contactName} -> ${targetUid ? `UID:${targetUid}` : `NAME:${value}`}`);
+      loggingService.info(`[RelationshipSyncManager] Resolved contact: ${rel.contactName} -> ${targetUid ? `UID:${targetUid}` : `NAME:${rel.contactName}`} -> formatted: ${value}`);
       relatedListEntries.push({ type: rel.type, value });
     }
     
@@ -337,6 +337,21 @@ export class RelationshipSyncManager {
     // Contact not found - return null but this is OK, we'll use the name as value
     loggingService.info(`[RelationshipSyncManager] Contact not found, will use name as value: ${name}`);
     return null;
+  }
+
+  /**
+   * Format a related value for vCard RELATED field
+   */
+  private formatRelatedValue(targetUid: string, targetName: string): string {
+    // Check if it's a valid UUID
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (uuidRegex.test(targetUid)) {
+      return `urn:uuid:${targetUid}`;
+    } else if (targetUid) {
+      return `uid:${targetUid}`;
+    } else {
+      return `name:${targetName}`;
+    }
   }
 
   /**

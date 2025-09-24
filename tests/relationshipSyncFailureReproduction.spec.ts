@@ -111,12 +111,12 @@ RELATED[parent]: Jane Doe
     const setCalls = calls.filter(call => call[2] !== ''); // Non-empty values
     expect(setCalls.length).toBeGreaterThan(1); // Should have multiple relationships
     
-    // Verify that all relationships from Related list are represented
+    // Verify that all relationships from Related list are represented with proper namespacing
     const setCallValues = setCalls.map(call => call[2]);
-    expect(setCallValues).toContain('Jane Doe'); // mother (should be normalized to parent)
-    expect(setCallValues).toContain('Bob Doe');  // father (should be normalized to parent)
-    expect(setCallValues).toContain('Alice Doe'); // sister (should be normalized to sibling)
-    expect(setCallValues).toContain('Charlie Smith'); // friend
+    expect(setCallValues).toContain('name:Jane Doe'); // mother (should be normalized to parent)
+    expect(setCallValues).toContain('name:Bob Doe');  // father (should be normalized to parent)
+    expect(setCallValues).toContain('name:Alice Doe'); // sister (should be normalized to sibling)
+    expect(setCallValues).toContain('name:Charlie Smith'); // friend
   });
 
   it('should handle relationships where contact names resolve to UIDs', async () => {
@@ -163,9 +163,9 @@ FN: John Doe
     expect(setCalls.length).toBeGreaterThan(0);
     
     const setCallValues = setCalls.map(call => call[2]);
-    // Should contain the UIDs of the found contacts
-    expect(setCallValues).toContain('jane-doe-456');
-    expect(setCallValues).toContain('bob-doe-789');
+    // Should contain the UIDs of the found contacts with uid: prefix
+    expect(setCallValues).toContain('uid:jane-doe-456');
+    expect(setCallValues).toContain('uid:bob-doe-789');
   });
 
   it('should preserve existing front matter relationships while adding new ones from Related list', async () => {
@@ -211,9 +211,9 @@ RELATED[1:friend]: existing-friend-uid
     expect(setCallValues).toContain('existing-parent-uid');
     expect(setCallValues).toContain('existing-friend-uid');
     
-    // Should add new relationships
-    expect(setCallValues).toContain('New Mother');
-    expect(setCallValues).toContain('New Friend');
+    // Should add new relationships with name: prefix
+    expect(setCallValues).toContain('name:New Mother');
+    expect(setCallValues).toContain('name:New Friend');
     
     // Should have more relationships than just the existing ones
     expect(setCalls.length).toBeGreaterThan(2);
