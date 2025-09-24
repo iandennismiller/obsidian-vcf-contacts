@@ -2,6 +2,19 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { RelationshipManager } from '../src/relationships/relationshipManager';
 import { RelationshipGraph } from '../src/relationships/relationshipGraph';
 import { parseRelationshipListItem, formatRelationshipListItem } from '../src/relationships/genderUtils';
+import type { ContactsPluginSettings } from '../src/settings/settings.d';
+
+const mockSettings: ContactsPluginSettings = {
+  contactsFolder: 'Contacts',
+  defaultHashtag: '',
+  vcfWatchFolder: '',
+  vcfWatchEnabled: false,
+  vcfWatchPollingInterval: 30,
+  vcfWriteBackEnabled: false,
+  vcfIgnoreFilenames: [],
+  vcfIgnoreUIDs: [],
+  logLevel: 'INFO',
+};
 
 describe('End-to-End Relationship Flow', () => {
   let mockApp: any;
@@ -22,7 +35,7 @@ describe('End-to-End Relationship Flow', () => {
       }
     };
     
-    manager = new RelationshipManager(mockApp);
+    manager = new RelationshipManager(mockApp, mockSettings);
     // Access the private graph property for testing
     graph = (manager as any).graph;
   });

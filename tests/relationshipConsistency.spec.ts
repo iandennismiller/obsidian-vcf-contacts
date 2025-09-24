@@ -1,6 +1,19 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { RelationshipManager } from '../src/relationships/relationshipManager';
 import { RelationshipSet } from '../src/relationships/relationshipSet';
+import type { ContactsPluginSettings } from '../src/settings/settings.d';
+
+const mockSettings: ContactsPluginSettings = {
+  contactsFolder: 'Contacts',
+  defaultHashtag: '',
+  vcfWatchFolder: '',
+  vcfWatchEnabled: false,
+  vcfWatchPollingInterval: 30,
+  vcfWriteBackEnabled: false,
+  vcfIgnoreFilenames: [],
+  vcfIgnoreUIDs: [],
+  logLevel: 'INFO',
+};
 
 describe('RelationshipManager Consistency and Merging', () => {
   let mockApp: any;
@@ -22,7 +35,7 @@ describe('RelationshipManager Consistency and Merging', () => {
       }
     };
     
-    manager = new RelationshipManager(mockApp);
+    manager = new RelationshipManager(mockApp, mockSettings);
   });
 
   it('should merge front matter relationships without removing existing ones', () => {

@@ -1,4 +1,4 @@
-import { TFile, App } from 'obsidian';
+import { TFile, App, MarkdownView } from 'obsidian';
 import { loggingService } from '../services/loggingService';
 import { ContactUtils } from './contactUtils';
 
@@ -126,7 +126,6 @@ export class RelationshipEventHandler {
    * Get the currently active contact file
    */
   private getActiveContactFile(): TFile | null {
-    const { MarkdownView } = require('obsidian');
     const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
     if (!activeView || !activeView.file) return null;
 
@@ -150,17 +149,14 @@ export class RelationshipEventHandler {
         try {
           const result = await operation();
           resolve(result);
-          return result;
         } catch (error) {
           reject(error);
-          throw error;
         } finally {
           this.globalLock = false;
         }
       }).catch(error => {
         // Handle errors in the queue
         reject(error);
-        throw error;
       });
     });
   }
