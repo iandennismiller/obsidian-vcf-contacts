@@ -1,6 +1,7 @@
 import { TFile, App, MarkdownView } from 'obsidian';
 import { RelationshipGraph, RelationshipType, Gender } from './relationshipGraph';
 import { parseRelationshipListItem, formatRelationshipListItem, inferGenderFromTerm, normalizeGender } from './genderUtils';
+import { RelationshipSet } from './relationshipSet';
 import { updateFrontMatterValue } from '../contacts/contactFrontmatter';
 import { loggingService } from '../services/loggingService';
 
@@ -104,48 +105,11 @@ export class RelationshipManager {
   }
 
   /**
-   * Parse RELATED fields from frontmatter
+   * Parse RELATED fields from frontmatter using RelationshipSet
    */
   private parseRelatedFromFrontmatter(frontmatter: Record<string, any>): { type: RelationshipType; value: string }[] {
-    const related: { type: RelationshipType; value: string }[] = [];
-
-    // Valid relationship types for validation
-    const validRelationshipTypes: RelationshipType[] = [
-      'parent', 'child', 'sibling', 'spouse', 'friend',
-      'colleague', 'relative', 'auncle', 'nibling',
-      'grandparent', 'grandchild', 'cousin', 'partner'
-    ];
-
-    for (const [key, value] of Object.entries(frontmatter)) {
-      if (key.startsWith('RELATED')) {
-        // Extract type from key format: RELATED[type] or RELATED[index:type]
-        const typeMatch = key.match(/RELATED(?:\[(?:\d+:)?([^\]]+)\])?/);
-        if (typeMatch && typeMatch[1]) {
-          let type = typeMatch[1];
-          
-          // Normalize gendered relationship terms to genderless ones
-          const inferred = inferGenderFromTerm(type);
-          if (inferred) {
-            type = inferred.type;
-          }
-          
-          // Validate that the type is a valid RelationshipType
-          if (!validRelationshipTypes.includes(type as RelationshipType)) {
-            continue; // Skip invalid relationship types
-          }
-          
-          // Check if value is blank/empty
-          const stringValue = String(value || '').trim();
-          if (!stringValue || stringValue === 'null' || stringValue === 'undefined') {
-            continue; // Skip blank values
-          }
-          
-          related.push({ type: type as RelationshipType, value: stringValue });
-        }
-      }
-    }
-
-    return related;
+    const relationshipSet = RelationshipSet.fromFrontMatter(frontmatter);
+    return [...relationshipSet.getEntries()]; // Convert readonly to mutable array
   }
 
   /**
@@ -348,10 +312,11 @@ export class RelationshipManager {
   }
 
   /**
-   * Update frontmatter from graph relationships
+   * Update frontmatter from graph relationships using RelationshipSet
    */
   private async updateFrontmatterFromGraph(file: TFile, uid: string): Promise<void> {
     const relatedFields = this.graph.contactToRelatedFields(uid);
+    const relationshipSet = RelationshipSet.fromRelatedFields(relatedFields);
     
     // Clear existing RELATED fields
     const cache = this.app.metadataCache.getFileCache(file);
@@ -363,17 +328,9 @@ export class RelationshipManager {
       }
     }
 
-    // Add new RELATED fields (only non-blank values)
-    for (let i = 0; i < relatedFields.length; i++) {
-      const field = relatedFields[i];
-      
-      // Skip fields with blank values
-      const value = String(field.value || '').trim();
-      if (!value) {
-        continue;
-      }
-      
-      const key = i === 0 ? `RELATED[${field.type}]` : `RELATED[${i}:${field.type}]`;
+    // Add new RELATED fields using RelationshipSet for consistent indexing
+    const frontMatterFields = relationshipSet.toFrontMatterFields();
+    for (const [key, value] of Object.entries(frontMatterFields)) {
       await updateFrontMatterValue(file, key, value, this.app);
     }
 
