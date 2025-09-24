@@ -1,6 +1,7 @@
 import { parseYaml, stringifyYaml, TFile, App } from "obsidian";
 import { getApp } from "src/context/sharedAppContext";
 import { RelationshipGraph, RelationshipReference } from "./relationshipGraph";
+import { convertRelationshipsToFrontMatter } from "src/contacts/contactMdTemplate";
 
 export interface RelatedField {
   kind: string;
@@ -12,6 +13,7 @@ export interface RelatedField {
 
 /**
  * Handles bidirectional synchronization between front matter RELATED fields and the relationship graph.
+ * Sorting and rendering logic has been consolidated into contactMdTemplate.ts
  */
 export class RelationshipSync {
   private graph: RelationshipGraph;
@@ -22,6 +24,7 @@ export class RelationshipSync {
 
   /**
    * Parse RELATED fields from front matter into structured data
+   * Note: This is now simplified since sorting logic moved to contactMdTemplate
    */
   parseRelatedFieldsFromFrontMatter(frontMatter: Record<string, any>): RelatedField[] {
     const relatedFields: RelatedField[] = [];
@@ -35,40 +38,19 @@ export class RelationshipSync {
       }
     });
 
-    // Sort by kind then by reference for consistent ordering
-    return relatedFields.sort((a, b) => {
-      const kindCompare = a.kind.localeCompare(b.kind);
-      return kindCompare !== 0 ? kindCompare : a.reference.localeCompare(b.reference);
-    });
+    // Simple sort by kind - detailed sorting handled in contactMdTemplate
+    return relatedFields.sort((a, b) => a.kind.localeCompare(b.kind));
   }
 
   /**
    * Convert relationship graph data to front matter RELATED fields
+   * Now delegates to consolidated function in contactMdTemplate
    */
   convertRelationshipsToFrontMatter(contactUid: string, contactName: string): Record<string, string> {
     const relationships = this.graph.getContactRelationships(contactUid, contactName);
-    const frontMatterFields: Record<string, string> = {};
-    const kindCounts = new Map<string, number>();
-
-    relationships.forEach((relationship) => {
-      const kind = relationship.relationshipKind;
-      const reference = this.formatRelationshipReference(relationship.reference);
-      
-      // Determine the front matter key
-      let key: string;
-      const existingCount = kindCounts.get(kind) || 0;
-      
-      if (existingCount === 0) {
-        key = `RELATED[${kind}]`;
-      } else {
-        key = `RELATED[${existingCount}:${kind}]`;
-      }
-      
-      frontMatterFields[key] = reference;
-      kindCounts.set(kind, existingCount + 1);
-    });
-
-    return frontMatterFields;
+    
+    // Use the consolidated function from contactMdTemplate
+    return convertRelationshipsToFrontMatter(relationships);
   }
 
   /**
@@ -95,7 +77,7 @@ export class RelationshipSync {
       }
     });
 
-    // Add new RELATED fields from graph
+    // Add new RELATED fields from graph using consolidated conversion
     const newRelatedFields = this.convertRelationshipsToFrontMatter(contactUid, contactName);
     Object.assign(yamlObj, newRelatedFields);
 
@@ -134,6 +116,7 @@ export class RelationshipSync {
 
   /**
    * Sync relationships from graph to all contact files
+   * Note: Individual sorting happens in contactMdTemplate during rendering
    */
   async syncGraphToFrontMatter(contactFiles: TFile[], app?: App): Promise<void> {
     const appInstance = app || getApp();
@@ -209,21 +192,5 @@ export class RelationshipSync {
     }
     
     return null;
-  }
-
-  /**
-   * Format relationship reference for front matter
-   */
-  private formatRelationshipReference(reference: RelationshipReference): string {
-    switch (reference.namespace) {
-      case 'urn:uuid':
-        return `urn:uuid:${reference.uid}`;
-      case 'uid':
-        return `uid:${reference.uid}`;
-      case 'name':
-        return `name:${reference.name}`;
-      default:
-        throw new Error(`Unknown namespace: ${reference.namespace}`);
-    }
   }
 }

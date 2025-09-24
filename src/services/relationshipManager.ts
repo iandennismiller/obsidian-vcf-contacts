@@ -5,6 +5,7 @@ import { RelationshipSync } from "./relationshipSync";
 import { updateFrontMatterValue } from "src/contacts/contactFrontmatter";
 import { loggingService } from "./loggingService";
 import { FileUpdateCoordinator } from "./fileUpdateCoordinator";
+import { renderRelatedSection } from "src/contacts/contactMdTemplate";
 
 export interface RelationshipListItem {
   kind: string;
@@ -14,6 +15,7 @@ export interface RelationshipListItem {
 
 /**
  * Manages relationship events and markdown list synchronization.
+ * Rendering logic has been consolidated into contactMdTemplate.ts
  */
 export class RelationshipManager {
   private app: App;
@@ -99,6 +101,7 @@ export class RelationshipManager {
 
   /**
    * Handle file open event - render relationships as markdown list
+   * Now uses consolidated rendering from contactMdTemplate
    */
   private async onFileOpen(file: TFile | null): Promise<void> {
     if (!file || this.isUpdatingNote.has(file.path)) {
@@ -149,6 +152,7 @@ export class RelationshipManager {
 
   /**
    * Render relationships from front matter as markdown list under ## Related heading
+   * Now uses consolidated rendering from contactMdTemplate
    */
   private async renderRelationshipsList(file: TFile): Promise<void> {
     const cache = this.app.metadataCache.getFileCache(file);
@@ -170,7 +174,12 @@ export class RelationshipManager {
     
     try {
       const content = await this.app.vault.read(file);
-      const updatedContent = this.updateRelatedSection(content, relationships);
+      
+      // Use consolidated rendering function from contactMdTemplate
+      const updatedContent = renderRelatedSection(content, relationships.map(rel => ({
+        kind: rel.relationshipKind,
+        contactName: rel.targetName || `[${rel.targetUid}]`
+      })));
       
       if (content !== updatedContent) {
         await this.app.vault.modify(file, updatedContent);
@@ -246,53 +255,8 @@ export class RelationshipManager {
   }
 
   /**
-   * Update the Related section in markdown content
-   */
-  private updateRelatedSection(content: string, relationships: Array<{
-    targetName: string;
-    relationshipKind: string;
-  }>): string {
-    // Find or create the Related heading
-    const relatedRegex = /^(#{1,6})\s*related\s*$/im;
-    const match = content.match(relatedRegex);
-    
-    if (match) {
-      // Found existing Related heading
-      const headingLevel = match[1];
-      const headingIndex = content.indexOf(match[0]);
-      
-      // Find the end of this section (next heading of same or higher level, or end of file)
-      const nextHeadingRegex = new RegExp(`^#{1,${headingLevel.length}}\\s+.+$`, 'im');
-      const afterHeading = content.slice(headingIndex + match[0].length);
-      const nextHeadingMatch = afterHeading.match(nextHeadingRegex);
-      
-      const sectionEnd = nextHeadingMatch 
-        ? headingIndex + match[0].length + afterHeading.indexOf(nextHeadingMatch[0])
-        : content.length;
-      
-      // Build relationship list
-      const relationshipList = relationships
-        .map(rel => `- ${rel.relationshipKind} [[${rel.targetName}]]`)
-        .join('\n');
-      
-      // Replace the section
-      const beforeSection = content.slice(0, headingIndex);
-      const afterSection = content.slice(sectionEnd);
-      const newSection = `## Related\n\n${relationshipList}\n\n`;
-      
-      return beforeSection + newSection + afterSection;
-    } else {
-      // No Related heading exists, add one at the end
-      const relationshipList = relationships
-        .map(rel => `- ${rel.relationshipKind} [[${rel.targetName}]]`)
-        .join('\n');
-      
-      return content + `\n## Related\n\n${relationshipList}\n`;
-    }
-  }
-
-  /**
    * Parse relationship list items from markdown content
+   * This parsing logic remains here as it's specific to user input processing
    */
   private parseRelationshipsList(content: string): RelationshipListItem[] {
     const relationships: RelationshipListItem[] = [];

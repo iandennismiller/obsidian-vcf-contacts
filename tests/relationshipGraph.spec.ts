@@ -75,14 +75,15 @@ describe('RelationshipGraph', () => {
       expect(graph.getContactRelationships('uid1', 'John Doe')).toHaveLength(0);
     });
 
-    it('should sort relationships by kind then name', () => {
+    it('should return relationships in the order they were added', () => {
       graph.addRelationship('uid1', 'John Doe', 'uid2', 'Jane Smith', 'friend');
       graph.addRelationship('uid1', 'John Doe', 'uid3', 'Bob Johnson', 'colleague');
       
       const relationships = graph.getContactRelationships('uid1', 'John Doe');
       expect(relationships).toHaveLength(2);
-      expect(relationships[0].relationshipKind).toBe('colleague'); // Comes first alphabetically
-      expect(relationships[1].relationshipKind).toBe('friend');
+      // Sorting is now handled by consolidated functions in contactMdTemplate
+      expect(relationships[0].relationshipKind).toBe('friend'); // First added
+      expect(relationships[1].relationshipKind).toBe('colleague'); // Second added
     });
   });
 

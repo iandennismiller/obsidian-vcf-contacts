@@ -152,11 +152,9 @@ export class RelationshipGraph {
       });
     });
 
-    // Sort by relationship kind then by target name
-    return relationships.sort((a, b) => {
-      const kindCompare = a.relationshipKind.localeCompare(b.relationshipKind);
-      return kindCompare !== 0 ? kindCompare : a.targetName.localeCompare(b.targetName);
-    });
+    // Note: Sorting is now handled by consolidated functions in contactMdTemplate.ts
+    // This provides raw relationship data that gets sorted during rendering/front matter conversion
+    return relationships;
   }
 
   /**
