@@ -37,7 +37,7 @@ export default class ContactsPlugin extends Plugin {
 		await this.vcfWatcher.start();
 
 		// Initialize relationship manager
-		this.relationshipManager = new RelationshipManager(this.app);
+		this.relationshipManager = new RelationshipManager(this.app, this.settings);
 		await this.relationshipManager.initializeFromVault();
 
 		// Initialize VCF drop handler

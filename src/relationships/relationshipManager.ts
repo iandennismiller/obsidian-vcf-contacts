@@ -3,7 +3,9 @@ import { RelationshipGraph, RelationshipType, Gender } from './relationshipGraph
 import { RelationshipEventHandler } from './relationshipEventHandler';
 import { RelationshipContentParser } from './relationshipContentParser';
 import { RelationshipSyncManager } from './relationshipSyncManager';
+import { ContactUtils } from './contactUtils';
 import { loggingService } from '../services/loggingService';
+import { ContactsPluginSettings } from '../settings/settings.d';
 
 /**
  * Main orchestrator for relationship management - coordinates between different modules
@@ -11,16 +13,22 @@ import { loggingService } from '../services/loggingService';
 export class RelationshipManager {
   private graph: RelationshipGraph;
   private app: App;
+  private settings: ContactsPluginSettings;
   private eventHandler: RelationshipEventHandler;
   private contentParser: RelationshipContentParser;
   private syncManager: RelationshipSyncManager;
+  private contactUtils: ContactUtils;
 
-  constructor(app: App) {
+  constructor(app: App, settings: ContactsPluginSettings) {
     this.app = app;
+    this.settings = settings;
     this.graph = new RelationshipGraph();
     
+    // Initialize utilities
+    this.contactUtils = new ContactUtils(app, settings);
+    
     // Initialize sub-modules
-    this.eventHandler = new RelationshipEventHandler(app);
+    this.eventHandler = new RelationshipEventHandler(app, this.contactUtils);
     this.contentParser = new RelationshipContentParser(app);
     this.syncManager = new RelationshipSyncManager(app, this.graph);
     
@@ -39,7 +47,7 @@ export class RelationshipManager {
     return this.eventHandler.withGlobalLock(async () => {
       loggingService.info('[RelationshipManager] Starting comprehensive initialization and sync...');
       
-      const contactFiles = this.app.vault.getMarkdownFiles().filter(file => this.isContactFile(file));
+      const contactFiles = this.contactUtils.getAllContactFiles();
 
       loggingService.info(`[RelationshipManager] Found ${contactFiles.length} potential contact files`);
 
@@ -121,7 +129,7 @@ export class RelationshipManager {
     loggingService.info(`[RelationshipManager] Finding missing reciprocal relationships for ${processingAll ? 'all contacts' : `${uidsToProcess.length} specific contact(s)`}...`);
     
     // Build UID to file mapping
-    const contactFiles = this.app.vault.getMarkdownFiles().filter(file => this.isContactFile(file));
+    const contactFiles = this.contactUtils.getAllContactFiles();
     
     const contactFilesByUID = new Map<string, TFile>();
     
@@ -316,7 +324,7 @@ export class RelationshipManager {
    * Performs comprehensive sync: Related list → graph → front matter → reciprocals
    */
   public async syncFile(file: TFile): Promise<void> {
-    if (this.isContactFile(file) && !this.eventHandler.isLocked) {
+    if (this.contactUtils.isContactFile(file) && !this.eventHandler.isLocked) {
       loggingService.info(`[RelationshipManager] Manual comprehensive sync triggered for file: ${file.path}`);
       await this.performComprehensiveFileSync(file);
     }
@@ -369,7 +377,7 @@ export class RelationshipManager {
    */
   
   private async handleFileSync(file: TFile): Promise<void> {
-    if (file && this.isContactFile(file)) {
+    if (file && this.contactUtils.isContactFile(file)) {
       await this.syncRelatedListToFrontmatter(file);
     }
   }
@@ -382,7 +390,7 @@ export class RelationshipManager {
   }
 
   private async handleEditorChange(file: TFile): Promise<void> {
-    if (this.isContactFile(file)) {
+    if (this.contactUtils.isContactFile(file)) {
       await this.syncRelatedListToFrontmatter(file);
     }
   }
@@ -463,18 +471,6 @@ export class RelationshipManager {
    * Utility methods
    */
   
-  private isContactFile(file: TFile | null): boolean {
-    if (!file) return false;
-    
-    // Check if it's in a contacts directory or has UID in front matter
-    if (file.path.includes('Contacts/') || file.path.includes('contacts/')) {
-      return true;
-    }
-    
-    const cache = this.app.metadataCache.getFileCache(file);
-    return !!(cache?.frontmatter?.UID);
-  }
-
   private async ensureGraphConsistency(): Promise<void> {
     loggingService.info('[RelationshipManager] Ensuring graph consistency...');
     
