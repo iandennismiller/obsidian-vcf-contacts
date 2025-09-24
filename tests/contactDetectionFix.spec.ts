@@ -8,6 +8,10 @@ class MockTFile implements Partial<TFile> {
   path: string;
   basename: string;
   name: string;
+  extension: string = 'md';
+  stat: any = { mtime: Date.now(), ctime: Date.now(), size: 0 };
+  vault: any = null;
+  parent: any = null;
 
   constructor(path: string) {
     this.path = path;
@@ -55,11 +59,11 @@ describe('ContactUtils - Contact Detection Fix', () => {
       const settings: ContactsPluginSettings = { contactsFolder: 'Contacts' } as any;
       const contactUtils = new ContactUtils(mockApp as any, settings);
 
-      expect(contactUtils.isContactFile(mockFiles[0])).toBe(true); // Contacts/John Doe.md
-      expect(contactUtils.isContactFile(mockFiles[1])).toBe(true); // Contacts/Jane Smith.md
-      expect(contactUtils.isContactFile(mockFiles[2])).toBe(false); // ContactsExtra/Wrong.md - FALSE POSITIVE FIXED
-      expect(contactUtils.isContactFile(mockFiles[3])).toBe(false); // Other/Contact.md (no UID)
-      expect(contactUtils.isContactFile(mockFiles[4])).toBe(false); // Root.md
+      expect(contactUtils.isContactFile(mockFiles[0] as TFile)).toBe(true); // Contacts/John Doe.md
+      expect(contactUtils.isContactFile(mockFiles[1] as TFile)).toBe(true); // Contacts/Jane Smith.md
+      expect(contactUtils.isContactFile(mockFiles[2] as TFile)).toBe(false); // ContactsExtra/Wrong.md - FALSE POSITIVE FIXED
+      expect(contactUtils.isContactFile(mockFiles[3] as TFile)).toBe(false); // Other/Contact.md (no UID)
+      expect(contactUtils.isContactFile(mockFiles[4] as TFile)).toBe(false); // Root.md
     });
 
     it('should handle trailing slash in contactsFolder correctly', () => {
@@ -67,9 +71,9 @@ describe('ContactUtils - Contact Detection Fix', () => {
       const settings: ContactsPluginSettings = { contactsFolder: 'Contacts/' } as any;
       const contactUtils = new ContactUtils(mockApp as any, settings);
 
-      expect(contactUtils.isContactFile(mockFiles[0])).toBe(true); // Contacts/John Doe.md
-      expect(contactUtils.isContactFile(mockFiles[1])).toBe(true); // Contacts/Jane Smith.md
-      expect(contactUtils.isContactFile(mockFiles[2])).toBe(false); // ContactsExtra/Wrong.md
+      expect(contactUtils.isContactFile(mockFiles[0] as TFile)).toBe(true); // Contacts/John Doe.md
+      expect(contactUtils.isContactFile(mockFiles[1] as TFile)).toBe(true); // Contacts/Jane Smith.md
+      expect(contactUtils.isContactFile(mockFiles[2] as TFile)).toBe(false); // ContactsExtra/Wrong.md
     });
 
     it('should handle empty contactsFolder (root vault)', () => {
@@ -78,11 +82,11 @@ describe('ContactUtils - Contact Detection Fix', () => {
       const contactUtils = new ContactUtils(mockApp as any, settings);
 
       // When contactsFolder is empty, should use pattern matching for "Contacts/"
-      expect(contactUtils.isContactFile(mockFiles[0])).toBe(true); // Contacts/John Doe.md
-      expect(contactUtils.isContactFile(mockFiles[1])).toBe(true); // Contacts/Jane Smith.md
-      expect(contactUtils.isContactFile(mockFiles[2])).toBe(false); // ContactsExtra/Wrong.md
-      expect(contactUtils.isContactFile(mockFiles[3])).toBe(false); // Other/Contact.md (no UID)
-      expect(contactUtils.isContactFile(mockFiles[4])).toBe(false); // Root.md
+      expect(contactUtils.isContactFile(mockFiles[0] as TFile)).toBe(true); // Contacts/John Doe.md
+      expect(contactUtils.isContactFile(mockFiles[1] as TFile)).toBe(true); // Contacts/Jane Smith.md
+      expect(contactUtils.isContactFile(mockFiles[2] as TFile)).toBe(false); // ContactsExtra/Wrong.md
+      expect(contactUtils.isContactFile(mockFiles[3] as TFile)).toBe(false); // Other/Contact.md (no UID)
+      expect(contactUtils.isContactFile(mockFiles[4] as TFile)).toBe(false); // Root.md
     });
   });
 
@@ -97,15 +101,15 @@ describe('ContactUtils - Contact Detection Fix', () => {
       const contactUtils = new ContactUtils(mockApp as any, settings);
 
       // Files in Contacts folder should match
-      expect(contactUtils.isContactFile(mockFiles[0])).toBe(true); // Contacts/John Doe.md
-      expect(contactUtils.isContactFile(mockFiles[1])).toBe(true); // Contacts/Jane Smith.md
+      expect(contactUtils.isContactFile(mockFiles[0] as TFile)).toBe(true); // Contacts/John Doe.md
+      expect(contactUtils.isContactFile(mockFiles[1] as TFile)).toBe(true); // Contacts/Jane Smith.md
 
       // Files with UIDs should match regardless of location
-      expect(contactUtils.isContactFile(mockFiles[3])).toBe(true); // Other/Contact.md (has UID)
-      expect(contactUtils.isContactFile(mockFiles[4])).toBe(true); // Root.md (has UID)
+      expect(contactUtils.isContactFile(mockFiles[3] as TFile)).toBe(true); // Other/Contact.md (has UID)
+      expect(contactUtils.isContactFile(mockFiles[4] as TFile)).toBe(true); // Root.md (has UID)
 
       // Files without UIDs outside contacts folder should not match
-      expect(contactUtils.isContactFile(mockFiles[2])).toBe(false); // ContactsExtra/Wrong.md
+      expect(contactUtils.isContactFile(mockFiles[2] as TFile)).toBe(false); // ContactsExtra/Wrong.md
     });
   });
 
