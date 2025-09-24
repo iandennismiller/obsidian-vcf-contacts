@@ -21,8 +21,9 @@ describe('RelationshipManager Bug Fix', () => {
       }
     };
     
-    graph = new RelationshipGraph();
-    manager = new RelationshipManager(mockApp, graph);
+    manager = new RelationshipManager(mockApp);
+    // Access the private graph property for testing
+    graph = (manager as any).graph;
   });
 
   it('should normalize gendered relationship terms in front matter to genderless types', () => {

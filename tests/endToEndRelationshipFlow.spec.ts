@@ -22,8 +22,9 @@ describe('End-to-End Relationship Flow', () => {
       }
     };
     
-    graph = new RelationshipGraph();
-    manager = new RelationshipManager(mockApp, graph);
+    manager = new RelationshipManager(mockApp);
+    // Access the private graph property for testing
+    graph = (manager as any).graph;
   });
 
   it('should maintain genderless relationship types throughout the entire flow', () => {
@@ -90,7 +91,7 @@ describe('End-to-End Relationship Flow', () => {
       expect(listResult?.impliedGender).toBe(testCase.gender);
 
       // Formatting should convert back to gendered term
-      const formatted = formatRelationshipListItem(testCase.expectedType, 'Target Person', testCase.gender);
+      const formatted = formatRelationshipListItem(testCase.expectedType as any, 'Target Person', testCase.gender as any);
       expect(formatted).toBe(`- ${testCase.input} [[Target Person]]`);
     });
   });
@@ -111,7 +112,7 @@ describe('End-to-End Relationship Flow', () => {
       }]);
 
       // Formatting should keep neutral terms regardless of gender
-      const formatted = formatRelationshipListItem(type, 'Person Name', 'M');
+      const formatted = formatRelationshipListItem(type as any, 'Person Name', 'M');
       expect(formatted).toBe(`- ${type} [[Person Name]]`);
     });
   });
