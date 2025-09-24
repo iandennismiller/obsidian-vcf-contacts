@@ -59,10 +59,11 @@ export class RelationshipSet {
           }
           
           // Check if value is blank/empty
-          const stringValue = String(value || '').trim();
-          if (!stringValue || stringValue === 'null' || stringValue === 'undefined') {
+          if (RelationshipSet.isBlankValue(value)) {
             continue; // Skip blank values
           }
+          
+          const stringValue = String(value || '').trim();
           
           entries.push({ type: type as RelationshipType, value: stringValue });
         }
@@ -100,10 +101,11 @@ export class RelationshipSet {
     }
 
     // Validate value is not blank
-    const trimmedValue = value.trim();
-    if (!trimmedValue) {
+    if (RelationshipSet.isBlankValue(value)) {
       return; // Silently skip blank values
     }
+
+    const trimmedValue = value.trim();
 
     this.entries.push({ type, value: trimmedValue });
     this.normalizeInPlace();
@@ -237,6 +239,14 @@ export class RelationshipSet {
   }
 
   /**
+   * Check if a value is blank or should be filtered out
+   */
+  private static isBlankValue(value: any): boolean {
+    const stringValue = String(value || '').trim();
+    return !stringValue || stringValue === 'null' || stringValue === 'undefined';
+  }
+
+  /**
    * Normalize entries by filtering and deduplicating
    */
   private normalizeEntries(entries: RelationshipEntry[]): RelationshipEntry[] {
@@ -250,10 +260,11 @@ export class RelationshipSet {
       }
 
       // Skip blank values
-      const value = entry.value.trim();
-      if (!value) {
+      if (RelationshipSet.isBlankValue(entry.value)) {
         continue;
       }
+
+      const value = entry.value.trim();
 
       // Skip duplicates
       const key = `${entry.type}:${value}`;

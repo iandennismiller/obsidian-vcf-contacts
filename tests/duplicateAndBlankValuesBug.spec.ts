@@ -83,19 +83,48 @@ describe('Duplicate and Blank Values Bug Reproduction', () => {
     
     const set = new RelationshipSet(problematicEntries);
     
-    // Debug: Let's see what's actually in the set
-    const entries = set.getEntries();
-    console.log('Entries:', entries);
-    
     // Should filter out all blank/problematic values
-    expect(set.size()).toBe(4); // Temporarily expecting 4 to see what's being kept
+    expect(set.size()).toBe(2); // Jane Doe (parent), Best Friend (friend) - others should be filtered
     
+    const entries = set.getEntries();
     expect(entries).toContainEqual({ type: 'parent', value: 'Jane Doe' });
     expect(entries).toContainEqual({ type: 'friend', value: 'Best Friend' });
     
     // Should NOT contain blank values
     entries.forEach(entry => {
       expect(entry.value.trim()).toBeTruthy();
+      expect(entry.value).not.toBe('null');
+      expect(entry.value).not.toBe('undefined');
     });
+  });
+
+  it('should handle edge cases for blank value detection', () => {
+    // Test various edge cases for blank values
+    const edgeCaseFrontMatter = {
+      UID: 'test-uid',
+      'RELATED[parent]': 'Jane Doe',        // Valid
+      'RELATED[1:parent]': 'null',          // String "null" - should be filtered
+      'RELATED[2:parent]': 'undefined',     // String "undefined" - should be filtered  
+      'RELATED[3:parent]': 'NULL',          // Uppercase - should NOT be filtered (different from null)
+      'RELATED[4:parent]': 'UNDEFINED',     // Uppercase - should NOT be filtered (different from undefined)
+      'RELATED[friend]': '0',               // String "0" - should NOT be filtered (valid value)
+      'RELATED[1:friend]': 'false',         // String "false" - should NOT be filtered (valid value)
+      'RELATED[2:friend]': '\t\n  \r',      // Only whitespace chars - should be filtered
+    };
+
+    const set = RelationshipSet.fromFrontMatter(edgeCaseFrontMatter);
+    
+    const entries = set.getEntries();
+    expect(entries).toHaveLength(5); // Jane Doe, NULL, UNDEFINED, 0, false
+    
+    expect(entries).toContainEqual({ type: 'parent', value: 'Jane Doe' });
+    expect(entries).toContainEqual({ type: 'parent', value: 'NULL' });      // Should keep uppercase NULL
+    expect(entries).toContainEqual({ type: 'parent', value: 'UNDEFINED' }); // Should keep uppercase UNDEFINED
+    expect(entries).toContainEqual({ type: 'friend', value: '0' });
+    expect(entries).toContainEqual({ type: 'friend', value: 'false' });
+    
+    // Should NOT contain lowercase null/undefined strings
+    expect(entries.find(e => e.value === 'null')).toBeUndefined();
+    expect(entries.find(e => e.value === 'undefined')).toBeUndefined();
   });
 });
