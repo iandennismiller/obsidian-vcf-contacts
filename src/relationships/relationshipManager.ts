@@ -114,8 +114,15 @@ export class RelationshipManager {
         // Extract type from key format: RELATED[type] or RELATED[index:type]
         const typeMatch = key.match(/RELATED(?:\[(?:\d+:)?([^\]]+)\])?/);
         if (typeMatch && typeMatch[1]) {
-          const type = typeMatch[1] as RelationshipType;
-          related.push({ type, value: String(value) });
+          let type = typeMatch[1];
+          
+          // Normalize gendered relationship terms to genderless ones
+          const inferred = inferGenderFromTerm(type);
+          if (inferred) {
+            type = inferred.type;
+          }
+          
+          related.push({ type: type as RelationshipType, value: String(value) });
         }
       }
     }
