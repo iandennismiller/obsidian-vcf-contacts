@@ -24,25 +24,20 @@ export class RelationshipManager {
     this.contentParser = new RelationshipContentParser(app);
     this.syncManager = new RelationshipSyncManager(app, this.graph);
     
-    // Set up event callbacks
-    this.eventHandler.setCallbacks({
-      onFileOpen: (file) => this.handleFileSync(file),
-      onActiveLeafChange: () => this.handleActiveLeafChange(),
-      onEditorChange: (file) => this.handleEditorChange(file),
-      onLayoutChange: () => this.handleLayoutChange(),
-      onAppClose: () => this.handleAppClose(),
-      onConsistencyCheck: () => this.ensureGraphConsistency()
-    });
-    
-    this.eventHandler.setupEventListeners();
+    // Note: Event listeners are disabled - sync only occurs during initialization and manual commands
   }
 
   /**
-   * Initialize the relationship graph with existing contacts and ensure consistency
+   * Initialize the relationship graph with existing contacts and perform comprehensive sync
+   * This method does everything needed for relationship consistency in one go:
+   * 1. Build relationship graph from all contacts' front matter
+   * 2. Check for missing reciprocal relationships
+   * 3. Sync Related lists to front matter and graph
+   * 4. Ensure all relationships are bidirectional
    */
   async initializeFromVault(): Promise<void> {
     return this.eventHandler.withGlobalLock(async () => {
-      loggingService.info('[RelationshipManager] Initializing from vault...');
+      loggingService.info('[RelationshipManager] Starting comprehensive initialization and sync...');
       
       const contactFiles = this.app.vault.getMarkdownFiles().filter(file => 
         file.path.includes('Contacts/') || file.path.includes('contacts/')
@@ -50,23 +45,33 @@ export class RelationshipManager {
 
       loggingService.info(`[RelationshipManager] Found ${contactFiles.length} potential contact files`);
 
+      // PHASE 1: Load all contacts into graph based on front matter
+      loggingService.info('[RelationshipManager] PHASE 1: Building relationship graph from front matter...');
       for (const file of contactFiles) {
         await this.loadContactIntoGraph(file);
       }
+      loggingService.info(`[RelationshipManager] Graph initialized with relationships from ${contactFiles.length} contacts`);
 
-      loggingService.info('[RelationshipManager] Graph initialized with contacts, performing consistency check...');
-      await this.performStartupConsistencyCheck(contactFiles);
-      loggingService.info('[RelationshipManager] Initialization complete');
+      // PHASE 2: Comprehensive sync - examine Related lists and ensure consistency
+      loggingService.info('[RelationshipManager] PHASE 2: Performing comprehensive relationship sync...');
+      await this.performComprehensiveSync(contactFiles);
+      
+      // PHASE 3: Find and correct missing reciprocal relationships
+      loggingService.info('[RelationshipManager] PHASE 3: Finding and correcting missing reciprocal relationships...');
+      await this.findAndCorrectMissingReciprocals(contactFiles);
+      
+      loggingService.info('[RelationshipManager] Comprehensive initialization and sync complete');
     });
   }
 
   /**
-   * Perform startup consistency check on all contact files
+   * Perform comprehensive sync on all contact files
+   * Examines Related lists and ensures they are reflected in graph and front matter
    */
-  private async performStartupConsistencyCheck(contactFiles: TFile[]): Promise<void> {
-    loggingService.info(`[RelationshipManager] Starting consistency check on ${contactFiles.length} contact files...`);
+  private async performComprehensiveSync(contactFiles: TFile[]): Promise<void> {
+    loggingService.info(`[RelationshipManager] Starting comprehensive sync on ${contactFiles.length} contact files...`);
     
-    let inconsistentFiles = 0;
+    let syncedFiles = 0;
     
     for (const file of contactFiles) {
       try {
@@ -80,34 +85,174 @@ export class RelationshipManager {
         const relatedSection = this.contentParser.extractRelatedSection(content);
         const relatedListRelationships = relatedSection ? this.contentParser.parseRelatedSection(relatedSection) : [];
         
-        // Parse relationships from front matter  
-        const frontMatterRelationships = this.contentParser.parseRelatedFromFrontmatter(cache.frontmatter);
-        
-        // Check for inconsistencies
-        const relatedListSet = new Set(relatedListRelationships.map(r => `${r.type}:${r.contactName}`));
-        const frontMatterSet = new Set(frontMatterRelationships.map(r => `${r.type}:${r.value}`));
-        
-        // Count items in Related list not in front matter
-        const missingInFrontMatter = [...relatedListSet].filter(item => !frontMatterSet.has(item));
-        
-        if (missingInFrontMatter.length > 0) {
-          loggingService.info(`[RelationshipManager] Inconsistency in ${file.path}: ${missingInFrontMatter.length} relationships in Related list missing from front matter`);
+        if (relatedListRelationships.length > 0) {
+          loggingService.info(`[RelationshipManager] Processing ${file.path}: ${relatedListRelationships.length} relationships in Related list`);
           
           // Update graph with Related list relationships (merge, don't replace)
           await this.syncManager.updateGraphFromRelatedList(uid, relatedListRelationships);
           
-          // Direct merge with existing front matter (never remove, only add)
+          // Merge Related list relationships with existing front matter (never remove, only add)
           await this.syncManager.mergeRelatedListToFrontmatter(file, relatedListRelationships);
           
-          inconsistentFiles++;
+          syncedFiles++;
+        } else {
+          loggingService.info(`[RelationshipManager] ${file.path}: No Related list found`);
         }
         
       } catch (error) {
-        loggingService.error(`[RelationshipManager] Error checking consistency for ${file.path}: ${error.message}`);
+        loggingService.error(`[RelationshipManager] Error syncing ${file.path}: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
     
-    loggingService.info(`[RelationshipManager] Startup consistency check complete. Fixed ${inconsistentFiles} inconsistent files.`);
+    loggingService.info(`[RelationshipManager] Comprehensive sync complete: ${syncedFiles} files had Related list relationships`);
+  }
+
+  /**
+   * Find and correct missing reciprocal relationships
+   * Ensures all relationships in the graph are bidirectional and reflected in both contacts
+   */
+  private async findAndCorrectMissingReciprocals(contactFiles: TFile[]): Promise<void> {
+    loggingService.info(`[RelationshipManager] Finding missing reciprocal relationships...`);
+    
+    const contactFilesByUID = new Map<string, TFile>();
+    
+    // Build UID to file mapping
+    for (const file of contactFiles) {
+      const cache = this.app.metadataCache.getFileCache(file);
+      if (cache?.frontmatter?.UID) {
+        contactFilesByUID.set(cache.frontmatter.UID, file);
+      }
+    }
+    
+    let addedReciprocals = 0;
+    
+    // Check each relationship in the graph for missing reciprocals
+    for (const sourceUID of this.graph.getAllContactUIDs()) {
+      const relationships = this.graph.getContactRelationships(sourceUID);
+      
+      for (const relationship of relationships) {
+        const targetUID = relationship.targetUid;
+        const reciprocalType = this.getReciprocalRelationshipType(relationship.type);
+        
+        if (reciprocalType && contactFilesByUID.has(targetUID)) {
+          // Check if the reciprocal relationship exists
+          const targetRelationships = this.graph.getContactRelationships(targetUID);
+          const hasReciprocal = targetRelationships.some((r: { type: RelationshipType; targetUid: string; targetName: string }) => 
+            r.targetUid === sourceUID && r.type === reciprocalType
+          );
+          
+          if (!hasReciprocal) {
+            loggingService.info(`[RelationshipManager] Missing reciprocal: ${targetUID} should have ${reciprocalType} -> ${sourceUID}`);
+            
+            // Add the reciprocal relationship to the graph
+            const sourceFile = contactFilesByUID.get(sourceUID);
+            const targetFile = contactFilesByUID.get(targetUID);
+            
+            if (sourceFile && targetFile && reciprocalType) {
+              const sourceCache = this.app.metadataCache.getFileCache(sourceFile);
+              const sourceName = sourceCache?.frontmatter?.FN || sourceFile.basename;
+              
+              // Add to graph
+              this.graph.addRelationship(targetUID, reciprocalType, sourceUID);
+              
+              // Add to target file's front matter
+              await this.syncManager.addRelationshipToFrontMatter(targetFile, reciprocalType, sourceName);
+              
+              // Add to target file's Related list
+              await this.addRelationshipToRelatedList(targetFile, reciprocalType, sourceName);
+              
+              addedReciprocals++;
+            }
+          }
+        }
+      }
+    }
+    
+    loggingService.info(`[RelationshipManager] Added ${addedReciprocals} missing reciprocal relationships`);
+  }
+
+  /**
+   * Get the reciprocal relationship type for a given type
+   */
+  private getReciprocalRelationshipType(type: RelationshipType): RelationshipType | null {
+    const reciprocals: Record<RelationshipType, RelationshipType> = {
+      'parent': 'child',
+      'child': 'parent',
+      'sibling': 'sibling',
+      'spouse': 'spouse',
+      'partner': 'partner',
+      'friend': 'friend',
+      'colleague': 'colleague',
+      'relative': 'relative',
+      'auncle': 'nibling',
+      'nibling': 'auncle',
+      'grandparent': 'grandchild',
+      'grandchild': 'grandparent',
+      'cousin': 'cousin'
+    };
+    
+    return reciprocals[type] || null;
+  }
+
+  /**
+   * Add a relationship to a file's Related list
+   */
+  private async addRelationshipToRelatedList(file: TFile, type: RelationshipType, contactName: string): Promise<void> {
+    try {
+      const content = await this.app.vault.read(file);
+      const lines = content.split('\n');
+      
+      // Find or create Related section
+      let relatedSectionStart = -1;
+      let relatedSectionEnd = -1;
+      
+      for (let i = 0; i < lines.length; i++) {
+        if (lines[i].trim() === '## Related') {
+          relatedSectionStart = i;
+          // Find the end of the Related section
+          for (let j = i + 1; j < lines.length; j++) {
+            if (lines[j].startsWith('##') || lines[j].startsWith('#')) {
+              relatedSectionEnd = j;
+              break;
+            }
+          }
+          if (relatedSectionEnd === -1) {
+            relatedSectionEnd = lines.length;
+          }
+          break;
+        }
+      }
+      
+      const relationshipLine = `- ${type}: [[${contactName}]]`;
+      
+      if (relatedSectionStart === -1) {
+        // No Related section exists, create it at the end
+        lines.push('', '## Related', '', relationshipLine, '');
+      } else {
+        // Related section exists, check if relationship already exists
+        const relatedLines = lines.slice(relatedSectionStart + 1, relatedSectionEnd);
+        const alreadyExists = relatedLines.some(line => 
+          line.includes(`${type}:`) && line.includes(`[[${contactName}]]`)
+        );
+        
+        if (!alreadyExists) {
+          // Insert the new relationship
+          let insertIndex = relatedSectionStart + 1;
+          while (insertIndex < relatedSectionEnd && lines[insertIndex].trim() === '') {
+            insertIndex++;
+          }
+          lines.splice(insertIndex, 0, relationshipLine);
+        }
+      }
+      
+      const newContent = lines.join('\n');
+      await this.app.vault.modify(file, newContent);
+      
+      loggingService.info(`[RelationshipManager] Added ${type}: ${contactName} to Related list in ${file.path}`);
+      
+    } catch (error) {
+      loggingService.error(`[RelationshipManager] Error adding relationship to Related list in ${file.path}: ${error instanceof Error ? error.message : String(error)}`);
+    }
   }
 
   /**

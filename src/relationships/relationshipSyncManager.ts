@@ -382,6 +382,38 @@ export class RelationshipSyncManager {
   }
 
   /**
+   * Add a single relationship to a file's front matter
+   */
+  async addRelationshipToFrontMatter(file: TFile, type: RelationshipType, contactName: string): Promise<void> {
+    loggingService.info(`[RelationshipSyncManager] Adding relationship to front matter: ${file.path} - ${type}: ${contactName}`);
+    
+    const cache = this.app.metadataCache.getFileCache(file);
+    
+    // Get existing front matter relationships
+    const existingSet = RelationshipSet.fromFrontMatter(cache?.frontmatter || {});
+    
+    // Add the new relationship
+    existingSet.add(type, contactName);
+    
+    // Clear existing RELATED fields and write the updated set
+    if (cache?.frontmatter) {
+      for (const key of Object.keys(cache.frontmatter)) {
+        if (key.startsWith('RELATED')) {
+          await updateFrontMatterValue(file, key, '', this.app);
+        }
+      }
+    }
+
+    // Add updated RELATED fields
+    const frontMatterFields = existingSet.toFrontMatterFields();
+    for (const [key, value] of Object.entries(frontMatterFields)) {
+      await updateFrontMatterValue(file, key, value, this.app);
+    }
+    
+    loggingService.info(`[RelationshipSyncManager] Added ${type}: ${contactName} to front matter in ${file.path}`);
+  }
+
+  /**
    * Update REV timestamp
    */
   async updateRevTimestamp(file: TFile): Promise<void> {

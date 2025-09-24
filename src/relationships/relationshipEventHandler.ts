@@ -34,43 +34,13 @@ export class RelationshipEventHandler {
 
   /**
    * Set up event listeners for relationship sync
+   * NOTE: Event listeners disabled per user request - sync only on initialization and manual command
    */
   setupEventListeners(): void {
-    if (!this.app.workspace) return; // Handle test environments gracefully
-
-    // Primary event: Listen for when files are opened (to sync the PREVIOUS file)
-    this.app.workspace.on('file-open', (file: TFile | null) => {
-      loggingService.info(`[RelationshipEventHandler] file-open event: ${file?.path || 'null'}`);
-      this.handleFileOpen(file);
-    });
-
-    // Fallback event: Listen for active leaf changes
-    this.app.workspace.on('active-leaf-change', (leaf) => {
-      loggingService.info(`[RelationshipEventHandler] active-leaf-change event`);
-      this.handleActiveLeafChange();
-    });
-
-    // Editor change event: Listen for content modifications (heavily debounced)
-    this.app.workspace.on('editor-change', (editor, view) => {
-      if (view.file) {
-        loggingService.info(`[RelationshipEventHandler] editor-change event: ${view.file.path}`);
-        this.handleEditorChange(view.file);
-      }
-    });
-
-    // Layout change event: Listen for tab closing/reorganization
-    this.app.workspace.on('layout-change', () => {
-      loggingService.info(`[RelationshipEventHandler] layout-change event`);
-      this.handleLayoutChange();
-    });
-
-    // App closing event: Sync current file when app closes
-    if (typeof window !== 'undefined') {
-      window.addEventListener('beforeunload', () => {
-        loggingService.info(`[RelationshipEventHandler] beforeunload event`);
-        this.handleAppClose();
-      });
-    }
+    // Event listeners have been removed - sync now only occurs:
+    // 1. Once during plugin initialization via initializeFromVault()
+    // 2. Manually via the "Sync Contact Relationships" command
+    loggingService.info(`[RelationshipEventHandler] Event listeners disabled - sync only on initialization and manual command`);
   }
 
   /**

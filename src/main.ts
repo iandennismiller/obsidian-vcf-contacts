@@ -84,7 +84,7 @@ export default class ContactsPlugin extends Plugin {
 
     this.addCommand({
       id: 'contacts-sync-relationships',
-      name: "Sync Contact Relationships",
+      name: "Sync Contact Relationships (Manual)",
       callback: async () => {
         if (this.relationshipManager) {
           await this.relationshipManager.syncCurrentFile();
