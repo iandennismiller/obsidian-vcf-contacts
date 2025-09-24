@@ -36,6 +36,12 @@ export class ContactUtils {
   isContactFile(file: TFile | null): boolean {
     if (!file) return false;
     
+    // First check if it has a UID in front matter (regardless of location)
+    const hasUID = !!this.extractUIDFromFile(file);
+    if (hasUID) {
+      return true;
+    }
+    
     // Use same folder logic as VcfFolderWatcher for consistency
     const contactsFolder = this.getContactsFolder();
     
@@ -49,8 +55,7 @@ export class ContactUtils {
       return true;
     }
     
-    // Check if it has a UID in front matter (regardless of location)
-    return !!this.extractUIDFromFile(file);
+    return false;
   }
 
   /**
@@ -60,12 +65,39 @@ export class ContactUtils {
     const allMarkdownFiles = this.app.vault.getMarkdownFiles();
     loggingService.debug(`[ContactUtils] Total markdown files in vault: ${allMarkdownFiles.length}`);
     
-    const contactFiles = allMarkdownFiles.filter(file => this.isContactFile(file));
+    // Enhanced logging to debug contact detection
+    const contactsFolder = this.getContactsFolder();
+    loggingService.debug(`[ContactUtils] Using contacts folder: "${contactsFolder}"`);
+    
+    const contactFiles: TFile[] = [];
+    const debugInfo: string[] = [];
+    
+    for (const file of allMarkdownFiles) {
+      const isContact = this.isContactFile(file);
+      if (isContact) {
+        contactFiles.push(file);
+        const uid = this.extractUIDFromFile(file);
+        debugInfo.push(`  - ${file.path} (UID: ${uid || 'path-based'})`);
+      }
+    }
+    
     loggingService.debug(`[ContactUtils] Contact files found: ${contactFiles.length}`);
+    if (debugInfo.length > 0 && debugInfo.length <= 10) {
+      loggingService.debug(`[ContactUtils] Contact files:\n${debugInfo.join('\n')}`);
+    } else if (debugInfo.length > 10) {
+      loggingService.debug(`[ContactUtils] First 5 contact files:\n${debugInfo.slice(0, 5).join('\n')}\n  ... and ${debugInfo.length - 5} more`);
+    }
     
     if (contactFiles.length === 0) {
-      const contactsFolder = this.getContactsFolder();
       loggingService.warning(`[ContactUtils] No contact files found. Contacts folder: "${contactsFolder}". Check folder setting or ensure files have UIDs in front matter.`);
+      
+      // Additional debugging: show sample files
+      const sampleFiles = allMarkdownFiles.slice(0, 5);
+      const sampleInfo = sampleFiles.map(f => {
+        const uid = this.extractUIDFromFile(f);
+        return `  - ${f.path} (UID: ${uid || 'none'})`;
+      });
+      loggingService.debug(`[ContactUtils] Sample files from vault:\n${sampleInfo.join('\n')}`);
     }
     
     return contactFiles;

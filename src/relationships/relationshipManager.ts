@@ -18,6 +18,7 @@ export class RelationshipManager {
   private contentParser: RelationshipContentParser;
   private syncManager: RelationshipSyncManager;
   private contactUtils: ContactUtils;
+  private pendingRelationships = new Map<string, { type: RelationshipType; value: string }[]>();
 
   constructor(app: App, settings: ContactsPluginSettings) {
     this.app = app;
@@ -51,12 +52,45 @@ export class RelationshipManager {
 
       loggingService.info(`[RelationshipManager] Found ${contactFiles.length} potential contact files`);
 
-      // PHASE 1: Load all contacts into graph based on front matter
+      // PHASE 1: Load all contacts into graph (contacts first, relationships after)
       loggingService.info('[RelationshipManager] PHASE 1: Building relationship graph from front matter...');
+      
+      // First pass: Load all contacts into the graph
       for (const file of contactFiles) {
         await this.loadContactIntoGraph(file);
       }
-      loggingService.info(`[RelationshipManager] Graph initialized with relationships from ${contactFiles.length} contacts`);
+      
+      loggingService.info(`[RelationshipManager] Loaded ${this.graph.getAllContacts().length} contacts into graph`);
+      
+      // Second pass: Add relationships now that all contacts exist in the graph
+      loggingService.info('[RelationshipManager] Adding relationships from front matter...');
+      let addedRelationships = 0;
+      
+      for (const [sourceUID, relationships] of this.pendingRelationships) {
+        for (const rel of relationships) {
+          // Try to find the target contact by UID or name
+          const targetContact = this.graph.getAllContacts().find(c => 
+            c.uid === rel.value || c.fullName === rel.value
+          );
+          
+          if (targetContact) {
+            try {
+              this.graph.addRelationship(sourceUID, targetContact.uid, rel.type);
+              addedRelationships++;
+              loggingService.debug(`[RelationshipManager] Added relationship: ${sourceUID} -[${rel.type}]-> ${targetContact.uid}`);
+            } catch (error) {
+              loggingService.warning(`[RelationshipManager] Failed to add relationship ${sourceUID} -[${rel.type}]-> ${targetContact.uid}: ${error instanceof Error ? error.message : String(error)}`);
+            }
+          } else {
+            loggingService.debug(`[RelationshipManager] Target contact not found for relationship: ${sourceUID} -[${rel.type}]-> ${rel.value}`);
+          }
+        }
+      }
+      
+      // Clear pending relationships
+      this.pendingRelationships.clear();
+      
+      loggingService.info(`[RelationshipManager] Added ${addedRelationships} relationships from front matter`);
 
       // PHASE 2: Comprehensive sync - examine Related lists and ensure consistency
       loggingService.info('[RelationshipManager] PHASE 2: Performing comprehensive relationship sync...');
@@ -167,7 +201,13 @@ export class RelationshipManager {
               const sourceName = sourceCache?.frontmatter?.FN || sourceFile.basename;
               
               // Add to graph - we know reciprocalType is non-null due to outer if check
-              this.graph.addRelationship(targetUID, reciprocalType!, sourceUID);
+              try {
+                this.graph.addRelationship(targetUID, sourceUID, reciprocalType!);
+                loggingService.debug(`[RelationshipManager] Added reciprocal relationship: ${targetUID} -[${reciprocalType}]-> ${sourceUID}`);
+              } catch (error) {
+                loggingService.warning(`[RelationshipManager] Failed to add reciprocal relationship ${targetUID} -[${reciprocalType}]-> ${sourceUID}: ${error instanceof Error ? error.message : String(error)}`);
+                continue;
+              }
               
               // Add to target file's front matter
               await this.syncManager.addRelationshipToFrontMatter(targetFile, reciprocalType!, sourceName);
@@ -274,28 +314,29 @@ export class RelationshipManager {
    */
   private async loadContactIntoGraph(file: TFile): Promise<void> {
     const cache = this.app.metadataCache.getFileCache(file);
-    if (!cache?.frontmatter) return;
+    if (!cache?.frontmatter) {
+      loggingService.debug(`[RelationshipManager] No frontmatter in ${file.path}`);
+      return;
+    }
 
     const { UID, FN, N, GENDER } = cache.frontmatter;
-    if (!UID) return;
+    if (!UID) {
+      loggingService.debug(`[RelationshipManager] No UID in ${file.path}`);
+      return;
+    }
 
     // Add contact to graph
     const fullName = FN || (N ? `${N.split(';')[1] || ''} ${N.split(';')[0] || ''}`.trim() : '') || file.basename;
     const gender = GENDER || '';
     
     this.graph.addContact(UID, fullName, gender, file);
+    loggingService.debug(`[RelationshipManager] Added contact to graph: ${UID} (${fullName})`);
 
-    // Add relationships from front matter
+    // Store relationships to add after all contacts are loaded
     const relationships = this.contentParser.parseRelatedFromFrontmatter(cache.frontmatter);
-    for (const rel of relationships) {
-      // Try to find the target contact
-      const targetContact = this.graph.getAllContacts().find(c => 
-        c.uid === rel.value || c.fullName === rel.value
-      );
-      
-      if (targetContact) {
-        this.graph.addRelationship(UID, targetContact.uid, rel.type);
-      }
+    if (relationships.length > 0) {
+      this.pendingRelationships.set(UID, relationships);
+      loggingService.debug(`[RelationshipManager] Stored ${relationships.length} pending relationships for ${UID}`);
     }
   }
 
