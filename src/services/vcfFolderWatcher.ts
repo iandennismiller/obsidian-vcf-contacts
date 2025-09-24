@@ -50,6 +50,7 @@ export class VCFolderWatcher {
   private contactFiles = new Map<string, TFile>(); // Track contact files by UID
   private contactFileListeners: (() => void)[] = []; // Track registered listeners
   private updatingRevFields = new Set<string>(); // Track files being updated internally to prevent loops
+  private writeBackTimers = new Map<string, NodeJS.Timeout>(); // Debounce write-back operations
 
   /**
    * Creates a new VCF folder watcher instance.
@@ -124,6 +125,10 @@ export class VCFolderWatcher {
       console.log('Stopped VCF folder watcher');
       loggingService.info('VCF folder sync stopped');
     }
+    
+    // Clean up write-back timers
+    this.writeBackTimers.forEach(timer => clearTimeout(timer));
+    this.writeBackTimers.clear();
     
     // Clean up contact file listeners
     this.cleanupContactFileTracking();
@@ -688,7 +693,7 @@ export class VCFolderWatcher {
         this.contactFiles.set(uid, file);
         
         // Write back to VCF if enabled (metadata cache should be updated now)
-        await this.writeContactToVCF(file, uid);
+        this.debouncedWriteContactToVCF(file, uid);
         
         loggingService.debug(`Updated contact file REV timestamp for ${file.basename} (UID: ${uid})`);
       } catch (error) {
@@ -707,7 +712,7 @@ export class VCFolderWatcher {
         
         if (uid) {
           this.contactFiles.set(uid, file);
-          await this.writeContactToVCF(file, uid);
+          this.debouncedWriteContactToVCF(file, uid);
         }
       }
     };
@@ -761,6 +766,34 @@ export class VCFolderWatcher {
    * 5. Updates internal tracking data
    * 
    * @param contactFile - The Obsidian contact file to write back
+   * @param uid - The UID of the contact
+   * @returns Promise that resolves when write-back is complete
+   */
+  private debouncedWriteContactToVCF(contactFile: TFile, uid: string): void {
+    const key = contactFile.path;
+    
+    // Clear existing timer for this file
+    if (this.writeBackTimers.has(key)) {
+      clearTimeout(this.writeBackTimers.get(key)!);
+    }
+
+    // Set new timer
+    const timer = setTimeout(async () => {
+      this.writeBackTimers.delete(key);
+      try {
+        await this.writeContactToVCF(contactFile, uid);
+      } catch (error) {
+        loggingService.error(`Error in debounced VCF write-back for ${contactFile.path}: ${error.message}`);
+      }
+    }, 1000); // 1 second debounce
+
+    this.writeBackTimers.set(key, timer);
+  }
+
+  /**
+   * Writes contact data from an Obsidian markdown file back to a VCF file.
+   * 
+   * @param contactFile - The Obsidian contact file to convert
    * @param uid - The UID of the contact
    * @returns Promise that resolves when write-back is complete
    */

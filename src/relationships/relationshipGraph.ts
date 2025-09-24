@@ -129,7 +129,9 @@ export class RelationshipGraph {
 
     const relationships: { type: RelationshipType; targetUid: string; targetName: string }[] = [];
     
-    this.graph.forEachOutEdge(uid, (edge, _, target) => {
+    this.graph.forEachOutEdge(uid, (edge) => {
+      const source = this.graph.source(edge);
+      const target = this.graph.target(edge);
       const type = this.graph.getEdgeAttribute(edge, 'type');
       const targetName = this.graph.getNodeAttribute(target, 'fullName');
       relationships.push({ type, targetUid: target, targetName });
@@ -152,7 +154,8 @@ export class RelationshipGraph {
 
     const related: ContactNode[] = [];
     
-    this.graph.forEachInEdge(uid, (edge, source) => {
+    this.graph.forEachInEdge(uid, (edge) => {
+      const source = this.graph.source(edge);
       if (this.graph.getEdgeAttribute(edge, 'type') === type) {
         related.push(this.graph.getNodeAttributes(source));
       }
@@ -206,11 +209,18 @@ export class RelationshipGraph {
       const reciprocalType = this.getReciprocalType(type);
       
       if (reciprocalType) {
-        // Check if reciprocal relationship exists
-        const reciprocalExists = this.graph.edges(target, source).some(e => 
-          this.graph.getEdgeAttribute(e, 'type') === reciprocalType
-        );
-
+        // Check if reciprocal relationship exists using forEachOutEdge
+        let reciprocalExists = false;
+        
+        this.graph.forEachOutEdge(target, (e) => {
+          const edgeTarget = this.graph.target(e);
+          const edgeType = this.graph.getEdgeAttribute(e, 'type');
+          
+          if (edgeTarget === source && edgeType === reciprocalType) {
+            reciprocalExists = true;
+          }
+        });
+        
         if (!reciprocalExists) {
           inconsistencies.push({ fromUid: target, toUid: source, type: reciprocalType });
         }
