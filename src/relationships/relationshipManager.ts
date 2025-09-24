@@ -12,6 +12,9 @@ export class RelationshipManager {
   private app: App;
   private syncingFiles = new Set<string>(); // Prevent infinite loops
   private debounceTimers = new Map<string, NodeJS.Timeout>();
+  private globalLock = false; // Global lock for graph operations
+  private consistencyCheckTimer: NodeJS.Timeout | null = null; // Debounced consistency check
+  private operationQueue: Promise<void> = Promise.resolve(); // Serial operation queue
 
   constructor(app: App) {
     this.app = app;
@@ -23,16 +26,57 @@ export class RelationshipManager {
    * Initialize the relationship graph with existing contacts
    */
   async initializeFromVault(): Promise<void> {
-    const contactFiles = this.app.vault.getMarkdownFiles().filter(file => 
-      file.path.includes('Contacts/') || file.path.includes('contacts/')
-    );
+    return this.withGlobalLock(async () => {
+      const contactFiles = this.app.vault.getMarkdownFiles().filter(file => 
+        file.path.includes('Contacts/') || file.path.includes('contacts/')
+      );
 
-    for (const file of contactFiles) {
-      await this.loadContactIntoGraph(file);
+      for (const file of contactFiles) {
+        await this.loadContactIntoGraph(file);
+      }
+
+      // Schedule consistency check with debouncing
+      this.scheduleConsistencyCheck();
+    });
+  }
+
+  /**
+   * Execute operation with global lock to prevent race conditions
+   */
+  private async withGlobalLock<T>(operation: () => Promise<T>): Promise<T> {
+    // Queue the operation to run serially
+    return new Promise<T>((resolve, reject) => {
+      this.operationQueue = this.operationQueue.then(async () => {
+        // Wait for global lock to be released
+        while (this.globalLock) {
+          await new Promise(r => setTimeout(r, 100));
+        }
+
+        this.globalLock = true;
+        try {
+          const result = await operation();
+          resolve(result);
+        } catch (error) {
+          reject(error);
+        } finally {
+          this.globalLock = false;
+        }
+      }).catch(reject);
+    });
+  }
+
+  /**
+   * Schedule a debounced consistency check
+   */
+  private scheduleConsistencyCheck(): void {
+    if (this.consistencyCheckTimer) {
+      clearTimeout(this.consistencyCheckTimer);
     }
 
-    // Check for consistency and fix missing reciprocal relationships
-    await this.ensureGraphConsistency();
+    this.consistencyCheckTimer = setTimeout(() => {
+      this.consistencyCheckTimer = null;
+      this.withGlobalLock(() => this.ensureGraphConsistency());
+    }, 2000); // 2 second debounce for consistency checks
   }
 
   /**
@@ -101,8 +145,8 @@ export class RelationshipManager {
    */
   private handleFileChange(): void {
     const previousFile = this.getCurrentContactFile();
-    if (previousFile) {
-      this.debounceSync(previousFile, () => this.syncRelatedListToFrontmatter(previousFile));
+    if (previousFile && !this.globalLock) {
+      this.debounceSync(previousFile, () => this.syncRelatedListToFrontmatter(previousFile), 1500); // Longer delay for file change
     }
   }
 
@@ -110,12 +154,14 @@ export class RelationshipManager {
    * Handle file modification - update graph and sync relationships
    */
   private async handleFileModified(file: TFile): Promise<void> {
-    if (this.syncingFiles.has(file.path)) {
-      return; // Skip to prevent infinite loops
+    if (this.syncingFiles.has(file.path) || this.globalLock) {
+      return; // Skip to prevent infinite loops or race conditions
     }
 
-    await this.loadContactIntoGraph(file);
-    await this.syncFrontmatterToRelatedList(file);
+    await this.withGlobalLock(async () => {
+      await this.loadContactIntoGraph(file);
+      await this.syncFrontmatterToRelatedList(file);
+    });
   }
 
   /**
@@ -140,34 +186,37 @@ export class RelationshipManager {
    * Sync the Related list in markdown to frontmatter
    */
   private async syncRelatedListToFrontmatter(file: TFile): Promise<void> {
-    if (this.syncingFiles.has(file.path)) return;
+    if (this.syncingFiles.has(file.path) || this.globalLock) return;
 
-    const cache = this.app.metadataCache.getFileCache(file);
-    if (!cache?.frontmatter?.UID) return;
+    await this.withGlobalLock(async () => {
+      const cache = this.app.metadataCache.getFileCache(file);
+      if (!cache?.frontmatter?.UID) return;
 
-    const uid = cache.frontmatter.UID;
-    const content = await this.app.vault.read(file);
-    
-    // Find and parse the Related section
-    const relatedSection = this.extractRelatedSection(content);
-    if (!relatedSection) return;
-
-    const relationships = this.parseRelatedSection(relatedSection);
-    
-    this.syncingFiles.add(file.path);
-    try {
-      // Update graph with new relationships
-      await this.updateGraphFromRelatedList(uid, relationships);
+      const uid = cache.frontmatter.UID;
+      const content = await this.app.vault.read(file);
       
-      // Update frontmatter to match graph
-      await this.updateFrontmatterFromGraph(file, uid);
-      
-      // Propagate changes to related contacts
-      await this.propagateRelationshipChanges(uid);
+      // Find and parse the Related section
+      const relatedSection = this.extractRelatedSection(content);
+      if (!relatedSection) return;
 
-    } finally {
-      this.syncingFiles.delete(file.path);
-    }
+      const relationships = this.parseRelatedSection(relatedSection);
+      
+      this.syncingFiles.add(file.path);
+      try {
+        // Update graph with new relationships
+        await this.updateGraphFromRelatedList(uid, relationships);
+        
+        // Update frontmatter to match graph
+        await this.updateFrontmatterFromGraph(file, uid);
+        
+        // Schedule consistency check and propagation (debounced)
+        this.scheduleConsistencyCheck();
+        await this.propagateRelationshipChanges(uid);
+
+      } finally {
+        this.syncingFiles.delete(file.path);
+      }
+    });
   }
 
   /**
@@ -201,7 +250,7 @@ export class RelationshipManager {
    * Extract the Related section from markdown content
    */
   private extractRelatedSection(content: string): string | null {
-    const relatedMatch = content.match(/^(#{1,6})\s*related\s*$(.*?)(?=^#{1,6}|\z)/ims);
+    const relatedMatch = content.match(/^(#{1,6})\s*related\s*$([\s\S]*?)(?=^#{1,6}|$)/im);
     return relatedMatch ? relatedMatch[2].trim() : null;
   }
 
@@ -282,12 +331,12 @@ export class RelationshipManager {
   private async updateContactGender(file: TFile, gender: Gender): Promise<void> {
     if (this.syncingFiles.has(file.path)) return;
 
-    this.syncingFiles.add(file.path);
+    // Don't add to syncingFiles here since this is called within a locked context
     try {
       await updateFrontMatterValue(file, 'GENDER', gender, this.app);
       await this.updateRevTimestamp(file);
-    } finally {
-      this.syncingFiles.delete(file.path);
+    } catch (error) {
+      loggingService.error(`Error updating gender for ${file.path}: ${error.message}`);
     }
   }
 
@@ -332,7 +381,7 @@ export class RelationshipManager {
       : '\n## Related\n\n';
 
     // Replace or add the Related section
-    const relatedMatch = content.match(/^(#{1,6})\s*related\s*$(.*?)(?=^#{1,6}|\z)/ims);
+    const relatedMatch = content.match(/^(#{1,6})\s*related\s*$([\s\S]*?)(?=^#{1,6}|$)/im);
     if (relatedMatch) {
       return content.replace(relatedMatch[0], relatedSection.trim());
     } else {
@@ -354,10 +403,17 @@ export class RelationshipManager {
   private async propagateRelationshipChanges(uid: string): Promise<void> {
     const relationships = this.graph.getContactRelationships(uid);
     
+    // Use a debounced approach to avoid cascading updates
     for (const rel of relationships) {
       const targetContact = this.graph.getContact(rel.targetUid);
       if (targetContact?.file && !this.syncingFiles.has(targetContact.file.path)) {
-        await this.syncFrontmatterToRelatedList(targetContact.file);
+        // Debounce the update to the related contact to prevent cascades
+        this.debounceSync(targetContact.file, async () => {
+          // Check again if we should update (may have been updated by another operation)
+          if (!this.syncingFiles.has(targetContact.file!.path)) {
+            await this.syncFrontmatterToRelatedList(targetContact.file!);
+          }
+        }, 500); // Shorter delay for propagation
       }
     }
   }
@@ -372,18 +428,38 @@ export class RelationshipManager {
 
   /**
    * Ensure graph consistency by adding missing reciprocal relationships
+   * This method should only be called within a global lock context
    */
   private async ensureGraphConsistency(): Promise<void> {
     const inconsistencies = this.graph.checkConsistency();
     
+    if (inconsistencies.length === 0) {
+      return; // No inconsistencies found
+    }
+
+    loggingService.info(`Found ${inconsistencies.length} relationship inconsistencies, fixing...`);
+    
+    // Add missing relationships to graph first (batch operation)
     for (const inconsistency of inconsistencies) {
-      loggingService.info(`Adding missing reciprocal relationship: ${inconsistency.fromUid} -> ${inconsistency.toUid} (${inconsistency.type})`);
+      loggingService.debug(`Adding missing reciprocal relationship: ${inconsistency.fromUid} -> ${inconsistency.toUid} (${inconsistency.type})`);
       this.graph.addRelationship(inconsistency.fromUid, inconsistency.toUid, inconsistency.type);
-      
-      // Update the contact's frontmatter
-      const contact = this.graph.getContact(inconsistency.fromUid);
-      if (contact?.file) {
-        await this.updateFrontmatterFromGraph(contact.file, inconsistency.fromUid);
+    }
+    
+    // Then update front matter for all affected contacts (without triggering more cascades)
+    const affectedContacts = new Set<string>();
+    for (const inconsistency of inconsistencies) {
+      affectedContacts.add(inconsistency.fromUid);
+    }
+    
+    for (const uid of affectedContacts) {
+      const contact = this.graph.getContact(uid);
+      if (contact?.file && !this.syncingFiles.has(contact.file.path)) {
+        this.syncingFiles.add(contact.file.path);
+        try {
+          await this.updateFrontmatterFromGraph(contact.file, uid);
+        } finally {
+          this.syncingFiles.delete(contact.file.path);
+        }
       }
     }
   }
@@ -417,5 +493,14 @@ export class RelationshipManager {
     // Clear all debounce timers
     this.debounceTimers.forEach(timer => clearTimeout(timer));
     this.debounceTimers.clear();
+    
+    // Clear consistency check timer
+    if (this.consistencyCheckTimer) {
+      clearTimeout(this.consistencyCheckTimer);
+      this.consistencyCheckTimer = null;
+    }
+    
+    // Wait for any pending operations to complete
+    this.globalLock = false;
   }
 }
