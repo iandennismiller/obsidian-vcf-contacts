@@ -33,21 +33,81 @@ export class RelationshipManager {
   }
 
   /**
-   * Initialize the relationship graph with existing contacts
+   * Initialize the relationship graph with existing contacts and ensure consistency
    */
   async initializeFromVault(): Promise<void> {
     return this.withGlobalLock(async () => {
+      loggingService.info('[RelationshipManager] Initializing from vault...');
+      
       const contactFiles = this.app.vault.getMarkdownFiles().filter(file => 
         file.path.includes('Contacts/') || file.path.includes('contacts/')
       );
+
+      loggingService.info(`[RelationshipManager] Found ${contactFiles.length} potential contact files`);
 
       for (const file of contactFiles) {
         await this.loadContactIntoGraph(file);
       }
 
-      // Schedule consistency check with debouncing
+      // Perform startup consistency check to ensure all notes are consistent
+      await this.performStartupConsistencyCheck(contactFiles);
+
+      // Schedule regular consistency check with debouncing  
       this.scheduleConsistencyCheck();
     });
+  }
+
+  /**
+   * Perform a comprehensive consistency check during plugin startup
+   * Ensures all contact files have consistent Related lists and front matter
+   */
+  private async performStartupConsistencyCheck(contactFiles: TFile[]): Promise<void> {
+    loggingService.info('[RelationshipManager] Performing startup consistency check...');
+    
+    let inconsistentFiles = 0;
+    
+    for (const file of contactFiles) {
+      if (!this.isContactFile(file)) continue;
+      
+      try {
+        const cache = this.app.metadataCache.getFileCache(file);
+        if (!cache?.frontmatter?.UID) continue;
+        
+        const uid = cache.frontmatter.UID;
+        const content = await this.app.vault.read(file);
+        
+        // Parse relationships from Related list in content
+        const relatedSection = this.extractRelatedSection(content);
+        const relatedListRelationships = relatedSection ? this.parseRelatedSection(relatedSection) : [];
+        
+        // Parse relationships from front matter  
+        const frontMatterRelationships = this.parseRelatedFromFrontmatter(cache.frontmatter);
+        
+        // Check for inconsistencies
+        const relatedListSet = new Set(relatedListRelationships.map(r => `${r.type}:${r.contactName}`));
+        const frontMatterSet = new Set(frontMatterRelationships.map(r => `${r.type}:${r.value}`));
+        
+        // Count items in Related list not in front matter
+        const missingInFrontMatter = [...relatedListSet].filter(item => !frontMatterSet.has(item));
+        
+        if (missingInFrontMatter.length > 0) {
+          loggingService.info(`[RelationshipManager] Inconsistency in ${file.path}: ${missingInFrontMatter.length} relationships in Related list missing from front matter`);
+          
+          // Update graph with Related list relationships
+          await this.updateGraphFromRelatedList(uid, relatedListRelationships);
+          
+          // Merge with existing front matter (never remove, only add)
+          await this.updateFrontmatterFromGraph(file, uid);
+          
+          inconsistentFiles++;
+        }
+        
+      } catch (error) {
+        loggingService.error(`[RelationshipManager] Error checking consistency for ${file.path}: ${error.message}`);
+      }
+    }
+    
+    loggingService.info(`[RelationshipManager] Startup consistency check complete. Fixed ${inconsistentFiles} inconsistent files.`);
   }
 
   /**
@@ -478,26 +538,53 @@ export class RelationshipManager {
   }
 
   /**
-   * Update frontmatter from graph relationships using RelationshipSet
+   * Update frontmatter from graph relationships - MERGE with existing front matter, never remove
    */
   private async updateFrontmatterFromGraph(file: TFile, uid: string): Promise<void> {
-    const relatedFields = this.graph.contactToRelatedFields(uid);
-    const relationshipSet = RelationshipSet.fromRelatedFields(relatedFields);
+    const graphRelatedFields = this.graph.contactToRelatedFields(uid);
     
-    // Clear existing RELATED fields
+    // Get existing front matter relationships
     const cache = this.app.metadataCache.getFileCache(file);
-    if (cache?.frontmatter) {
-      for (const key of Object.keys(cache.frontmatter)) {
-        if (key.startsWith('RELATED')) {
-          await updateFrontMatterValue(file, key, '', this.app);
-        }
+    const existingFrontMatterSet = RelationshipSet.fromFrontMatter(cache?.frontmatter || {});
+    
+    // Create a combined set from graph relationships
+    const graphSet = RelationshipSet.fromRelatedFields(graphRelatedFields);
+    
+    // Merge: start with existing front matter, add any missing relationships from graph
+    const mergedSet = existingFrontMatterSet.clone();
+    for (const entry of graphSet.getEntries()) {
+      // Only add if this exact relationship doesn't already exist
+      const existingEntries = mergedSet.getEntries();
+      const alreadyExists = existingEntries.some(existing => 
+        existing.type === entry.type && existing.value === entry.value
+      );
+      
+      if (!alreadyExists) {
+        mergedSet.add(entry.type, entry.value);
       }
     }
+    
+    loggingService.info(`[RelationshipManager] Merging relationships - existing: ${existingFrontMatterSet.size()}, graph: ${graphSet.size()}, merged: ${mergedSet.size()}`);
+    
+    // Clear existing RELATED fields only if we have changes to make
+    if (!existingFrontMatterSet.equals(mergedSet)) {
+      if (cache?.frontmatter) {
+        for (const key of Object.keys(cache.frontmatter)) {
+          if (key.startsWith('RELATED')) {
+            await updateFrontMatterValue(file, key, '', this.app);
+          }
+        }
+      }
 
-    // Add new RELATED fields using RelationshipSet for consistent indexing
-    const frontMatterFields = relationshipSet.toFrontMatterFields();
-    for (const [key, value] of Object.entries(frontMatterFields)) {
-      await updateFrontMatterValue(file, key, value, this.app);
+      // Add merged and sanitized RELATED fields using RelationshipSet for consistent indexing
+      const frontMatterFields = mergedSet.toFrontMatterFields();
+      for (const [key, value] of Object.entries(frontMatterFields)) {
+        await updateFrontMatterValue(file, key, value, this.app);
+      }
+      
+      loggingService.info(`[RelationshipManager] Updated front matter for: ${file.path}`);
+    } else {
+      loggingService.info(`[RelationshipManager] No front matter changes needed for: ${file.path}`);
     }
 
     // Update REV timestamp

@@ -82,6 +82,18 @@ export default class ContactsPlugin extends Plugin {
       },
     });
 
+    this.addCommand({
+      id: 'contacts-sync-relationships',
+      name: "Sync Contact Relationships",
+      callback: async () => {
+        if (this.relationshipManager) {
+          await this.relationshipManager.syncCurrentFile();
+          // Show a notice to the user
+          new (this.app as any).Notice("Contact relationships synced to front matter");
+        }
+      },
+    });
+
 
 	}
 
