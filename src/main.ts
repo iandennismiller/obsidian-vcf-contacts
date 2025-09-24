@@ -8,6 +8,7 @@ import { VCFolderWatcher } from "src/services/vcfFolderWatcher";
 import { onSettingsChange } from "src/context/sharedSettingsContext";
 import { setApp, clearApp } from "src/context/sharedAppContext";
 import { loggingService } from "src/services/loggingService";
+import { RelationshipEventManager } from "src/relationships/relationshipEventManager";
 
 import { ContactsSettingTab, DEFAULT_SETTINGS } from './settings/settings';
 import { ContactsPluginSettings } from  './settings/settings.d';
@@ -15,6 +16,7 @@ import { ContactsPluginSettings } from  './settings/settings.d';
 export default class ContactsPlugin extends Plugin {
 	settings: ContactsPluginSettings;
 	private vcfWatcher: VCFolderWatcher | null = null;
+	private relationshipEventManager: RelationshipEventManager | null = null;
 	private settingsUnsubscribe: (() => void) | null = null;
 
 	async onload() {
@@ -31,6 +33,10 @@ export default class ContactsPlugin extends Plugin {
 		// Initialize VCF folder watcher
 		this.vcfWatcher = new VCFolderWatcher(this.app, this.settings);
 		await this.vcfWatcher.start();
+
+		// Initialize relationship event manager
+		this.relationshipEventManager = new RelationshipEventManager(this.app);
+		await this.relationshipEventManager.initializeFromVault();
 
 		// Listen for settings changes to update watcher
 		this.settingsUnsubscribe = onSettingsChange(async (newSettings) => {
@@ -82,6 +88,12 @@ export default class ContactsPlugin extends Plugin {
 		if (this.vcfWatcher) {
 			this.vcfWatcher.stop();
 			this.vcfWatcher = null;
+		}
+
+		// Clean up relationship event manager
+		if (this.relationshipEventManager) {
+			this.relationshipEventManager.destroy();
+			this.relationshipEventManager = null;
 		}
 
 		// Unsubscribe from settings changes
