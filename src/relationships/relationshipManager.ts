@@ -16,10 +16,19 @@ export class RelationshipManager {
   private globalLock = false; // Global lock for graph operations
   private consistencyCheckTimer: NodeJS.Timeout | null = null; // Debounced consistency check
   private operationQueue: Promise<void> = Promise.resolve(); // Serial operation queue
+  private currentContactFile: TFile | null = null; // Track the currently active contact file
 
   constructor(app: App) {
     this.app = app;
     this.graph = new RelationshipGraph();
+    
+    // Try to get the current contact file, but handle cases where workspace is not available (e.g., tests)
+    try {
+      this.currentContactFile = this.getActiveContactFile();
+    } catch (e) {
+      this.currentContactFile = null; // Gracefully handle unavailable workspace
+    }
+    
     this.setupEventListeners();
   }
 
@@ -116,41 +125,108 @@ export class RelationshipManager {
    * Setup event listeners for file events
    */
   private setupEventListeners(): void {
-    // Listen for when files lose focus to sync Related list to frontmatter
-    this.app.workspace.on('active-leaf-change', () => {
-      this.handleFileChange();
+    // Guard against missing workspace (e.g., in tests)
+    if (!this.app.workspace?.on) {
+      return;
+    }
+
+    // Listen for when a file is opened to sync the previous file
+    this.app.workspace.on('file-open', (file: TFile | null) => {
+      this.handleFileOpen(file);
     });
 
-    // Note: Removed 'modify' event listener to prevent cascading updates
-    // Only user-initiated events (like switching files) should trigger sync
-  }
+    // Listen for when the active leaf changes as a fallback
+    this.app.workspace.on('active-leaf-change', () => {
+      this.handleActiveLeafChange();
+    });
 
-  /**
-   * Handle when active file changes - sync the previous file if needed
-   */
-  private handleFileChange(): void {
-    const previousFile = this.getCurrentContactFile();
-    if (previousFile && !this.globalLock) {
-      this.debounceSync(previousFile, () => this.syncRelatedListToFrontmatter(previousFile), 1500); // Longer delay for file change
+    // Listen for window/app close events to sync current file
+    if (typeof window !== 'undefined') {
+      // Bind the method so we can remove it later
+      this.handleAppClose = this.handleAppClose.bind(this);
+      window.addEventListener('beforeunload', this.handleAppClose);
     }
   }
 
   /**
-   * Get the current contact file if it's a contact
+   * Handle when a file is opened - sync the previous file if needed
    */
-  private getCurrentContactFile(): TFile | null {
+  private handleFileOpen(file: TFile | null): void {
+    const previousFile = this.currentContactFile;
+    
+    // Update current file tracking
+    this.currentContactFile = this.isContactFile(file) ? file : null;
+    
+    // Sync the previous file if it was a contact file
+    if (previousFile && !this.globalLock) {
+      this.debounceSync(previousFile, () => this.syncRelatedListToFrontmatter(previousFile), 800);
+    }
+  }
+
+  /**
+   * Handle when active leaf changes - sync the previous file if needed (fallback)
+   */
+  private handleActiveLeafChange(): void {
+    const previousFile = this.currentContactFile;
+    const newFile = this.getActiveContactFile();
+    
+    // Only update if we don't already have the right file tracked
+    if (this.currentContactFile !== newFile) {
+      this.currentContactFile = newFile;
+      
+      // Sync the previous file if it was a contact file
+      if (previousFile && !this.globalLock) {
+        this.debounceSync(previousFile, () => this.syncRelatedListToFrontmatter(previousFile), 1000);
+      }
+    }
+  }
+
+  /**
+   * Handle when a file is closed - sync it if needed
+   */
+  private handleFileClose(file: TFile): void {
+    if (!file || this.globalLock) return;
+    
+    // Check if it's a contact file that needs syncing
+    if (this.isContactFile(file)) {
+      this.debounceSync(file, () => this.syncRelatedListToFrontmatter(file), 500);
+    }
+    
+    // Clear current file if it's the one being closed
+    if (this.currentContactFile === file) {
+      this.currentContactFile = null;
+    }
+  }
+
+  /**
+   * Handle when the app is closing - sync current file if needed
+   */
+  private handleAppClose(): void {
+    if (this.currentContactFile && !this.globalLock) {
+      // Synchronous sync for app close to ensure it completes
+      this.syncRelatedListToFrontmatter(this.currentContactFile);
+    }
+  }
+
+  /**
+   * Check if a file is a contact file
+   */
+  private isContactFile(file: TFile | null): boolean {
+    if (!file) return false;
+    
+    const cache = this.app.metadataCache.getFileCache(file);
+    return !!(cache?.frontmatter?.UID || cache?.frontmatter?.FN || cache?.frontmatter?.['N.GN']);
+  }
+
+  /**
+   * Get the currently active contact file (if any)
+   */
+  private getActiveContactFile(): TFile | null {
     const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
     if (!activeView || !activeView.file) return null;
 
     const file = activeView.file;
-    const cache = this.app.metadataCache.getFileCache(file);
-    
-    // Check if it's a contact file (has UID or name fields)
-    if (cache?.frontmatter?.UID || cache?.frontmatter?.FN || cache?.frontmatter?.['N.GN']) {
-      return file;
-    }
-
-    return null;
+    return this.isContactFile(file) ? file : null;
   }
 
   /**
@@ -461,6 +537,11 @@ export class RelationshipManager {
    * Clean up resources
    */
   destroy(): void {
+    // Sync current file before cleanup if needed
+    if (this.currentContactFile && !this.globalLock) {
+      this.syncRelatedListToFrontmatter(this.currentContactFile);
+    }
+
     // Clear all debounce timers
     this.debounceTimers.forEach(timer => clearTimeout(timer));
     this.debounceTimers.clear();
@@ -469,6 +550,11 @@ export class RelationshipManager {
     if (this.consistencyCheckTimer) {
       clearTimeout(this.consistencyCheckTimer);
       this.consistencyCheckTimer = null;
+    }
+    
+    // Clean up event listeners
+    if (typeof window !== 'undefined' && this.handleAppClose) {
+      window.removeEventListener('beforeunload', this.handleAppClose);
     }
     
     // Wait for any pending operations to complete
