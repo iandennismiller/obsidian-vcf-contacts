@@ -93,11 +93,11 @@ export class RelationshipManager {
         if (missingInFrontMatter.length > 0) {
           loggingService.info(`[RelationshipManager] Inconsistency in ${file.path}: ${missingInFrontMatter.length} relationships in Related list missing from front matter`);
           
-          // Update graph with Related list relationships
+          // Update graph with Related list relationships (merge, don't replace)
           await this.updateGraphFromRelatedList(uid, relatedListRelationships);
           
-          // Merge with existing front matter (never remove, only add)
-          await this.updateFrontmatterFromGraph(file, uid);
+          // Direct merge with existing front matter (never remove, only add)
+          await this.mergeRelatedListToFrontmatter(file, relatedListRelationships);
           
           inconsistentFiles++;
         }
@@ -398,11 +398,11 @@ export class RelationshipManager {
       
       this.syncingFiles.add(file.path);
       try {
-        // Update graph with new relationships
+        // Update graph with new relationships (merge, don't replace)
         await this.updateGraphFromRelatedList(uid, relationships);
         
-        // Update frontmatter to match graph
-        await this.updateFrontmatterFromGraph(file, uid);
+        // DIRECT merge: combine Related list relationships with existing front matter
+        await this.mergeRelatedListToFrontmatter(file, relationships);
         
         loggingService.info(`[RelationshipManager] Successfully synced: ${file.path}`);
         
@@ -414,6 +414,71 @@ export class RelationshipManager {
         this.syncingFiles.delete(file.path);
       }
     });
+  }
+
+  /**
+   * Directly merge Related list relationships with existing front matter
+   */
+  private async mergeRelatedListToFrontmatter(file: TFile, relationships: { type: RelationshipType; contactName: string; impliedGender?: Gender }[]): Promise<void> {
+    const cache = this.app.metadataCache.getFileCache(file);
+    
+    // Get existing front matter relationships
+    const existingFrontMatterSet = RelationshipSet.fromFrontMatter(cache?.frontmatter || {});
+    
+    // Convert Related list relationships to RelationshipSet format
+    const relatedListEntries: { type: RelationshipType; value: string }[] = [];
+    for (const rel of relationships) {
+      // Find the target contact to get proper UID/name for front matter
+      const targetUid = await this.findOrCreateContactByName(rel.contactName);
+      const value = targetUid || rel.contactName; // Use UID if available, otherwise name
+      relatedListEntries.push({ type: rel.type, value });
+    }
+    
+    const relatedListSet = new RelationshipSet(relatedListEntries);
+    
+    // Merge: start with existing front matter, add any missing relationships from Related list
+    const mergedSet = existingFrontMatterSet.clone();
+    let addedCount = 0;
+    
+    for (const entry of relatedListSet.getEntries()) {
+      // Only add if this exact relationship doesn't already exist
+      const existingEntries = mergedSet.getEntries();
+      const alreadyExists = existingEntries.some(existing => 
+        existing.type === entry.type && existing.value === entry.value
+      );
+      
+      if (!alreadyExists) {
+        mergedSet.add(entry.type, entry.value);
+        addedCount++;
+      }
+    }
+    
+    loggingService.info(`[RelationshipManager] Direct merge - existing: ${existingFrontMatterSet.size()}, related list: ${relatedListSet.size()}, merged: ${mergedSet.size()}, added: ${addedCount}`);
+    
+    // Update front matter only if we have changes to make
+    if (addedCount > 0) {
+      // Clear existing RELATED fields
+      if (cache?.frontmatter) {
+        for (const key of Object.keys(cache.frontmatter)) {
+          if (key.startsWith('RELATED')) {
+            await updateFrontMatterValue(file, key, '', this.app);
+          }
+        }
+      }
+
+      // Add merged and sanitized RELATED fields using RelationshipSet for consistent indexing
+      const frontMatterFields = mergedSet.toFrontMatterFields();
+      for (const [key, value] of Object.entries(frontMatterFields)) {
+        await updateFrontMatterValue(file, key, value, this.app);
+      }
+      
+      loggingService.info(`[RelationshipManager] Updated front matter for: ${file.path} (added ${addedCount} relationships)`);
+    } else {
+      loggingService.info(`[RelationshipManager] No front matter changes needed for: ${file.path}`);
+    }
+
+    // Update REV timestamp
+    await this.updateRevTimestamp(file);
   }
 
   /**
@@ -469,23 +534,30 @@ export class RelationshipManager {
   }
 
   /**
-   * Update the graph from parsed related list
+   * Update the graph from parsed related list - MERGE with existing relationships, don't clear
    */
   private async updateGraphFromRelatedList(uid: string, relationships: { type: RelationshipType; contactName: string; impliedGender?: Gender }[]): Promise<void> {
     const contact = this.graph.getContact(uid);
     if (!contact) return;
 
-    // Clear existing relationships for this contact
-    const existingRelationships = this.graph.getContactRelationships(uid);
-    for (const rel of existingRelationships) {
-      this.graph.removeRelationship(uid, rel.targetUid, rel.type);
-    }
+    loggingService.info(`[RelationshipManager] Merging ${relationships.length} relationships from Related list into graph for: ${uid}`);
 
-    // Add new relationships
+    // Get existing relationships to avoid clearing them
+    const existingRelationships = this.graph.getContactRelationships(uid);
+    const existingSet = new Set(existingRelationships.map(r => `${r.type}:${r.targetUid}`));
+
+    // Only add new relationships that don't already exist
     for (const rel of relationships) {
       // Find or create the target contact
       const targetUid = await this.findOrCreateContactByName(rel.contactName);
       if (!targetUid) continue;
+
+      // Check if this relationship already exists
+      const relationshipKey = `${rel.type}:${targetUid}`;
+      if (existingSet.has(relationshipKey)) {
+        loggingService.info(`[RelationshipManager] Relationship already exists in graph: ${relationshipKey}`);
+        continue;
+      }
 
       // Update target contact's gender if implied
       if (rel.impliedGender) {
@@ -495,7 +567,8 @@ export class RelationshipManager {
         }
       }
 
-      // Add the relationship
+      // Add the new relationship
+      loggingService.info(`[RelationshipManager] Adding new relationship to graph: ${relationshipKey}`);
       this.graph.addRelationship(uid, targetUid, rel.type);
     }
   }
