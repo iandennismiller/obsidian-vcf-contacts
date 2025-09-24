@@ -24,21 +24,39 @@ export class RelationshipSyncManager {
     file: TFile, 
     relationships: { type: RelationshipType; contactName: string; impliedGender?: Gender }[]
   ): Promise<void> {
+    loggingService.info(`[RelationshipSyncManager] Starting direct merge for ${file.path} with ${relationships.length} Related list relationships`);
+    
     const cache = this.app.metadataCache.getFileCache(file);
     
     // Get existing front matter relationships
     const existingFrontMatterSet = RelationshipSet.fromFrontMatter(cache?.frontmatter || {});
+    loggingService.info(`[RelationshipSyncManager] Existing front matter relationships: ${existingFrontMatterSet.size()}`);
+    
+    // Log existing relationships for debugging
+    for (const entry of existingFrontMatterSet.getEntries()) {
+      loggingService.info(`[RelationshipSyncManager] Existing: ${entry.type} -> ${entry.value}`);
+    }
     
     // Convert Related list relationships to RelationshipSet format
     const relatedListEntries: { type: RelationshipType; value: string }[] = [];
     for (const rel of relationships) {
+      loggingService.info(`[RelationshipSyncManager] Processing Related list item: ${rel.type} -> ${rel.contactName}`);
+      
       // Find the target contact to get proper UID/name for front matter
       const targetUid = await this.findOrCreateContactByName(rel.contactName);
       const value = targetUid || rel.contactName; // Use UID if available, otherwise name
+      
+      loggingService.info(`[RelationshipSyncManager] Resolved contact: ${rel.contactName} -> ${targetUid ? `UID:${targetUid}` : `NAME:${value}`}`);
       relatedListEntries.push({ type: rel.type, value });
     }
     
     const relatedListSet = new RelationshipSet(relatedListEntries);
+    loggingService.info(`[RelationshipSyncManager] Related list set size: ${relatedListSet.size()}`);
+    
+    // Log related list relationships for debugging
+    for (const entry of relatedListSet.getEntries()) {
+      loggingService.info(`[RelationshipSyncManager] Related list: ${entry.type} -> ${entry.value}`);
+    }
     
     // Merge: start with existing front matter, add any missing relationships from Related list
     const mergedSet = existingFrontMatterSet.clone();
@@ -51,16 +69,25 @@ export class RelationshipSyncManager {
         existing.type === entry.type && existing.value === entry.value
       );
       
+      loggingService.info(`[RelationshipSyncManager] Checking if ${entry.type}:${entry.value} already exists: ${alreadyExists}`);
+      
       if (!alreadyExists) {
-        mergedSet.add(entry.type, entry.value);
-        addedCount++;
+        // Check for blank values before adding
+        const stringValue = String(entry.value || '').trim();
+        if (stringValue && stringValue !== 'null' && stringValue !== 'undefined') {
+          mergedSet.add(entry.type, entry.value);
+          addedCount++;
+          loggingService.info(`[RelationshipSyncManager] Added new relationship: ${entry.type} -> ${entry.value}`);
+        } else {
+          loggingService.info(`[RelationshipSyncManager] Skipped blank/invalid value: ${entry.type} -> ${entry.value}`);
+        }
       }
     }
     
     loggingService.info(`[RelationshipSyncManager] Direct merge - existing: ${existingFrontMatterSet.size()}, related list: ${relatedListSet.size()}, merged: ${mergedSet.size()}, added: ${addedCount}`);
     
-    // Update front matter only if we have changes to make
-    if (addedCount > 0) {
+    // Always update front matter to ensure consistent indexing (even if no new relationships)
+    if (mergedSet.size() > 0) {
       // Clear existing RELATED fields
       if (cache?.frontmatter) {
         for (const key of Object.keys(cache.frontmatter)) {
@@ -74,11 +101,12 @@ export class RelationshipSyncManager {
       const frontMatterFields = mergedSet.toFrontMatterFields();
       for (const [key, value] of Object.entries(frontMatterFields)) {
         await updateFrontMatterValue(file, key, value, this.app);
+        loggingService.info(`[RelationshipSyncManager] Set front matter: ${key} = ${value}`);
       }
       
-      loggingService.info(`[RelationshipSyncManager] Updated front matter for: ${file.path} (added ${addedCount} relationships)`);
+      loggingService.info(`[RelationshipSyncManager] Updated front matter for: ${file.path} (${mergedSet.size()} total relationships, ${addedCount} new)`);
     } else {
-      loggingService.info(`[RelationshipSyncManager] No front matter changes needed for: ${file.path}`);
+      loggingService.info(`[RelationshipSyncManager] No relationships to write to front matter for: ${file.path}`);
     }
 
     // Update REV timestamp
@@ -262,26 +290,52 @@ export class RelationshipSyncManager {
    * Find contact by name or create a stub entry
    */
   async findOrCreateContactByName(name: string): Promise<string | null> {
+    loggingService.info(`[RelationshipSyncManager] Looking up contact: ${name}`);
+    
     // First, try to find existing contact by name
     const allContacts = this.graph.getAllContacts();
     const existing = allContacts.find(c => c.fullName === name);
-    if (existing) return existing.uid;
+    if (existing) {
+      loggingService.info(`[RelationshipSyncManager] Found existing contact in graph: ${name} -> ${existing.uid}`);
+      return existing.uid;
+    }
 
-    // Look for a contact file with this name
-    const contactFile = this.app.vault.getAbstractFileByPath(`Contacts/${name}.md`);
-    const TFile = require('obsidian').TFile;
-    if (contactFile instanceof TFile) {
-      // Load the contact into the graph
-      const cache = this.app.metadataCache.getFileCache(contactFile);
-      if (cache?.frontmatter?.UID) {
-        this.graph.addContact(cache.frontmatter.UID, name);
-        return cache.frontmatter.UID;
+    // Try different contact file paths
+    const possiblePaths = [
+      `Contacts/${name}.md`,
+      `contacts/${name}.md`,
+      `People/${name}.md`,
+      `people/${name}.md`
+    ];
+    
+    for (const path of possiblePaths) {
+      const contactFile = this.app.vault.getAbstractFileByPath(path);
+      // Check if it's a TFile using duck typing instead of instanceof to avoid test issues
+      if (contactFile && typeof contactFile === 'object' && 'path' in contactFile) {
+        // Load the contact into the graph
+        const cache = this.app.metadataCache.getFileCache(contactFile);
+        if (cache?.frontmatter?.UID) {
+          const fullName = cache.frontmatter.FN || name;
+          const gender = cache.frontmatter.GENDER || '';
+          this.graph.addContact(cache.frontmatter.UID, fullName, gender, contactFile);
+          loggingService.info(`[RelationshipSyncManager] Loaded contact from file: ${path} -> ${cache.frontmatter.UID}`);
+          return cache.frontmatter.UID;
+        }
       }
     }
 
-    // For now, return null if contact doesn't exist
-    // In the future, we might want to create stub contacts
-    loggingService.info(`[RelationshipSyncManager] Contact not found: ${name}`);
+    // Try to find by partial name match in existing contacts
+    const partialMatch = allContacts.find(c => 
+      c.fullName.toLowerCase().includes(name.toLowerCase()) || 
+      name.toLowerCase().includes(c.fullName.toLowerCase())
+    );
+    if (partialMatch) {
+      loggingService.info(`[RelationshipSyncManager] Found partial match: ${name} -> ${partialMatch.fullName} (${partialMatch.uid})`);
+      return partialMatch.uid;
+    }
+
+    // Contact not found - return null but this is OK, we'll use the name as value
+    loggingService.info(`[RelationshipSyncManager] Contact not found, will use name as value: ${name}`);
     return null;
   }
 

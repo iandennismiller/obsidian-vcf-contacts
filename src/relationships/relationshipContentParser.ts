@@ -64,8 +64,50 @@ export class RelationshipContentParser {
    * Extract the Related section from markdown content
    */
   extractRelatedSection(content: string): string | null {
-    const relatedMatch = content.match(/^#{1,6}\s*related\s*$([^]*?)(?=^#{1,6}|$)/im);
-    return relatedMatch ? relatedMatch[1].trim() : null;
+    loggingService.info(`[RelationshipContentParser] Looking for Related section in content (${content.length} chars)`);
+    
+    // Find the Related section index
+    const relatedIndex = content.indexOf('## Related');
+    if (relatedIndex < 0) {
+      loggingService.info(`[RelationshipContentParser] No "## Related" section found`);
+      return null;
+    }
+    
+    // Get content after "## Related"
+    const afterRelated = content.substring(relatedIndex + '## Related'.length);
+    
+    // Extract lines starting with - or * until next header or end
+    const lines = afterRelated.split('\n');
+    const relatedLines: string[] = [];
+    
+    for (const line of lines) {
+      const trimmed = line.trim();
+      
+      // Stop at next header
+      if (trimmed.startsWith('#')) {
+        break;
+      }
+      
+      // Collect list items
+      if (trimmed.startsWith('-') || trimmed.startsWith('*')) {
+        relatedLines.push(trimmed);
+      }
+      // Also collect non-empty lines that might be part of the section
+      else if (trimmed && !trimmed.startsWith('---')) {
+        // This might be a continuation or other content, include it
+        relatedLines.push(trimmed);
+      }
+    }
+    
+    const sectionContent = relatedLines.join('\n');
+    
+    if (sectionContent) {
+      loggingService.info(`[RelationshipContentParser] Found Related section with ${relatedLines.length} lines: "${sectionContent.substring(0, 100)}..."`);
+      return sectionContent;
+    }
+    
+    loggingService.info(`[RelationshipContentParser] Related section found but no list items detected`);
+    return null;
   }
 
   /**
