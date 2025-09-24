@@ -35,6 +35,8 @@
 		"vitest": "^3.2.1"
 	},
 	"dependencies": {
+		"graphology": "^0.26.0",
+		"graphology-types": "^0.24.8",
 		"react": "^18.2.0",
 		"react-dom": "^18.2.0"
 	}
