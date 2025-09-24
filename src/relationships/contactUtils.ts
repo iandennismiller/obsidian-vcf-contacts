@@ -45,17 +45,14 @@ export class ContactUtils {
     // Use same folder logic as VcfFolderWatcher for consistency
     const contactsFolder = this.getContactsFolder();
     
-    // Check if file is in the configured contacts folder
-    if (contactsFolder !== '/' && file.path.startsWith(contactsFolder)) {
-      return true;
-    }
-    
     // For vault root or legacy setups, check common folder patterns
-    if (contactsFolder === '/' && (file.path.includes('Contacts/') || file.path.includes('contacts/'))) {
-      return true;
+    if (contactsFolder === '/' || contactsFolder === '') {
+      return file.path.includes('Contacts/') || file.path.includes('contacts/');
     }
     
-    return false;
+    // Check if file is in the configured contacts folder with proper folder boundary matching
+    const normalizedFolder = contactsFolder.endsWith('/') ? contactsFolder : contactsFolder + '/';
+    return file.path.startsWith(normalizedFolder);
   }
 
   /**

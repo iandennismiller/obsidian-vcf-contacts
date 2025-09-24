@@ -64,6 +64,22 @@ export class VCFolderWatcher {
   }
 
   /**
+   * Helper method to check if a file is in the contacts folder with proper path boundary matching
+   */
+  private isInContactsFolder(filePath: string, contactsFolder?: string): boolean {
+    const resolvedContactsFolder = contactsFolder || this.settings.contactsFolder || '/';
+    
+    // For vault root or legacy setups, check common folder patterns
+    if (resolvedContactsFolder === '/' || resolvedContactsFolder === '') {
+      return filePath.includes('Contacts/') || filePath.includes('contacts/');
+    }
+    
+    // Check if file is in the configured contacts folder with proper folder boundary matching
+    const normalizedFolder = resolvedContactsFolder.endsWith('/') ? resolvedContactsFolder : resolvedContactsFolder + '/';
+    return filePath.startsWith(normalizedFolder);
+  }
+
+  /**
    * Starts the VCF folder watcher service.
    * 
    * This method:
@@ -251,7 +267,7 @@ export class VCFolderWatcher {
       loggingService.debug(`Total markdown files in vault: ${allMarkdownFiles.length}`);
       
       const files = allMarkdownFiles.filter(file => 
-        file.path.startsWith(contactsFolder)
+        this.isInContactsFolder(file.path, contactsFolder)
       );
       loggingService.debug(`Markdown files in contacts folder: ${files.length}`);
 
@@ -315,7 +331,7 @@ export class VCFolderWatcher {
     try {
       const contactsFolder = this.settings.contactsFolder || '/';
       const files = this.app.vault.getMarkdownFiles().filter(file => 
-        file.path.startsWith(contactsFolder)
+        this.isInContactsFolder(file.path, contactsFolder)
       );
 
       loggingService.debug(`Searching ${files.length} files in "${contactsFolder}" for UID "${uid}"`);
@@ -661,7 +677,7 @@ export class VCFolderWatcher {
 
     const onFileModify = async (file: TFile) => {
       // Only process files in the contacts folder
-      if (!file.path.startsWith(this.settings.contactsFolder)) {
+      if (!this.isInContactsFolder(file.path)) {
         return;
       }
 
@@ -706,7 +722,7 @@ export class VCFolderWatcher {
 
     const onFileRename = async (file: TFile) => {
       // Handle renamed files in contacts folder
-      if (file.path.startsWith(this.settings.contactsFolder)) {
+      if (this.isInContactsFolder(file.path)) {
         const cache = this.app.metadataCache.getFileCache(file);
         const uid = cache?.frontmatter?.UID;
         
@@ -719,7 +735,7 @@ export class VCFolderWatcher {
 
     const onFileDelete = (file: TFile) => {
       // Remove from tracking when deleted
-      if (file.path.startsWith(this.settings.contactsFolder)) {
+      if (this.isInContactsFolder(file.path)) {
         const cache = this.app.metadataCache.getFileCache(file);
         const uid = cache?.frontmatter?.UID;
         
