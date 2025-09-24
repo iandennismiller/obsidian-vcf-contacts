@@ -1,6 +1,19 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { RelationshipManager } from '../src/relationships/relationshipManager';
 import { RelationshipSet } from '../src/relationships/relationshipSet';
+import type { ContactsPluginSettings } from '../src/settings/settings.d';
+
+const mockSettings: ContactsPluginSettings = {
+  contactsFolder: 'Contacts',
+  defaultHashtag: '',
+  vcfWatchFolder: '',
+  vcfWatchEnabled: false,
+  vcfWatchPollingInterval: 30,
+  vcfWriteBackEnabled: false,
+  vcfIgnoreFilenames: [],
+  vcfIgnoreUIDs: [],
+  logLevel: 'INFO',
+};
 
 describe('RelationshipManager Direct Merge Fix', () => {
   let mockApp: any;
@@ -21,7 +34,7 @@ describe('RelationshipManager Direct Merge Fix', () => {
       }
     };
     
-    manager = new RelationshipManager(mockApp);
+    manager = new RelationshipManager(mockApp, mockSettings);
   });
 
   it('should directly merge Related list with existing front matter without losing relationships', async () => {

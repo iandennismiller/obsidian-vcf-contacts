@@ -315,12 +315,14 @@ export class RelationshipSyncManager {
       const contactFile = this.app.vault.getAbstractFileByPath(path);
       // Check if it's a TFile using duck typing instead of instanceof to avoid test issues
       if (contactFile && typeof contactFile === 'object' && 'path' in contactFile) {
+        // Cast to TFile since we've verified it has the expected properties
+        const tFile = contactFile as TFile;
         // Load the contact into the graph
-        const cache = this.app.metadataCache.getFileCache(contactFile);
+        const cache = this.app.metadataCache.getFileCache(tFile);
         if (cache?.frontmatter?.UID) {
           const fullName = cache.frontmatter.FN || name;
           const gender = cache.frontmatter.GENDER || '';
-          this.graph.addContact(cache.frontmatter.UID, fullName, gender, contactFile);
+          this.graph.addContact(cache.frontmatter.UID, fullName, gender, tFile);
           loggingService.info(`[RelationshipSyncManager] Loaded contact from file: ${path} -> ${cache.frontmatter.UID}`);
           return cache.frontmatter.UID;
         }

@@ -1,5 +1,18 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { RelationshipManager } from '../src/relationships/relationshipManager';
+import type { ContactsPluginSettings } from '../src/settings/settings.d';
+
+const mockSettings: ContactsPluginSettings = {
+  contactsFolder: 'Contacts',
+  defaultHashtag: '',
+  vcfWatchFolder: '',
+  vcfWatchEnabled: false,
+  vcfWatchPollingInterval: 30,
+  vcfWriteBackEnabled: false,
+  vcfIgnoreFilenames: [],
+  vcfIgnoreUIDs: [],
+  logLevel: 'INFO',
+};
 
 describe('RelationshipManager Event Handling', () => {
   let mockApp: any;
@@ -25,7 +38,7 @@ describe('RelationshipManager Event Handling', () => {
     mockFile1 = { path: 'contact1.md' };
     mockFile2 = { path: 'contact2.md' };
     
-    manager = new RelationshipManager(mockApp);
+    manager = new RelationshipManager(mockApp, mockSettings);
   });
 
   it('should set up event listeners correctly', () => {
@@ -58,7 +71,7 @@ describe('RelationshipManager Event Handling', () => {
     };
     
     // Should not throw
-    expect(() => new RelationshipManager(appWithoutWorkspace as any)).not.toThrow();
+    expect(() => new RelationshipManager(appWithoutWorkspace as any, mockSettings)).not.toThrow();
   });
 
   it('should handle destroy without errors', () => {

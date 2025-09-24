@@ -1,6 +1,19 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { RelationshipManager } from '../src/relationships/relationshipManager';
 import { RelationshipGraph } from '../src/relationships/relationshipGraph';
+import type { ContactsPluginSettings } from '../src/settings/settings.d';
+
+const mockSettings: ContactsPluginSettings = {
+  contactsFolder: 'Contacts',
+  defaultHashtag: '',
+  vcfWatchFolder: '',
+  vcfWatchEnabled: false,
+  vcfWatchPollingInterval: 30,
+  vcfWriteBackEnabled: false,
+  vcfIgnoreFilenames: [],
+  vcfIgnoreUIDs: [],
+  logLevel: 'INFO',
+};
 
 describe('RelationshipManager Bug Fix', () => {
   let mockApp: any;
@@ -21,7 +34,7 @@ describe('RelationshipManager Bug Fix', () => {
       }
     };
     
-    manager = new RelationshipManager(mockApp);
+    manager = new RelationshipManager(mockApp, mockSettings);
     // Access the private graph property for testing
     graph = (manager as any).graph;
   });
