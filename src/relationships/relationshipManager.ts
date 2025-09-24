@@ -109,6 +109,13 @@ export class RelationshipManager {
   private parseRelatedFromFrontmatter(frontmatter: Record<string, any>): { type: RelationshipType; value: string }[] {
     const related: { type: RelationshipType; value: string }[] = [];
 
+    // Valid relationship types for validation
+    const validRelationshipTypes: RelationshipType[] = [
+      'parent', 'child', 'sibling', 'spouse', 'friend',
+      'colleague', 'relative', 'auncle', 'nibling',
+      'grandparent', 'grandchild', 'cousin', 'partner'
+    ];
+
     for (const [key, value] of Object.entries(frontmatter)) {
       if (key.startsWith('RELATED')) {
         // Extract type from key format: RELATED[type] or RELATED[index:type]
@@ -122,7 +129,18 @@ export class RelationshipManager {
             type = inferred.type;
           }
           
-          related.push({ type: type as RelationshipType, value: String(value) });
+          // Validate that the type is a valid RelationshipType
+          if (!validRelationshipTypes.includes(type as RelationshipType)) {
+            continue; // Skip invalid relationship types
+          }
+          
+          // Check if value is blank/empty
+          const stringValue = String(value || '').trim();
+          if (!stringValue || stringValue === 'null' || stringValue === 'undefined') {
+            continue; // Skip blank values
+          }
+          
+          related.push({ type: type as RelationshipType, value: stringValue });
         }
       }
     }
@@ -345,11 +363,18 @@ export class RelationshipManager {
       }
     }
 
-    // Add new RELATED fields
+    // Add new RELATED fields (only non-blank values)
     for (let i = 0; i < relatedFields.length; i++) {
       const field = relatedFields[i];
+      
+      // Skip fields with blank values
+      const value = String(field.value || '').trim();
+      if (!value) {
+        continue;
+      }
+      
       const key = i === 0 ? `RELATED[${field.type}]` : `RELATED[${i}:${field.type}]`;
-      await updateFrontMatterValue(file, key, field.value, this.app);
+      await updateFrontMatterValue(file, key, value, this.app);
     }
 
     // Update REV timestamp
