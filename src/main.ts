@@ -8,6 +8,7 @@ import { VCFolderWatcher } from "src/services/vcfFolderWatcher";
 import { onSettingsChange } from "src/context/sharedSettingsContext";
 import { setApp, clearApp } from "src/context/sharedAppContext";
 import { loggingService } from "src/services/loggingService";
+import { RelationshipManager } from "src/relationships";
 
 import { ContactsSettingTab, DEFAULT_SETTINGS } from './settings/settings';
 import { ContactsPluginSettings } from  './settings/settings.d';
@@ -15,6 +16,7 @@ import { ContactsPluginSettings } from  './settings/settings.d';
 export default class ContactsPlugin extends Plugin {
 	settings: ContactsPluginSettings;
 	private vcfWatcher: VCFolderWatcher | null = null;
+	private relationshipManager: RelationshipManager | null = null;
 	private settingsUnsubscribe: (() => void) | null = null;
 
 	async onload() {
@@ -32,13 +34,24 @@ export default class ContactsPlugin extends Plugin {
 		this.vcfWatcher = new VCFolderWatcher(this.app, this.settings);
 		await this.vcfWatcher.start();
 
-		// Listen for settings changes to update watcher
+		// Initialize relationship manager
+		this.relationshipManager = new RelationshipManager(this.app, this.settings.contactsFolder);
+		await this.relationshipManager.initialize();
+
+		// Listen for settings changes to update watcher and relationship manager
 		this.settingsUnsubscribe = onSettingsChange(async (newSettings) => {
 			// Update log level when settings change
 			loggingService.setLogLevel(newSettings.logLevel);
 			
 			if (this.vcfWatcher) {
 				await this.vcfWatcher.updateSettings(newSettings);
+			}
+
+			// Reinitialize relationship manager if contacts folder changed
+			if (this.relationshipManager && newSettings.contactsFolder !== this.settings.contactsFolder) {
+				await this.relationshipManager.cleanup();
+				this.relationshipManager = new RelationshipManager(this.app, newSettings.contactsFolder);
+				await this.relationshipManager.initialize();
 			}
 		});
 
@@ -71,6 +84,40 @@ export default class ContactsPlugin extends Plugin {
       },
     });
 
+    // Add relationship management commands
+    this.addCommand({
+      id: 'relationships-rebuild-graph',
+      name: "Rebuild Relationship Graph",
+      callback: async () => {
+        if (this.relationshipManager) {
+          await this.relationshipManager.rebuildGraph();
+          loggingService.info("Relationship graph rebuilt successfully");
+        }
+      },
+    });
+
+    this.addCommand({
+      id: 'relationships-check-consistency',
+      name: "Check Relationship Consistency",
+      callback: async () => {
+        if (this.relationshipManager) {
+          const result = await this.relationshipManager.checkConsistency();
+          const message = `Consistency check: ${result.totalContacts} contacts, ${result.inconsistentContacts.length} inconsistent, ${result.missingReciprocals.length} missing reciprocals, ${result.duplicateEdges.length} duplicates`;
+          loggingService.info(message);
+        }
+      },
+    });
+
+    this.addCommand({
+      id: 'relationships-fix-consistency',
+      name: "Fix Relationship Consistency",
+      callback: async () => {
+        if (this.relationshipManager) {
+          await this.relationshipManager.fixConsistency();
+          loggingService.info("Relationship consistency issues fixed");
+        }
+      },
+    });
 
 	}
 
@@ -82,6 +129,12 @@ export default class ContactsPlugin extends Plugin {
 		if (this.vcfWatcher) {
 			this.vcfWatcher.stop();
 			this.vcfWatcher = null;
+		}
+
+		// Clean up relationship manager
+		if (this.relationshipManager) {
+			this.relationshipManager.cleanup();
+			this.relationshipManager = null;
 		}
 
 		// Unsubscribe from settings changes

@@ -15,11 +15,23 @@ ORG: Wayne Enterprises
 "ADR[HOME].POSTAL": "10001"
 "ADR[HOME].COUNTRY": USA
 CATEGORIES: Detective, Billionaire, Vigilante
+GENDER: M
+"RELATED[friend]": 
+  - name:Clark Kent
+  - name:Diana Prince
+"RELATED[colleague]":
+  - name:Jim Gordon
 VERSION: "4.0"
 UID: urn:uuid:019730a76c14a-4d32-a36e-a0f5dbf86fa3
+REV: 20250115T153900Z
 ---
-#### Notes
 
+## Related
+- friend [[Clark Kent]]
+- friend [[Diana Prince]]
+- colleague [[Jim Gordon]]
+
+#### Notes
 
 
 #Contact #Detective # Billionaire # Vigilante
