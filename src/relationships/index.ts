@@ -12,3 +12,4 @@ export * from './relationshipGraph';
 export * from './contactUtils';
 export * from './relationshipManager';
 export * from './relationshipUtils';
+export * from './relationshipEventHandler';

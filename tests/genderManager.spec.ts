@@ -2,7 +2,7 @@
  * Tests for the GenderManager functionality
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { GenderManager } from '../src/relationships/genderManager';
 
 describe('GenderManager', () => {
@@ -30,8 +30,8 @@ describe('GenderManager', () => {
     });
 
     it('should handle case insensitive input', () => {
-      expect(manager.encodeToGenderless('MOTHER')).toBe('parent');
-      expect(manager.encodeToGenderless('Mother')).toBe('parent');
+      expect(manager.encodeToGenderless('MOTHER' as any)).toBe('parent');
+      expect(manager.encodeToGenderless('Mother' as any)).toBe('parent');
     });
   });
 

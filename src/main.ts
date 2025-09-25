@@ -60,9 +60,7 @@ export default class ContactsPlugin extends Plugin {
 
 			// Update relationship manager settings
 			if (this.relationshipManager) {
-				// Recreate relationship manager with new settings
-				this.relationshipManager = new RelationshipManager(this.app, newSettings);
-				await this.relationshipManager.initializeGraph();
+				this.relationshipManager.updateSettings(newSettings);
 			}
 		});
 
@@ -186,6 +184,7 @@ export default class ContactsPlugin extends Plugin {
 
 		// Clean up relationship manager
 		if (this.relationshipManager) {
+			this.relationshipManager.stop();
 			this.relationshipManager = null;
 		}
 

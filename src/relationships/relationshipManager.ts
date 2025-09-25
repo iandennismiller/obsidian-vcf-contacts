@@ -7,6 +7,7 @@ import { ContactsPluginSettings } from '../settings/settings.d';
 import { RelationshipGraph } from './relationshipGraph';
 import { GenderManager } from './genderManager';
 import { ContactUtils } from './contactUtils';
+import { RelationshipEventHandler } from './relationshipEventHandler';
 import { 
   ContactNote, 
   RelationshipUpdate, 
@@ -33,6 +34,7 @@ export class RelationshipManager {
   private graph: RelationshipGraph;
   private genderManager: GenderManager;
   private contactUtils: ContactUtils;
+  private eventHandler: RelationshipEventHandler | null = null;
   private isInitialized = false;
   private globalLock = false;
 
@@ -81,6 +83,12 @@ export class RelationshipManager {
 
       console.log(`Graph initialized with ${this.graph.getStats().nodes} nodes and ${this.graph.getStats().edges} relationships`);
       this.isInitialized = true;
+
+      // Initialize event handler for automatic sync after graph is ready
+      if (!this.eventHandler) {
+        this.eventHandler = new RelationshipEventHandler(this.app, this.settings, this);
+        this.eventHandler.start();
+      }
     });
   }
 
@@ -138,8 +146,6 @@ export class RelationshipManager {
       const relatedItems = relatedSection ? parseRelatedSection(relatedSection) : [];
 
       // Process each relationship
-      const newRelationships: RelatedField[] = [];
-      
       for (const item of relatedItems) {
         const genderInfo = this.genderManager.inferGenderFromRelationship(item.type);
         const genderlessKind = genderInfo.genderlessKind;
@@ -194,11 +200,6 @@ export class RelationshipManager {
           await this.syncContactFrontMatter(targetUid);
           await this.syncContactRelatedSection(targetUid);
         }
-
-        newRelationships.push({
-          type: genderlessKind,
-          value: this.graph.parseRelatedValue(`uid:${targetUid}`) || `uid:${targetUid}`
-        });
       }
 
       // Update this contact's front matter and Related section
@@ -359,6 +360,36 @@ export class RelationshipManager {
   async rebuildGraph(): Promise<void> {
     this.isInitialized = false;
     await this.initializeGraph();
+  }
+
+  /**
+   * Stop the relationship manager and clean up event handlers
+   */
+  stop(): void {
+    if (this.eventHandler) {
+      this.eventHandler.stop();
+      this.eventHandler = null;
+    }
+    this.isInitialized = false;
+  }
+
+  /**
+   * Update settings and restart components as needed
+   */
+  updateSettings(newSettings: ContactsPluginSettings): void {
+    this.settings = newSettings;
+    this.contactUtils = new ContactUtils(this.app, newSettings);
+    
+    if (this.eventHandler) {
+      this.eventHandler.updateSettings(newSettings);
+    }
+  }
+
+  /**
+   * Remove a contact from the graph (exposed for event handler)
+   */
+  removeContactFromGraph(uid: string): void {
+    this.graph.removeNode(uid);
   }
 
   /**
