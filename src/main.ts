@@ -8,6 +8,7 @@ import { VCFolderWatcher } from "src/services/vcfFolderWatcher";
 import { onSettingsChange } from "src/context/sharedSettingsContext";
 import { setApp, clearApp } from "src/context/sharedAppContext";
 import { loggingService } from "src/services/loggingService";
+import { RelationshipManager } from "src/relationships/relationshipManager";
 
 import { ContactsSettingTab, DEFAULT_SETTINGS } from './settings/settings';
 import { ContactsPluginSettings } from  './settings/settings.d';
@@ -15,6 +16,7 @@ import { ContactsPluginSettings } from  './settings/settings.d';
 export default class ContactsPlugin extends Plugin {
 	settings: ContactsPluginSettings;
 	private vcfWatcher: VCFolderWatcher | null = null;
+	private relationshipManager: RelationshipManager | null = null;
 	private settingsUnsubscribe: (() => void) | null = null;
 
 	async onload() {
@@ -31,6 +33,10 @@ export default class ContactsPlugin extends Plugin {
 		// Initialize VCF folder watcher
 		this.vcfWatcher = new VCFolderWatcher(this.app, this.settings);
 		await this.vcfWatcher.start();
+
+		// Initialize relationship management
+		this.relationshipManager = new RelationshipManager(this.app, this.settings);
+		await this.relationshipManager.initializeFromVault();
 
 		// Listen for settings changes to update watcher
 		this.settingsUnsubscribe = onSettingsChange(async (newSettings) => {
@@ -84,6 +90,9 @@ export default class ContactsPlugin extends Plugin {
 			this.vcfWatcher = null;
 		}
 
+		// Clean up relationship manager
+		this.relationshipManager = null;
+
 		// Unsubscribe from settings changes
 		if (this.settingsUnsubscribe) {
 			this.settingsUnsubscribe();
@@ -116,5 +125,12 @@ export default class ContactsPlugin extends Plugin {
 
     await this.app.workspace.revealLeaf(leaf);
     return leaf.view as ContactsView;
+	}
+
+	/**
+	 * Get the relationship manager instance (for external access)
+	 */
+	getRelationshipManager(): RelationshipManager | null {
+		return this.relationshipManager;
 	}
 }

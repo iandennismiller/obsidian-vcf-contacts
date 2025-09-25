@@ -7,6 +7,7 @@ import { RelationshipEventHandler } from './relationshipEventHandler';
 import { ContactUtils } from './contactUtils';
 import { RelationshipSet } from './relationshipSet';
 import { getReciprocalRelationshipType } from './genderUtils';
+import { loggingService } from '../services/loggingService';
 
 /**
  * Main orchestrator for relationship management - coordinates between different modules
@@ -41,24 +42,24 @@ export class RelationshipManager {
    */
   async initializeFromVault(): Promise<void> {
     return this.eventHandler.withGlobalLock(async () => {
-      console.log('[RelationshipManager] Starting comprehensive initialization and sync...');
+      loggingService.info('[RelationshipManager] Starting comprehensive initialization and sync...');
       
       const contactFiles = this.contactUtils.getAllContactFiles();
 
-      console.log(`[RelationshipManager] Found ${contactFiles.length} potential contact files`);
+      loggingService.info(`[RelationshipManager] Found ${contactFiles.length} potential contact files`);
 
       // PHASE 1: Load all contacts into graph (contacts first, relationships after)
-      console.log('[RelationshipManager] PHASE 1: Building relationship graph from front matter...');
+      loggingService.info('[RelationshipManager] PHASE 1: Building relationship graph from front matter...');
 
       // First pass: Load all contacts into the graph
       for (const file of contactFiles) {
         await this.loadContactIntoGraph(file);
       }
       
-      console.log(`[RelationshipManager] Loaded ${this.graph.getAllContacts().length} contacts into graph`);
+      loggingService.info(`[RelationshipManager] Loaded ${this.graph.getAllContacts().length} contacts into graph`);
       
       // Second pass: Add relationships now that all contacts exist in the graph
-      console.log('[RelationshipManager] Adding relationships from front matter...');
+      loggingService.info('[RelationshipManager] Adding relationships from front matter...');
       let addedRelationships = 0;
       
       for (const file of contactFiles) {
@@ -66,18 +67,18 @@ export class RelationshipManager {
         addedRelationships += addedCount;
       }
       
-      console.log(`[RelationshipManager] Added ${addedRelationships} relationships from front matter`);
+      loggingService.info(`[RelationshipManager] Added ${addedRelationships} relationships from front matter`);
 
       // PHASE 2: Comprehensive sync
-      console.log('[RelationshipManager] PHASE 2: Performing comprehensive sync...');
+      loggingService.info('[RelationshipManager] PHASE 2: Performing comprehensive sync...');
       await this.performComprehensiveSync(contactFiles);
 
       // PHASE 3: Find and correct missing reciprocals
-      console.log('[RelationshipManager] PHASE 3: Finding and correcting missing reciprocal relationships...');
+      loggingService.info('[RelationshipManager] PHASE 3: Finding and correcting missing reciprocal relationships...');
       await this.findAndCorrectMissingReciprocals();
 
       const stats = this.graph.getStats();
-      console.log(`[RelationshipManager] Initialization complete. Graph stats: ${stats.contacts} contacts, ${stats.relationships} relationships`);
+      loggingService.info(`[RelationshipManager] Initialization complete. Graph stats: ${stats.contacts} contacts, ${stats.relationships} relationships`);
     });
   }
 
@@ -86,7 +87,7 @@ export class RelationshipManager {
    * Examines Related lists and ensures they are reflected in graph and front matter
    */
   private async performComprehensiveSync(contactFiles: TFile[]): Promise<void> {
-    console.log('[RelationshipManager] Starting comprehensive sync of Related lists...');
+    loggingService.info('[RelationshipManager] Starting comprehensive sync of Related lists...');
     
     let processedFiles = 0;
     let totalRelationshipsFound = 0;
@@ -103,7 +104,7 @@ export class RelationshipManager {
         const parseResult = this.contentParser.parseRelatedList(content);
 
         if (parseResult.relationships.length > 0) {
-          console.log(`[RelationshipManager] Found ${parseResult.relationships.length} relationships in Related list for: ${file.path}`);
+          loggingService.info(`[RelationshipManager] Found ${parseResult.relationships.length} relationships in Related list for: ${file.path}`);
           totalRelationshipsFound += parseResult.relationships.length;
 
           // Sync Related list to graph
@@ -115,11 +116,11 @@ export class RelationshipManager {
 
         processedFiles++;
       } catch (error) {
-        console.warn(`[RelationshipManager] Error processing file ${file.path}:`, error);
+        loggingService.warning(`[RelationshipManager] Error processing file ${file.path}: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
 
-    console.log(`[RelationshipManager] Comprehensive sync complete. Processed ${processedFiles} files, found ${totalRelationshipsFound} relationships in Related lists`);
+    loggingService.info(`[RelationshipManager] Comprehensive sync complete. Processed ${processedFiles} files, found ${totalRelationshipsFound} relationships in Related lists`);
   }
 
   /**
@@ -127,7 +128,7 @@ export class RelationshipManager {
    * Ensures all relationships in the graph are bidirectional and reflected in both contacts
    */
   private async findAndCorrectMissingReciprocals(sourceUIDs: string[] = []): Promise<void> {
-    console.log('[RelationshipManager] Checking for missing reciprocal relationships...');
+    loggingService.info('[RelationshipManager] Checking for missing reciprocal relationships...');
     
     const contactFilesByUID = new Map<string, TFile>();
     for (const file of this.contactUtils.getAllContactFiles()) {
@@ -155,14 +156,14 @@ export class RelationshipManager {
           );
 
           if (!hasReciprocal) {
-            console.log(`[RelationshipManager] Adding missing reciprocal: ${targetUID} -[${reciprocalType}]-> ${sourceUID}`);
+            loggingService.info(`[RelationshipManager] Adding missing reciprocal: ${targetUID} -[${reciprocalType}]-> ${sourceUID}`);
             
             try {
               // Add to graph
               this.graph.addRelationship(targetUID, sourceUID, reciprocalType!);
-              console.log(`[RelationshipManager] Added reciprocal relationship: ${targetUID} -[${reciprocalType}]-> ${sourceUID}`);
+              loggingService.info(`[RelationshipManager] Added reciprocal relationship: ${targetUID} -[${reciprocalType}]-> ${sourceUID}`);
             } catch (error) {
-              console.warn(`[RelationshipManager] Failed to add reciprocal relationship ${targetUID} -[${reciprocalType}]-> ${sourceUID}: ${error instanceof Error ? error.message : String(error)}`);
+              loggingService.warning(`[RelationshipManager] Failed to add reciprocal relationship ${targetUID} -[${reciprocalType}]-> ${sourceUID}: ${error instanceof Error ? error.message : String(error)}`);
               continue;
             }
 
@@ -173,7 +174,7 @@ export class RelationshipManager {
                 await this.syncManager.updateFrontmatterFromGraph(targetFile, targetUID);
                 correctedRelationships++;
               } catch (error) {
-                console.warn(`[RelationshipManager] Failed to update frontmatter for reciprocal relationship in ${targetFile.path}:`, error);
+                loggingService.warning(`[RelationshipManager] Failed to update frontmatter for reciprocal relationship in ${targetFile.path}: ${error instanceof Error ? error.message : String(error)}`);
               }
             }
           }
@@ -181,7 +182,7 @@ export class RelationshipManager {
       }
     }
 
-    console.log(`[RelationshipManager] Corrected ${correctedRelationships} missing reciprocal relationships`);
+    loggingService.info(`[RelationshipManager] Corrected ${correctedRelationships} missing reciprocal relationships`);
   }
 
   /**
@@ -194,7 +195,7 @@ export class RelationshipManager {
     const gender = cache?.frontmatter?.GENDER as Gender;
 
     if (!uid || !fullName) {
-      console.warn(`[RelationshipManager] Skipping file without UID or FN: ${file.path}`);
+      loggingService.warning(`[RelationshipManager] Skipping file without UID or FN: ${file.path}`);
       return;
     }
 
@@ -221,7 +222,7 @@ export class RelationshipManager {
           this.graph.addRelationship(uid, targetUid, field.type);
           addedCount++;
         } catch (error) {
-          console.warn(`[RelationshipManager] Failed to add relationship from frontmatter: ${uid} -> ${targetUid} (${field.type})`, error);
+          loggingService.warning(`[RelationshipManager] Failed to add relationship from frontmatter: ${uid} -> ${targetUid} (${field.type}) - ${error instanceof Error ? error.message : String(error)}`);
         }
       } else if (targetUid) {
         // Store pending relationship for later processing
@@ -288,10 +289,10 @@ export class RelationshipManager {
       const updatedContent = lines.join('\n');
       if (updatedContent !== content) {
         await this.app.vault.modify(file, updatedContent);
-        console.log(`[RelationshipManager] Added relationship to Related list in: ${file.path}`);
+        loggingService.info(`[RelationshipManager] Added relationship to Related list in: ${file.path}`);
       }
     } catch (error) {
-      console.error(`[RelationshipManager] Error updating Related list in ${file.path}:`, error);
+      loggingService.error(`[RelationshipManager] Error updating Related list in ${file.path}: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 

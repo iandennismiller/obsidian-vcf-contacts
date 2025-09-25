@@ -2,6 +2,8 @@ import { App, TFile } from 'obsidian';
 import { RelationshipGraph, Gender, RelationshipType } from './relationshipGraph';
 import { RelationshipContentParser, ParsedRelationship } from './relationshipContentParser';
 import { RelationshipSet } from './relationshipSet';
+import { updateFrontMatterValue } from '../contacts/contactFrontmatter';
+import { loggingService } from '../services/loggingService';
 
 /**
  * Manages sync operations between Related lists, front matter, and the relationship graph
@@ -52,12 +54,12 @@ export class RelationshipSyncManager {
       // Convert back to frontmatter fields and update
       const frontMatterFields = existingSet.toFrontMatterFields();
       for (const [key, value] of Object.entries(frontMatterFields)) {
-        await this.updateFrontMatterValue(file, key, value);
+        await updateFrontMatterValue(file, key, value, this.app);
       }
 
-      console.log(`[RelationshipSyncManager] Updated front matter for: ${file.path} (${existingSet.size()} total relationships, ${addedCount} new)`);
+      loggingService.info(`[RelationshipSyncManager] Updated front matter for: ${file.path} (${existingSet.size()} total relationships, ${addedCount} new)`);
     } else {
-      console.log(`[RelationshipSyncManager] No relationships to write to front matter for: ${file.path}`);
+      loggingService.info(`[RelationshipSyncManager] No relationships to write to front matter for: ${file.path}`);
     }
 
     // Update REV timestamp
@@ -75,7 +77,7 @@ export class RelationshipSyncManager {
     const relatedFields = this.graph.contactToRelatedFields(uid);
     
     if (relatedFields.length === 0) {
-      console.log(`[RelationshipSyncManager] No relationships to sync for: ${file.path}`);
+      loggingService.info(`[RelationshipSyncManager] No relationships to sync for: ${file.path}`);
       return;
     }
 
@@ -90,7 +92,7 @@ export class RelationshipSyncManager {
 
     if (updatedContent !== content) {
       await this.app.vault.modify(file, updatedContent);
-      console.log(`[RelationshipSyncManager] Updated Related list for: ${file.path}`);
+      loggingService.info(`[RelationshipSyncManager] Updated Related list for: ${file.path}`);
     }
   }
 
@@ -107,7 +109,7 @@ export class RelationshipSyncManager {
         try {
           this.graph.addRelationship(uid, targetUid, rel.type);
         } catch (error) {
-          console.warn(`[RelationshipSyncManager] Failed to add relationship ${uid} -> ${targetUid} (${rel.type}):`, error);
+          loggingService.warning(`[RelationshipSyncManager] Failed to add relationship ${uid} -> ${targetUid} (${rel.type}): ${error instanceof Error ? error.message : String(error)}`);
         }
       }
     }
@@ -120,7 +122,7 @@ export class RelationshipSyncManager {
     const graphRelatedFields = this.graph.contactToRelatedFields(uid);
     
     if (graphRelatedFields.length === 0) {
-      console.log(`[RelationshipSyncManager] No graph relationships to sync for: ${file.path}`);
+      loggingService.info(`[RelationshipSyncManager] No graph relationships to sync for: ${file.path}`);
       return;
     }
 
@@ -139,20 +141,20 @@ export class RelationshipSyncManager {
       const existingFields = existingSet.toFrontMatterFields();
       for (const key of Object.keys(existingFields)) {
         if (key.startsWith('RELATED.')) {
-          await this.updateFrontMatterValue(file, key, '');
+          await updateFrontMatterValue(file, key, '', this.app);
         }
       }
 
       // Add merged and sanitized RELATED fields
       const frontMatterFields = mergedSet.toFrontMatterFields();
       for (const [key, value] of Object.entries(frontMatterFields)) {
-        await this.updateFrontMatterValue(file, key, value);
+        await updateFrontMatterValue(file, key, value, this.app);
       }
       
       const addedCount = mergedSet.size() - existingSet.size();
-      console.log(`[RelationshipSyncManager] Updated front matter for: ${file.path} (added ${addedCount} new relationships)`);
+      loggingService.info(`[RelationshipSyncManager] Updated front matter for: ${file.path} (added ${addedCount} new relationships)`);
     } else {
-      console.log(`[RelationshipSyncManager] No front matter updates needed for: ${file.path}`);
+      loggingService.info(`[RelationshipSyncManager] No front matter updates needed for: ${file.path}`);
     }
 
     // Update REV timestamp
@@ -196,7 +198,7 @@ export class RelationshipSyncManager {
     // Create a stub contact for now (should be handled by the calling code)
     const stubUid = `stub-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     this.graph.addContact(stubUid, name);
-    console.warn(`[RelationshipSyncManager] Created stub contact for: ${name} (${stubUid})`);
+    loggingService.warning(`[RelationshipSyncManager] Created stub contact for: ${name} (${stubUid})`);
     
     return stubUid;
   }
@@ -258,66 +260,10 @@ export class RelationshipSyncManager {
   }
 
   /**
-   * Update a frontmatter value
-   */
-  private async updateFrontMatterValue(file: TFile, key: string, value: string): Promise<void> {
-    // This is a simplified implementation - in a real plugin you'd use the app's frontmatter API
-    const content = await this.app.vault.read(file);
-    const lines = content.split('\n');
-    
-    // Find frontmatter section
-    let fmStart = -1;
-    let fmEnd = -1;
-    
-    for (let i = 0; i < lines.length; i++) {
-      if (lines[i].trim() === '---') {
-        if (fmStart === -1) {
-          fmStart = i;
-        } else {
-          fmEnd = i;
-          break;
-        }
-      }
-    }
-
-    if (fmStart === -1 || fmEnd === -1) {
-      // No frontmatter found, add it
-      if (value.trim()) {
-        const newFrontmatter = ['---', `${key}: "${value}"`, '---', ''];
-        await this.app.vault.modify(file, newFrontmatter.join('\n') + content);
-      }
-      return;
-    }
-
-    // Update existing frontmatter
-    const frontmatterLines = lines.slice(fmStart + 1, fmEnd);
-    const otherLines = [...lines.slice(0, fmStart + 1), ...lines.slice(fmEnd)];
-    
-    // Remove existing key if present
-    const filteredFmLines = frontmatterLines.filter(line => {
-      const lineKey = line.split(':')[0]?.trim().replace(/^["']|["']$/g, '');
-      return lineKey !== key;
-    });
-
-    // Add new value if not empty
-    if (value.trim()) {
-      filteredFmLines.push(`${key}: "${value}"`);
-    }
-
-    const newContent = [
-      ...lines.slice(0, fmStart + 1),
-      ...filteredFmLines,
-      ...lines.slice(fmEnd)
-    ].join('\n');
-
-    await this.app.vault.modify(file, newContent);
-  }
-
-  /**
    * Update REV timestamp in frontmatter
    */
   private async updateRevTimestamp(file: TFile): Promise<void> {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '').replace('T', '').slice(0, -1);
-    await this.updateFrontMatterValue(file, 'REV', timestamp);
+    await updateFrontMatterValue(file, 'REV', timestamp, this.app);
   }
 }
