@@ -38,6 +38,7 @@ A powerful way to manage, link, and export contact data directly within [Obsidia
       + [🏠 Address Fields](#-address-fields)
       + [🌐 Online Presence](#-online-presence)
       + [🖼️ Profile Photo](#-profile-photo)
+      + [🔗 Relationships](#-relationships)
       + [🗂️ Categorization & Metadata](#-categorization-metadata)
    * [🚀 Why This Format? Why a Plugin for Obsidian?](#-why-this-format-why-a-plugin-for-obsidian)
    * [🙏 Acknowledgements](#-acknowledgements)
@@ -358,6 +359,21 @@ Photo's avatars can also be imported from file and will be resized so that they 
 ---
 
 <!-- TOC --><a name="-categorization-metadata"></a>
+### 🔗 Relationships
+
+The plugin supports comprehensive relationship management using vCard 4.0 RELATED fields:
+
+| **vCard Field** | **Readable Name**     | **Example**                                |
+|-----------------|----------------------|--------------------------------------------|
+| `RELATED.SPOUSE` | Spouse/Partner       | `urn:uuid:550e8400-e29b-41d4-a716-446655440000` |
+| `RELATED.CHILD`  | Child                | `uid:john-smith-contact`                   |
+| `RELATED.PARENT` | Parent               | `name:Jane Doe`                            |
+| `RELATED.*`      | Various Relationships | `sibling`, `colleague`, `friend`, etc.     |
+
+👉 **For comprehensive relationship documentation, see**: [vCard Relationships Guide](assets/docs/vcard_relationships.md)
+
+---
+
 ### 🗂️ Categorization & Metadata
 
 | **vCard Field** | **Readable Name**         | **Example**                        |
