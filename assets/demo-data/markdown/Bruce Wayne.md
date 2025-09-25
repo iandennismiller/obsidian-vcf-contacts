@@ -19,16 +19,18 @@ GENDER: M
 "RELATED[friend]": 
   - name:Clark Kent
   - name:Diana Prince
+  - urn:uuid:019730a76c09e-4768-b9bc-f4e7ff3b8b8d
 "RELATED[colleague]":
   - name:Jim Gordon
 VERSION: "4.0"
 UID: urn:uuid:019730a76c14a-4d32-a36e-a0f5dbf86fa3
-REV: 20250115T153900Z
+REV: 20250115T154500Z
 ---
 
 ## Related
 - friend [[Clark Kent]]
 - friend [[Diana Prince]]
+- friend [[Tony Stark]]
 - colleague [[Jim Gordon]]
 
 #### Notes
