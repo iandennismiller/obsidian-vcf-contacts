@@ -8,6 +8,7 @@ import { VCFolderWatcher } from "src/services/vcfFolderWatcher";
 import { onSettingsChange } from "src/context/sharedSettingsContext";
 import { setApp, clearApp } from "src/context/sharedAppContext";
 import { loggingService } from "src/services/loggingService";
+import { RelationshipManager } from "src/relationships";
 
 import { ContactsSettingTab, DEFAULT_SETTINGS } from './settings/settings';
 import { ContactsPluginSettings } from  './settings/settings.d';
@@ -16,6 +17,7 @@ export default class ContactsPlugin extends Plugin {
 	settings: ContactsPluginSettings;
 	private vcfWatcher: VCFolderWatcher | null = null;
 	private settingsUnsubscribe: (() => void) | null = null;
+	private relationshipManager: RelationshipManager | null = null;
 
 	async onload() {
 		// Set up app context for shared utilities
@@ -31,6 +33,10 @@ export default class ContactsPlugin extends Plugin {
 		// Initialize VCF folder watcher
 		this.vcfWatcher = new VCFolderWatcher(this.app, this.settings);
 		await this.vcfWatcher.start();
+
+		// Initialize relationship management system
+		this.relationshipManager = new RelationshipManager(this.app, this.settings);
+		await this.relationshipManager.initialize();
 
 		// Listen for settings changes to update watcher
 		this.settingsUnsubscribe = onSettingsChange(async (newSettings) => {
@@ -71,12 +77,30 @@ export default class ContactsPlugin extends Plugin {
       },
     });
 
+    // Add relationship management commands
+    this.addCommand({
+      id: 'relationships-rebuild-graph',
+      name: "Rebuild Relationship Graph",
+      callback: async () => {
+        if (this.relationshipManager) {
+          await this.relationshipManager.rebuildGraph();
+          // TODO: Show completion notice
+        }
+      },
+    });
+
 
 	}
 
 	onunload() {
 		// Clean up app context
 		clearApp();
+
+		// Clean up relationship management system
+		if (this.relationshipManager) {
+			this.relationshipManager.destroy();
+			this.relationshipManager = null;
+		}
 
 		// Clean up VCF folder watcher
 		if (this.vcfWatcher) {
