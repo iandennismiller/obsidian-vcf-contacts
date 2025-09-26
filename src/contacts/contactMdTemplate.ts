@@ -1,5 +1,6 @@
 import { stringifyYaml } from "obsidian";
 import { extractRelationshipType, parseRelatedValue } from "src/util/relatedFieldUtils";
+import { parseGender, getGenderedRelationshipTerm, type Gender } from "src/util/genderUtils";
 
 const nameKeys = ["N", "FN"];
 const priorityKeys = [
@@ -68,7 +69,7 @@ function sortedPriorityItems(record: Record<string, any>)  {
   );
 }
 
-function generateRelatedList(record: Record<string, any>): string {
+function generateRelatedList(record: Record<string, any>, genderLookup?: (contactRef: string) => Gender): string {
   const relatedFields = Object.entries(record).filter(([key]) => 
     extractBaseKey(key) === 'RELATED'
   );
@@ -78,7 +79,7 @@ function generateRelatedList(record: Record<string, any>): string {
   }
 
   // Parse RELATED fields and generate markdown list
-  const relationships: { type: string; contact: string }[] = [];
+  const relationships: { type: string; contact: string; displayType: string }[] = [];
   
   relatedFields.forEach(([key, value]) => {
     const type = extractRelationshipType(key);
@@ -95,23 +96,35 @@ function generateRelatedList(record: Record<string, any>): string {
       }
     }
     
-    relationships.push({ type, contact });
+    // Apply gender-aware relationship term if gender lookup is available
+    let displayType = type;
+    if (genderLookup) {
+      try {
+        const contactGender = genderLookup(contact);
+        displayType = getGenderedRelationshipTerm(type, contactGender);
+      } catch {
+        // If gender lookup fails, use the original type
+        displayType = type;
+      }
+    }
+    
+    relationships.push({ type, contact, displayType });
   });
 
-  // Sort relationships for consistent display
+  // Sort relationships for consistent display (by display type, then contact)
   relationships.sort((a, b) => {
-    if (a.type !== b.type) return a.type.localeCompare(b.type);
+    if (a.displayType !== b.displayType) return a.displayType.localeCompare(b.displayType);
     return a.contact.localeCompare(b.contact);
   });
 
   const listItems = relationships.map(rel => 
-    `- ${rel.type} [[${rel.contact}]]`
+    `- ${rel.displayType} [[${rel.contact}]]`
   ).join('\n');
 
   return `\n## Related\n${listItems}\n`;
 }
 
-export function mdRender(record: Record<string, any>, hashtags: string): string {
+export function mdRender(record: Record<string, any>, hashtags: string, genderLookup?: (contactRef: string) => Gender): string {
 	const { NOTE, ...recordWithoutNote } = record;
   const groups = groupVCardFields(recordWithoutNote)
 	const myNote = NOTE ? NOTE.replace(/\\n/g, `
@@ -130,8 +143,8 @@ export function mdRender(record: Record<string, any>, hashtags: string): string 
 		...groups.other
 	};
 
-  // Generate Related section from RELATED fields
-  const relatedSection = generateRelatedList(recordWithoutNote);
+  // Generate Related section from RELATED fields with optional gender-aware rendering
+  const relatedSection = generateRelatedList(recordWithoutNote, genderLookup);
 
 	return `---
 ${stringifyYaml(frontmatter)}---
