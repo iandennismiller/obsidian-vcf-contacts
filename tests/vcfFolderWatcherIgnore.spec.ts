@@ -45,10 +45,10 @@ vi.mock('obsidian', () => ({
 }));
 
 // Mock other dependencies
-vi.mock('src/contacts/vcard', () => ({
-  vcard: {
+vi.mock('src/contacts/vcardFile', () => ({
+  VcardFile: vi.fn().mockImplementation((data) => ({
     parse: vi.fn()
-  }
+  }))
 }));
 
 vi.mock('src/file/file', () => ({
