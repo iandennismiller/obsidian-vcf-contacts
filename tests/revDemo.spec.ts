@@ -1,7 +1,8 @@
-// @vitest-skip - Deprecated: This test was for individual utility modules that have been consolidated into ContactNote
-import.meta.env.VITEST_SKIP = true;
+import { ContactNote } from 'src/contacts/contactNote';
+
+// Create a test ContactNote instance for testing static methods
+const createTestContactNote = () => new ContactNote(null as any, null as any, null as any);
 import { describe, it, expect, vi } from 'vitest';
-import { generateRevTimestamp } from 'src/contacts/contactFrontmatter';
 
 describe('REV field demonstration', () => {
   it('should demonstrate REV timestamp format', () => {
@@ -9,7 +10,7 @@ describe('REV field demonstration', () => {
     const mockDate = new Date('2025-09-23T23:19:28.000Z');
     vi.spyOn(global, 'Date').mockImplementation(() => mockDate);
     
-    const revTimestamp = generateRevTimestamp();
+    const revTimestamp = contactNote.generateRevTimestamp();
     
     console.log('Generated REV timestamp:', revTimestamp);
     console.log('Format breakdown:');
@@ -27,7 +28,7 @@ describe('REV field demonstration', () => {
   });
   
   it('should demonstrate REV format specification', () => {
-    const timestamp = generateRevTimestamp();
+    const timestamp = contactNote.generateRevTimestamp();
     
     // Verify format: YYYYMMDDTHHMMSSZ
     expect(timestamp).toHaveLength(16);

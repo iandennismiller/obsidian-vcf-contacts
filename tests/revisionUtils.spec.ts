@@ -1,5 +1,7 @@
-// @vitest-skip - Deprecated: This test was for individual utility modules that have been consolidated into ContactNote
-import.meta.env.VITEST_SKIP = true;
+import { ContactNote } from 'src/contacts/contactNote';
+
+// Create a test ContactNote instance for testing static methods
+const createTestContactNote = () => new ContactNote(null as any, null as any, null as any);
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TFile, App } from 'obsidian';
 import { RevisionUtils } from '../src/contacts/revisionUtils';
@@ -32,6 +34,7 @@ describe('RevisionUtils', () => {
 
   describe('Revision Date Parsing', () => {
     it('should parse vCard format dates correctly', () => {
+      const contactNote = createTestContactNote();
       const vcardDate = '20240315T143000Z';
       const parsed = revisionUtils.parseRevisionDate(vcardDate);
       
@@ -45,6 +48,7 @@ describe('RevisionUtils', () => {
     });
 
     it('should parse ISO 8601 format dates correctly', () => {
+      const contactNote = createTestContactNote();
       const isoDate = '2024-03-15T14:30:00Z';
       const parsed = revisionUtils.parseRevisionDate(isoDate);
       
@@ -55,6 +59,7 @@ describe('RevisionUtils', () => {
     });
 
     it('should handle vCard format without Z suffix', () => {
+      const contactNote = createTestContactNote();
       const vcardDate = '20240315T143000';
       const parsed = revisionUtils.parseRevisionDate(vcardDate);
       
@@ -63,11 +68,13 @@ describe('RevisionUtils', () => {
     });
 
     it('should return null for empty strings', () => {
+      const contactNote = createTestContactNote();
       expect(revisionUtils.parseRevisionDate('')).toBeNull();
       expect(revisionUtils.parseRevisionDate(undefined)).toBeNull();
     });
 
     it('should return null for invalid date strings', () => {
+      const contactNote = createTestContactNote();
       const invalidDates = [
         'invalid-date',
         '2024-13-40T25:99:99Z', // Invalid date components
@@ -81,6 +88,7 @@ describe('RevisionUtils', () => {
     });
 
     it('should handle various date format edge cases', () => {
+      const contactNote = createTestContactNote();
       const testCases = [
         { input: '20240229T120000Z', expected: true },  // Leap year
         { input: '20241231T235959Z', expected: true },  // End of year
