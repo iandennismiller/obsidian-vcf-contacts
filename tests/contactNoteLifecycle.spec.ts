@@ -1,0 +1,854 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { TFile, App } from 'obsidian';
+import {
+  parseRelatedSection,
+  syncRelatedListToFrontmatter,
+  resolveContact
+} from 'src/util/relatedListSync';
+import { convertToGenderlessType } from 'src/util/genderUtils';
+
+// Mock dependencies
+vi.mock('obsidian', () => ({
+  TFile: vi.fn(),
+  App: vi.fn(),
+  parseYaml: vi.fn(),
+  stringifyYaml: vi.fn(),
+  Notice: vi.fn()
+}));
+
+vi.mock('src/services/loggingService', () => ({
+  loggingService: {
+    info: vi.fn(),
+    debug: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn()
+  }
+}));
+
+vi.mock('src/contacts/contactFrontmatter', () => ({
+  updateMultipleFrontMatterValues: vi.fn(),
+  updateFrontMatterValue: vi.fn()
+}));
+
+vi.mock('src/util/relatedFieldUtils', () => ({
+  formatRelatedValue: vi.fn((uid: string, name: string) => {
+    if (uid) {
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (uuidRegex.test(uid)) {
+        return `urn:uuid:${uid}`;
+      }
+      return `uid:${uid}`;
+    }
+    return `name:${name}`;
+  })
+}));
+
+vi.mock('src/context/sharedAppContext', () => ({
+  getApp: vi.fn()
+}));
+
+describe('Contact Note Lifecycle - Relationship Management', () => {
+  let mockApp: any;
+  let mockFile: TFile;
+  let mockContactsFolder: string;
+  
+  beforeEach(() => {
+    vi.clearAllMocks();
+    
+    mockApp = {
+      vault: {
+        read: vi.fn(),
+        modify: vi.fn(),
+        getAbstractFileByPath: vi.fn()
+      },
+      metadataCache: {
+        getFileCache: vi.fn()
+      }
+    };
+    
+    mockFile = {
+      path: 'Contacts/John Doe.md',
+      basename: 'John Doe'
+    } as TFile;
+    
+    mockContactsFolder = 'Contacts';
+  });
+
+  describe('Initial Contact Creation', () => {
+    it('should start with a basic contact note with no relationships', async () => {
+      const initialContent = `---
+FN: John Doe
+EMAIL: john@example.com
+UID: urn:uuid:john-doe-123
+GENDER: M
+---
+
+#### Notes
+Initial contact note for John Doe.
+
+## Related
+
+#Contact`;
+
+      mockApp.vault.read.mockResolvedValue(initialContent);
+      mockApp.metadataCache.getFileCache.mockReturnValue({
+        frontmatter: {
+          FN: 'John Doe',
+          EMAIL: 'john@example.com',
+          UID: 'urn:uuid:john-doe-123',
+          GENDER: 'M'
+        }
+      });
+
+      // Parse the empty Related section
+      const relationships = parseRelatedSection(initialContent);
+      expect(relationships).toHaveLength(0);
+      
+      // Sync should complete successfully with no changes
+      const result = await syncRelatedListToFrontmatter(mockApp, mockFile, mockContactsFolder);
+      expect(result.success).toBe(true);
+      expect(result.errors).toHaveLength(0);
+    });
+  });
+
+  describe('Adding First Relationship', () => {
+    it('should add a single relationship to Related list and sync to front matter', async () => {
+      const contentWithOneRelationship = `---
+FN: John Doe
+EMAIL: john@example.com
+UID: urn:uuid:john-doe-123
+GENDER: M
+---
+
+#### Notes
+Initial contact note for John Doe.
+
+## Related
+- mother [[Jane Doe]]
+
+#Contact`;
+
+      mockApp.vault.read.mockResolvedValue(contentWithOneRelationship);
+      mockApp.metadataCache.getFileCache.mockReturnValue({
+        frontmatter: {
+          FN: 'John Doe',
+          EMAIL: 'john@example.com',
+          UID: 'urn:uuid:john-doe-123',
+          GENDER: 'M'
+        }
+      });
+
+      // Mock the Jane Doe contact doesn't exist yet
+      mockApp.vault.getAbstractFileByPath.mockReturnValue(null);
+
+      const relationships = parseRelatedSection(contentWithOneRelationship);
+      expect(relationships).toHaveLength(1);
+      expect(relationships[0]).toEqual({
+        type: 'mother',
+        contactName: 'Jane Doe',
+        originalType: 'mother'
+      });
+
+      const result = await syncRelatedListToFrontmatter(mockApp, mockFile, mockContactsFolder);
+      expect(result.success).toBe(true);
+      
+      // Should have attempted to update front matter with the new relationship
+      const { updateMultipleFrontMatterValues } = await import('src/contacts/contactFrontmatter');
+      expect(updateMultipleFrontMatterValues).toHaveBeenCalledWith(
+        mockFile,
+        { 'RELATED[parent]': 'name:Jane Doe' },
+        mockApp
+      );
+    });
+  });
+
+  describe('Gradual Relationship Addition', () => {
+    it('should handle multiple relationships added incrementally with proper syncing', async () => {
+      // Step 1: Add first relationship (father)
+      const step1Content = `---
+FN: John Doe
+EMAIL: john@example.com
+UID: urn:uuid:john-doe-123
+GENDER: M
+---
+
+#### Notes
+John Doe contact with growing relationships.
+
+## Related
+- father [[Bob Doe]]
+
+#Contact`;
+
+      mockApp.vault.read.mockResolvedValueOnce(step1Content);
+      mockApp.metadataCache.getFileCache.mockReturnValue({
+        frontmatter: {
+          FN: 'John Doe',
+          EMAIL: 'john@example.com',
+          UID: 'urn:uuid:john-doe-123',
+          GENDER: 'M'
+        }
+      });
+
+      let result = await syncRelatedListToFrontmatter(mockApp, mockFile, mockContactsFolder);
+      expect(result.success).toBe(true);
+
+      // Step 2: Add second relationship (mother)
+      const step2Content = `---
+FN: John Doe
+EMAIL: john@example.com
+UID: urn:uuid:john-doe-123
+GENDER: M
+RELATED[parent]: name:Bob Doe
+---
+
+#### Notes
+John Doe contact with growing relationships.
+
+## Related
+- father [[Bob Doe]]
+- mother [[Jane Doe]]
+
+#Contact`;
+
+      mockApp.vault.read.mockResolvedValueOnce(step2Content);
+      mockApp.metadataCache.getFileCache.mockReturnValue({
+        frontmatter: {
+          FN: 'John Doe',
+          EMAIL: 'john@example.com',
+          UID: 'urn:uuid:john-doe-123',
+          GENDER: 'M',
+          'RELATED[parent]': 'name:Bob Doe'
+        }
+      });
+
+      result = await syncRelatedListToFrontmatter(mockApp, mockFile, mockContactsFolder);
+      expect(result.success).toBe(true);
+
+      // Step 3: Add different relationship types
+      const step3Content = `---
+FN: John Doe
+EMAIL: john@example.com
+UID: urn:uuid:john-doe-123
+GENDER: M
+RELATED[parent]: name:Bob Doe
+RELATED[1:parent]: name:Jane Doe
+---
+
+#### Notes
+John Doe contact with growing relationships.
+
+## Related
+- father [[Bob Doe]]
+- mother [[Jane Doe]]
+- brother [[Mike Doe]]
+- friend [[Alice Smith]]
+
+#Contact`;
+
+      mockApp.vault.read.mockResolvedValueOnce(step3Content);
+      mockApp.metadataCache.getFileCache.mockReturnValue({
+        frontmatter: {
+          FN: 'John Doe',
+          EMAIL: 'john@example.com', 
+          UID: 'urn:uuid:john-doe-123',
+          GENDER: 'M',
+          'RELATED[parent]': 'name:Bob Doe',
+          'RELATED[1:parent]': 'name:Jane Doe'
+        }
+      });
+
+      result = await syncRelatedListToFrontmatter(mockApp, mockFile, mockContactsFolder);
+      expect(result.success).toBe(true);
+
+      const { updateMultipleFrontMatterValues } = await import('src/contacts/contactFrontmatter');
+      
+      // Verify that the sync function was called with the new relationships
+      expect(updateMultipleFrontMatterValues).toHaveBeenCalledWith(
+        mockFile,
+        expect.objectContaining({
+          'RELATED[sibling]': 'name:Mike Doe',
+          'RELATED[friend]': 'name:Alice Smith'
+        }),
+        mockApp
+      );
+    });
+  });
+
+  describe('Relationship Consistency During Sync', () => {
+    it('should maintain existing relationships when adding new ones', async () => {
+      const contentWithExistingAndNew = `---
+FN: John Doe
+EMAIL: john@example.com
+UID: urn:uuid:john-doe-123
+GENDER: M
+RELATED[parent]: name:Bob Doe
+RELATED[sibling]: name:Jane Doe
+---
+
+#### Notes
+Contact with existing relationships in front matter.
+
+## Related
+- father [[Bob Doe]]
+- sister [[Jane Doe]]
+- friend [[Charlie Wilson]]
+
+#Contact`;
+
+      mockApp.vault.read.mockResolvedValue(contentWithExistingAndNew);
+      mockApp.metadataCache.getFileCache.mockReturnValue({
+        frontmatter: {
+          FN: 'John Doe',
+          EMAIL: 'john@example.com',
+          UID: 'urn:uuid:john-doe-123',
+          GENDER: 'M',
+          'RELATED[parent]': 'name:Bob Doe',
+          'RELATED[sibling]': 'name:Jane Doe'
+        }
+      });
+
+      const result = await syncRelatedListToFrontmatter(mockApp, mockFile, mockContactsFolder);
+      expect(result.success).toBe(true);
+
+      const { updateMultipleFrontMatterValues } = await import('src/contacts/contactFrontmatter');
+      
+      // Should only add new relationships, not duplicate existing ones
+      expect(updateMultipleFrontMatterValues).toHaveBeenCalledWith(
+        mockFile,
+        { 'RELATED[friend]': 'name:Charlie Wilson' },
+        mockApp
+      );
+    });
+
+    it('should handle relationships with resolved contacts (UIDs)', async () => {
+      const contentWithResolvedContacts = `---
+FN: John Doe
+EMAIL: john@example.com
+UID: urn:uuid:john-doe-123
+GENDER: M
+---
+
+#### Notes
+Contact with relationships to existing contacts.
+
+## Related
+- mother [[Jane Doe]]
+- friend [[Alice Smith]]
+
+#Contact`;
+
+      mockApp.vault.read.mockResolvedValue(contentWithResolvedContacts);
+      
+      // Mock resolved contacts setup - need to return the file first, then the cache
+      const janeDoeFile = { path: 'Contacts/Jane Doe.md', basename: 'Jane Doe' } as TFile;
+      const aliceSmithFile = { path: 'Contacts/Alice Smith.md', basename: 'Alice Smith' } as TFile;
+
+      // Mock the getAbstractFileByPath calls for finding contacts
+      mockApp.vault.getAbstractFileByPath
+        .mockReturnValueOnce(janeDoeFile)   // For Jane Doe lookup
+        .mockReturnValueOnce(aliceSmithFile); // For Alice Smith lookup
+
+      // Mock the getFileCache calls - first for the main file, then for the resolved contacts
+      mockApp.metadataCache.getFileCache
+        .mockReturnValueOnce({
+          frontmatter: {
+            FN: 'John Doe',
+            EMAIL: 'john@example.com',
+            UID: 'urn:uuid:john-doe-123',
+            GENDER: 'M'
+          }
+        })
+        .mockReturnValueOnce({
+          frontmatter: {
+            FN: 'Jane Doe',
+            UID: 'urn:uuid:jane-doe-456',
+            GENDER: 'F'
+          }
+        })
+        .mockReturnValueOnce({
+          frontmatter: {
+            FN: 'Alice Smith',
+            UID: 'urn:uuid:alice-smith-789'
+          }
+        });
+
+      const result = await syncRelatedListToFrontmatter(mockApp, mockFile, mockContactsFolder);
+      expect(result.success).toBe(true);
+
+      const { updateMultipleFrontMatterValues } = await import('src/contacts/contactFrontmatter');
+      
+      // Should use UIDs for resolved contacts (formatted through formatRelatedValue mock)
+      expect(updateMultipleFrontMatterValues).toHaveBeenCalledWith(
+        mockFile,
+        expect.objectContaining({
+          'RELATED[parent]': 'uid:urn:uuid:jane-doe-456',
+          'RELATED[friend]': 'uid:urn:uuid:alice-smith-789'
+        }),
+        mockApp
+      );
+    });
+  });
+
+  describe('Relationship Type Conversion', () => {
+    it('should convert gendered relationship terms to genderless terms for storage', async () => {
+      const contentWithGenderedTerms = `---
+FN: John Doe
+UID: urn:uuid:john-doe-123
+GENDER: M
+---
+
+## Related
+- father [[Bob Doe]]
+- mother [[Jane Doe]]  
+- brother [[Mike Doe]]
+- sister [[Sally Doe]]
+- husband [[spouse]]
+- wife [[partner]]
+
+#Contact`;
+
+      const relationships = parseRelatedSection(contentWithGenderedTerms);
+      
+      // Test the conversion logic
+      const conversions = relationships.map(rel => ({
+        original: rel.type,
+        converted: convertToGenderlessType(rel.type)
+      }));
+
+      expect(conversions).toContainEqual({ original: 'father', converted: 'parent' });
+      expect(conversions).toContainEqual({ original: 'mother', converted: 'parent' });
+      expect(conversions).toContainEqual({ original: 'brother', converted: 'sibling' });
+      expect(conversions).toContainEqual({ original: 'sister', converted: 'sibling' });
+      expect(conversions).toContainEqual({ original: 'husband', converted: 'spouse' });
+      expect(conversions).toContainEqual({ original: 'wife', converted: 'spouse' });
+    });
+  });
+
+  describe('Edge Cases and Error Handling', () => {
+    it('should handle malformed Related sections gracefully', async () => {
+      const malformedContent = `---
+FN: John Doe
+UID: urn:uuid:john-doe-123
+---
+
+## Related
+- invalid line without brackets
+- another [[missing relationship type
+- [[no type at all]]
+- father [[]]
+- [[empty name]]
+
+#Contact`;
+
+      const relationships = parseRelatedSection(malformedContent);
+      
+      // Should only parse valid relationships
+      expect(relationships).toHaveLength(0); // All lines are malformed
+    });
+
+    it('should handle empty Related section after initial content', async () => {
+      const contentWithEmptyRelated = `---
+FN: John Doe
+UID: urn:uuid:john-doe-123
+RELATED[parent]: name:Jane Doe
+---
+
+## Related
+
+#Contact`;
+
+      mockApp.vault.read.mockResolvedValue(contentWithEmptyRelated);
+      mockApp.metadataCache.getFileCache.mockReturnValue({
+        frontmatter: {
+          FN: 'John Doe',
+          UID: 'urn:uuid:john-doe-123',
+          'RELATED[parent]': 'name:Jane Doe'
+        }
+      });
+
+      const result = await syncRelatedListToFrontmatter(mockApp, mockFile, mockContactsFolder);
+      expect(result.success).toBe(true);
+      expect(result.errors).toHaveLength(0);
+
+      // Should not remove existing front matter relationships when Related section is empty
+      const { updateMultipleFrontMatterValues } = await import('src/contacts/contactFrontmatter');
+      expect(updateMultipleFrontMatterValues).not.toHaveBeenCalled();
+    });
+
+    it('should handle duplicate relationships in Related list', async () => {
+      const contentWithDuplicates = `---
+FN: John Doe
+UID: urn:uuid:john-doe-123
+---
+
+## Related
+- mother [[Jane Doe]]
+- parent [[Jane Doe]]
+- mother [[Jane Doe]]
+- friend [[Alice Smith]]
+- friend [[Alice Smith]]
+
+#Contact`;
+
+      mockApp.vault.read.mockResolvedValue(contentWithDuplicates);
+      mockApp.metadataCache.getFileCache.mockReturnValue({
+        frontmatter: {
+          FN: 'John Doe',
+          UID: 'urn:uuid:john-doe-123'
+        }
+      });
+
+      const result = await syncRelatedListToFrontmatter(mockApp, mockFile, mockContactsFolder);
+      expect(result.success).toBe(true);
+
+      const { updateMultipleFrontMatterValues } = await import('src/contacts/contactFrontmatter');
+      
+      // Should only add unique relationships
+      expect(updateMultipleFrontMatterValues).toHaveBeenCalledWith(
+        mockFile,
+        expect.objectContaining({
+          'RELATED[parent]': 'name:Jane Doe', // mother converts to parent
+          'RELATED[friend]': 'name:Alice Smith'
+        }),
+        mockApp
+      );
+    });
+  });
+
+  describe('Advanced Sync Command Testing', () => {
+    it('should handle repeated sync operations without duplication', async () => {
+      const contentWithRelationships = `---
+FN: John Doe
+EMAIL: john@example.com
+UID: urn:uuid:john-doe-123
+GENDER: M
+---
+
+#### Notes
+Testing repeated sync operations.
+
+## Related
+- mother [[Jane Doe]]
+- father [[Bob Doe]]
+- friend [[Charlie Wilson]]
+
+#Contact`;
+
+      mockApp.vault.read.mockResolvedValue(contentWithRelationships);
+
+      // Simulate multiple sync operations
+      for (let syncRound = 1; syncRound <= 3; syncRound++) {
+        console.log(`\n--- Sync Round ${syncRound} ---`);
+
+        // Reset mocks for this round but maintain state consistency
+        const currentFrontmatter = syncRound === 1 
+          ? {
+              FN: 'John Doe',
+              EMAIL: 'john@example.com',
+              UID: 'urn:uuid:john-doe-123',
+              GENDER: 'M'
+            }
+          : {
+              FN: 'John Doe',
+              EMAIL: 'john@example.com',
+              UID: 'urn:uuid:john-doe-123',
+              GENDER: 'M',
+              'RELATED[parent]': 'name:Jane Doe',
+              'RELATED[1:parent]': 'name:Bob Doe',
+              'RELATED[friend]': 'name:Charlie Wilson'
+            };
+
+        mockApp.metadataCache.getFileCache.mockReturnValueOnce({
+          frontmatter: currentFrontmatter
+        });
+
+        const result = await syncRelatedListToFrontmatter(mockApp, mockFile, mockContactsFolder);
+        expect(result.success).toBe(true);
+        console.log(`✅ Sync round ${syncRound} completed successfully`);
+      }
+
+      const { updateMultipleFrontMatterValues } = await import('src/contacts/contactFrontmatter');
+      
+      // Should only update once (first sync) - subsequent syncs should detect existing relationships
+      expect(updateMultipleFrontMatterValues).toHaveBeenCalledTimes(1);
+    });
+
+    it('should handle gradual relationship addition with incremental sync operations', async () => {
+      const syncStages = [
+        {
+          name: 'Add first relationship',
+          content: `## Related
+- mother [[Jane Doe]]`,
+          expectedNewRelationships: 1,
+          frontmatter: {
+            FN: 'John Doe',
+            UID: 'urn:uuid:john-doe-123'
+          }
+        },
+        {
+          name: 'Add second relationship',
+          content: `## Related
+- mother [[Jane Doe]]
+- father [[Bob Doe]]`,
+          expectedNewRelationships: 1,
+          frontmatter: {
+            FN: 'John Doe',
+            UID: 'urn:uuid:john-doe-123',
+            'RELATED[parent]': 'name:Jane Doe'
+          }
+        },
+        {
+          name: 'Add multiple new relationships',
+          content: `## Related
+- mother [[Jane Doe]]
+- father [[Bob Doe]]
+- brother [[Mike Doe]]
+- sister [[Sally Doe]]
+- friend [[Charlie Wilson]]`,
+          expectedNewRelationships: 3,
+          frontmatter: {
+            FN: 'John Doe',
+            UID: 'urn:uuid:john-doe-123',
+            'RELATED[parent]': 'name:Jane Doe',
+            'RELATED[1:parent]': 'name:Bob Doe'
+          }
+        }
+      ];
+
+      const { updateMultipleFrontMatterValues } = await import('src/contacts/contactFrontmatter');
+      
+      for (let i = 0; i < syncStages.length; i++) {
+        const stage = syncStages[i];
+        console.log(`\n=== Stage ${i + 1}: ${stage.name} ===`);
+
+        const fullContent = `---
+FN: John Doe
+UID: urn:uuid:john-doe-123
+---
+
+${stage.content}
+
+#Contact`;
+
+        mockApp.vault.read.mockResolvedValueOnce(fullContent);
+        mockApp.metadataCache.getFileCache.mockReturnValueOnce({
+          frontmatter: stage.frontmatter
+        });
+
+        const result = await syncRelatedListToFrontmatter(mockApp, mockFile, mockContactsFolder);
+        expect(result.success).toBe(true);
+
+        console.log(`✅ ${stage.name} completed - sync successful`);
+      }
+
+      // Verify that sync was called appropriately (may be fewer times if some stages had no new relationships)
+      expect(updateMultipleFrontMatterValues).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('Relationship State Consistency', () => {
+    it('should maintain relationship consistency across multiple modifications', async () => {
+      const modifications = [
+        {
+          description: 'Start with basic family relationships',
+          relatedContent: `- mother [[Jane Doe]]
+- father [[Bob Doe]]`,
+          expectedCount: 2
+        },
+        {
+          description: 'Add friends and colleagues',
+          relatedContent: `- mother [[Jane Doe]]
+- father [[Bob Doe]]
+- friend [[Alice Smith]]
+- colleague [[David Wilson]]`,
+          expectedCount: 4
+        },
+        {
+          description: 'Add extended family',
+          relatedContent: `- mother [[Jane Doe]]
+- father [[Bob Doe]]
+- friend [[Alice Smith]]
+- colleague [[David Wilson]]
+- aunt [[Mary Johnson]]
+- uncle [[Tom Johnson]]
+- cousin [[Emma Johnson]]`,
+          expectedCount: 7
+        },
+        {
+          description: 'Remove some relationships and add others',
+          relatedContent: `- mother [[Jane Doe]]
+- father [[Bob Doe]]
+- friend [[Alice Smith]]
+- spouse [[Sarah Miller]]
+- child [[Tommy Doe]]`,
+          expectedCount: 5
+        }
+      ];
+
+      for (let i = 0; i < modifications.length; i++) {
+        const mod = modifications[i];
+        console.log(`\n--- Modification ${i + 1}: ${mod.description} ---`);
+
+        const testContent = `---
+FN: John Doe
+UID: urn:uuid:john-doe-123
+---
+
+## Related
+${mod.relatedContent}
+
+#Contact`;
+
+        const relationships = parseRelatedSection(testContent);
+        expect(relationships).toHaveLength(mod.expectedCount);
+
+        console.log(`✅ Parsed ${relationships.length} relationships as expected`);
+        
+        // Log the relationships for debugging
+        relationships.forEach((rel, idx) => {
+          console.log(`   ${idx + 1}. ${rel.type} -> ${rel.contactName}`);
+        });
+      }
+    });
+
+    it('should handle relationship type changes during lifecycle', async () => {
+      // Test scenario where relationships change type over time
+      const relationshipEvolution = [
+        {
+          stage: 'Initial - friend relationship',
+          content: `## Related
+- friend [[Sarah Miller]]`,
+          expectedTypes: ['friend']
+        },
+        {
+          stage: 'Changed to girlfriend',
+          content: `## Related
+- girlfriend [[Sarah Miller]]`,
+          expectedTypes: ['girlfriend'] 
+        },
+        {
+          stage: 'Changed to fiancee',
+          content: `## Related
+- fiancee [[Sarah Miller]]`,
+          expectedTypes: ['fiancee']
+        },
+        {
+          stage: 'Changed to spouse',
+          content: `## Related
+- spouse [[Sarah Miller]]`,
+          expectedTypes: ['spouse']
+        },
+        {
+          stage: 'Add child',
+          content: `## Related
+- spouse [[Sarah Miller]]
+- daughter [[Emma Doe-Miller]]`,
+          expectedTypes: ['spouse', 'daughter']
+        }
+      ];
+
+      for (const evolution of relationshipEvolution) {
+        console.log(`\n=== ${evolution.stage} ===`);
+        
+        const relationships = parseRelatedSection(evolution.content);
+        const actualTypes = relationships.map(r => r.type);
+        
+        expect(actualTypes).toEqual(evolution.expectedTypes);
+        console.log(`✅ Relationship types match: ${actualTypes.join(', ')}`);
+      }
+    });
+  });
+
+  describe('Complete Lifecycle Simulation', () => {
+    it('should demonstrate complete lifecycle from empty to fully populated relationships', async () => {
+      const stages = [
+        {
+          name: 'Empty contact',
+          content: `---
+FN: John Doe
+UID: urn:uuid:john-doe-123
+---
+
+## Related
+
+#Contact`,
+          expectedRelationshipCount: 0
+        },
+        {
+          name: 'First relationship added',
+          content: `---
+FN: John Doe
+UID: urn:uuid:john-doe-123
+---
+
+## Related
+- mother [[Jane Doe]]
+
+#Contact`,
+          expectedRelationshipCount: 1
+        },
+        {
+          name: 'Multiple family relationships',
+          content: `---
+FN: John Doe
+UID: urn:uuid:john-doe-123
+RELATED[parent]: name:Jane Doe
+---
+
+## Related
+- mother [[Jane Doe]]
+- father [[Bob Doe]]
+- sister [[Sally Doe]]
+
+#Contact`,
+          expectedRelationshipCount: 3
+        },
+        {
+          name: 'Mixed relationship types',
+          content: `---
+FN: John Doe
+UID: urn:uuid:john-doe-123
+RELATED[parent]: name:Jane Doe
+RELATED[1:parent]: name:Bob Doe  
+RELATED[sibling]: name:Sally Doe
+---
+
+## Related
+- mother [[Jane Doe]]
+- father [[Bob Doe]]
+- sister [[Sally Doe]]
+- friend [[Charlie Wilson]]
+- colleague [[Diana Prince]]
+
+#Contact`,
+          expectedRelationshipCount: 5
+        }
+      ];
+
+      for (const stage of stages) {
+        console.log(`\n=== Testing Stage: ${stage.name} ===`);
+        
+        const relationships = parseRelatedSection(stage.content);
+        expect(relationships).toHaveLength(stage.expectedRelationshipCount);
+        
+        mockApp.vault.read.mockResolvedValueOnce(stage.content);
+        
+        // Mock appropriate front matter for each stage
+        const frontMatterMatch = stage.content.match(/^---([\s\S]*?)---/);
+        const frontMatter = frontMatterMatch ? {} : {}; // Simplified for test
+        
+        mockApp.metadataCache.getFileCache.mockReturnValue({
+          frontmatter: frontMatter
+        });
+
+        const result = await syncRelatedListToFrontmatter(mockApp, mockFile, mockContactsFolder);
+        expect(result.success).toBe(true);
+        
+        console.log(`✅ Stage "${stage.name}" completed successfully`);
+        console.log(`   - Parsed ${relationships.length} relationships`);
+        console.log(`   - Sync result: ${result.success}`);
+      }
+    });
+  });
+});
