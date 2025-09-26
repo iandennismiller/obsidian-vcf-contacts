@@ -1,6 +1,7 @@
-import { App, TFile } from 'obsidian';
+import { App, TFile, EventRef, WorkspaceLeaf } from 'obsidian';
 import { ContactsPluginSettings } from '../settings/settings.d';
 import { loggingService } from '../services/loggingService';
+import { syncRelatedListToFrontmatter } from '../util/relatedListSync';
 
 /**
  * Interface for managing contact notes in the Obsidian vault.
@@ -56,6 +57,16 @@ export interface IContactManager {
    * Update the cache when a file is renamed
    */
   updateCacheForRename(uid: string, newFile: TFile): void;
+
+  /**
+   * Set up event listeners for automatic syncing when navigating away from contact files
+   */
+  setupEventListeners(): void;
+
+  /**
+   * Clean up event listeners
+   */
+  cleanupEventListeners(): void;
 }
 
 /**
@@ -344,5 +355,84 @@ export class ContactManager implements IContactManager {
       uidCount: this.existingUIDs.size,
       fileCount: this.contactFiles.size
     };
+  }
+
+  // Event handling for active leaf changes
+  private eventRef: EventRef | null = null;
+  private currentActiveFile: TFile | null = null;
+
+  /**
+   * Set up event listeners for automatic syncing when navigating away from contact files
+   */
+  setupEventListeners(): void {
+    if (this.eventRef) {
+      // Already set up
+      return;
+    }
+
+    this.eventRef = this.app.workspace.on('active-leaf-change', (leaf: WorkspaceLeaf | null) => {
+      this.handleActiveLeafChange(leaf);
+    });
+
+    loggingService.info('[ContactManager] Event listeners set up for active-leaf-change');
+  }
+
+  /**
+   * Clean up event listeners
+   */
+  cleanupEventListeners(): void {
+    if (this.eventRef) {
+      this.app.workspace.offref(this.eventRef);
+      this.eventRef = null;
+      loggingService.info('[ContactManager] Event listeners cleaned up');
+    }
+  }
+
+  /**
+   * Handle active leaf change - sync the previous contact file if we're leaving one
+   */
+  private handleActiveLeafChange(leaf: WorkspaceLeaf | null): void {
+    // Check if the view has a file property (duck typing for MarkdownView)
+    const newActiveFile = (leaf?.view && 'file' in leaf.view) ? (leaf.view as any).file : null;
+    
+    // If we had a previous active contact file and we're switching away from it, sync it
+    if (this.currentActiveFile && 
+        this.currentActiveFile !== newActiveFile && 
+        this.isContactFile(this.currentActiveFile)) {
+      
+      const fileToSync = this.currentActiveFile;
+      loggingService.info(`[ContactManager] Navigating away from contact file: ${fileToSync.path} - starting sync`);
+      
+      // Sync the related list to frontmatter for the file we're leaving
+      this.syncContactFile(fileToSync);
+    }
+    
+    this.currentActiveFile = newActiveFile;
+  }
+
+  /**
+   * Sync a contact file's related list to frontmatter
+   */
+  private async syncContactFile(file: TFile): Promise<void> {
+    try {
+      const result = await syncRelatedListToFrontmatter(
+        this.app,
+        file,
+        this.getContactsFolder()
+      );
+
+      if (result.success) {
+        loggingService.info(`[ContactManager] Successfully synced related list for: ${file.basename}`);
+        if (result.errors.length > 0) {
+          loggingService.warning(`[ContactManager] Sync completed with warnings for ${file.basename}`);
+          result.errors.forEach(error => loggingService.warning(error));
+        }
+      } else {
+        loggingService.error(`[ContactManager] Failed to sync related list for: ${file.basename}`);
+        result.errors.forEach(error => loggingService.error(error));
+      }
+    } catch (error) {
+      loggingService.error(`[ContactManager] Error syncing contact file ${file.basename}: ${error.message}`);
+    }
   }
 }
