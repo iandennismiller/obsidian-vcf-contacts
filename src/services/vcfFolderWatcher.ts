@@ -8,6 +8,7 @@ import { VCardForObsidianRecord } from "src/contacts/vcard/shared/vcard.d";
 import { createContactFile } from "src/file/file";
 import { loggingService } from "src/services/loggingService";
 import { ContactsPluginSettings } from "src/settings/settings.d";
+import { onSettingsChange } from "src/context/sharedSettingsContext";
 
 /**
  * Information about a VCF file being tracked by the watcher
@@ -50,6 +51,7 @@ export class VCFolderWatcher {
   private contactFiles = new Map<string, TFile>(); // Track contact files by UID
   private contactFileListeners: (() => void)[] = []; // Track registered listeners
   private updatingRevFields = new Set<string>(); // Track files being updated internally to prevent loops
+	private settingsUnsubscribe: (() => void) | null = null;
 
   /**
    * Creates a new VCF folder watcher instance.
@@ -106,6 +108,11 @@ export class VCFolderWatcher {
       this.settings.vcfWatchPollingInterval * 1000
     );
     
+    // Listen for settings changes to update watcher
+    this.settingsUnsubscribe = onSettingsChange(async (newSettings) => {
+      await this.updateSettings(newSettings);
+    });
+
     loggingService.info(`VCF folder polling started (interval: ${this.settings.vcfWatchPollingInterval}s)`);
   }
 

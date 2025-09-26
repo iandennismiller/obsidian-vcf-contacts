@@ -5,7 +5,6 @@ import { ContactsView } from "src/ui/sidebar/sidebarView";
 import { CONTACTS_VIEW_CONFIG } from "src/util/constants";
 import myScrollTo from "src/util/myScrollTo";
 import { VCFolderWatcher } from "src/services/vcfFolderWatcher";
-import { onSettingsChange } from "src/context/sharedSettingsContext";
 import { setApp, clearApp } from "src/context/sharedAppContext";
 import { loggingService } from "src/services/loggingService";
 
@@ -15,32 +14,17 @@ import { ContactsPluginSettings } from  './settings/settings.d';
 export default class ContactsPlugin extends Plugin {
 	settings: ContactsPluginSettings;
 	private vcfWatcher: VCFolderWatcher | null = null;
-	private settingsUnsubscribe: (() => void) | null = null;
 
-	async onload() {
-		// Set up app context for shared utilities
-		setApp(this.app);
+		async onload() {
+			await this.loadSettings();
+			// Initialize logging service early
+			loggingService.initialize(this.settings.logLevel, "VCF Contacts plugin loaded");
+			// Set up app context for shared utilities
+			setApp(this.app);
 
-		await this.loadSettings();
-		
-		// Set log level from settings
-		loggingService.setLogLevel(this.settings.logLevel);
-		
-		loggingService.info("VCF Contacts plugin loaded");
-		
-		// Initialize VCF folder watcher
-		this.vcfWatcher = new VCFolderWatcher(this.app, this.settings);
-		await this.vcfWatcher.start();
-
-		// Listen for settings changes to update watcher
-		this.settingsUnsubscribe = onSettingsChange(async (newSettings) => {
-			// Update log level when settings change
-			loggingService.setLogLevel(newSettings.logLevel);
-			
-			if (this.vcfWatcher) {
-				await this.vcfWatcher.updateSettings(newSettings);
-			}
-		});
+			// Initialize VCF folder watcher
+			this.vcfWatcher = new VCFolderWatcher(this.app, this.settings);
+			await this.vcfWatcher.start();
 
 		this.registerView(
 			CONTACTS_VIEW_CONFIG.type,
@@ -89,6 +73,8 @@ export default class ContactsPlugin extends Plugin {
 			this.settingsUnsubscribe();
 			this.settingsUnsubscribe = null;
 		}
+		// Clean up loggingService event listener
+		loggingService.cleanup();
 	}
 
 	async loadSettings() {

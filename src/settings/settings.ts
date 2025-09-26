@@ -274,57 +274,9 @@ export class ContactsSettingTab extends PluginSettingTab {
           });
       });
 
-    // Log viewer
-    const logDesc = document.createDocumentFragment();
-    logDesc.append(
-      "View internal logs from VCF folder sync operations.",
-      logDesc.createEl("br"),
-      "Log buffer size: 64KB (older entries are automatically removed)."
-    );
-
-    const logSetting = new Setting(containerEl)
-      .setName("Internal Logs")
-      .setDesc(logDesc);
-
-    // Add buttons for log management
-    logSetting
-      .addButton(button => {
-        button
-          .setButtonText("View Logs")
-          .onClick(() => {
-            this.showLogsModal();
-          });
-      })
-      .addButton(button => {
-        button
-          .setButtonText("Clear Logs")
-          .onClick(() => {
-            const { loggingService } = require("src/services/loggingService");
-            loggingService.clearLogs();
-            new Notice("Logs cleared");
-          });
-      });
+  // Log viewer and clear log buttons removed for lightweight loggingService
 
   }
 
-  private showLogsModal(): void {
-    const { loggingService } = require("src/services/loggingService");
-    const logs = loggingService.getLogsAsString();
-    
-    const modal = new (require("obsidian").Modal)(this.app);
-    modal.titleEl.setText("VCF Sync Logs");
-    
-    const content = modal.contentEl;
-    content.empty();
-    
-    const textArea = content.createEl("textarea");
-    textArea.value = logs || "No logs available";
-    textArea.readOnly = true;
-    textArea.style.width = "100%";
-    textArea.style.height = "400px";
-    textArea.style.fontFamily = "monospace";
-    textArea.style.fontSize = "12px";
-    
-    modal.open();
-  }
+  // showLogsModal removed for lightweight loggingService
 }
