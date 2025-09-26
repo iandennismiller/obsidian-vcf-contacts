@@ -1,5 +1,7 @@
 import { Notice } from "obsidian";
-import { Contact, updateFrontMatterValue } from "src/contacts";
+import { Contact, ContactNote } from "src/contacts";
+import { getApp } from "src/context/sharedAppContext";
+import { getSettings } from "src/context/sharedSettingsContext";
 import { openFilePicker } from "src/file/file";
 import { RunType } from "src/insights/insight.d";
 import { insightService } from "src/insights/insightService";
@@ -65,7 +67,8 @@ export const processAvatar = async (contact: Contact) => {
 			}
 		}
 
-		await updateFrontMatterValue(contact.file, 'PHOTO', base64EncodeImage(resizeAndCropImage(rawImg, 120)));
+		const contactNote = new ContactNote(getApp(), getSettings(), contact.file);
+		await contactNote.updateFrontmatterValue('PHOTO', base64EncodeImage(resizeAndCropImage(rawImg, 120)));
 	} catch (err) {
 		throw new Error(
 			"hmmm... Could not load or process the avatar image. The website hosting the image likely does not allow access from other apps (CORS restriction). " +

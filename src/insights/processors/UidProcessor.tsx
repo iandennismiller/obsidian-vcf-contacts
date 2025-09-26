@@ -1,5 +1,6 @@
 import * as React from "react";
-import { Contact, updateFrontMatterValue } from "src/contacts";
+import { Contact, ContactNote } from "src/contacts";
+import { getApp } from "src/context/sharedAppContext";
 import { getSettings } from "src/context/sharedSettingsContext";
 import { InsightProcessor, InsightQueItem, RunType } from "src/insights/insight.d";
 
@@ -50,7 +51,8 @@ export const UidProcessor: InsightProcessor = {
     }
 
     const UUID = `urn:uuid:${generateUUID()}`
-    await updateFrontMatterValue(contact.file, "UID", UUID)
+    const contactNote = new ContactNote(getApp(), getSettings(), contact.file);
+    await contactNote.updateFrontmatterValue("UID", UUID);
 
     return Promise.resolve({
       name: this.name,
