@@ -5,7 +5,7 @@ import { mdRender } from "src/contacts/contactMdTemplate";
 import { updateFrontMatterValue, generateRevTimestamp } from "src/contacts/contactFrontmatter";
 import { vcard } from "src/contacts/vcard";
 import { VCardForObsidianRecord } from "src/contacts/vcard/shared/vcard.d";
-import { ContactManager, RevisionUtils, VCFUtils, VCFFileInfo } from "src/contacts";
+import { ContactManager, RevisionUtils, VCFManager, VCFFileInfo } from "src/contacts";
 import { createContactFile } from "src/file/file";
 import { loggingService } from "src/services/loggingService";
 import { ContactsPluginSettings } from "src/settings/settings.d";
@@ -15,7 +15,7 @@ import { setupVCFDropHandler } from 'src/services/vcfDropHandler';
 /**
  * Information about a VCF file being tracked by the watcher
  */
-export type { VCFFileInfo } from 'src/contacts/vcfUtils';
+export type { VCFFileInfo } from 'src/contacts/vcfManager';
 
 /**
  * Watches a folder for VCF (vCard) files and automatically syncs them with Obsidian contact files.
@@ -46,7 +46,7 @@ export class VCFolderWatcher {
   // Dependency injection for contact management and utilities
   private contactManager: ContactManager;
   private revisionUtils: RevisionUtils;
-  private vcfUtils: VCFUtils;
+  private vcfManager: VCFManager;
 
   /**
    * Creates a new VCF folder watcher instance.
@@ -61,7 +61,7 @@ export class VCFolderWatcher {
     // Initialize dependency classes
     this.contactManager = new ContactManager(app, settings);
     this.revisionUtils = new RevisionUtils(app);
-    this.vcfUtils = new VCFUtils(settings);
+    this.vcfManager = new VCFManager(settings);
   }
 
   /**
@@ -181,7 +181,7 @@ export class VCFolderWatcher {
 
     // Update dependency settings
     this.contactManager.updateSettings(newSettings);
-    this.vcfUtils.updateSettings(newSettings);
+    this.vcfManager.updateSettings(newSettings);
 
     if (shouldRestart) {
       this.stop();
@@ -201,23 +201,22 @@ export class VCFolderWatcher {
    */
   private async scanVCFFolder(): Promise<void> {
     try {
-      const folderPath = this.settings.vcfWatchFolder;
-      
-      // Check if folder exists using VCFUtils
-      const folderExists = await this.vcfUtils.checkWatchFolderExists();
+      // Check if folder exists using VCFManager
+      const folderExists = await this.vcfManager.watchFolderExists();
       if (!folderExists) {
         return;
       }
 
-      // Get list of files in the folder using VCFUtils
-      const files = await this.vcfUtils.listVCFFiles(folderPath);
+      // Get list of files in the folder using VCFManager
+      const files = await this.vcfManager.listVCFFiles();
       
       if (files.length === 0) {
-        loggingService.debug(`No VCF files found in ${folderPath}`);
+        const watchFolder = this.vcfManager.getWatchFolder();
+        loggingService.debug(`No VCF files found in ${watchFolder}`);
         return;
       }
 
-      loggingService.debug(`Scanning ${files.length} VCF files in ${folderPath}`);
+      loggingService.debug(`Scanning ${files.length} VCF files in ${this.vcfManager.getWatchFolder()}`);
       
       for (const filePath of files) {
         await this.processVCFFile(filePath);
@@ -243,30 +242,30 @@ export class VCFolderWatcher {
    */
   private async processVCFFile(filePath: string): Promise<void> {
     try {
-      // Check if this filename should be ignored using VCFUtils
-      if (this.vcfUtils.shouldIgnoreFile(filePath)) {
+      // Check if this filename should be ignored using VCFManager
+      if (this.vcfManager.shouldIgnoreFile(filePath)) {
         return;
       }
 
-      // Get file stats using VCFUtils
-      const stats = await this.vcfUtils.getFileStats(filePath);
-      if (!stats) {
+      // Get file stats using VCFManager
+      const fileInfo = await this.vcfManager.getVCFFileInfo(filePath);
+      if (!fileInfo) {
         return;
       }
 
       const known = this.knownFiles.get(filePath);
       
       // Skip if file hasn't changed
-      if (known && known.lastModified >= stats.mtimeMs) {
+      if (known && known.lastModified >= fileInfo.lastModified) {
         return;
       }
 
       const filename = path.basename(filePath);
       loggingService.debug(`Processing VCF file: ${filename}`);
 
-      // Read VCF content using VCFUtils
-      const content = await this.vcfUtils.readVCFFile(filePath);
-      if (!content) {
+      // Read and parse VCF content using VCFManager
+      const parsedEntries = await this.vcfManager.readAndParseVCF(filePath);
+      if (!parsedEntries) {
         return;
       }
 
@@ -274,11 +273,11 @@ export class VCFolderWatcher {
       let updated = 0;
       let skipped = 0;
 
-      // Parse VCF content and process contacts
-      for await (const [slug, record] of vcard.parse(content)) {
+      // Process each parsed entry
+      for (const [slug, record] of parsedEntries) {
         if (slug && record.UID) {
-          // Check if this UID should be ignored using VCFUtils
-          if (this.vcfUtils.shouldIgnoreUID(record.UID)) {
+          // Check if this UID should be ignored using VCFManager
+          if (this.vcfManager.shouldIgnoreUID(record.UID)) {
             skipped++;
             continue;
           }
@@ -327,7 +326,7 @@ export class VCFolderWatcher {
       // Update our tracking
       this.knownFiles.set(filePath, {
         path: filePath,
-        lastModified: stats.mtimeMs,
+        lastModified: fileInfo.lastModified,
         uid: undefined // We don't store individual UIDs here since a file can contain multiple
       });
 
@@ -557,33 +556,39 @@ export class VCFolderWatcher {
         return;
       }
 
-      // Find corresponding VCF file by UID using VCFUtils
-      const vcfFilePath = await this.vcfUtils.findVCFFileByUID(uid);
+      // Find corresponding VCF file by UID using VCFManager
+      const vcfFilePath = await this.vcfManager.findVCFFileByUID(uid);
       let targetPath: string;
 
       if (vcfFilePath) {
         // Update existing VCF file
         targetPath = vcfFilePath;
       } else {
-        // Create new VCF file using VCFUtils filename generation
-        const vcfFilename = this.vcfUtils.generateVCFFilename(contactFile.basename);
-        targetPath = path.join(this.settings.vcfWatchFolder, vcfFilename);
+        // Create new VCF file using VCFManager filename generation
+        const vcfFilename = this.vcfManager.generateVCFFilename(contactFile.basename);
+        const writtenPath = await this.vcfManager.writeVCFFile(vcfFilename, vcards);
+        if (!writtenPath) {
+          new Notice(`Failed to write contact ${contactFile.basename} to VCF folder`);
+          return;
+        }
+        targetPath = writtenPath;
       }
 
-      // Write to filesystem using VCFUtils
-      const writeSuccess = await this.vcfUtils.writeVCFFile(targetPath, vcards);
-      
-      if (!writeSuccess) {
-        new Notice(`Failed to write contact ${contactFile.basename} to VCF folder`);
-        return;
+      // If updating existing file, write directly
+      if (vcfFilePath) {
+        const writeSuccess = await this.vcfManager.writeVCFFile(path.basename(targetPath), vcards);
+        if (!writeSuccess) {
+          new Notice(`Failed to write contact ${contactFile.basename} to VCF folder`);
+          return;
+        }
       }
 
       // Update our known files tracking
-      const stats = await this.vcfUtils.getFileStats(targetPath);
-      if (stats) {
+      const fileInfo = await this.vcfManager.getVCFFileInfo(targetPath);
+      if (fileInfo) {
         this.knownFiles.set(targetPath, {
           path: targetPath,
-          lastModified: stats.mtimeMs,
+          lastModified: fileInfo.lastModified,
           uid: uid
         });
       }
