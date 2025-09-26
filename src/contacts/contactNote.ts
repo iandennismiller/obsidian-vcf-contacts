@@ -8,6 +8,12 @@ import { TFile, App, parseYaml, stringifyYaml } from 'obsidian';
 import { ContactsPluginSettings } from '../settings/settings.d';
 import { VCardForObsidianRecord } from './vcard-types';
 import { loggingService } from '../services/loggingService';
+import { getApp } from '../context/sharedAppContext';
+
+export type Contact = {
+  data: Record<string, any>;
+  file: TFile;
+}
 
 // Re-export types that were previously exported from utility modules
 export type Gender = 'M' | 'F' | 'NB' | 'U' | null;
@@ -1022,4 +1028,23 @@ export class ContactNote {
 
     return `\n## Related\n${relationshipList}\n`;
   }
+}
+
+/**
+ * Utility function to get frontmatter data from multiple files and create Contact objects
+ * This is a static utility function that doesn't require a ContactNote instance
+ */
+export async function getFrontmatterFromFiles(files: TFile[]): Promise<Contact[]> {
+  const { metadataCache } = getApp();
+  const contactsData: Contact[] = [];
+  for (const file of files) {
+    const frontMatter = metadataCache.getFileCache(file)?.frontmatter;
+    if ((frontMatter?.['N.GN'] && frontMatter?.['N.FN']) || frontMatter?.['FN']) {
+      contactsData.push({
+        file,
+        data: frontMatter,
+      });
+    }
+  }
+  return contactsData;
 }
