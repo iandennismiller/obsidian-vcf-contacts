@@ -367,6 +367,14 @@ export class VcardFile {
       }
     }
 
+    if (baseKey === 'VERSION') {
+      // Convert vCard version 3.0 to 4.0
+      if (value === '3.0') {
+        return { [`${baseKey}${typeValues}`]: '4.0' };
+      }
+      return { [`${baseKey}${typeValues}`]: value };
+    }
+
     return { [`${baseKey}${typeValues}`]: value };
   }
 

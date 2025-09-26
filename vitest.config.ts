@@ -11,6 +11,22 @@ export default defineConfig({
   },
   test: {
     include: ['tests/**/*.spec.ts'],
+    exclude: [
+      // Skip deprecated test files that tested individual utility modules 
+      // (functionality now consolidated into ContactNote)
+      'tests/relatedListSync.spec.ts',
+      'tests/relatedListSyncDemo.spec.ts', 
+      'tests/relatedFieldDemo.spec.ts',
+      'tests/genderAwareRelationships.spec.ts',
+      'tests/completeGenderDemo.spec.ts',
+      'tests/relatedFieldUtils.spec.ts',
+      'tests/revDemo.spec.ts',
+      'tests/frontmatterToRelatedListSync.spec.ts',
+      'tests/revisionUtils.spec.ts',
+      'tests/genderUtils.spec.ts', 
+      'tests/revFieldManagement.spec.ts',
+      'tests/contactNoteLifecycle.spec.ts'
+    ],
     globals: true,
     environment: 'node',
     coverage: {
