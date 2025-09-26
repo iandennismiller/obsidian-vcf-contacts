@@ -1,7 +1,7 @@
 import { App, TFile, EventRef, WorkspaceLeaf } from 'obsidian';
 import { ContactsPluginSettings } from '../settings/settings.d';
 import { loggingService } from '../services/loggingService';
-import { syncRelatedListToFrontmatter } from '../util/relatedListSync';
+import { syncRelatedListToFrontmatter, syncFrontmatterToRelatedList } from '../util/relatedListSync';
 
 /**
  * Interface for managing contact notes in the Obsidian vault.
@@ -411,26 +411,50 @@ export class ContactManager implements IContactManager {
   }
 
   /**
-   * Sync a contact file's related list to frontmatter
+   * Sync a contact file bidirectionally:
+   * 1. First sync frontmatter to Related list (add missing relationships to Related section)
+   * 2. Then sync Related list to frontmatter (ensure frontmatter is complete)
    */
   private async syncContactFile(file: TFile): Promise<void> {
     try {
-      const result = await syncRelatedListToFrontmatter(
+      // Step 1: Sync from frontmatter to Related list
+      loggingService.info(`[ContactManager] Syncing frontmatter to Related list for: ${file.basename}`);
+      const frontmatterToRelatedResult = await syncFrontmatterToRelatedList(
         this.app,
         file,
         this.getContactsFolder()
       );
 
-      if (result.success) {
-        loggingService.info(`[ContactManager] Successfully synced related list for: ${file.basename}`);
-        if (result.errors.length > 0) {
-          loggingService.warning(`[ContactManager] Sync completed with warnings for ${file.basename}`);
-          result.errors.forEach(error => loggingService.warning(error));
+      if (frontmatterToRelatedResult.success) {
+        loggingService.info(`[ContactManager] Successfully synced frontmatter to Related list for: ${file.basename}`);
+        if (frontmatterToRelatedResult.errors.length > 0) {
+          loggingService.warning(`[ContactManager] Frontmatter sync completed with warnings for ${file.basename}`);
+          frontmatterToRelatedResult.errors.forEach(error => loggingService.warning(error));
         }
       } else {
-        loggingService.error(`[ContactManager] Failed to sync related list for: ${file.basename}`);
-        result.errors.forEach(error => loggingService.error(error));
+        loggingService.error(`[ContactManager] Failed to sync frontmatter to Related list for: ${file.basename}`);
+        frontmatterToRelatedResult.errors.forEach(error => loggingService.error(error));
       }
+
+      // Step 2: Sync from Related list to frontmatter
+      loggingService.info(`[ContactManager] Syncing Related list to frontmatter for: ${file.basename}`);
+      const relatedToFrontmatterResult = await syncRelatedListToFrontmatter(
+        this.app,
+        file,
+        this.getContactsFolder()
+      );
+
+      if (relatedToFrontmatterResult.success) {
+        loggingService.info(`[ContactManager] Successfully synced Related list to frontmatter for: ${file.basename}`);
+        if (relatedToFrontmatterResult.errors.length > 0) {
+          loggingService.warning(`[ContactManager] Related list sync completed with warnings for ${file.basename}`);
+          relatedToFrontmatterResult.errors.forEach(error => loggingService.warning(error));
+        }
+      } else {
+        loggingService.error(`[ContactManager] Failed to sync Related list to frontmatter for: ${file.basename}`);
+        relatedToFrontmatterResult.errors.forEach(error => loggingService.error(error));
+      }
+
     } catch (error) {
       loggingService.error(`[ContactManager] Error syncing contact file ${file.basename}: ${error.message}`);
     }

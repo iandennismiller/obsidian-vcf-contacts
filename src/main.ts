@@ -8,7 +8,7 @@ import { VCFolderWatcher } from "src/services/vcfFolderWatcher";
 import { setupVCFDropHandler } from 'src/services/vcfDropHandler';
 import { setApp, clearApp } from "src/context/sharedAppContext";
 import { loggingService } from "src/services/loggingService";
-import { syncRelatedListToFrontmatter } from "src/util/relatedListSync";
+import { syncRelatedListToFrontmatter, syncFrontmatterToRelatedList } from "src/util/relatedListSync";
 import { ContactManager } from "src/contacts/contactManager";
 
 import { ContactsSettingTab, DEFAULT_SETTINGS } from './settings/settings';
@@ -108,6 +108,107 @@ export default class ContactsPlugin extends Plugin {
 				} else {
 					new Notice('Failed to sync Related list - check console for details');
 					result.errors.forEach(error => loggingService.error(error));
+				}
+			},
+		});
+
+		this.addCommand({
+			id: 'sync-frontmatter-to-related',
+			name: "Sync frontmatter to Related list",
+			callback: async () => {
+				const activeFile = this.app.workspace.getActiveFile();
+				if (!activeFile) {
+					new Notice('No active file found');
+					return;
+				}
+
+				// Check if the file is in the contacts folder
+				if (!activeFile.path.startsWith(this.settings.contactsFolder)) {
+					new Notice('Active file is not in the contacts folder');
+					return;
+				}
+
+				// Check if file has UID (is a contact file)
+				const cache = this.app.metadataCache.getFileCache(activeFile);
+				if (!cache?.frontmatter?.UID) {
+					new Notice('Active file is not a contact file (missing UID)');
+					return;
+				}
+
+				// Perform the sync
+				new Notice('Syncing frontmatter to Related list...');
+				const result = await syncFrontmatterToRelatedList(
+					this.app,
+					activeFile,
+					this.settings.contactsFolder
+				);
+
+				if (result.success) {
+					new Notice('Frontmatter synced successfully!');
+					if (result.errors.length > 0) {
+						new Notice(`Sync completed with ${result.errors.length} warnings - check console for details`);
+						result.errors.forEach(error => loggingService.warn(error));
+					}
+				} else {
+					new Notice('Failed to sync frontmatter - check console for details');
+					result.errors.forEach(error => loggingService.error(error));
+				}
+			},
+		});
+
+		this.addCommand({
+			id: 'sync-bidirectional',
+			name: "Sync relationships bidirectionally",
+			callback: async () => {
+				const activeFile = this.app.workspace.getActiveFile();
+				if (!activeFile) {
+					new Notice('No active file found');
+					return;
+				}
+
+				// Check if the file is in the contacts folder
+				if (!activeFile.path.startsWith(this.settings.contactsFolder)) {
+					new Notice('Active file is not in the contacts folder');
+					return;
+				}
+
+				// Check if file has UID (is a contact file)
+				const cache = this.app.metadataCache.getFileCache(activeFile);
+				if (!cache?.frontmatter?.UID) {
+					new Notice('Active file is not a contact file (missing UID)');
+					return;
+				}
+
+				// Perform bidirectional sync
+				new Notice('Syncing relationships bidirectionally...');
+				
+				// Step 1: Sync frontmatter to Related list
+				const frontmatterResult = await syncFrontmatterToRelatedList(
+					this.app,
+					activeFile,
+					this.settings.contactsFolder
+				);
+
+				// Step 2: Sync Related list to frontmatter
+				const relatedResult = await syncRelatedListToFrontmatter(
+					this.app,
+					activeFile,
+					this.settings.contactsFolder
+				);
+
+				// Report results
+				const totalErrors = frontmatterResult.errors.length + relatedResult.errors.length;
+				if (frontmatterResult.success && relatedResult.success) {
+					new Notice('Bidirectional sync completed successfully!');
+					if (totalErrors > 0) {
+						new Notice(`Sync completed with ${totalErrors} warnings - check console for details`);
+						frontmatterResult.errors.forEach(error => loggingService.warn(error));
+						relatedResult.errors.forEach(error => loggingService.warn(error));
+					}
+				} else {
+					new Notice('Bidirectional sync failed - check console for details');
+					frontmatterResult.errors.forEach(error => loggingService.error(error));
+					relatedResult.errors.forEach(error => loggingService.error(error));
 				}
 			},
 		});
