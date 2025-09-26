@@ -191,7 +191,7 @@ describe('VCFolderWatcher', () => {
     expect(mockWindow.clearInterval).toHaveBeenCalledWith(mockIntervalId);
   });
 
-  it('should find contact file by UID', async () => {
+  it('should find contact file by UID using ContactManager', async () => {
     const mockFile = { path: 'Contacts/john-doe.md' } as TFile;
     const mockCache = {
       frontmatter: { UID: 'test-uid-123' }
@@ -200,7 +200,9 @@ describe('VCFolderWatcher', () => {
     mockApp.vault.getMarkdownFiles = vi.fn().mockReturnValue([mockFile]);
     mockApp.metadataCache.getFileCache = vi.fn().mockReturnValue(mockCache);
 
-    const foundFile = await (watcher as any).findContactFileByUID('test-uid-123');
+    // Test via the ContactManager instance that watcher uses
+    const contactManager = (watcher as any).contactManager;
+    const foundFile = await contactManager.findContactFileByUID('test-uid-123');
     
     expect(foundFile).toBe(mockFile);
     expect(mockApp.metadataCache.getFileCache).toHaveBeenCalledWith(mockFile);
@@ -221,7 +223,9 @@ describe('VCFolderWatcher', () => {
 
     mockApp.metadataCache.getFileCache = vi.fn().mockReturnValue(mockCache);
 
-    const shouldUpdate = await (watcher as any).shouldUpdateContact(vcfRecord, mockFile);
+    // Test via the RevisionUtils instance that watcher uses
+    const revisionUtils = (watcher as any).revisionUtils;
+    const shouldUpdate = await revisionUtils.shouldUpdateContact(vcfRecord, mockFile);
     
     expect(shouldUpdate).toBe(true);
   });
@@ -241,7 +245,9 @@ describe('VCFolderWatcher', () => {
 
     mockApp.metadataCache.getFileCache = vi.fn().mockReturnValue(mockCache);
 
-    const shouldUpdate = await (watcher as any).shouldUpdateContact(vcfRecord, mockFile);
+    // Test via the RevisionUtils instance that watcher uses
+    const revisionUtils = (watcher as any).revisionUtils;
+    const shouldUpdate = await revisionUtils.shouldUpdateContact(vcfRecord, mockFile);
     
     expect(shouldUpdate).toBe(false);
   });
@@ -282,9 +288,12 @@ describe('VCFolderWatcher', () => {
       }
     };
 
-    // Mock the find contact file method
-    const findContactSpy = vi.spyOn(watcher as any, 'findContactFileByUID').mockResolvedValue(mockFile);
-    const shouldUpdateSpy = vi.spyOn(watcher as any, 'shouldUpdateContact').mockResolvedValue(true);
+    // Mock the ContactManager methods instead of VCFolderWatcher methods
+    const contactManager = (watcher as any).contactManager;
+    const revisionUtils = (watcher as any).revisionUtils;
+    
+    const findContactSpy = vi.spyOn(contactManager, 'findContactFileByUID').mockResolvedValue(mockFile);
+    const shouldUpdateSpy = vi.spyOn(revisionUtils, 'shouldUpdateContact').mockResolvedValue(true);
     const updateSpy = vi.spyOn(watcher as any, 'updateExistingContact').mockResolvedValue(undefined);
 
     // Mock fs operations instead of adapter operations
@@ -303,21 +312,22 @@ describe('VCFolderWatcher', () => {
 
   it('should parse REV dates correctly in various formats', () => {
     const watcher = new VCFolderWatcher(mockApp, mockSettings);
+    const revisionUtils = (watcher as any).revisionUtils;
     
     // Test vCard format
-    const date1 = (watcher as any).parseRevisionDate('20240101T120000Z');
+    const date1 = revisionUtils.parseRevisionDate('20240101T120000Z');
     expect(date1).toEqual(new Date('2024-01-01T12:00:00Z'));
     
     // Test ISO format
-    const date2 = (watcher as any).parseRevisionDate('2024-01-01T12:00:00Z');
+    const date2 = revisionUtils.parseRevisionDate('2024-01-01T12:00:00Z');
     expect(date2).toEqual(new Date('2024-01-01T12:00:00Z'));
     
     // Test invalid format
-    const date3 = (watcher as any).parseRevisionDate('invalid-date');
+    const date3 = revisionUtils.parseRevisionDate('invalid-date');
     expect(date3).toBeNull();
     
     // Test empty string
-    const date4 = (watcher as any).parseRevisionDate('');
+    const date4 = revisionUtils.parseRevisionDate('');
     expect(date4).toBeNull();
   });
 
@@ -396,9 +406,9 @@ describe('VCFolderWatcher', () => {
         return;
       }
 
-      // Get the UID from the file's frontmatter
-      const cache = mockApp.metadataCache.getFileCache(file);
-      const uid = cache?.frontmatter?.UID;
+      // Get the UID from the file's frontmatter using ContactManager
+      const contactManager = (watcher as any).contactManager;
+      const uid = await contactManager.extractUIDFromFile(file);
       
       if (!uid) {
         return; // Skip files without UID
@@ -413,10 +423,11 @@ describe('VCFolderWatcher', () => {
         const revTimestamp = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
         await updateFrontMatterValue(file, 'REV', revTimestamp);
         
-        // Update our tracking
-        (watcher as any).contactFiles.set(uid, file);
+        // Update ContactManager cache
+        contactManager.addToCache(uid, file);
         
-        // Write back to VCF if enabled
+        // For testing purposes, call writeContactToVCF directly
+        // In real usage, this would be called via scheduleWriteBack
         await (watcher as any).writeContactToVCF(file, uid);
       } catch (error) {
         console.error(`Error updating contact file REV timestamp: ${error.message}`);
