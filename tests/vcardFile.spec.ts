@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { VcardFile } from 'src/contacts/vcard/vcardFile';
+import { VcardFile } from 'src/contacts/vcardFile';
 import * as fs from 'fs/promises';
 
 // Mock fs module

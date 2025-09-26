@@ -1,6 +1,5 @@
 import * as path from 'path';
-import { VCardFileOps } from './vcard/fileOps';
-import { vcard } from './vcard';
+import { VcardFile } from './vcardFile';
 import { loggingService } from '../services/loggingService';
 import { ContactsPluginSettings } from '../settings/settings.d';
 
@@ -19,7 +18,7 @@ export interface VCFFileInfo {
 /**
  * Manages a collection of VCF files in the VCF watch folder.
  * Provides high-level operations for managing VCF file collections
- * while delegating low-level file operations to VCardFileOps.
+ * while delegating low-level file operations to VcardFile.
  */
 export class VCFManager {
   private settings: ContactsPluginSettings;
@@ -54,7 +53,7 @@ export class VCFManager {
       return [];
     }
 
-    return VCardFileOps.listVCFFiles(watchFolder);
+    return VcardFile.listVCFFiles(watchFolder);
   }
 
   /**
@@ -97,7 +96,7 @@ export class VCFManager {
    * @returns Promise resolving to VCF file info or null if error
    */
   async getVCFFileInfo(filePath: string): Promise<VCFFileInfo | null> {
-    const stats = await VCardFileOps.getFileStats(filePath);
+    const stats = await VcardFile.getFileStats(filePath);
     if (!stats) {
       return null;
     }
@@ -116,14 +115,15 @@ export class VCFManager {
    * @returns Promise resolving to parsed VCF content or null if error
    */
   async readAndParseVCF(filePath: string): Promise<Array<[string, any]> | null> {
-    const content = await VCardFileOps.readVCFFile(filePath);
+    const content = await VcardFile.readVCFFile(filePath);
     if (!content) {
       return null;
     }
 
     try {
       const parsedEntries: Array<[string, any]> = [];
-      for await (const entry of vcard.parse(content)) {
+      const vcardFile = new VcardFile(content);
+      for await (const entry of vcardFile.parse()) {
         parsedEntries.push(entry);
       }
       return parsedEntries;
@@ -148,7 +148,7 @@ export class VCFManager {
     }
 
     const fullPath = path.join(watchFolder, filename);
-    const success = await VCardFileOps.writeVCFFile(fullPath, content);
+    const success = await VcardFile.writeVCFFile(fullPath, content);
     
     return success ? fullPath : null;
   }
@@ -164,8 +164,8 @@ export class VCFManager {
     
     for (const filePath of vcfFiles) {
       try {
-        const content = await VCardFileOps.readVCFFile(filePath);
-        if (content && VCardFileOps.containsUID(content, uid)) {
+        const content = await VcardFile.readVCFFile(filePath);
+        if (content && VcardFile.containsUID(content, uid)) {
           return filePath;
         }
       } catch (error) {
@@ -187,7 +187,7 @@ export class VCFManager {
       return false;
     }
 
-    const exists = await VCardFileOps.folderExists(watchFolder);
+    const exists = await VcardFile.folderExists(watchFolder);
     if (!exists) {
       loggingService.warning(`[VCFManager] VCF watch folder does not exist: ${watchFolder}`);
     }
@@ -202,7 +202,7 @@ export class VCFManager {
    * @returns Sanitized VCF filename
    */
   generateVCFFilename(contactName: string): string {
-    return VCardFileOps.generateVCFFilename(contactName);
+    return VcardFile.generateVCFFilename(contactName);
   }
 
   /**

@@ -1,14 +1,13 @@
 import { TFile, App } from "obsidian";
 import { parseKey } from "src/contacts";
-import { StructuredFields } from "src/contacts/vcard/shared/structuredFields";
-import { VCardToStringError, VCardToStringReply, VCardForObsidianRecord, VCardSupportedKey } from "src/contacts/vcard/shared/vcard";
+import { StructuredFields, VCardToStringError, VCardToStringReply, VCardForObsidianRecord, VCardSupportedKey } from "src/contacts/vcard-types";
 import { getApp } from "src/context/sharedAppContext";
 import { createNameSlug } from "src/util/nameUtils";
 import { photoLineFromV3toV4 } from "src/util/photoLineFromV3toV4";
-import { ensureHasName } from "src/contacts/vcard/shared/ensureHasName";
+import { ensureHasName } from "src/contacts/ensureHasName";
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { loggingService } from '../../services/loggingService';
+import { loggingService } from '../services/loggingService';
 
 /**
  * A unified interface for interacting with vCard files (VCF)

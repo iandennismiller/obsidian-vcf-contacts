@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { VCFManager } from '../src/contacts/vcfManager';
-import { VCardFileOps } from '../src/contacts/vcard/fileOps';
-import { vcard } from '../src/contacts/vcard';
+import { VcardFile } from '../src/contacts/vcardFile';
 import { ContactsPluginSettings } from '../src/settings/settings.d';
 import { loggingService } from '../src/services/loggingService';
 
@@ -15,9 +14,9 @@ vi.mock('../src/services/loggingService', () => ({
   }
 }));
 
-// Mock VCardFileOps
+// Mock VcardFile
 vi.mock('../src/contacts/vcard/fileOps', () => ({
-  VCardFileOps: {
+  VcardFile: {
     listVCFFiles: vi.fn(),
     getFileStats: vi.fn(),
     readVCFFile: vi.fn(),
@@ -78,14 +77,14 @@ describe('VCFManager', () => {
   });
 
   describe('File Listing', () => {
-    it('should list VCF files using VCardFileOps', async () => {
+    it('should list VCF files using VcardFile', async () => {
       const mockFiles = ['/test/vcf/contact1.vcf', '/test/vcf/contact2.vcf'];
-      vi.mocked(VCardFileOps.listVCFFiles).mockResolvedValue(mockFiles);
+      vi.mocked(VcardFile.listVCFFiles).mockResolvedValue(mockFiles);
 
       const files = await vcfManager.listVCFFiles();
       
       expect(files).toEqual(mockFiles);
-      expect(VCardFileOps.listVCFFiles).toHaveBeenCalledWith('/test/vcf');
+      expect(VcardFile.listVCFFiles).toHaveBeenCalledWith('/test/vcf');
     });
 
     it('should return empty array when no watch folder is configured', async () => {
@@ -95,7 +94,7 @@ describe('VCFManager', () => {
       const files = await vcfManager.listVCFFiles();
       
       expect(files).toEqual([]);
-      expect(VCardFileOps.listVCFFiles).not.toHaveBeenCalled();
+      expect(VcardFile.listVCFFiles).not.toHaveBeenCalled();
     });
   });
 
@@ -129,7 +128,7 @@ describe('VCFManager', () => {
   describe('File Information', () => {
     it('should get VCF file information', async () => {
       const mockStats = { mtimeMs: 1234567890 };
-      vi.mocked(VCardFileOps.getFileStats).mockResolvedValue(mockStats);
+      vi.mocked(VcardFile.getFileStats).mockResolvedValue(mockStats);
 
       const fileInfo = await vcfManager.getVCFFileInfo('/test/vcf/contact.vcf');
       
@@ -138,11 +137,11 @@ describe('VCFManager', () => {
         lastModified: 1234567890,
         uid: undefined
       });
-      expect(VCardFileOps.getFileStats).toHaveBeenCalledWith('/test/vcf/contact.vcf');
+      expect(VcardFile.getFileStats).toHaveBeenCalledWith('/test/vcf/contact.vcf');
     });
 
     it('should return null when file stats are unavailable', async () => {
-      vi.mocked(VCardFileOps.getFileStats).mockResolvedValue(null);
+      vi.mocked(VcardFile.getFileStats).mockResolvedValue(null);
 
       const fileInfo = await vcfManager.getVCFFileInfo('/test/vcf/missing.vcf');
       
@@ -155,7 +154,7 @@ describe('VCFManager', () => {
       const mockContent = 'BEGIN:VCARD\nVERSION:3.0\nFN:John Doe\nEND:VCARD';
       const mockParsedEntries = [['john-doe', { UID: 'test-uid', FN: 'John Doe' }]];
       
-      vi.mocked(VCardFileOps.readVCFFile).mockResolvedValue(mockContent);
+      vi.mocked(VcardFile.readVCFFile).mockResolvedValue(mockContent);
       
       // Mock async generator
       const mockGenerator = (async function* () {
@@ -163,17 +162,17 @@ describe('VCFManager', () => {
           yield entry;
         }
       })();
-      vi.mocked(vcard.parse).mockReturnValue(mockGenerator);
+      vi.mocked(VcardFile.prototype.parse).mockReturnValue(mockGenerator);
 
       const result = await vcfManager.readAndParseVCF('/test/vcf/contact.vcf');
       
       expect(result).toEqual(mockParsedEntries);
-      expect(VCardFileOps.readVCFFile).toHaveBeenCalledWith('/test/vcf/contact.vcf');
-      expect(vcard.parse).toHaveBeenCalledWith(mockContent);
+      expect(VcardFile.readVCFFile).toHaveBeenCalledWith('/test/vcf/contact.vcf');
+      expect(VcardFile.prototype.parse).toHaveBeenCalledWith(mockContent);
     });
 
     it('should return null when file cannot be read', async () => {
-      vi.mocked(VCardFileOps.readVCFFile).mockResolvedValue(null);
+      vi.mocked(VcardFile.readVCFFile).mockResolvedValue(null);
 
       const result = await vcfManager.readAndParseVCF('/test/vcf/missing.vcf');
       
@@ -182,8 +181,8 @@ describe('VCFManager', () => {
 
     it('should handle parsing errors gracefully', async () => {
       const mockContent = 'INVALID VCF CONTENT';
-      vi.mocked(VCardFileOps.readVCFFile).mockResolvedValue(mockContent);
-      vi.mocked(vcard.parse).mockImplementation(() => {
+      vi.mocked(VcardFile.readVCFFile).mockResolvedValue(mockContent);
+      vi.mocked(VcardFile.prototype.parse).mockImplementation(() => {
         throw new Error('Parse error');
       });
 
@@ -199,17 +198,17 @@ describe('VCFManager', () => {
   describe('VCF Writing', () => {
     it('should write VCF file successfully', async () => {
       const vcfContent = 'BEGIN:VCARD\nVERSION:3.0\nFN:John Doe\nEND:VCARD';
-      vi.mocked(VCardFileOps.writeVCFFile).mockResolvedValue(true);
+      vi.mocked(VcardFile.writeVCFFile).mockResolvedValue(true);
 
       const result = await vcfManager.writeVCFFile('contact.vcf', vcfContent);
       
       expect(result).toBe('/test/vcf/contact.vcf');
-      expect(VCardFileOps.writeVCFFile).toHaveBeenCalledWith('/test/vcf/contact.vcf', vcfContent);
+      expect(VcardFile.writeVCFFile).toHaveBeenCalledWith('/test/vcf/contact.vcf', vcfContent);
     });
 
     it('should return null when write fails', async () => {
       const vcfContent = 'BEGIN:VCARD\nVERSION:3.0\nFN:John Doe\nEND:VCARD';
-      vi.mocked(VCardFileOps.writeVCFFile).mockResolvedValue(false);
+      vi.mocked(VcardFile.writeVCFFile).mockResolvedValue(false);
 
       const result = await vcfManager.writeVCFFile('contact.vcf', vcfContent);
       
@@ -235,11 +234,11 @@ describe('VCFManager', () => {
       const file1Content = 'BEGIN:VCARD\nUID:other-uid\nEND:VCARD';
       const file2Content = 'BEGIN:VCARD\nUID:target-uid\nEND:VCARD';
       
-      vi.mocked(VCardFileOps.listVCFFiles).mockResolvedValue(mockFiles);
-      vi.mocked(VCardFileOps.readVCFFile)
+      vi.mocked(VcardFile.listVCFFiles).mockResolvedValue(mockFiles);
+      vi.mocked(VcardFile.readVCFFile)
         .mockResolvedValueOnce(file1Content)
         .mockResolvedValueOnce(file2Content);
-      vi.mocked(VCardFileOps.containsUID)
+      vi.mocked(VcardFile.containsUID)
         .mockReturnValueOnce(false)
         .mockReturnValueOnce(true);
 
@@ -252,9 +251,9 @@ describe('VCFManager', () => {
       const mockFiles = ['/test/vcf/contact1.vcf'];
       const fileContent = 'BEGIN:VCARD\nUID:different-uid\nEND:VCARD';
       
-      vi.mocked(VCardFileOps.listVCFFiles).mockResolvedValue(mockFiles);
-      vi.mocked(VCardFileOps.readVCFFile).mockResolvedValue(fileContent);
-      vi.mocked(VCardFileOps.containsUID).mockReturnValue(false);
+      vi.mocked(VcardFile.listVCFFiles).mockResolvedValue(mockFiles);
+      vi.mocked(VcardFile.readVCFFile).mockResolvedValue(fileContent);
+      vi.mocked(VcardFile.containsUID).mockReturnValue(false);
 
       const result = await vcfManager.findVCFFileByUID('target-uid');
       
@@ -265,13 +264,13 @@ describe('VCFManager', () => {
       const mockFiles = ['/test/vcf/contact1.vcf', '/test/vcf/contact2.vcf'];
       const file2Content = 'BEGIN:VCARD\nUID:target-uid\nEND:VCARD';
       
-      vi.mocked(VCardFileOps.listVCFFiles).mockResolvedValue(mockFiles);
+      vi.mocked(VcardFile.listVCFFiles).mockResolvedValue(mockFiles);
       // Mock the first file returning null (no content, not an error)
       // and second file returning content
-      vi.mocked(VCardFileOps.readVCFFile)
+      vi.mocked(VcardFile.readVCFFile)
         .mockResolvedValueOnce(null) // First file returns null (no error thrown)
         .mockResolvedValueOnce(file2Content);
-      vi.mocked(VCardFileOps.containsUID)
+      vi.mocked(VcardFile.containsUID)
         .mockReturnValueOnce(true); // Only called for the second file
 
       const result = await vcfManager.findVCFFileByUID('target-uid');
@@ -283,16 +282,16 @@ describe('VCFManager', () => {
 
   describe('Watch Folder Management', () => {
     it('should check if watch folder exists', async () => {
-      vi.mocked(VCardFileOps.folderExists).mockResolvedValue(true);
+      vi.mocked(VcardFile.folderExists).mockResolvedValue(true);
 
       const exists = await vcfManager.watchFolderExists();
       
       expect(exists).toBe(true);
-      expect(VCardFileOps.folderExists).toHaveBeenCalledWith('/test/vcf');
+      expect(VcardFile.folderExists).toHaveBeenCalledWith('/test/vcf');
     });
 
     it('should return false and log warning when watch folder does not exist', async () => {
-      vi.mocked(VCardFileOps.folderExists).mockResolvedValue(false);
+      vi.mocked(VcardFile.folderExists).mockResolvedValue(false);
 
       const exists = await vcfManager.watchFolderExists();
       
@@ -309,18 +308,18 @@ describe('VCFManager', () => {
       const exists = await vcfManager.watchFolderExists();
       
       expect(exists).toBe(false);
-      expect(VCardFileOps.folderExists).not.toHaveBeenCalled();
+      expect(VcardFile.folderExists).not.toHaveBeenCalled();
     });
   });
 
   describe('Filename Generation', () => {
-    it('should generate VCF filename using VCardFileOps', () => {
-      vi.mocked(VCardFileOps.generateVCFFilename).mockReturnValue('John_Doe.vcf');
+    it('should generate VCF filename using VcardFile', () => {
+      vi.mocked(VcardFile.generateVCFFilename).mockReturnValue('John_Doe.vcf');
 
       const result = vcfManager.generateVCFFilename('John Doe');
       
       expect(result).toBe('John_Doe.vcf');
-      expect(VCardFileOps.generateVCFFilename).toHaveBeenCalledWith('John Doe');
+      expect(VcardFile.generateVCFFilename).toHaveBeenCalledWith('John Doe');
     });
   });
 
@@ -330,8 +329,8 @@ describe('VCFManager', () => {
       const mockStats1 = { mtimeMs: 1234567890 };
       const mockStats2 = { mtimeMs: 1234567891 };
       
-      vi.mocked(VCardFileOps.listVCFFiles).mockResolvedValue(mockFiles);
-      vi.mocked(VCardFileOps.getFileStats)
+      vi.mocked(VcardFile.listVCFFiles).mockResolvedValue(mockFiles);
+      vi.mocked(VcardFile.getFileStats)
         .mockResolvedValueOnce(mockStats1)
         .mockResolvedValueOnce(mockStats2);
 
@@ -355,8 +354,8 @@ describe('VCFManager', () => {
       const mockFiles = ['/test/vcf/contact1.vcf', '/test/vcf/contact2.vcf'];
       const mockStats1 = { mtimeMs: 1234567890 };
       
-      vi.mocked(VCardFileOps.listVCFFiles).mockResolvedValue(mockFiles);
-      vi.mocked(VCardFileOps.getFileStats)
+      vi.mocked(VcardFile.listVCFFiles).mockResolvedValue(mockFiles);
+      vi.mocked(VcardFile.getFileStats)
         .mockResolvedValueOnce(mockStats1)
         .mockResolvedValueOnce(null); // Second file has no stats
 

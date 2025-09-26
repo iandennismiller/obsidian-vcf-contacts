@@ -2,7 +2,7 @@ import * as fs from 'fs/promises';
 import { App, Notice, TFile } from 'obsidian';
 import * as path from 'path';
 import { mdRender } from 'src/contacts/contactMdTemplate';
-import { vcard } from 'src/contacts/vcard';
+import { VcardFile } from 'src/contacts/vcardFile';
 import { createContactFile } from 'src/file/file';
 import { loggingService } from 'src/services/loggingService';
 import { ContactsPluginSettings } from 'src/settings/settings.d';
@@ -36,7 +36,8 @@ export function setupVCFDropHandler(app: App, settings: ContactsPluginSettings):
       }
 
       // Parse vCard records and create/update contacts
-      for await (const [slug, record] of vcard.parse(content)) {
+      const vcardFile = new VcardFile(content);
+      for await (const [slug, record] of vcardFile.parse()) {
         if (!record || !record.UID) continue;
 
         // Locate existing contact by UID (scan contacts folder)

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { VcardFile, vcard } from 'src/contacts/vcard';
+import { VcardFile } from 'src/contacts/vcardFile';
 
 // Mock the app context dependency
 vi.mock('src/context/sharedAppContext', () => ({
@@ -24,21 +24,18 @@ describe('VcardFile Integration', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
-  it('should work alongside existing vcard API', async () => {
-    // Test that both the new VcardFile class and old vcard object coexist
+  it('should provide VcardFile class functionality', async () => {
+    // Test that the VcardFile class provides all needed functionality
     
-    // Old way - using the vcard object
-    const emptyVcardOld = await vcard.createEmpty();
-    expect(emptyVcardOld).toBeDefined();
+    // Test creating empty vcard
+    const emptyVcard = await VcardFile.createEmpty();
+    expect(emptyVcard).toBeInstanceOf(VcardFile);
+    expect(emptyVcard.toString()).toContain('BEGIN:VCARD');
+    expect(emptyVcard.toString()).toContain('END:VCARD');
+    expect(emptyVcard.toString()).toContain('VERSION:4.0');
     
-    // New way - using the VcardFile class
-    const emptyVcardNew = await VcardFile.createEmpty();
-    expect(emptyVcardNew).toBeInstanceOf(VcardFile);
-    expect(emptyVcardNew.toString()).toContain('BEGIN:VCARD');
-    expect(emptyVcardNew.toString()).toContain('END:VCARD');
-    
-    // Both should produce VCF content
-    expect(typeof emptyVcardNew.toString()).toBe('string');
+    // Test string output
+    expect(typeof emptyVcard.toString()).toBe('string');
   });
 
   it('should provide unified interface for parsing and generation', async () => {

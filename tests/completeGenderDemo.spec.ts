@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { vcard } from 'src/contacts/vcard';
+import { VcardFile } from 'src/contacts/vcardFile';
 import { mdRender } from 'src/contacts/contactMdTemplate';
 import { parseGender, type Gender } from 'src/util/genderUtils';
 
@@ -34,7 +34,7 @@ END:VCARD`;
 
     // Parse the VCard
     const results = [];
-    for await (const [slug, record] of vcard.parse(vcardData)) {
+    for await (const [slug, record] of new VcardFile(vcardData).parse()) {
       results.push({ slug, record });
     }
 

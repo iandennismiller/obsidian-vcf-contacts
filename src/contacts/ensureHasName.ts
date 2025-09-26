@@ -1,5 +1,4 @@
-import { VCardForObsidianRecord } from "src/contacts/vcard/index";
-import { VCardKinds } from "src/contacts/vcard/shared/structuredFields";
+import { VCardForObsidianRecord, VCardKinds } from "src/contacts/vcard-types";
 import { getApp } from "src/context/sharedAppContext";
 import { ContactNameModal, NamingPayload } from "src/ui/modals/contactNameModal";
 import { createNameSlug } from "src/util/nameUtils";

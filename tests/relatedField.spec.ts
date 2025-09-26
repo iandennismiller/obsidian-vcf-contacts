@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { vcard } from 'src/contacts/vcard';
+import { VcardFile } from 'src/contacts/vcardFile';
 
 describe('RELATED field support', () => {
   it('should parse RELATED fields from VCard', async () => {
@@ -12,7 +12,7 @@ RELATED;TYPE=sibling:name:Jane Doe
 END:VCARD`;
 
     const results = [];
-    for await (const [slug, record] of vcard.parse(vcardData)) {
+    for await (const [slug, record] of new VcardFile(vcardData).parse()) {
       results.push({ slug, record });
     }
 
@@ -33,7 +33,7 @@ RELATED;TYPE=friend:name:Another Friend
 END:VCARD`;
 
     const results = [];
-    for await (const [slug, record] of vcard.parse(vcardData)) {
+    for await (const [slug, record] of new VcardFile(vcardData).parse()) {
       results.push({ slug, record });
     }
 

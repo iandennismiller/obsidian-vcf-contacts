@@ -1,5 +1,5 @@
 import { TFile, App } from 'obsidian';
-import { VCardForObsidianRecord } from './vcard/shared/vcard.d';
+import { VCardForObsidianRecord } from './vcard-types';
 import { loggingService } from '../services/loggingService';
 
 /**
