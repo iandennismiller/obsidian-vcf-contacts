@@ -48,6 +48,8 @@ export class VCFolderWatcher {
   private writeBackTimers: Map<string, number> = new Map();
   // Keep track of vault create listener cleanup
   private vaultCreateCleanup: (() => void) | null = null;
+  // Track files currently being updated to prevent infinite loops
+  private updatingRevFields: Set<string> = new Set();
 
   /**
    * Creates a new VCF folder watcher instance.
@@ -161,10 +163,10 @@ export class VCFolderWatcher {
 
     // Log configuration changes
     if (this.settings.vcfWatchEnabled !== newSettings.vcfWatchEnabled) {
-      loggingService.debug(`VCF watch enabled changed: ${this.settings.vcfWatchEnabled} → ${newSettings.vcfWatchEnabled}`);
+      loggingService.info(`VCF watch enabled changed: ${this.settings.vcfWatchEnabled} → ${newSettings.vcfWatchEnabled}`);
     }
     if (this.settings.vcfWatchFolder !== newSettings.vcfWatchFolder) {
-      loggingService.debug(`VCF watch folder changed: ${this.settings.vcfWatchFolder} → ${newSettings.vcfWatchFolder}`);
+      loggingService.info(`VCF watch folder changed: ${this.settings.vcfWatchFolder} → ${newSettings.vcfWatchFolder}`);
     }
     if (this.settings.vcfWatchPollingInterval !== newSettings.vcfWatchPollingInterval) {
       loggingService.debug(`VCF polling interval changed: ${this.settings.vcfWatchPollingInterval}s → ${newSettings.vcfWatchPollingInterval}s`);
@@ -476,6 +478,10 @@ export class VCFolderWatcher {
   private async listVCFFiles(folderPath: string): Promise<string[]> {
     try {
       const entries = await fs.readdir(folderPath, { withFileTypes: true });
+      if (!entries || !Array.isArray(entries)) {
+        loggingService.debug(`No entries returned from readdir for ${folderPath}`);
+        return [];
+      }
       return entries
         .filter(entry => entry.isFile() && entry.name.toLowerCase().endsWith('.vcf'))
         .map(entry => path.join(folderPath, entry.name));
@@ -503,7 +509,7 @@ export class VCFolderWatcher {
       // Check if this filename should be ignored
       const filename = path.basename(filePath);
       if (this.settings.vcfIgnoreFilenames.includes(filename)) {
-        loggingService.debug(`Skipping ignored VCF file: ${filename}`);
+        loggingService.info(`Skipping ignored VCF file: ${filename}`);
         return;
       }
 
@@ -538,7 +544,7 @@ export class VCFolderWatcher {
         if (slug && record.UID) {
           // Check if this UID should be ignored
           if (this.settings.vcfIgnoreUIDs.includes(record.UID)) {
-            loggingService.debug(`Skipping ignored UID: ${record.UID}`);
+            loggingService.info(`Skipping ignored UID: ${record.UID}`);
             skipped++;
             continue;
           }
@@ -640,8 +646,16 @@ export class VCFolderWatcher {
         loggingService.debug(`Renamed contact file from ${currentFilename} to ${newFilename}`);
       }
       
-      // Update the file content with new data
-      await this.app.vault.modify(existingFile, newMdContent);
+      // Mark file as being updated to prevent loops
+      this.updatingRevFields.add(existingFile.path);
+      
+      try {
+        // Update the file content with new data
+        await this.app.vault.modify(existingFile, newMdContent);
+      } finally {
+        // Remove from tracking set after update
+        this.updatingRevFields.delete(existingFile.path);
+      }
       
     } catch (error) {
       loggingService.error(`Error updating existing contact: ${error.message}`);
@@ -667,6 +681,11 @@ export class VCFolderWatcher {
     const onFileModify = async (file: TFile) => {
       // Only process files in the contacts folder
       if (!file.path.startsWith(this.settings.contactsFolder)) {
+        return;
+      }
+
+      // Skip if we're currently updating this file internally to avoid loops
+      if (this.updatingRevFields.has(file.path)) {
         return;
       }
 
