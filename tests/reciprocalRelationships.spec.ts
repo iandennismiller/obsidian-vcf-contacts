@@ -37,14 +37,7 @@ vi.mock('src/util/relatedListSync', () => ({
   updateRelatedSectionInContent: vi.fn()
 }));
 
-vi.mock('src/util/reciprocalRelationships', async () => {
-  const actual = await vi.importActual<typeof import('src/util/reciprocalRelationships')>('src/util/reciprocalRelationships');
-  return {
-    ...actual,
-    hasReciprocalRelationshipInFrontmatter: vi.fn(),
-    hasReciprocalRelationshipInRelatedList: vi.fn(),
-  };
-});
+// Don't mock our own module - we want to test the actual implementation
 
 vi.mock('src/util/genderUtils', () => ({
   convertToGenderlessType: vi.fn((type: string) => {
@@ -297,7 +290,8 @@ UID: jane-123
     beforeEach(() => {
       mockApp = {
         vault: {
-          read: vi.fn()
+          read: vi.fn(),
+          getAbstractFileByPath: vi.fn()
         },
         metadataCache: {
           getFileCache: vi.fn()
@@ -308,35 +302,61 @@ UID: jane-123
         path: '/test/John Doe.md',
         basename: 'John Doe'
       } as TFile;
-      
-      // Mock the functions that will be called internally
-      vi.mocked(hasReciprocalRelationshipInFrontmatter).mockReset();
-      vi.mocked(hasReciprocalRelationshipInRelatedList).mockReset();
     });
 
     it('should find missing reciprocal relationships', async () => {
-      const { parseRelatedSection, findContactByName } = await import('src/util/relatedListSync');
+      const { parseRelatedSection, findContactByName, parseFrontmatterRelationships } = await import('src/util/relatedListSync');
 
-      // Mock the source file content (John Doe has parent Jane Doe)
-      vi.mocked(mockApp.vault.read).mockResolvedValue(`---
+      // Mock John's file content (John has parent Jane Doe) - first call to vault.read
+      vi.mocked(mockApp.vault.read)
+        .mockResolvedValueOnce(`---
 FN: John Doe
 UID: john-123
 ---
 
 ## Related
 - parent [[Jane Doe]]
+`)
+        // Mock Jane's file content for hasReciprocalRelationshipInRelatedList - second call to vault.read
+        .mockResolvedValueOnce(`---
+FN: Jane Doe
+UID: jane-123
+---
+
+## Related
+- spouse [[Bob Doe]]
 `);
 
-      vi.mocked(parseRelatedSection).mockReturnValue([
-        { type: 'parent', contactName: 'Jane Doe', originalType: 'parent' }
-      ]);
+      // Mock parseRelatedSection - first call for John's relationships
+      vi.mocked(parseRelatedSection)
+        .mockReturnValueOnce([
+          { type: 'parent', contactName: 'Jane Doe', originalType: 'parent' }
+        ])
+        // Second call for Jane's relationships (to check if she has reciprocal)
+        .mockReturnValueOnce([
+          { type: 'spouse', contactName: 'Bob Doe', originalType: 'spouse' }
+        ]);
 
       const janeFile = { path: '/test/Jane Doe.md', basename: 'Jane Doe' } as TFile;
       vi.mocked(findContactByName).mockResolvedValue(janeFile);
+      
+      // Mock the direct vault method that findContactByName uses
+      vi.mocked(mockApp.vault.getAbstractFileByPath).mockReturnValue(janeFile);
 
-      // Mock that Jane does NOT have the reciprocal relationship in either location
-      vi.mocked(hasReciprocalRelationshipInFrontmatter).mockResolvedValue(false);
-      vi.mocked(hasReciprocalRelationshipInRelatedList).mockResolvedValue(false);
+      // Mock Jane's frontmatter (she doesn't have the reciprocal child relationship)
+      vi.mocked(mockApp.metadataCache.getFileCache).mockReturnValue({
+        frontmatter: {
+          'RELATED[spouse]': 'name:Bob Doe'  // Jane has a spouse but not child relationship to John
+        }
+      } as any);
+
+      vi.mocked(parseFrontmatterRelationships).mockReturnValue([
+        {
+          type: 'spouse',
+          value: 'name:Bob Doe',
+          parsedValue: { type: 'name', value: 'Bob Doe' }
+        }
+      ]);
 
       const result = await findMissingReciprocalRelationships(
         mockApp,
@@ -355,9 +375,10 @@ UID: john-123
     });
 
     it('should return empty array when all reciprocals exist', async () => {
-      const { parseRelatedSection, findContactByName } = await import('src/util/relatedListSync');
+      const { parseRelatedSection, findContactByName, parseFrontmatterRelationships } = await import('src/util/relatedListSync');
 
-      vi.mocked(mockApp.vault.read).mockResolvedValue(`---
+      // Mock John's file content (John has parent Jane) - first call to vault.read
+      vi.mocked(mockApp.vault.read).mockResolvedValueOnce(`---
 FN: John Doe
 UID: john-123
 ---
@@ -366,16 +387,31 @@ UID: john-123
 - parent [[Jane Doe]]
 `);
 
-      vi.mocked(parseRelatedSection).mockReturnValue([
+      // Mock parseRelatedSection - first call for John's relationships
+      vi.mocked(parseRelatedSection).mockReturnValueOnce([
         { type: 'parent', contactName: 'Jane Doe', originalType: 'parent' }
       ]);
 
       const janeFile = { path: '/test/Jane Doe.md', basename: 'Jane Doe' } as TFile;
       vi.mocked(findContactByName).mockResolvedValue(janeFile);
+      
+      // Mock the direct vault method that findContactByName uses  
+      vi.mocked(mockApp.vault.getAbstractFileByPath).mockReturnValue(janeFile);
 
-      // Mock that Jane DOES have the reciprocal relationship in frontmatter
-      vi.mocked(hasReciprocalRelationshipInFrontmatter).mockResolvedValue(true);
-      vi.mocked(hasReciprocalRelationshipInRelatedList).mockResolvedValue(false); // doesn't matter since frontmatter check passes
+      // Mock Jane's frontmatter (she DOES have the reciprocal child relationship)
+      vi.mocked(mockApp.metadataCache.getFileCache).mockReturnValue({
+        frontmatter: {
+          'RELATED[child]': 'name:John Doe'  // Jane correctly has John as child
+        }
+      } as any);
+
+      vi.mocked(parseFrontmatterRelationships).mockReturnValue([
+        {
+          type: 'child',
+          value: 'name:John Doe',
+          parsedValue: { type: 'name', value: 'John Doe' }
+        }
+      ]);
 
       const result = await findMissingReciprocalRelationships(
         mockApp,
@@ -485,7 +521,8 @@ UID: jane-123
       mockApp = {
         vault: {
           read: vi.fn(),
-          modify: vi.fn()
+          modify: vi.fn(),
+          getAbstractFileByPath: vi.fn()
         },
         metadataCache: {
           getFileCache: vi.fn()
@@ -507,22 +544,47 @@ UID: jane-123
         updateRelatedSectionInContent
       } = await import('src/util/relatedListSync');
 
-      // Mock John's file content
-      vi.mocked(mockApp.vault.read).mockResolvedValueOnce(`---
+      // Mock vault.read to return different content based on the file
+      vi.mocked(mockApp.vault.read).mockImplementation(async (file: TFile) => {
+        if (file.basename === 'John Doe') {
+          return `---
 FN: John Doe
 UID: john-123
 ---
 
 ## Related
 - parent [[Jane Doe]]
-`);
+`;
+        } else if (file.basename === 'Jane Doe') {
+          return `---
+FN: Jane Doe
+UID: jane-123
+---
 
-      vi.mocked(parseRelatedSection).mockReturnValueOnce([
-        { type: 'parent', contactName: 'Jane Doe', originalType: 'parent' }
-      ]);
+## Related
+`;
+        }
+        throw new Error(`Unexpected file: ${file.basename}`);
+      });
+
+      // Mock parseRelatedSection to return different content based on the call order
+      let parseRelatedSectionCallCount = 0;
+      vi.mocked(parseRelatedSection).mockImplementation((content: string) => {
+        parseRelatedSectionCallCount++;
+        if (parseRelatedSectionCallCount === 1) {
+          // First call: John's relationships
+          return [{ type: 'parent', contactName: 'Jane Doe', originalType: 'parent' }];
+        } else {
+          // Later calls: Jane's relationships (empty initially)
+          return [];
+        }
+      });
 
       const janeFile = { path: '/test/Jane Doe.md', basename: 'Jane Doe' } as TFile;
       vi.mocked(findContactByName).mockResolvedValue(janeFile);
+      
+      // Mock the direct vault method that findContactByName uses
+      vi.mocked(mockApp.vault.getAbstractFileByPath).mockReturnValue(janeFile);
 
       // Mock Jane's frontmatter (missing reciprocal)
       vi.mocked(mockApp.metadataCache.getFileCache).mockReturnValue({
@@ -530,17 +592,6 @@ UID: john-123
       } as any);
 
       vi.mocked(parseFrontmatterRelationships).mockReturnValue([]);
-
-      // Mock Jane's file content for adding reciprocal
-      vi.mocked(mockApp.vault.read).mockResolvedValueOnce(`---
-FN: Jane Doe
-UID: jane-123
----
-
-## Related
-`);
-
-      vi.mocked(parseRelatedSection).mockReturnValueOnce([]);
 
       const expectedContent = `---
 FN: Jane Doe
@@ -588,6 +639,9 @@ UID: john-123
 
       const janeFile = { path: '/test/Jane Doe.md', basename: 'Jane Doe' } as TFile;
       vi.mocked(findContactByName).mockResolvedValue(janeFile);
+      
+      // Mock the direct vault method that findContactByName uses
+      vi.mocked(mockApp.vault.getAbstractFileByPath).mockReturnValue(janeFile);
 
       // Mock Jane's frontmatter (has reciprocal)
       vi.mocked(mockApp.metadataCache.getFileCache).mockReturnValue({
