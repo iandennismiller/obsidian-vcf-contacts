@@ -9,6 +9,7 @@ import { setupVCFDropHandler } from 'src/services/vcfDropHandler';
 import { setApp, clearApp } from "src/context/sharedAppContext";
 import { loggingService } from "src/services/loggingService";
 import { syncRelatedListToFrontmatter } from "src/util/relatedListSync";
+import { ContactManager } from "src/contacts/contactManager";
 
 import { ContactsSettingTab, DEFAULT_SETTINGS } from './settings/settings';
 import { ContactsPluginSettings } from  './settings/settings.d';
@@ -17,6 +18,7 @@ export default class ContactsPlugin extends Plugin {
 	settings: ContactsPluginSettings;
 	private vcfWatcher: VCFolderWatcher | null = null;
 	private vcfDropCleanup: (() => void) | null = null;
+	private contactManager: ContactManager | null = null;
 
 	async onload() {
 		await this.loadSettings();
@@ -24,6 +26,11 @@ export default class ContactsPlugin extends Plugin {
 		loggingService.initialize(this.settings.logLevel, "VCF Contacts plugin loaded");
 		// Set up app context for shared utilities
 		setApp(this.app);
+
+		// Initialize ContactManager for automatic syncing
+		this.contactManager = new ContactManager(this.app, this.settings);
+		await this.contactManager.initializeCache();
+		this.contactManager.setupEventListeners();
 
 		// Initialize VCF folder watcher
 		this.vcfWatcher = new VCFolderWatcher(this.app, this.settings);
@@ -107,6 +114,12 @@ export default class ContactsPlugin extends Plugin {
 	}
 
 	onunload() {
+		// Clean up ContactManager event listeners
+		if (this.contactManager) {
+			this.contactManager.cleanupEventListeners();
+			this.contactManager = null;
+		}
+
 		// Clean up app context
 		clearApp();
 
