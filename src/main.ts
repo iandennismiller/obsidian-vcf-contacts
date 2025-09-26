@@ -9,6 +9,10 @@ import { setupVCFDropHandler } from 'src/services/vcfDropHandler';
 import { setApp, clearApp } from "src/context/sharedAppContext";
 import { loggingService } from "src/services/loggingService";
 import { syncRelatedListToFrontmatter, syncFrontmatterToRelatedList } from "src/util/relatedListSync";
+import { 
+  findMissingReciprocalRelationships, 
+  fixMissingReciprocalRelationships 
+} from "src/util/reciprocalRelationships";
 import { ContactManager } from "src/contacts/contactManager";
 
 import { ContactsSettingTab, DEFAULT_SETTINGS } from './settings/settings';
@@ -209,6 +213,105 @@ export default class ContactsPlugin extends Plugin {
 					new Notice('Bidirectional sync failed - check console for details');
 					frontmatterResult.errors.forEach(error => loggingService.error(error));
 					relatedResult.errors.forEach(error => loggingService.error(error));
+				}
+			},
+		});
+
+		this.addCommand({
+			id: 'check-reciprocal-relationships',
+			name: "Check reciprocal relationships",
+			callback: async () => {
+				const activeFile = this.app.workspace.getActiveFile();
+				if (!activeFile) {
+					new Notice('No active file found');
+					return;
+				}
+
+				// Check if the file is in the contacts folder
+				if (!activeFile.path.startsWith(this.settings.contactsFolder)) {
+					new Notice('Active file is not in the contacts folder');
+					return;
+				}
+
+				// Check if file has UID (is a contact file)
+				const cache = this.app.metadataCache.getFileCache(activeFile);
+				if (!cache?.frontmatter?.UID) {
+					new Notice('Active file is not a contact file (missing UID)');
+					return;
+				}
+
+				// Check for missing reciprocals
+				new Notice('Checking reciprocal relationships...');
+				const result = await findMissingReciprocalRelationships(
+					this.app,
+					activeFile,
+					this.settings.contactsFolder
+				);
+
+				if (result.allReciprocalExists) {
+					new Notice('All relationships have proper reciprocals! 🎉');
+				} else {
+					const count = result.missingReciprocals.length;
+					new Notice(`Found ${count} missing reciprocal relationship${count > 1 ? 's' : ''}. Use "Fix missing reciprocal relationships" to add them.`);
+					
+					// Log details to console
+					loggingService.info(`Missing reciprocal relationships for ${activeFile.basename}:`);
+					result.missingReciprocals.forEach(missing => {
+						loggingService.info(`  ${missing.targetName} is missing: ${missing.reciprocalType} -> ${missing.sourceContactName}`);
+					});
+				}
+
+				if (result.errors.length > 0) {
+					new Notice(`Check completed with ${result.errors.length} errors - check console for details`);
+					result.errors.forEach(error => loggingService.error(error));
+				}
+			},
+		});
+
+		this.addCommand({
+			id: 'fix-missing-reciprocal-relationships',
+			name: "Fix missing reciprocal relationships",
+			callback: async () => {
+				const activeFile = this.app.workspace.getActiveFile();
+				if (!activeFile) {
+					new Notice('No active file found');
+					return;
+				}
+
+				// Check if the file is in the contacts folder
+				if (!activeFile.path.startsWith(this.settings.contactsFolder)) {
+					new Notice('Active file is not in the contacts folder');
+					return;
+				}
+
+				// Check if file has UID (is a contact file)
+				const cache = this.app.metadataCache.getFileCache(activeFile);
+				if (!cache?.frontmatter?.UID) {
+					new Notice('Active file is not a contact file (missing UID)');
+					return;
+				}
+
+				// Fix missing reciprocals
+				new Notice('Fixing missing reciprocal relationships...');
+				const result = await fixMissingReciprocalRelationships(
+					this.app,
+					activeFile,
+					this.settings.contactsFolder
+				);
+
+				if (result.success) {
+					if (result.addedCount === 0) {
+						new Notice('No missing reciprocal relationships found!');
+					} else {
+						new Notice(`Successfully added ${result.addedCount} reciprocal relationship${result.addedCount > 1 ? 's' : ''}! 🎉`);
+					}
+				} else {
+					new Notice('Failed to fix reciprocal relationships - check console for details');
+				}
+
+				if (result.errors.length > 0) {
+					new Notice(`Fix completed with ${result.errors.length} warnings - check console for details`);
+					result.errors.forEach(error => loggingService.warn(error));
 				}
 			},
 		});
