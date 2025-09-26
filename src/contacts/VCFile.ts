@@ -184,14 +184,49 @@ class VCardParserInternal {
     // This is a simplified parser - for now, we'll create a basic implementation
     // TODO: Implement full VCard parsing or integrate with a VCard parsing library
     
-    // For now, create a placeholder record
+    // For testing purposes, try to extract some basic information
+    const lines = vCardData.split('\n');
     const record: VCardForObsidianRecord = {
       VERSION: "4.0",
       FN: "Placeholder Contact",
       UID: Date.now().toString()
     };
     
-    yield [undefined, record];
+    // Extract some basic fields for testing
+    let slug = undefined;
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed.startsWith('FN:')) {
+        record.FN = trimmed.substring(3);
+        slug = record.FN.toLowerCase().replace(/\s+/g, '-');
+      } else if (trimmed.startsWith('UID:')) {
+        record.UID = trimmed.substring(4);
+      } else if (trimmed.startsWith('N:')) {
+        // Parse N field: Family;Given;Middle;Prefix;Suffix
+        const nameParts = trimmed.substring(2).split(';');
+        if (nameParts[1]) record['N.GN'] = nameParts[1];
+        if (nameParts[0]) record['N.FN'] = nameParts[0];
+        if (nameParts[2]) record['N.MN'] = nameParts[2];
+        if (nameParts[3]) record['N.PREFIX'] = nameParts[3];
+        if (nameParts[4]) record['N.SUFFIX'] = nameParts[4];
+        
+        // Create slug from name if we don't have one from FN
+        if (!slug && (nameParts[0] || nameParts[1])) {
+          slug = `${nameParts[1] || ''}-${nameParts[0] || ''}`.toLowerCase().replace(/\s+/g, '-');
+        }
+      } else if (trimmed.startsWith('BDAY:')) {
+        record.BDAY = trimmed.substring(5);
+      } else if (trimmed.startsWith('EMAIL:')) {
+        record.EMAIL = trimmed.substring(6);
+      } else if (trimmed.startsWith('TEL:')) {
+        record.TEL = trimmed.substring(4);
+      }
+    }
+    
+    // Only yield if we have a valid slug (for parseValidVCards to work)
+    if (slug) {
+      yield [slug, record];
+    }
   }
 
   static async generateVCardString(files: TFile[], app?: App): Promise<VCardToStringReply> {
@@ -277,6 +312,34 @@ export class VCFile {
    */
   static async folderExists(folderPath: string): Promise<boolean> {
     return await VCardFileOpsInternal.folderExists(folderPath);
+  }
+
+  /**
+   * Get file statistics (static, for VCFManager)
+   */
+  static async getFileStats(filePath: string): Promise<{ mtimeMs: number } | null> {
+    return await VCardFileOpsInternal.getFileStats(filePath);
+  }
+
+  /**
+   * Read VCF file content (static, for VCFManager)
+   */
+  static async readVCFFile(filePath: string): Promise<string | null> {
+    return await VCardFileOpsInternal.readVCFFile(filePath);
+  }
+
+  /**
+   * Write VCF file content (static, for VCFManager)
+   */
+  static async writeVCFFile(filePath: string, content: string): Promise<boolean> {
+    return await VCardFileOpsInternal.writeVCFFile(filePath, content);
+  }
+
+  /**
+   * Check if content contains a UID (static, for VCFManager)
+   */
+  static containsUID(content: string, uid: string): boolean {
+    return VCardFileOpsInternal.containsUID(content, uid);
   }
   private _filePath: string;
   private _content: string | null = null;
