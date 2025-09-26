@@ -41,8 +41,8 @@ export interface ResolvedContact {
 export function parseRelatedSection(content: string): ParsedRelationship[] {
   const relationships: ParsedRelationship[] = [];
   
-  // Find the Related section
-  const relatedMatch = content.match(/##\s*Related\s*\n((?:^\s*-\s*.*\n?)*)/m);
+  // Find the Related section - handle different line ending formats
+  const relatedMatch = content.match(/##\s*Related\s*(?:\r?\n)((?:^\s*-\s*.*(?:\r?\n)?)*)/m);
   if (!relatedMatch) {
     return relationships;
   }
