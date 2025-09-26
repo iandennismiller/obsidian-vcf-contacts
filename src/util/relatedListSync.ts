@@ -86,6 +86,26 @@ export function parseRelatedSection(content: string): ParsedRelationship[] {
 }
 
 /**
+ * Check if two relationship types are equivalent (considering gender variations)
+ * For example, "father" and "parent" should be considered equivalent
+ * @param type1 - First relationship type
+ * @param type2 - Second relationship type  
+ * @returns true if the types are equivalent
+ */
+function areRelationshipTypesEquivalent(type1: string, type2: string): boolean {
+  // Exact match
+  if (type1 === type2) {
+    return true;
+  }
+  
+  // Convert both to genderless and compare
+  const genderless1 = convertToGenderlessType(type1.toLowerCase());
+  const genderless2 = convertToGenderlessType(type2.toLowerCase());
+  
+  return genderless1 === genderless2;
+}
+
+/**
  * Parse RELATED fields from frontmatter
  * @param frontmatter - Frontmatter object from file cache
  * @returns Array of frontmatter relationships
@@ -469,8 +489,13 @@ export async function syncFrontmatterToRelatedList(
       }
       
       // Check if this relationship already exists in the Related section
-      const relationshipKey = `${fmRel.type}:${contactName}`;
-      if (!existingRelationshipsSet.has(relationshipKey)) {
+      // Need to check both exact matches and equivalent gendered/genderless variations
+      const relationshipExists = existingRelationships.some(existing => 
+        existing.contactName === contactName && 
+        areRelationshipTypesEquivalent(existing.type, fmRel.type)
+      );
+      
+      if (!relationshipExists) {
         missingRelationships.push({
           type: fmRel.type,
           contactName
