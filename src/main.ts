@@ -1,6 +1,6 @@
 import "src/insights/insightLoading";
 
-import { Plugin } from 'obsidian';
+import { Plugin, Notice } from 'obsidian';
 import { ContactsView } from "src/ui/sidebar/sidebarView";
 import { CONTACTS_VIEW_CONFIG } from "src/util/constants";
 import myScrollTo from "src/util/myScrollTo";
@@ -8,6 +8,7 @@ import { VCFolderWatcher } from "src/services/vcfFolderWatcher";
 import { setupVCFDropHandler } from 'src/services/vcfDropHandler';
 import { setApp, clearApp } from "src/context/sharedAppContext";
 import { loggingService } from "src/services/loggingService";
+import { syncRelatedListToFrontmatter } from "src/util/relatedListSync";
 
 import { ContactsSettingTab, DEFAULT_SETTINGS } from './settings/settings';
 import { ContactsPluginSettings } from  './settings/settings.d';
@@ -57,6 +58,50 @@ export default class ContactsPlugin extends Plugin {
 			callback: async () => {
 				const leaf = await this.activateSidebarView();
 				leaf?.createNewContact();
+			},
+		});
+
+		this.addCommand({
+			id: 'sync-related-list',
+			name: "Sync Related list to frontmatter",
+			callback: async () => {
+				const activeFile = this.app.workspace.getActiveFile();
+				if (!activeFile) {
+					new Notice('No active file found');
+					return;
+				}
+
+				// Check if the file is in the contacts folder
+				if (!activeFile.path.startsWith(this.settings.contactsFolder)) {
+					new Notice('Active file is not in the contacts folder');
+					return;
+				}
+
+				// Check if file has UID (is a contact file)
+				const cache = this.app.metadataCache.getFileCache(activeFile);
+				if (!cache?.frontmatter?.UID) {
+					new Notice('Active file is not a contact file (missing UID)');
+					return;
+				}
+
+				// Perform the sync
+				new Notice('Syncing Related list to frontmatter...');
+				const result = await syncRelatedListToFrontmatter(
+					this.app,
+					activeFile,
+					this.settings.contactsFolder
+				);
+
+				if (result.success) {
+					new Notice('Related list synced successfully!');
+					if (result.errors.length > 0) {
+						new Notice(`Sync completed with ${result.errors.length} warnings - check console for details`);
+						result.errors.forEach(error => loggingService.warn(error));
+					}
+				} else {
+					new Notice('Failed to sync Related list - check console for details');
+					result.errors.forEach(error => loggingService.error(error));
+				}
 			},
 		});
 	}
