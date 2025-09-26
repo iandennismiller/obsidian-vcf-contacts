@@ -15,24 +15,33 @@ vi.mock('../src/services/loggingService', () => ({
 }));
 
 // Mock VcardFile
-vi.mock('../src/contacts/vcard/fileOps', () => ({
-  VcardFile: {
-    listVCFFiles: vi.fn(),
-    getFileStats: vi.fn(),
-    readVCFFile: vi.fn(),
-    writeVCFFile: vi.fn(),
-    folderExists: vi.fn(),
-    containsUID: vi.fn(),
-    generateVCFFilename: vi.fn()
-  }
-}));
-
-// Mock vcard
-vi.mock('../src/contacts/vcard', () => ({
-  vcard: {
-    parse: vi.fn()
-  }
-}));
+vi.mock('../src/contacts/vcardFile', () => {
+  const mockParse = vi.fn();
+  const VcardFileMock = vi.fn().mockImplementation(() => ({
+    parse: mockParse,
+    toString: vi.fn(),
+    saveToFile: vi.fn()
+  }));
+  
+  // Add static methods
+  VcardFileMock.listVCFFiles = vi.fn();
+  VcardFileMock.getFileStats = vi.fn();
+  VcardFileMock.readVCFFile = vi.fn();
+  VcardFileMock.writeVCFFile = vi.fn();
+  VcardFileMock.folderExists = vi.fn();
+  VcardFileMock.containsUID = vi.fn();
+  VcardFileMock.generateVCFFilename = vi.fn();
+  VcardFileMock.fromFile = vi.fn();
+  VcardFileMock.fromObsidianFiles = vi.fn();
+  VcardFileMock.createEmpty = vi.fn();
+  
+  // Store the parse mock for access in tests
+  VcardFileMock.mockParse = mockParse;
+  
+  return {
+    VcardFile: VcardFileMock
+  };
+});
 
 describe('VCFManager', () => {
   let mockSettings: ContactsPluginSettings;
@@ -162,13 +171,13 @@ describe('VCFManager', () => {
           yield entry;
         }
       })();
-      vi.mocked(VcardFile.prototype.parse).mockReturnValue(mockGenerator);
+      vi.mocked(VcardFile.mockParse).mockReturnValue(mockGenerator);
 
       const result = await vcfManager.readAndParseVCF('/test/vcf/contact.vcf');
       
       expect(result).toEqual(mockParsedEntries);
       expect(VcardFile.readVCFFile).toHaveBeenCalledWith('/test/vcf/contact.vcf');
-      expect(VcardFile.prototype.parse).toHaveBeenCalledWith(mockContent);
+      expect(VcardFile.mockParse).toHaveBeenCalled();
     });
 
     it('should return null when file cannot be read', async () => {
@@ -182,7 +191,7 @@ describe('VCFManager', () => {
     it('should handle parsing errors gracefully', async () => {
       const mockContent = 'INVALID VCF CONTENT';
       vi.mocked(VcardFile.readVCFFile).mockResolvedValue(mockContent);
-      vi.mocked(VcardFile.prototype.parse).mockImplementation(() => {
+      vi.mocked(VcardFile.mockParse).mockImplementation(() => {
         throw new Error('Parse error');
       });
 

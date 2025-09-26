@@ -207,6 +207,37 @@ export class VcardFile {
     return `${sanitizedName}.vcf`;
   }
 
+  /**
+   * Reads VCF file content
+   */
+  static async readVCFFile(filePath: string): Promise<string | null> {
+    try {
+      const content = await fs.readFile(filePath, 'utf-8');
+      if (!content) {
+        loggingService.warning(`[VcardFile] Empty or unreadable VCF file: ${path.basename(filePath)}`);
+        return null;
+      }
+      return content;
+    } catch (error) {
+      loggingService.error(`[VcardFile] Error reading VCF file ${filePath}: ${error.message}`);
+      return null;
+    }
+  }
+
+  /**
+   * Writes content to a VCF file
+   */
+  static async writeVCFFile(filePath: string, content: string): Promise<boolean> {
+    try {
+      await fs.writeFile(filePath, content, 'utf-8');
+      loggingService.debug(`[VcardFile] Successfully wrote VCF file: ${filePath}`);
+      return true;
+    } catch (error) {
+      loggingService.error(`[VcardFile] Error writing VCF file ${filePath}: ${error.message}`);
+      return false;
+    }
+  }
+
   // Private helper methods (migrated from individual files)
 
   private unfoldVCardLines(vCardData: string): string[] {
@@ -318,12 +349,22 @@ export class VcardFile {
       return this.parseStructuredField(baseKey as keyof typeof StructuredFields, value, typeValues);
     }
 
-    if (baseKey === 'BDAY') {
+    if (['BDAY', 'ANNIVERSARY'].includes(baseKey)) {
       return { [`${baseKey}${typeValues}`]: this.formatVCardDate(value) };
     }
 
-    if (baseKey === 'PHOTO' && value.startsWith('data:')) {
-      return { [`${baseKey}${typeValues}`]: photoLineFromV3toV4(value) };
+    if (baseKey === 'PHOTO') {
+      // Handle both v3 and v4 formats
+      if (paramsPart && paramsPart.includes('ENCODING=BASE64')) {
+        // v3 format: reconstruct the line for processing
+        const fullLine = `PHOTO${paramsPart}:${value}`;
+        return { [`${baseKey}${typeValues}`]: photoLineFromV3toV4(fullLine) };
+      } else if (value.startsWith('data:')) {
+        // v4 format
+        return { [`${baseKey}${typeValues}`]: value };
+      } else {
+        return { [`${baseKey}${typeValues}`]: value };
+      }
     }
 
     return { [`${baseKey}${typeValues}`]: value };
