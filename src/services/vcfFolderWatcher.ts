@@ -478,6 +478,10 @@ export class VCFolderWatcher {
   private async listVCFFiles(folderPath: string): Promise<string[]> {
     try {
       const entries = await fs.readdir(folderPath, { withFileTypes: true });
+      if (!entries || !Array.isArray(entries)) {
+        loggingService.debug(`No entries returned from readdir for ${folderPath}`);
+        return [];
+      }
       return entries
         .filter(entry => entry.isFile() && entry.name.toLowerCase().endsWith('.vcf'))
         .map(entry => path.join(folderPath, entry.name));
