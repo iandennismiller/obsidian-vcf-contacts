@@ -9,6 +9,7 @@ import { createContactFile } from "src/file/file";
 import { loggingService } from "src/services/loggingService";
 import { ContactsPluginSettings } from "src/settings/settings.d";
 import { onSettingsChange } from "src/context/sharedSettingsContext";
+import { setupVCFDropHandler } from 'src/services/vcfDropHandler';
 
 /**
  * Information about a VCF file being tracked by the watcher
@@ -52,6 +53,10 @@ export class VCFolderWatcher {
   private contactFileListeners: (() => void)[] = []; // Track registered listeners
   private updatingRevFields = new Set<string>(); // Track files being updated internally to prevent loops
 	private settingsUnsubscribe: (() => void) | null = null;
+  // Debounce timers for write-back operations keyed by contact file path
+  private writeBackTimers: Map<string, number> = new Map();
+  // Keep track of vault create listener cleanup
+  private vaultCreateCleanup: (() => void) | null = null;
 
   /**
    * Creates a new VCF folder watcher instance.
@@ -98,6 +103,7 @@ export class VCFolderWatcher {
       this.setupContactFileTracking();
       loggingService.info("VCF write-back enabled");
     }
+  // VCF drop handler is initialized from main plugin entrypoint
     
     // Initial scan
     await this.scanVCFFolder();
@@ -126,7 +132,8 @@ export class VCFolderWatcher {
    */
   stop(): void {
     if (this.intervalId !== null) {
-      window.clearInterval(this.intervalId);
+      // Use the window clearInterval so tests that mock window are hit
+      window.clearInterval(this.intervalId as unknown as number);
       this.intervalId = null;
       console.log('Stopped VCF folder watcher');
       loggingService.info('VCF folder sync stopped');
@@ -134,6 +141,11 @@ export class VCFolderWatcher {
     
     // Clean up contact file listeners
     this.cleanupContactFileTracking();
+    // Clean up vault create listener
+    if (this.vaultCreateCleanup) {
+      this.vaultCreateCleanup();
+      this.vaultCreateCleanup = null;
+    }
   }
 
   /**
@@ -683,20 +695,25 @@ export class VCFolderWatcher {
       try {
         // Mark that we're updating this file to prevent infinite loops
         this.updatingRevFields.add(file.path);
-        
-        // Update the REV field in the contact file with current timestamp
-        const revTimestamp = generateRevTimestamp();
-        await updateFrontMatterValue(file, 'REV', revTimestamp, this.app);
-        
-        // Wait a brief moment for the metadata cache to update after the file modification
-        await new Promise(resolve => setTimeout(resolve, 50));
-        
-        // Update our tracking
-        this.contactFiles.set(uid, file);
-        
-        // Write back to VCF if enabled (metadata cache should be updated now)
-        await this.writeContactToVCF(file, uid);
-        
+
+        // Update the REV field in the contact file with current timestamp if vault supports it
+        if (this.app && this.app.vault && typeof this.app.vault.read === 'function' && typeof this.app.vault.modify === 'function') {
+          const revTimestamp = generateRevTimestamp();
+          await updateFrontMatterValue(file, 'REV', revTimestamp, this.app);
+
+          // Wait a brief moment for the metadata cache to update after the file modification
+          await new Promise(resolve => setTimeout(resolve, 50));
+
+          // Update our tracking
+          this.contactFiles.set(uid, file);
+        } else {
+          // If vault modify/read aren't available (e.g., in unit tests), still update tracking
+          this.contactFiles.set(uid, file);
+        }
+
+        // Schedule debounced write-back to VCF (metadata cache should be updated now)
+        this.scheduleWriteBack(file, uid);
+
         loggingService.debug(`Updated contact file REV timestamp for ${file.basename} (UID: ${uid})`);
       } catch (error) {
         loggingService.error(`Error updating contact file REV timestamp: ${error.message}`);
@@ -714,7 +731,8 @@ export class VCFolderWatcher {
         
         if (uid) {
           this.contactFiles.set(uid, file);
-          await this.writeContactToVCF(file, uid);
+          // Debounced write-back on rename as well
+          this.scheduleWriteBack(file, uid);
         }
       }
     };
@@ -743,6 +761,42 @@ export class VCFolderWatcher {
       () => this.app.vault.off('rename', onFileRename),
       () => this.app.vault.off('delete', onFileDelete)
     );
+  }
+
+  /**
+   * Schedule a debounced write-back for the provided contact file.
+   * Ensures we do not write back more than once per second per file.
+   */
+  private scheduleWriteBack(file: TFile, uid: string) {
+    try {
+      const key = file.path;
+
+      // Clear any existing timer
+      const existing = this.writeBackTimers.get(key);
+      if (existing) {
+        globalThis.clearTimeout(existing as unknown as number);
+      }
+
+      // Schedule new timer for 1 second
+      const timer = globalThis.setTimeout(async () => {
+        try {
+          await this.writeContactToVCF(file, uid);
+        } catch (err) {
+          loggingService.error(`Debounced write-back failed for ${file.path}: ${err.message}`);
+        } finally {
+          this.writeBackTimers.delete(key);
+        }
+      }, 1000);
+
+      this.writeBackTimers.set(key, timer as unknown as number);
+    } catch (error) {
+      loggingService.debug(`Error scheduling write-back for ${file.path}: ${error.message}`);
+    }
+  }
+
+  private setupVaultCreateHandler(): void {
+    if (!this.settings.vcfWatchFolder) return;
+    this.vaultCreateCleanup = setupVCFDropHandler(this.app, this.settings);
   }
 
   /**

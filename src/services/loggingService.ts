@@ -39,6 +39,7 @@ function initialize(logLevel: LogLevel, loadedMsg?: string) {
   }
   unsubscribeSettingsChange = onSettingsChange((settings: ContactsPluginSettings) => {
     if (settings.logLevel) setLogLevel(settings.logLevel);
+    loggingService.info(`Log level changed: ${settings.logLevel}`);
   });
 }
 

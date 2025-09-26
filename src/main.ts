@@ -5,6 +5,7 @@ import { ContactsView } from "src/ui/sidebar/sidebarView";
 import { CONTACTS_VIEW_CONFIG } from "src/util/constants";
 import myScrollTo from "src/util/myScrollTo";
 import { VCFolderWatcher } from "src/services/vcfFolderWatcher";
+import { setupVCFDropHandler } from 'src/services/vcfDropHandler';
 import { setApp, clearApp } from "src/context/sharedAppContext";
 import { loggingService } from "src/services/loggingService";
 
@@ -14,17 +15,21 @@ import { ContactsPluginSettings } from  './settings/settings.d';
 export default class ContactsPlugin extends Plugin {
 	settings: ContactsPluginSettings;
 	private vcfWatcher: VCFolderWatcher | null = null;
+	private vcfDropCleanup: (() => void) | null = null;
 
-		async onload() {
-			await this.loadSettings();
-			// Initialize logging service early
-			loggingService.initialize(this.settings.logLevel, "VCF Contacts plugin loaded");
-			// Set up app context for shared utilities
-			setApp(this.app);
+	async onload() {
+		await this.loadSettings();
+		// Initialize logging service early
+		loggingService.initialize(this.settings.logLevel, "VCF Contacts plugin loaded");
+		// Set up app context for shared utilities
+		setApp(this.app);
 
-			// Initialize VCF folder watcher
-			this.vcfWatcher = new VCFolderWatcher(this.app, this.settings);
-			await this.vcfWatcher.start();
+		// Initialize VCF folder watcher
+		this.vcfWatcher = new VCFolderWatcher(this.app, this.settings);
+		await this.vcfWatcher.start();
+
+		// Initialize VCF drop handler (watch for .vcf files created in the vault)
+		this.vcfDropCleanup = setupVCFDropHandler(this.app, this.settings);
 
 		this.registerView(
 			CONTACTS_VIEW_CONFIG.type,
@@ -33,29 +38,27 @@ export default class ContactsPlugin extends Plugin {
 
 		this.addRibbonIcon('contact', 'Contacts', () => {
 			this.activateSidebarView();
-      myScrollTo.handleLeafEvent(null);
+			myScrollTo.handleLeafEvent(null);
 		});
 
 		this.addSettingTab(new ContactsSettingTab(this.app, this));
 
-    this.addCommand({
-      id: 'contacts-sidebar',
-      name: "Open Contacts Sidebar",
-      callback: () => {
-        this.activateSidebarView();
-      },
-    });
+		this.addCommand({
+			id: 'contacts-sidebar',
+			name: "Open Contacts Sidebar",
+			callback: () => {
+				this.activateSidebarView();
+			},
+		});
 
-    this.addCommand({
-      id: 'contacts-create',
-      name: "Create Contact",
-      callback: async () => {
-        const leaf = await this.activateSidebarView();
-        leaf?.createNewContact()
-      },
-    });
-
-
+		this.addCommand({
+			id: 'contacts-create',
+			name: "Create Contact",
+			callback: async () => {
+				const leaf = await this.activateSidebarView();
+				leaf?.createNewContact();
+			},
+		});
 	}
 
 	onunload() {
@@ -68,10 +71,10 @@ export default class ContactsPlugin extends Plugin {
 			this.vcfWatcher = null;
 		}
 
-		// Unsubscribe from settings changes
-		if (this.settingsUnsubscribe) {
-			this.settingsUnsubscribe();
-			this.settingsUnsubscribe = null;
+		// Clean up VCF drop handler
+		if (this.vcfDropCleanup) {
+			this.vcfDropCleanup();
+			this.vcfDropCleanup = null;
 		}
 		// Clean up loggingService event listener
 		loggingService.cleanup();
