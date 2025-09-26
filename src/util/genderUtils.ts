@@ -114,3 +114,73 @@ export function getGenderlessRelationshipTypes(): string[] {
 export function isGenderAwareRelationship(relationshipType: string): boolean {
   return relationshipType.toLowerCase() in RELATIONSHIP_MAPPING;
 }
+
+/**
+ * Infer gender from a gendered relationship term
+ * @param relationshipType - The relationship type (e.g., "father", "aunt", "sister")
+ * @returns Inferred gender or null if not gendered
+ */
+export function inferGenderFromRelationship(relationshipType: string): Gender {
+  const type = relationshipType.toLowerCase();
+  
+  // Male terms
+  const maleTerms = ['father', 'dad', 'daddy', 'uncle', 'brother', 'son', 'husband', 'grandfather', 'grandson'];
+  if (maleTerms.includes(type)) {
+    return 'M';
+  }
+  
+  // Female terms  
+  const femaleTerms = ['mother', 'mom', 'mommy', 'aunt', 'sister', 'daughter', 'wife', 'grandmother', 'granddaughter'];
+  if (femaleTerms.includes(type)) {
+    return 'F';
+  }
+  
+  return null;
+}
+
+/**
+ * Convert gendered relationship term to genderless equivalent
+ * @param relationshipType - The gendered relationship type
+ * @returns Genderless relationship type
+ */
+export function convertToGenderlessType(relationshipType: string): string {
+  const type = relationshipType.toLowerCase();
+  
+  // Parent relationships
+  if (['father', 'dad', 'daddy', 'mother', 'mom', 'mommy'].includes(type)) {
+    return 'parent';
+  }
+  
+  // Aunt/Uncle relationships
+  if (['aunt', 'uncle'].includes(type)) {
+    return 'auncle';
+  }
+  
+  // Child relationships
+  if (['son', 'daughter'].includes(type)) {
+    return 'child';
+  }
+  
+  // Sibling relationships
+  if (['brother', 'sister'].includes(type)) {
+    return 'sibling';
+  }
+  
+  // Spouse relationships
+  if (['husband', 'wife'].includes(type)) {
+    return 'spouse';
+  }
+  
+  // Grandparent relationships
+  if (['grandfather', 'grandmother'].includes(type)) {
+    return 'grandparent';
+  }
+  
+  // Grandchild relationships
+  if (['grandson', 'granddaughter'].includes(type)) {
+    return 'grandchild';
+  }
+  
+  // Return as-is if no mapping found
+  return relationshipType;
+}

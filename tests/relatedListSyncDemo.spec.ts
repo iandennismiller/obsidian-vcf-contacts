@@ -1,10 +1,12 @@
 import { describe, it, expect, vi } from 'vitest';
 import {
   parseRelatedSection,
-  inferGenderFromRelationship,
-  convertToGenderlessType,
   syncRelatedListToFrontmatter
 } from 'src/util/relatedListSync';
+import {
+  inferGenderFromRelationship,
+  convertToGenderlessType
+} from 'src/util/genderUtils';
 
 // Mock dependencies
 vi.mock('obsidian', () => ({

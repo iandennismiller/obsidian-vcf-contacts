@@ -4,10 +4,12 @@ import {
   parseRelatedSection,
   findContactByName,
   resolveContact,
-  inferGenderFromRelationship,
-  convertToGenderlessType,
   syncRelatedListToFrontmatter
 } from 'src/util/relatedListSync';
+import {
+  inferGenderFromRelationship,
+  convertToGenderlessType
+} from 'src/util/genderUtils';
 
 // Mock dependencies
 vi.mock('obsidian', () => ({
