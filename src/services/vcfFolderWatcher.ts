@@ -3,8 +3,7 @@ import { App, Notice, TFile } from 'obsidian';
 import * as path from 'path';
 import { mdRender } from "src/contacts/contactMdTemplate";
 import { updateFrontMatterValue, generateRevTimestamp } from "src/contacts/contactFrontmatter";
-import { vcard } from "src/contacts/vcard";
-import { VCardForObsidianRecord } from "src/contacts/vcard/shared/vcard.d";
+import { VCFile, VCardForObsidianRecord } from "src/contacts/VCFile";
 import { ContactManager, RevisionUtils, VCFManager, VCFFileInfo } from "src/contacts";
 import { createContactFile } from "src/file/file";
 import { loggingService } from "src/services/loggingService";
@@ -548,11 +547,11 @@ export class VCFolderWatcher {
     }
 
     try {
-      // Generate VCF content using the existing toString function
-      const { vcards, errors } = await vcard.toString([contactFile], this.app);
+      // Generate VCF content using VCFile
+      const { vcards, errors } = await VCFile.generateVCardString([contactFile], this.app);
       
       if (errors.length > 0) {
-        loggingService.warning(`Error generating VCF for ${contactFile.name}: ${errors.map(e => e.message).join(', ')}`);
+        loggingService.warning(`Error generating VCF for ${contactFile.name}: ${errors.map((e: any) => e.message).join(', ')}`);
         return;
       }
 

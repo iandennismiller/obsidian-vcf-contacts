@@ -1,7 +1,7 @@
 import { App, MarkdownView, normalizePath, Notice, TFile, TFolder } from "obsidian";
 import * as React from "react";
 import { Contact, getFrontmatterFromFiles, mdRender } from "src/contacts";
-import { vcard } from "src/contacts/vcard";
+import { VCFile } from "src/contacts/VCFile";
 import { getApp } from "src/context/sharedAppContext";
 import { getSettings, onSettingsChange } from "src/context/sharedSettingsContext";
 import { ContactsPluginSettings } from "src/settings/settings.d";
@@ -31,7 +31,7 @@ const importVCFContacts = async (fileContent: string, app: App, settings: Contac
   let skipped = 0;
 
   // Use generator to avoid double parsing and reduce memory usage
-  for await (const [slug, record] of vcard.parse(fileContent)) {
+  for await (const [slug, record] of VCFile.parseVCardData(fileContent)) {
     if (slug) {
       const mdContent = mdRender(record, settings.defaultHashtag);
       const filename = slug + '.md';
@@ -126,7 +126,7 @@ export const SidebarRootView = (props: SidebarRootViewProps) => {
   }, [workspace]);
 
   async function createNewContact() {
-      const records = await vcard.createEmpty();
+  const records = await VCFile.createEmpty();
       const mdContent = mdRender(records, settings.defaultHashtag);
       createContactFile(app, settings.contactsFolder, mdContent, createFileName(records))
   }
@@ -151,7 +151,7 @@ export const SidebarRootView = (props: SidebarRootViewProps) => {
                 }}
                 exportAllVCF={async() => {
                   const allContactFiles = contacts.map((contact)=> contact.file)
-                  const {vcards, errors} = await vcard.toString(allContactFiles);
+                  const {vcards, errors} = await VCFile.generateVCardString(allContactFiles);
                   errors.forEach((err) => {
                     new Notice(`${err.message} in file skipping ${err.file}`);
                   })
@@ -183,7 +183,7 @@ export const SidebarRootView = (props: SidebarRootViewProps) => {
               }}
               exportVCF={(contactFile: TFile) => {
                 (async () => {
-                  const {vcards, errors} = await vcard.toString([contactFile])
+                  const {vcards, errors} = await VCFile.generateVCardString([contactFile])
                   errors.forEach((err) => {
                     new Notice(`${err.message} in file skipping ${err.file}`);
                   })

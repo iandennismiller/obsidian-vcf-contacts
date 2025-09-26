@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { VCFManager } from '../src/contacts/vcfManager';
 import { VCardFileOps } from '../src/contacts/vcard/fileOps';
-import { vcard } from '../src/contacts/vcard';
+import { VCFile } from '../src/contacts/VCFile';
 import { ContactsPluginSettings } from '../src/settings/settings.d';
 import { loggingService } from '../src/services/loggingService';
 
@@ -25,6 +25,66 @@ vi.mock('../src/contacts/vcard/fileOps', () => ({
     folderExists: vi.fn(),
     containsUID: vi.fn(),
     generateVCFFilename: vi.fn()
+  }
+}));
+
+// Mock vcard (still used internally by VCFile)
+vi.mock('../src/contacts/vcard', () => ({
+  vcard: {
+    parse: vi.fn(),
+    toString: vi.fn(),
+    createEmpty: vi.fn()
+  }
+}));
+
+// Mock VCFile
+vi.mock('../src/contacts/VCFile', () => ({
+  VCFile: {
+    parseVCardData: vi.fn(),
+    generateVCardString: vi.fn(),
+    createEmptyRecord: vi.fn(),
+    ensureHasName: vi.fn(),
+    generateVCFFilename: vi.fn(),
+    fromPath: vi.fn(() => ({
+      parse: vi.fn(),
+      save: vi.fn(),
+      containsUID: vi.fn(),
+      getFirstRecord: vi.fn(),
+      exists: vi.fn(),
+      load: vi.fn(),
+      getContent: vi.fn(),
+      setContent: vi.fn(),
+      refreshStats: vi.fn(),
+      hasBeenModified: vi.fn(),
+      filePath: '',
+      filename: '',
+      directory: '',
+      extension: '',
+      basename: '',
+      isVCF: true,
+      lastModified: null,
+      uid: undefined
+    })),
+    fromContent: vi.fn(() => ({
+      parse: vi.fn(),
+      save: vi.fn(),
+      containsUID: vi.fn(),
+      getFirstRecord: vi.fn(),
+      exists: vi.fn(),
+      load: vi.fn(),
+      getContent: vi.fn(),
+      setContent: vi.fn(),
+      refreshStats: vi.fn(),
+      hasBeenModified: vi.fn(),
+      filePath: '',
+      filename: '',
+      directory: '',
+      extension: '',
+      basename: '',
+      isVCF: true,
+      lastModified: null,
+      uid: undefined
+    }))
   }
 }));
 
@@ -153,23 +213,23 @@ describe('VCFManager', () => {
   describe('VCF Reading and Parsing', () => {
     it('should read and parse VCF file successfully', async () => {
       const mockContent = 'BEGIN:VCARD\nVERSION:3.0\nFN:John Doe\nEND:VCARD';
-      const mockParsedEntries = [['john-doe', { UID: 'test-uid', FN: 'John Doe' }]];
+      const mockParsedEntries: Array<[string, any]> = [['john-doe', { UID: 'test-uid', FN: 'John Doe' }]];
       
       vi.mocked(VCardFileOps.readVCFFile).mockResolvedValue(mockContent);
       
-      // Mock async generator
-      const mockGenerator = (async function* () {
-        for (const entry of mockParsedEntries) {
-          yield entry;
+      // Mock async generator with correct typing
+      const mockGenerator = (async function* (): AsyncGenerator<[string | undefined, any], void, unknown> {
+        for (const [slug, record] of mockParsedEntries) {
+          yield [slug, record];
         }
       })();
-      vi.mocked(vcard.parse).mockReturnValue(mockGenerator);
+      vi.mocked(VCFile.parseVCardData).mockReturnValue(mockGenerator);
 
       const result = await vcfManager.readAndParseVCF('/test/vcf/contact.vcf');
       
       expect(result).toEqual(mockParsedEntries);
       expect(VCardFileOps.readVCFFile).toHaveBeenCalledWith('/test/vcf/contact.vcf');
-      expect(vcard.parse).toHaveBeenCalledWith(mockContent);
+      expect(VCFile.parseVCardData).toHaveBeenCalledWith(mockContent);
     });
 
     it('should return null when file cannot be read', async () => {
@@ -183,7 +243,7 @@ describe('VCFManager', () => {
     it('should handle parsing errors gracefully', async () => {
       const mockContent = 'INVALID VCF CONTENT';
       vi.mocked(VCardFileOps.readVCFFile).mockResolvedValue(mockContent);
-      vi.mocked(vcard.parse).mockImplementation(() => {
+      vi.mocked(VCFile.parseVCardData).mockImplementation(() => {
         throw new Error('Parse error');
       });
 
@@ -191,7 +251,7 @@ describe('VCFManager', () => {
       
       expect(result).toBeNull();
       expect(loggingService.error).toHaveBeenCalledWith(
-        expect.stringContaining('[VCFManager] Error parsing VCF file')
+        expect.stringContaining('[VCFile] Error parsing VCF content')
       );
     });
   });
