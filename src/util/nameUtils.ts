@@ -1,6 +1,5 @@
 import { Contact } from "src/contacts";
-import { VCardForObsidianRecord, VCardKind } from "src/contacts/vcard/index";
-import { VCardKinds } from "src/contacts/vcard/shared/structuredFields";
+import { VCardForObsidianRecord, VCardKind, VCardKinds } from "src/contacts/vcard-types";
 
 /**
  * Doing our best for the user with minimal code to

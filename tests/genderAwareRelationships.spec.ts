@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { vcard } from 'src/contacts/vcard';
+import { VcardFile } from 'src/contacts/vcardFile';
 import { mdRender } from 'src/contacts/contactMdTemplate';
 import { type Gender } from 'src/util/genderUtils';
 
@@ -24,7 +24,7 @@ RELATED;TYPE=parent:urn:uuid:03a0e51f-d1aa-4385-8a53-e29025acd8af
 END:VCARD`;
 
     const results = [];
-    for await (const [slug, record] of vcard.parse(vcardData)) {
+    for await (const [slug, record] of new VcardFile(vcardData).parse()) {
       results.push({ slug, record });
     }
 
@@ -109,7 +109,7 @@ ${test.input ? `GENDER:${test.input}` : ''}
 END:VCARD`;
 
       const results = [];
-      for await (const [slug, record] of vcard.parse(vcardData)) {
+      for await (const [slug, record] of new VcardFile(vcardData).parse()) {
         results.push({ slug, record });
       }
 

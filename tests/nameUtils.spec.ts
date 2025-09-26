@@ -1,4 +1,4 @@
-import { VCardKinds } from "src/contacts/vcard/shared/structuredFields";
+import { VCardKinds } from "src/contacts/vcard-types";
 import { createNameSlug, isKind } from "src/util/nameUtils";
 import { describe, expect, it } from 'vitest';
 
