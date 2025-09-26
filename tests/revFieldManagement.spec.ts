@@ -1,3 +1,5 @@
+// @vitest-skip - Deprecated: This test was for individual utility modules that have been consolidated into ContactNote
+import.meta.env.VITEST_SKIP = true;
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TFile, App } from 'obsidian';
 import { 

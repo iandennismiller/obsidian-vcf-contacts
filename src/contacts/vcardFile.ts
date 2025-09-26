@@ -1,5 +1,5 @@
 import { TFile, App } from "obsidian";
-import { parseKey } from "src/contacts";
+import { ContactNote } from "./contactNote";
 import { StructuredFields, VCardToStringError, VCardToStringReply, VCardForObsidianRecord, VCardSupportedKey } from "src/contacts/vcard-types";
 import { getApp } from "src/context/sharedAppContext";
 import { createNameSlug } from "src/util/nameUtils";
@@ -367,6 +367,14 @@ export class VcardFile {
       }
     }
 
+    if (baseKey === 'VERSION') {
+      // Convert vCard version 3.0 to 4.0
+      if (value === '3.0') {
+        return { [`${baseKey}${typeValues}`]: '4.0' };
+      }
+      return { [`${baseKey}${typeValues}`]: value };
+    }
+
     return { [`${baseKey}${typeValues}`]: value };
   }
 
@@ -407,7 +415,8 @@ export class VcardFile {
     const structuredFields: Array<[string, string]> = [];
 
     entries.forEach(([key, value]) => {
-      const keyObj = parseKey(key);
+      const contactNote = new ContactNote(null as any, null as any, null as any);
+      const keyObj = contactNote.parseKey(key);
 
       if (['ADR', 'N'].includes(keyObj.key)) {
         structuredFields.push([key, value]);
@@ -436,7 +445,8 @@ export class VcardFile {
     const uniqueKeys = [...new Set(partialKeys)];
 
     const structuredLines = uniqueKeys.map((key) => {
-      const keyObj = parseKey(key);
+      const contactNote = new ContactNote(null as any, null as any, null as any);
+      const keyObj = contactNote.parseKey(key);
       const type = keyObj.type ? `;TYPE=${keyObj.type}` : '';
       switch (keyObj.key) {
         case 'N': {
@@ -455,7 +465,8 @@ export class VcardFile {
   }
 
   private static renderSingleKey([key, value]: [string, string]): string {
-    const keyObj = parseKey(key);
+    const contactNote = new ContactNote(null as any, null as any, null as any);
+    const keyObj = contactNote.parseKey(key);
     const type = keyObj.type ? `;TYPE=${keyObj.type}` : '';
     return `${keyObj.key}${type}:${value}`;
   }
@@ -466,7 +477,8 @@ export class VcardFile {
     const structuredFields: Array<[string, string]> = [];
 
     entries.forEach(([key, value]) => {
-      const keyObj = parseKey(key);
+      const contactNote = new ContactNote(null as any, null as any, null as any);
+      const keyObj = contactNote.parseKey(key);
 
       if (['ADR', 'N'].includes(keyObj.key)) {
         structuredFields.push([key, value]);

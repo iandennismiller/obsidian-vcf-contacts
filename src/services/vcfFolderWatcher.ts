@@ -1,11 +1,10 @@
 import * as fs from 'fs/promises';
 import { App, Notice, TFile } from 'obsidian';
 import * as path from 'path';
-import { mdRender } from "src/contacts/contactMdTemplate";
-import { updateFrontMatterValue, generateRevTimestamp } from "src/contacts/contactFrontmatter";
+import { ContactNote } from "src/contacts/contactNote";
 import { VcardFile } from "src/contacts/vcardFile";
 import { VCardForObsidianRecord } from "src/contacts/vcard-types";
-import { ContactManager, RevisionUtils, VCFManager, VCFFileInfo } from "src/contacts";
+import { ContactManager, VCFManager, VCFFileInfo } from "src/contacts";
 import { createContactFile } from "src/file/file";
 import { loggingService } from "src/services/loggingService";
 import { ContactsPluginSettings } from "src/settings/settings.d";
@@ -45,7 +44,6 @@ export class VCFolderWatcher {
 
   // Dependency injection for contact management and utilities
   private contactManager: ContactManager;
-  private revisionUtils: RevisionUtils;
   private vcfManager: VCFManager;
 
   /**
@@ -60,7 +58,6 @@ export class VCFolderWatcher {
     
     // Initialize dependency classes
     this.contactManager = new ContactManager(app, settings);
-    this.revisionUtils = new RevisionUtils(app);
     this.vcfManager = new VCFManager(settings);
   }
 
@@ -287,7 +284,8 @@ export class VCFolderWatcher {
           if (!existingFile) {
             // New contact - import it
             try {
-              const mdContent = mdRender(record, this.settings.defaultHashtag);
+              const contactNote = new ContactNote(this.app, this.settings, null as any); // We'll create the file first
+              const mdContent = contactNote.mdRender(record, this.settings.defaultHashtag);
               const filename = slug + '.md';
               
               createContactFile(this.app, this.settings.contactsFolder, mdContent, filename);
@@ -301,8 +299,9 @@ export class VCFolderWatcher {
               skipped++;
             }
           } else {
-            // Existing contact - check if we should update it using RevisionUtils
-            const shouldUpdate = await this.revisionUtils.shouldUpdateContact(record, existingFile);
+            // Existing contact - check if we should update it using ContactNote
+            const contactNote = new ContactNote(this.app, this.settings, existingFile);
+            const shouldUpdate = await contactNote.shouldUpdateFromVCF(record);
             
             if (shouldUpdate) {
               try {
@@ -363,8 +362,9 @@ export class VCFolderWatcher {
    */
   private async updateExistingContact(vcfRecord: VCardForObsidianRecord, existingFile: TFile, newSlug: string): Promise<void> {
     try {
-      // Generate new content
-      const newMdContent = mdRender(vcfRecord, this.settings.defaultHashtag);
+      // Generate new content using ContactNote
+      const contactNote = new ContactNote(this.app, this.settings, existingFile);
+      const newMdContent = contactNote.mdRender(vcfRecord, this.settings.defaultHashtag);
       
       // Check if the filename should change based on the new data
       const newFilename = newSlug + '.md';

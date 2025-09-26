@@ -1,6 +1,6 @@
-export * from './contactDataKeys';
-export * from './contactFrontmatter';
-export * from './contactMdTemplate';
+export * from './contactNote';
 export * from './contactManager';
-export * from './revisionUtils';
 export * from './vcfManager';
+
+// Re-export utility functions
+export { getFrontmatterFromFiles, parseKey, mdRender } from './contactNote';

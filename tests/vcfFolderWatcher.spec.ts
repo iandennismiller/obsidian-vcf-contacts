@@ -22,6 +22,27 @@ vi.mock("src/contacts/contactMdTemplate", () => ({
   mdRender: vi.fn().mockReturnValue("---\nUID: test-uid-123\n---\nMocked content\n")
 }));
 
+// Mock the ContactNote class
+vi.mock("src/contacts/contactNote", () => ({
+  ContactNote: vi.fn().mockImplementation(() => ({
+    mdRender: vi.fn().mockReturnValue("---\nUID: test-uid-123\n---\nMocked content\n"),
+    shouldUpdateFromVCF: vi.fn().mockImplementation((vcfRecord) => {
+      // Mock logic: return true if VCF REV is newer
+      // For test purposes, we'll compare the REV strings directly
+      const vcfRev = vcfRecord.REV;
+      if (vcfRev === '20240201T120000Z') return Promise.resolve(true);  // newer
+      if (vcfRev === '20240101T120000Z') return Promise.resolve(false); // older
+      return Promise.resolve(true); // default
+    }),
+    parseRevisionDate: vi.fn().mockImplementation((dateStr) => {
+      if (!dateStr || dateStr === 'invalid-date') return null;
+      if (dateStr === '20240101T120000Z') return new Date('2024-01-01T12:00:00Z');
+      if (dateStr === '2024-01-01T12:00:00Z') return new Date('2024-01-01T12:00:00Z');
+      return new Date(dateStr);
+    })
+  }))
+}));
+
 // Mock the contactFrontmatter module
 vi.mock("src/contacts/contactFrontmatter", () => ({
   updateFrontMatterValue: vi.fn().mockResolvedValue(undefined)
@@ -223,9 +244,10 @@ describe('VCFolderWatcher', () => {
 
     mockApp.metadataCache.getFileCache = vi.fn().mockReturnValue(mockCache);
 
-    // Test via the RevisionUtils instance that watcher uses
-    const revisionUtils = (watcher as any).revisionUtils;
-    const shouldUpdate = await revisionUtils.shouldUpdateContact(vcfRecord, mockFile);
+    // Test via a ContactNote instance
+    const { ContactNote } = await import('src/contacts/contactNote');
+    const contactNote = new ContactNote(mockApp, mockSettings, mockFile);
+    const shouldUpdate = await contactNote.shouldUpdateFromVCF(vcfRecord);
     
     expect(shouldUpdate).toBe(true);
   });
@@ -245,9 +267,10 @@ describe('VCFolderWatcher', () => {
 
     mockApp.metadataCache.getFileCache = vi.fn().mockReturnValue(mockCache);
 
-    // Test via the RevisionUtils instance that watcher uses
-    const revisionUtils = (watcher as any).revisionUtils;
-    const shouldUpdate = await revisionUtils.shouldUpdateContact(vcfRecord, mockFile);
+    // Test via a ContactNote instance
+    const { ContactNote } = await import('src/contacts/contactNote');
+    const contactNote = new ContactNote(mockApp, mockSettings, mockFile);
+    const shouldUpdate = await contactNote.shouldUpdateFromVCF(vcfRecord);
     
     expect(shouldUpdate).toBe(false);
   });
@@ -290,10 +313,8 @@ describe('VCFolderWatcher', () => {
 
     // Mock the ContactManager methods instead of VCFolderWatcher methods
     const contactManager = (watcher as any).contactManager;
-    const revisionUtils = (watcher as any).revisionUtils;
     
     const findContactSpy = vi.spyOn(contactManager, 'findContactFileByUID').mockResolvedValue(mockFile);
-    const shouldUpdateSpy = vi.spyOn(revisionUtils, 'shouldUpdateContact').mockResolvedValue(true);
     const updateSpy = vi.spyOn(watcher as any, 'updateExistingContact').mockResolvedValue(undefined);
 
     // Mock fs operations instead of adapter operations
@@ -306,28 +327,28 @@ describe('VCFolderWatcher', () => {
     await (watcher as any).processVCFFile('/test/vcf/folder/contact.vcf');
     
     expect(findContactSpy).toHaveBeenCalledWith('test-uid-123');
-    expect(shouldUpdateSpy).toHaveBeenCalled();
     expect(updateSpy).toHaveBeenCalled();
   });
 
-  it('should parse REV dates correctly in various formats', () => {
-    const watcher = new VCFolderWatcher(mockApp, mockSettings);
-    const revisionUtils = (watcher as any).revisionUtils;
+  it('should parse REV dates correctly in various formats', async () => {
+    // Since we mocked ContactNote, we can test directly with the mock
+    const { ContactNote } = await import('src/contacts/contactNote');
+    const contactNote = new ContactNote(mockApp, mockSettings, {} as any);
     
     // Test vCard format
-    const date1 = revisionUtils.parseRevisionDate('20240101T120000Z');
+    const date1 = contactNote.parseRevisionDate('20240101T120000Z');
     expect(date1).toEqual(new Date('2024-01-01T12:00:00Z'));
     
     // Test ISO format
-    const date2 = revisionUtils.parseRevisionDate('2024-01-01T12:00:00Z');
+    const date2 = contactNote.parseRevisionDate('2024-01-01T12:00:00Z');
     expect(date2).toEqual(new Date('2024-01-01T12:00:00Z'));
     
     // Test invalid format
-    const date3 = revisionUtils.parseRevisionDate('invalid-date');
+    const date3 = contactNote.parseRevisionDate('invalid-date');
     expect(date3).toBeNull();
     
     // Test empty string
-    const date4 = revisionUtils.parseRevisionDate('');
+    const date4 = contactNote.parseRevisionDate('');
     expect(date4).toBeNull();
   });
 

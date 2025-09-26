@@ -1,7 +1,7 @@
 import { App, TFile, EventRef, WorkspaceLeaf } from 'obsidian';
 import { ContactsPluginSettings } from '../settings/settings.d';
 import { loggingService } from '../services/loggingService';
-import { syncRelatedListToFrontmatter, syncFrontmatterToRelatedList } from '../util/relatedListSync';
+import { ContactNote } from './contactNote';
 
 /**
  * Interface for managing contact notes in the Obsidian vault.
@@ -417,13 +417,11 @@ export class ContactManager implements IContactManager {
    */
   private async syncContactFile(file: TFile): Promise<void> {
     try {
+      const contactNote = new ContactNote(this.app, this.settings, file);
+
       // Step 1: Sync from frontmatter to Related list
       loggingService.info(`[ContactManager] Syncing frontmatter to Related list for: ${file.basename}`);
-      const frontmatterToRelatedResult = await syncFrontmatterToRelatedList(
-        this.app,
-        file,
-        this.getContactsFolder()
-      );
+      const frontmatterToRelatedResult = await contactNote.syncFrontmatterToRelatedList();
 
       if (frontmatterToRelatedResult.success) {
         loggingService.info(`[ContactManager] Successfully synced frontmatter to Related list for: ${file.basename}`);
@@ -438,11 +436,7 @@ export class ContactManager implements IContactManager {
 
       // Step 2: Sync from Related list to frontmatter
       loggingService.info(`[ContactManager] Syncing Related list to frontmatter for: ${file.basename}`);
-      const relatedToFrontmatterResult = await syncRelatedListToFrontmatter(
-        this.app,
-        file,
-        this.getContactsFolder()
-      );
+      const relatedToFrontmatterResult = await contactNote.syncRelatedListToFrontmatter();
 
       if (relatedToFrontmatterResult.success) {
         loggingService.info(`[ContactManager] Successfully synced Related list to frontmatter for: ${file.basename}`);

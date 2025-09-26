@@ -1,7 +1,7 @@
 import * as fs from 'fs/promises';
 import { App, Notice, TFile } from 'obsidian';
 import * as path from 'path';
-import { mdRender } from 'src/contacts/contactMdTemplate';
+import { ContactNote } from 'src/contacts/contactNote';
 import { VcardFile } from 'src/contacts/vcardFile';
 import { createContactFile } from 'src/file/file';
 import { loggingService } from 'src/services/loggingService';
@@ -57,7 +57,8 @@ export function setupVCFDropHandler(app: App, settings: ContactsPluginSettings):
           loggingService.debug(`Error searching for existing contact for UID ${record.UID}: ${err.message}`);
         }
 
-        const mdContent = mdRender(record, settings.defaultHashtag);
+        const contactNote = new ContactNote(app, settings, null as any); // We'll create the file first
+        const mdContent = contactNote.mdRender(record, settings.defaultHashtag);
 
         if (existingContact) {
           try {

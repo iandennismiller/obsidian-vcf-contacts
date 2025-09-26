@@ -1,5 +1,8 @@
+import { ContactNote } from 'src/contacts/contactNote';
+
+// Create a test ContactNote instance for testing static methods
+const createTestContactNote = () => new ContactNote(null as any, null as any, null as any);
 import { describe, it, expect } from 'vitest';
-import { extractRelationshipType, parseRelatedValue } from 'src/util/relatedFieldUtils';
 
 describe('RELATED field markdown generation demo', () => {
   it('should demonstrate RELATED field processing for markdown', () => {
@@ -19,8 +22,8 @@ describe('RELATED field markdown generation demo', () => {
       .filter(([key]) => key.startsWith('RELATED'));
 
     const relationships = relatedFields.map(([key, value]) => {
-      const type = extractRelationshipType(key);
-      const parsed = parseRelatedValue(value);
+      const type = contactNote.extractRelationshipType(key);
+      const parsed = contactNote.parseRelatedValue(value);
       const contact = parsed ? parsed.value : value;
       
       return { type, contact, originalValue: value };
