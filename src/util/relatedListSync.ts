@@ -4,7 +4,7 @@
 
 import { TFile, App, TAbstractFile } from 'obsidian';
 import { updateMultipleFrontMatterValues, updateFrontMatterValue } from 'src/contacts/contactFrontmatter';
-import { formatRelatedValue } from 'src/util/relatedFieldUtils';
+import { formatRelatedValue, extractRelationshipType } from 'src/util/relatedFieldUtils';
 import { 
   parseGender, 
   getGenderedRelationshipTerm, 
@@ -181,6 +181,7 @@ export async function syncRelatedListToFrontmatter(
     // Track updates needed
     const frontmatterUpdates: Record<string, string> = {};
     const processedContacts = new Set<string>(); // Track to avoid duplicates
+    const typeIndexes: Record<string, number> = {}; // Track indexes for multiple same-type relationships
     
     for (const relationship of relationships) {
       try {
@@ -192,7 +193,6 @@ export async function syncRelatedListToFrontmatter(
         
         if (!resolvedContact) {
           // Contact not found - use name namespace
-          const key = `RELATED[${genderlessType}]`;
           const contactKey = `${genderlessType}:${relationship.contactName}`;
           
           // Skip if already processed this contact for this relationship type
@@ -201,15 +201,48 @@ export async function syncRelatedListToFrontmatter(
           }
           processedContacts.add(contactKey);
           
-          // Check if this relationship already exists in frontmatter
-          if (!currentFrontmatter[key]) {
-            frontmatterUpdates[key] = formatRelatedValue('', relationship.contactName);
-            loggingService.debug(`Adding relationship: ${key} = name:${relationship.contactName}`);
+          const relatedValue = formatRelatedValue('', relationship.contactName);
+          
+          // Check if this exact relationship already exists in frontmatter
+          const existingMatchingKey = Object.keys(currentFrontmatter).find(key => {
+            const keyType = extractRelationshipType(key);
+            return keyType === genderlessType && currentFrontmatter[key] === relatedValue;
+          });
+          
+          if (existingMatchingKey) {
+            // This relationship already exists, skip it
+            loggingService.debug(`Relationship already exists: ${existingMatchingKey} = ${relatedValue}`);
+            continue;
           }
+          
+          // Generate indexed key for multiple relationships of the same type
+          const baseKey = `RELATED[${genderlessType}]`;
+          let key = baseKey;
+          
+          // Check if base key already exists in current frontmatter or updates
+          if (currentFrontmatter[baseKey] || frontmatterUpdates[baseKey]) {
+            // Need to use indexed key
+            if (!typeIndexes[genderlessType]) {
+              typeIndexes[genderlessType] = 1;
+            }
+            key = `RELATED[${typeIndexes[genderlessType]}:${genderlessType}]`;
+            typeIndexes[genderlessType]++;
+          }
+          
+          // Ensure the key doesn't already exist
+          while (currentFrontmatter[key] || frontmatterUpdates[key]) {
+            if (!typeIndexes[genderlessType]) {
+              typeIndexes[genderlessType] = 1;
+            }
+            key = `RELATED[${typeIndexes[genderlessType]}:${genderlessType}]`;
+            typeIndexes[genderlessType]++;
+          }
+          
+          frontmatterUpdates[key] = relatedValue;
+          loggingService.debug(`Adding relationship: ${key} = name:${relationship.contactName}`);
         } else {
           // Contact found - use UID
           const relatedValue = formatRelatedValue(resolvedContact.uid, resolvedContact.name);
-          const key = `RELATED[${genderlessType}]`;
           const contactKey = `${genderlessType}:${resolvedContact.uid}`;
           
           // Skip if already processed this contact for this relationship type  
@@ -218,11 +251,43 @@ export async function syncRelatedListToFrontmatter(
           }
           processedContacts.add(contactKey);
           
-          // Check if this relationship already exists in frontmatter
-          if (!currentFrontmatter[key]) {
-            frontmatterUpdates[key] = relatedValue;
-            loggingService.debug(`Adding relationship: ${key} = ${relatedValue}`);
+          // Check if this exact relationship already exists in frontmatter
+          const existingMatchingKey = Object.keys(currentFrontmatter).find(key => {
+            const keyType = extractRelationshipType(key);
+            return keyType === genderlessType && currentFrontmatter[key] === relatedValue;
+          });
+          
+          if (existingMatchingKey) {
+            // This relationship already exists, skip it
+            loggingService.debug(`Relationship already exists: ${existingMatchingKey} = ${relatedValue}`);
+            continue;
           }
+          
+          // Generate indexed key for multiple relationships of the same type
+          const baseKey = `RELATED[${genderlessType}]`;
+          let key = baseKey;
+          
+          // Check if base key already exists in current frontmatter or updates
+          if (currentFrontmatter[baseKey] || frontmatterUpdates[baseKey]) {
+            // Need to use indexed key
+            if (!typeIndexes[genderlessType]) {
+              typeIndexes[genderlessType] = 1;
+            }
+            key = `RELATED[${typeIndexes[genderlessType]}:${genderlessType}]`;
+            typeIndexes[genderlessType]++;
+          }
+          
+          // Ensure the key doesn't already exist
+          while (currentFrontmatter[key] || frontmatterUpdates[key]) {
+            if (!typeIndexes[genderlessType]) {
+              typeIndexes[genderlessType] = 1;
+            }
+            key = `RELATED[${typeIndexes[genderlessType]}:${genderlessType}]`;
+            typeIndexes[genderlessType]++;
+          }
+          
+          frontmatterUpdates[key] = relatedValue;
+          loggingService.debug(`Adding relationship: ${key} = ${relatedValue}`);
           
           // Infer and update gender if needed
           const inferredGender = inferGenderFromRelationship(relationship.type);

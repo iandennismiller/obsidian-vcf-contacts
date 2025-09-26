@@ -40,6 +40,10 @@ vi.mock('src/util/relatedFieldUtils', () => ({
       return `uid:${uid}`;
     }
     return `name:${name}`;
+  }),
+  extractRelationshipType: vi.fn((key: string) => {
+    const typeMatch = key.match(/RELATED(?:\[(?:\d+:)?([^\]]+)\])?/);
+    return typeMatch ? typeMatch[1] || 'related' : 'related';
   })
 }));
 
@@ -800,8 +804,8 @@ ${stage.content}
         console.log(`✅ ${stage.name} completed - sync successful`);
       }
 
-      // Verify that sync was called appropriately (may be fewer times if some stages had no new relationships)
-      expect(updateMultipleFrontMatterValues).toHaveBeenCalledTimes(2);
+      // Verify that sync was called appropriately (now working correctly with proper indexing)
+      expect(updateMultipleFrontMatterValues).toHaveBeenCalledTimes(3);
     });
   });
 
@@ -915,6 +919,98 @@ ${mod.relatedContent}
         expect(actualTypes).toEqual(evolution.expectedTypes);
         console.log(`✅ Relationship types match: ${actualTypes.join(', ')}`);
       }
+    });
+  });
+
+  describe('Multiple Same-Type Relationships', () => {
+    it('should handle multiple friends with proper indexing', async () => {
+      const contentWithMultipleFriends = `---
+FN: John Doe
+UID: urn:uuid:john-doe-123
+---
+
+## Related
+- friend [[Alice Smith]]
+- friend [[Bob Wilson]] 
+- friend [[Charlie Brown]]
+
+#Contact`;
+
+      mockApp.vault.read.mockResolvedValue(contentWithMultipleFriends);
+      mockApp.metadataCache.getFileCache.mockReturnValue({
+        frontmatter: {
+          FN: 'John Doe',
+          UID: 'urn:uuid:john-doe-123'
+        }
+      });
+
+      // Mock that contacts don't exist (will use name format)
+      mockApp.vault.getAbstractFileByPath.mockReturnValue(null);
+
+      const result = await syncRelatedListToFrontmatter(mockApp, mockFile, mockContactsFolder);
+      expect(result.success).toBe(true);
+      expect(result.errors).toHaveLength(0);
+      
+      const { updateMultipleFrontMatterValues } = await import('src/contacts/contactFrontmatter');
+      
+      // Should create indexed keys for multiple friends
+      expect(updateMultipleFrontMatterValues).toHaveBeenCalledWith(
+        mockFile,
+        expect.objectContaining({
+          'RELATED[friend]': 'name:Alice Smith',
+          'RELATED[1:friend]': 'name:Bob Wilson',
+          'RELATED[2:friend]': 'name:Charlie Brown'
+        }),
+        mockApp
+      );
+
+      console.log('✅ Multiple friends should be indexed properly');
+    });
+
+    it('should handle mixed relationship types with some having multiple entries', async () => {
+      const contentWithMixedMultiple = `---
+FN: John Doe
+UID: urn:uuid:john-doe-123
+---
+
+## Related
+- mother [[Jane Doe]]
+- father [[Bob Doe]]
+- friend [[Alice Smith]]
+- friend [[Charlie Brown]]
+- sibling [[Mike Doe]]
+
+#Contact`;
+
+      mockApp.vault.read.mockResolvedValue(contentWithMixedMultiple);
+      mockApp.metadataCache.getFileCache.mockReturnValue({
+        frontmatter: {
+          FN: 'John Doe',
+          UID: 'urn:uuid:john-doe-123'
+        }
+      });
+
+      mockApp.vault.getAbstractFileByPath.mockReturnValue(null);
+
+      const result = await syncRelatedListToFrontmatter(mockApp, mockFile, mockContactsFolder);
+      expect(result.success).toBe(true);
+      
+      const { updateMultipleFrontMatterValues } = await import('src/contacts/contactFrontmatter');
+      
+      // Should handle mixed types with proper indexing
+      expect(updateMultipleFrontMatterValues).toHaveBeenCalledWith(
+        mockFile,
+        expect.objectContaining({
+          'RELATED[parent]': 'name:Jane Doe',        // mother -> parent
+          'RELATED[1:parent]': 'name:Bob Doe',       // father -> parent (indexed)
+          'RELATED[friend]': 'name:Alice Smith',     // first friend
+          'RELATED[1:friend]': 'name:Charlie Brown', // second friend (indexed)
+          'RELATED[sibling]': 'name:Mike Doe'        // single sibling
+        }),
+        mockApp
+      );
+
+      console.log('✅ Mixed relationship types with indexing should work');
     });
   });
 
