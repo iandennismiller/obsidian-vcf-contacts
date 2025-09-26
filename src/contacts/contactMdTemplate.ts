@@ -1,9 +1,10 @@
 import { stringifyYaml } from "obsidian";
+import { extractRelationshipType, parseRelatedValue } from "src/util/relatedFieldUtils";
 
 const nameKeys = ["N", "FN"];
 const priorityKeys = [
   "EMAIL", "TEL", "BDAY","URL",
-  "ORG", "TITLE", "ROLE", "PHOTO"
+  "ORG", "TITLE", "ROLE", "PHOTO", "RELATED", "GENDER"
 ];
 const adrKeys = [
   "ADR"
@@ -67,6 +68,49 @@ function sortedPriorityItems(record: Record<string, any>)  {
   );
 }
 
+function generateRelatedList(record: Record<string, any>): string {
+  const relatedFields = Object.entries(record).filter(([key]) => 
+    extractBaseKey(key) === 'RELATED'
+  );
+  
+  if (relatedFields.length === 0) {
+    return '';
+  }
+
+  // Parse RELATED fields and generate markdown list
+  const relationships: { type: string; contact: string }[] = [];
+  
+  relatedFields.forEach(([key, value]) => {
+    const type = extractRelationshipType(key);
+    
+    // Extract contact reference from value
+    // Handle formats: urn:uuid:..., name:..., uid:...
+    let contact = '';
+    if (typeof value === 'string') {
+      const parsed = parseRelatedValue(value);
+      if (parsed) {
+        contact = parsed.value;
+      } else {
+        contact = value;
+      }
+    }
+    
+    relationships.push({ type, contact });
+  });
+
+  // Sort relationships for consistent display
+  relationships.sort((a, b) => {
+    if (a.type !== b.type) return a.type.localeCompare(b.type);
+    return a.contact.localeCompare(b.contact);
+  });
+
+  const listItems = relationships.map(rel => 
+    `- ${rel.type} [[${rel.contact}]]`
+  ).join('\n');
+
+  return `\n## Related\n${listItems}\n`;
+}
+
 export function mdRender(record: Record<string, any>, hashtags: string): string {
 	const { NOTE, ...recordWithoutNote } = record;
   const groups = groupVCardFields(recordWithoutNote)
@@ -86,11 +130,14 @@ export function mdRender(record: Record<string, any>, hashtags: string): string 
 		...groups.other
 	};
 
+  // Generate Related section from RELATED fields
+  const relatedSection = generateRelatedList(recordWithoutNote);
+
 	return `---
 ${stringifyYaml(frontmatter)}---
 #### Notes
 ${myNote}
-
+${relatedSection}
 
 ${hashtags} ${additionalTags}
 `;
