@@ -8,7 +8,7 @@ import { VCFolderWatcher } from "src/services/vcfFolderWatcher";
 import { setupVCFDropHandler } from 'src/services/vcfDropHandler';
 import { setApp, clearApp } from "src/context/sharedAppContext";
 import { loggingService } from "src/services/loggingService";
-import { syncRelatedListToFrontmatter, syncFrontmatterToRelatedList } from "src/util/relatedListSync";
+import { ContactNote } from "src/contacts/contactNote";
 import { 
   findMissingReciprocalRelationships, 
   fixMissingReciprocalRelationships 
@@ -97,11 +97,8 @@ export default class ContactsPlugin extends Plugin {
 
 				// Perform the sync
 				new Notice('Syncing Related list to frontmatter...');
-				const result = await syncRelatedListToFrontmatter(
-					this.app,
-					activeFile,
-					this.settings.contactsFolder
-				);
+				const contactNote = new ContactNote(this.app, this.settings, activeFile);
+				const result = await contactNote.syncRelatedListToFrontmatter();
 
 				if (result.success) {
 					new Notice('Related list synced successfully!');
@@ -141,11 +138,8 @@ export default class ContactsPlugin extends Plugin {
 
 				// Perform the sync
 				new Notice('Syncing frontmatter to Related list...');
-				const result = await syncFrontmatterToRelatedList(
-					this.app,
-					activeFile,
-					this.settings.contactsFolder
-				);
+				const contactNote = new ContactNote(this.app, this.settings, activeFile);
+				const result = await contactNote.syncFrontmatterToRelatedList();
 
 				if (result.success) {
 					new Notice('Frontmatter synced successfully!');
@@ -186,19 +180,13 @@ export default class ContactsPlugin extends Plugin {
 				// Perform bidirectional sync
 				new Notice('Syncing relationships bidirectionally...');
 				
+				const contactNote = new ContactNote(this.app, this.settings, activeFile);
+				
 				// Step 1: Sync frontmatter to Related list
-				const frontmatterResult = await syncFrontmatterToRelatedList(
-					this.app,
-					activeFile,
-					this.settings.contactsFolder
-				);
+				const frontmatterResult = await contactNote.syncFrontmatterToRelatedList();
 
 				// Step 2: Sync Related list to frontmatter
-				const relatedResult = await syncRelatedListToFrontmatter(
-					this.app,
-					activeFile,
-					this.settings.contactsFolder
-				);
+				const relatedResult = await contactNote.syncRelatedListToFrontmatter();
 
 				// Report results
 				const totalErrors = frontmatterResult.errors.length + relatedResult.errors.length;

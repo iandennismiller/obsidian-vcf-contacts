@@ -4,17 +4,11 @@
 
 import { TFile, App } from 'obsidian';
 import { 
-  parseRelatedSection, 
-  findContactByName, 
-  resolveContact,
-  parseFrontmatterRelationships,
-  syncRelatedListToFrontmatter,
-  updateRelatedSectionInContent,
+  ContactNote,
   type ParsedRelationship,
-  type FrontmatterRelationship 
-} from './relatedListSync';
-import { convertToGenderlessType, type Gender } from './genderUtils';
-import { extractRelationshipType, parseRelatedValue } from './relatedFieldUtils';
+  type FrontmatterRelationship,
+  type Gender 
+} from '../contacts/contactNote';
 import { loggingService } from '../services/loggingService';
 
 /**
@@ -50,7 +44,8 @@ export interface ReciprocalCheckResult {
  */
 export function getReciprocalRelationshipType(relationshipType: string): string | null {
   // Convert to genderless form for consistent mapping
-  const genderlessType = convertToGenderlessType(relationshipType.toLowerCase());
+  const contactNote = new ContactNote(null as any, null as any, null as any);
+  const genderlessType = contactNote.convertToGenderlessType(relationshipType.toLowerCase());
   
   const reciprocalMap: Record<string, string> = {
     'parent': 'child',
@@ -77,7 +72,8 @@ export function getReciprocalRelationshipType(relationshipType: string): string 
  * @returns True if the relationship is symmetric
  */
 export function isSymmetricRelationship(relationshipType: string): boolean {
-  const genderlessType = convertToGenderlessType(relationshipType.toLowerCase());
+  const contactNote = new ContactNote(null as any, null as any, null as any);
+  const genderlessType = contactNote.convertToGenderlessType(relationshipType.toLowerCase());
   const symmetricTypes = ['sibling', 'spouse', 'partner', 'friend', 'colleague', 'relative', 'cousin'];
   return symmetricTypes.includes(genderlessType);
 }
@@ -93,8 +89,9 @@ function areRelationshipTypesEquivalent(type1: string, type2: string): boolean {
     return true;
   }
   
-  const genderless1 = convertToGenderlessType(type1.toLowerCase());
-  const genderless2 = convertToGenderlessType(type2.toLowerCase());
+  const contactNote = new ContactNote(null as any, null as any, null as any);
+  const genderless1 = contactNote.convertToGenderlessType(type1.toLowerCase());
+  const genderless2 = contactNote.convertToGenderlessType(type2.toLowerCase());
   
   return genderless1 === genderless2;
 }
@@ -118,7 +115,8 @@ export async function hasReciprocalRelationshipInFrontmatter(
     const frontmatter = cache?.frontmatter || {};
     
     // Parse all RELATED fields from frontmatter
-    const frontmatterRelationships = parseFrontmatterRelationships(frontmatter);
+    const contactNote = new ContactNote(app, { contactsFolder: '' } as any, targetFile);
+    const frontmatterRelationships = await contactNote.parseFrontmatterRelationships();
     
     // Check if any relationship matches the expected reciprocal
     for (const relationship of frontmatterRelationships) {
@@ -160,8 +158,8 @@ export async function hasReciprocalRelationshipInRelatedList(
   expectedReciprocalType: string
 ): Promise<boolean> {
   try {
-    const content = await app.vault.read(targetFile);
-    const relationships = parseRelatedSection(content);
+    const contactNote = new ContactNote(app, { contactsFolder: '' } as any, targetFile);
+    const relationships = await contactNote.parseRelatedSection();
     
     // Check if any relationship matches the expected reciprocal
     return relationships.some(rel => 
@@ -202,11 +200,10 @@ export async function addReciprocalRelationshipToRelatedList(
   sourceContactName: string
 ): Promise<boolean> {
   try {
-    // Read current content
-    const content = await app.vault.read(targetFile);
+    const contactNote = new ContactNote(app, { contactsFolder: '' } as any, targetFile);
     
     // Parse existing relationships
-    const existingRelationships = parseRelatedSection(content);
+    const existingRelationships = await contactNote.parseRelatedSection();
     
     // Check if the reciprocal relationship already exists in the Related list
     const reciprocalExists = existingRelationships.some(rel => 
@@ -226,15 +223,9 @@ export async function addReciprocalRelationshipToRelatedList(
     ];
     
     // Update content with new relationships
-    const updatedContent = updateRelatedSectionInContent(content, updatedRelationships);
-    
-    if (updatedContent !== content) {
-      await app.vault.modify(targetFile, updatedContent);
-      loggingService.info(`Added reciprocal relationship to Related list: ${targetFile.basename} -> ${reciprocalType} -> ${sourceContactName}`);
-      return true;
-    }
-    
-    return false;
+    await contactNote.updateRelatedSectionInContent(updatedRelationships);
+    loggingService.info(`Added reciprocal relationship to Related list: ${targetFile.basename} -> ${reciprocalType} -> ${sourceContactName}`);
+    return true;
     
   } catch (error) {
     loggingService.error(`Failed to add reciprocal relationship to Related list in ${targetFile.path}: ${error.message}`);
@@ -289,11 +280,8 @@ export async function fixMissingReciprocalRelationships(
         
         if (addedToRelatedList) {
           // Sync the Related list to frontmatter for the target contact
-          const syncResult = await syncRelatedListToFrontmatter(
-            app,
-            missing.targetFile,
-            contactsFolder
-          );
+          const targetContactNote = new ContactNote(app, { contactsFolder } as any, missing.targetFile);
+          const syncResult = await targetContactNote.syncRelatedListToFrontmatter();
           
           if (syncResult.success) {
             addedCount++;
@@ -356,8 +344,8 @@ export async function findMissingReciprocalRelationships(
     const sourceContactName = contactFile.basename;
     
     // Read the file content and parse relationships
-    const content = await app.vault.read(contactFile);
-    const relationships = parseRelatedSection(content);
+    const contactNote = new ContactNote(app, { contactsFolder } as any, contactFile);
+    const relationships = await contactNote.parseRelatedSection();
     
     // Check each relationship for reciprocal existence
     for (const relationship of relationships) {
@@ -370,7 +358,7 @@ export async function findMissingReciprocalRelationships(
       
       try {
         // Find the target contact file
-        const targetFile = await findContactByName(app, relationship.contactName, contactsFolder);
+        const targetFile = await contactNote.findContactByName(relationship.contactName);
         
         if (!targetFile) {
           errors.push(`Target contact not found: ${relationship.contactName}`);
