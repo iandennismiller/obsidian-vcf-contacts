@@ -1095,3 +1095,13 @@ export function parseKey(input: string): ParsedKey {
   const { key, index, type } = parseKeyPart(main);
   return { key, index, type, subkey };
 }
+
+/**
+ * Utility function to render contact markdown from vCard record data
+ * This is a static utility function that uses ContactNote internally
+ */
+export function mdRender(record: Record<string, any>, hashtags: string, genderLookup?: (contactRef: string) => Gender): string {
+  // Create a temporary ContactNote instance just for the helper methods
+  const tempContactNote = new ContactNote(getApp(), getSettings(), null as any);
+  return tempContactNote.mdRender(record, hashtags, genderLookup);
+}
