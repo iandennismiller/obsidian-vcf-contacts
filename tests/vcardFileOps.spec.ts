@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { VCardFileOps } from '../src/contacts/vcard/fileOps';
+// Access internal helpers at runtime via require to avoid TypeScript export limitations
+const { VCardFileOpsInternal, VCFile } = require('../src/contacts/VCFile');
 import { loggingService } from '../src/services/loggingService';
 
 // Mock fs/promises
@@ -40,7 +41,7 @@ describe('VCardFileOps', () => {
 
       (fs.readdir as any).mockResolvedValue(mockEntries);
 
-      const files = await VCardFileOps.listVCFFiles('/test/vcf');
+  const files = await VCardFileOpsInternal.listVCFFiles('/test/vcf');
       
       expect(files).toHaveLength(3);
       expect(files).toContain(path.join('/test/vcf', 'contact1.vcf'));
@@ -53,7 +54,7 @@ describe('VCardFileOps', () => {
     it('should handle empty directories', async () => {
       (fs.readdir as any).mockResolvedValue([]);
 
-      const files = await VCardFileOps.listVCFFiles('/test/vcf');
+  const files = await VCardFileOpsInternal.listVCFFiles('/test/vcf');
       
       expect(files).toHaveLength(0);
     });
@@ -61,7 +62,7 @@ describe('VCardFileOps', () => {
     it('should handle readdir errors gracefully', async () => {
       (fs.readdir as any).mockRejectedValue(new Error('Access denied'));
 
-      const files = await VCardFileOps.listVCFFiles('/test/vcf');
+  const files = await VCardFileOpsInternal.listVCFFiles('/test/vcf');
       
       expect(files).toHaveLength(0);
       expect(loggingService.error).toHaveBeenCalledWith(
@@ -72,7 +73,7 @@ describe('VCardFileOps', () => {
     it('should handle null/undefined readdir results', async () => {
       (fs.readdir as any).mockResolvedValue(null);
 
-      const files = await VCardFileOps.listVCFFiles('/test/vcf');
+  const files = await VCardFileOpsInternal.listVCFFiles('/test/vcf');
       
       expect(files).toHaveLength(0);
       expect(loggingService.debug).toHaveBeenCalledWith(
@@ -97,7 +98,7 @@ describe('VCardFileOps', () => {
       const mockStats = { mtimeMs: 1234567890 };
       (fs.stat as any).mockResolvedValue(mockStats);
 
-      const stats = await VCardFileOps.getFileStats('/test/file.vcf');
+  const stats = await VCardFileOpsInternal.getFileStats('/test/file.vcf');
       
       expect(stats).toEqual({ mtimeMs: 1234567890 });
       expect(fs.stat).toHaveBeenCalledWith('/test/file.vcf');
@@ -106,7 +107,7 @@ describe('VCardFileOps', () => {
     it('should handle stat errors gracefully', async () => {
       (fs.stat as any).mockRejectedValue(new Error('File not found'));
 
-      const stats = await VCardFileOps.getFileStats('/test/missing.vcf');
+  const stats = await VCardFileOpsInternal.getFileStats('/test/missing.vcf');
       
       expect(stats).toBeNull();
       expect(loggingService.debug).toHaveBeenCalledWith(
@@ -117,7 +118,7 @@ describe('VCardFileOps', () => {
     it('should handle null stat results', async () => {
       (fs.stat as any).mockResolvedValue(null);
 
-      const stats = await VCardFileOps.getFileStats('/test/file.vcf');
+  const stats = await VCardFileOpsInternal.getFileStats('/test/file.vcf');
       
       expect(stats).toBeNull();
     });
@@ -128,7 +129,7 @@ describe('VCardFileOps', () => {
       const mockContent = 'BEGIN:VCARD\nVERSION:3.0\nFN:John Doe\nEND:VCARD';
       (fs.readFile as any).mockResolvedValue(mockContent);
 
-      const content = await VCardFileOps.readVCFFile('/test/file.vcf');
+  const content = await VCardFileOpsInternal.readVCFFile('/test/file.vcf');
       
       expect(content).toBe(mockContent);
       expect(fs.readFile).toHaveBeenCalledWith('/test/file.vcf', 'utf-8');
@@ -137,7 +138,7 @@ describe('VCardFileOps', () => {
     it('should handle empty VCF files', async () => {
       (fs.readFile as any).mockResolvedValue('');
 
-      const content = await VCardFileOps.readVCFFile('/test/empty.vcf');
+  const content = await VCardFileOpsInternal.readVCFFile('/test/empty.vcf');
       
       expect(content).toBeNull();
       expect(loggingService.warning).toHaveBeenCalledWith(
@@ -148,7 +149,7 @@ describe('VCardFileOps', () => {
     it('should handle read errors gracefully', async () => {
       (fs.readFile as any).mockRejectedValue(new Error('Permission denied'));
 
-      const content = await VCardFileOps.readVCFFile('/test/protected.vcf');
+  const content = await VCardFileOpsInternal.readVCFFile('/test/protected.vcf');
       
       expect(content).toBeNull();
       expect(loggingService.error).toHaveBeenCalledWith(
@@ -160,7 +161,7 @@ describe('VCardFileOps', () => {
       const vcfContent = 'BEGIN:VCARD\nVERSION:3.0\nFN:John Doe\nEND:VCARD';
       (fs.writeFile as any).mockResolvedValue(undefined);
 
-      const success = await VCardFileOps.writeVCFFile('/test/output.vcf', vcfContent);
+  const success = await VCardFileOpsInternal.writeVCFFile('/test/output.vcf', vcfContent);
       
       expect(success).toBe(true);
       expect(fs.writeFile).toHaveBeenCalledWith('/test/output.vcf', vcfContent, 'utf-8');
@@ -173,7 +174,7 @@ describe('VCardFileOps', () => {
       const vcfContent = 'BEGIN:VCARD\nVERSION:3.0\nFN:John Doe\nEND:VCARD';
       (fs.writeFile as any).mockRejectedValue(new Error('Disk full'));
 
-      const success = await VCardFileOps.writeVCFFile('/test/output.vcf', vcfContent);
+  const success = await VCardFileOpsInternal.writeVCFFile('/test/output.vcf', vcfContent);
       
       expect(success).toBe(false);
       expect(loggingService.error).toHaveBeenCalledWith(
@@ -186,7 +187,7 @@ describe('VCardFileOps', () => {
     it('should check if folder exists', async () => {
       (fs.access as any).mockResolvedValue(undefined);
 
-      const exists = await VCardFileOps.folderExists('/test/vcf');
+  const exists = await VCardFileOpsInternal.folderExists('/test/vcf');
       
       expect(exists).toBe(true);
       expect(fs.access).toHaveBeenCalledWith('/test/vcf');
@@ -195,7 +196,7 @@ describe('VCardFileOps', () => {
     it('should return false when folder does not exist', async () => {
       (fs.access as any).mockRejectedValue(new Error('ENOENT: no such file or directory'));
 
-      const exists = await VCardFileOps.folderExists('/test/vcf');
+  const exists = await VCardFileOpsInternal.folderExists('/test/vcf');
       
       expect(exists).toBe(false);
       expect(loggingService.debug).toHaveBeenCalledWith(
@@ -204,7 +205,7 @@ describe('VCardFileOps', () => {
     });
 
     it('should return false when folder path is empty', async () => {
-      const exists = await VCardFileOps.folderExists('');
+  const exists = await VCardFileOpsInternal.folderExists('');
       
       expect(exists).toBe(false);
       expect(fs.access).not.toHaveBeenCalled();
@@ -215,7 +216,7 @@ describe('VCardFileOps', () => {
     it('should find UID in VCF content', () => {
       const vcfContent = 'BEGIN:VCARD\nVERSION:3.0\nUID:test-uid-123\nFN:John Doe\nEND:VCARD';
       
-      const hasUID = VCardFileOps.containsUID(vcfContent, 'test-uid-123');
+  const hasUID = VCardFileOpsInternal.containsUID(vcfContent, 'test-uid-123');
       
       expect(hasUID).toBe(true);
     });
@@ -223,13 +224,13 @@ describe('VCardFileOps', () => {
     it('should not find non-existent UID', () => {
       const vcfContent = 'BEGIN:VCARD\nVERSION:3.0\nUID:test-uid-123\nFN:John Doe\nEND:VCARD';
       
-      const hasUID = VCardFileOps.containsUID(vcfContent, 'different-uid');
+  const hasUID = VCardFileOpsInternal.containsUID(vcfContent, 'different-uid');
       
       expect(hasUID).toBe(false);
     });
 
     it('should handle empty content', () => {
-      const hasUID = VCardFileOps.containsUID('', 'test-uid-123');
+  const hasUID = VCardFileOpsInternal.containsUID('', 'test-uid-123');
       
       expect(hasUID).toBe(false);
     });
@@ -237,7 +238,7 @@ describe('VCardFileOps', () => {
 
   describe('Filename Generation', () => {
     it('should generate sanitized VCF filenames', () => {
-      const testCases = [
+  const testCases = [
         { input: 'John Doe', expected: 'John_Doe.vcf' },
         { input: 'Jane-Smith', expected: 'Jane-Smith.vcf' },
         { input: 'Bob_Wilson', expected: 'Bob_Wilson.vcf' },
@@ -249,14 +250,14 @@ describe('VCardFileOps', () => {
       ];
 
       testCases.forEach(({ input, expected }) => {
-        const result = VCardFileOps.generateVCFFilename(input);
+  const result = VCFile.generateVCFFilename(input);
         expect(result, `Input: "${input}"`).toBe(expected);
       });
     });
 
     it('should preserve alphanumeric, hyphens, and underscores', () => {
       const validChars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_';
-      const result = VCardFileOps.generateVCFFilename(validChars);
+  const result = VCFile.generateVCFFilename(validChars);
       expect(result).toBe(`${validChars}.vcf`);
     });
 
@@ -270,7 +271,7 @@ describe('VCardFileOps', () => {
       ];
 
       unicodeNames.forEach(name => {
-        const result = VCardFileOps.generateVCFFilename(name);
+  const result = VCFile.generateVCFFilename(name);
         expect(result).toMatch(/^[\w_-]+\.vcf$/); // Should only contain safe characters
       });
     });

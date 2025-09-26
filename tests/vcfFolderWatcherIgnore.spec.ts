@@ -45,17 +45,14 @@ vi.mock('obsidian', () => ({
 }));
 
 // Mock other dependencies
-vi.mock('src/contacts/vcard', () => ({
-  vcard: {
-    parse: vi.fn()
+vi.mock('src/contacts/VCFile', () => ({
+  VCardParserInternal: {
+    parseVCardData: vi.fn()
   }
 }));
 
-vi.mock('src/file/file', () => ({
-  createContactFile: vi.fn()
-}));
-
-vi.mock('src/contacts/contactMdTemplate', () => ({
+vi.mock('src/contacts/contactNote', () => ({
+  createContactFile: vi.fn(),
   mdRender: vi.fn(() => 'mock md content')
 }));
 

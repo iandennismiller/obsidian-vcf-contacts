@@ -5,7 +5,7 @@ import {
   getGenderlessRelationshipTypes,
   isGenderAwareRelationship,
   type Gender
-} from 'src/util/genderUtils';
+} from 'src/contacts/genderUtils';
 
 describe('genderUtils', () => {
   describe('parseGender', () => {

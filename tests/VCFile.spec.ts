@@ -1,11 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { VCFile } from '../src/contacts/VCFile';
-import { VCardFileOps } from '../src/contacts/vcard/fileOps';
-import { vcard } from '../src/contacts/vcard';
+import { loggingService } from '../src/services/loggingService';
 
-// Mock the dependencies
-vi.mock('../src/contacts/vcard/fileOps');
-vi.mock('../src/contacts/vcard');
 vi.mock('../src/services/loggingService');
 
 describe('VCFile', () => {
@@ -35,10 +31,13 @@ describe('VCFile', () => {
       const mockContent = 'BEGIN:VCARD\nVERSION:4.0\nFN:John Doe\nEND:VCARD';
       const mockStats = { mtimeMs: 1234567890 };
 
-      vi.mocked(VCardFileOps.readVCFFile).mockResolvedValue(mockContent);
-      vi.mocked(VCardFileOps.getFileStats).mockResolvedValue(mockStats);
+  // Spy on internal file ops exposed via VCFile static methods
+  const readSpy = vi.spyOn((VCFile as any).__proto__?.constructor ?? VCFile, 'listVCFFiles');
+  // Instead of spying listVCFFiles, we directly spy on the internal read method used by VCFile.load
+  const readFileSpy = vi.spyOn(require('../src/contacts/VCFile').VCardFileOpsInternal as any, 'readVCFFile').mockResolvedValue(mockContent);
+  const statSpy = vi.spyOn(require('../src/contacts/VCFile').VCardFileOpsInternal as any, 'getFileStats').mockResolvedValue(mockStats);
 
-      const vcFile = VCFile.fromPath('/test/path/contact.vcf');
+  const vcFile = VCFile.fromPath('/test/path/contact.vcf');
       const result = await vcFile.load();
 
       expect(result).toBe(true);
@@ -50,25 +49,30 @@ describe('VCFile', () => {
       const content = 'BEGIN:VCARD\nVERSION:4.0\nFN:Jane Doe\nEND:VCARD';
       const mockStats = { mtimeMs: 1234567891 };
 
-      vi.mocked(VCardFileOps.writeVCFFile).mockResolvedValue(true);
-      vi.mocked(VCardFileOps.getFileStats).mockResolvedValue(mockStats);
+  const writeSpy = vi.spyOn(require('../src/contacts/VCFile').VCardFileOpsInternal as any, 'writeVCFFile').mockResolvedValue(true);
+  const statSpy2 = vi.spyOn(require('../src/contacts/VCFile').VCardFileOpsInternal as any, 'getFileStats').mockResolvedValue(mockStats);
 
-      const vcFile = VCFile.fromContent('/test/path/contact.vcf', content);
-      const result = await vcFile.save();
+  const vcFile = VCFile.fromContent('/test/path/contact.vcf', content);
+  const result = await vcFile.save();
 
-      expect(result).toBe(true);
-      expect(VCardFileOps.writeVCFFile).toHaveBeenCalledWith('/test/path/contact.vcf', content);
+  expect(result).toBe(true);
+  expect(writeSpy).toHaveBeenCalledWith('/test/path/contact.vcf', content);
+
+  writeSpy.mockRestore();
+  statSpy2.mockRestore();
     });
 
     it('should check if file exists', async () => {
       const mockStats = { mtimeMs: 1234567890 };
-      vi.mocked(VCardFileOps.getFileStats).mockResolvedValue(mockStats);
+  const statSpy3 = vi.spyOn(require('../src/contacts/VCFile').VCardFileOpsInternal as any, 'getFileStats').mockResolvedValue(mockStats);
 
-      const vcFile = VCFile.fromPath('/test/path/contact.vcf');
-      const exists = await vcFile.exists();
+  const vcFile = VCFile.fromPath('/test/path/contact.vcf');
+  const exists = await vcFile.exists();
 
-      expect(exists).toBe(true);
-      expect(VCardFileOps.getFileStats).toHaveBeenCalledWith('/test/path/contact.vcf');
+  expect(exists).toBe(true);
+  expect(statSpy3).toHaveBeenCalledWith('/test/path/contact.vcf');
+
+  statSpy3.mockRestore();
     });
   });
 
@@ -79,70 +83,80 @@ describe('VCFile', () => {
         ['john-doe', { FN: 'John Doe', UID: 'test-uid', VERSION: '4.0' }]
       ];
 
-      vi.mocked(VCardFileOps.readVCFFile).mockResolvedValue(mockContent);
-      
-      // Mock async generator with proper typing
-      const mockGenerator = (async function* (): AsyncGenerator<[string | undefined, any], void, unknown> {
+      const readFileSpy2 = vi.spyOn(require('../src/contacts/VCFile').VCardFileOpsInternal as any, 'readVCFFile').mockResolvedValue(mockContent);
+
+      // Provide a mock parser by spying on VCardParserInternal.parseVCardData
+      const parserSpy = vi.spyOn(require('../src/contacts/VCFile').VCardParserInternal as any, 'parseVCardData').mockImplementation(async function*() {
         for (const [slug, record] of mockParsedEntries) {
           yield [slug, record];
         }
-      })();
-      vi.mocked(vcard.parse).mockReturnValue(mockGenerator);
+      } as any);
 
       const vcFile = VCFile.fromPath('/test/path/contact.vcf');
       const result = await vcFile.parse();
 
       expect(result).toEqual(mockParsedEntries);
       expect(vcFile.uid).toBe('test-uid');
+
+      readFileSpy2.mockRestore();
+      parserSpy.mockRestore();
     });
 
     it('should get first record from parsed content', async () => {
       const mockContent = 'BEGIN:VCARD\nVERSION:4.0\nFN:John Doe\nEND:VCARD';
       const mockRecord = { FN: 'John Doe', VERSION: '4.0' };
 
-      vi.mocked(VCardFileOps.readVCFFile).mockResolvedValue(mockContent);
-      
-      const mockGenerator = (async function* (): AsyncGenerator<[string | undefined, any], void, unknown> {
+      const readFileSpy3 = vi.spyOn(require('../src/contacts/VCFile').VCardFileOpsInternal as any, 'readVCFFile').mockResolvedValue(mockContent);
+      const parserSpy2 = vi.spyOn(require('../src/contacts/VCFile').VCardParserInternal as any, 'parseVCardData').mockImplementation(async function*() {
         yield ['john-doe', mockRecord];
-      })();
-      vi.mocked(vcard.parse).mockReturnValue(mockGenerator);
+      } as any);
 
       const vcFile = VCFile.fromPath('/test/path/contact.vcf');
       const result = await vcFile.getFirstRecord();
 
       expect(result).toEqual(mockRecord);
+
+      readFileSpy3.mockRestore();
+      parserSpy2.mockRestore();
     });
 
     it('should check if content contains UID', async () => {
       const mockContent = 'BEGIN:VCARD\nVERSION:4.0\nFN:John Doe\nUID:test-uid-123\nEND:VCARD';
       
-      vi.mocked(VCardFileOps.readVCFFile).mockResolvedValue(mockContent);
-      vi.mocked(VCardFileOps.containsUID).mockReturnValue(true);
+  const readFileSpy4 = vi.spyOn(require('../src/contacts/VCFile').VCardFileOpsInternal as any, 'readVCFFile').mockResolvedValue(mockContent);
+  const containsSpy = vi.spyOn(require('../src/contacts/VCFile').VCardFileOpsInternal as any, 'containsUID').mockReturnValue(true);
 
-      const vcFile = VCFile.fromPath('/test/path/contact.vcf');
-      const result = await vcFile.containsUID('test-uid-123');
+  const vcFile = VCFile.fromPath('/test/path/contact.vcf');
+  const result = await vcFile.containsUID('test-uid-123');
 
-      expect(result).toBe(true);
-      expect(VCardFileOps.containsUID).toHaveBeenCalledWith(mockContent, 'test-uid-123');
+  expect(result).toBe(true);
+  expect(containsSpy).toHaveBeenCalledWith(mockContent, 'test-uid-123');
+
+  readFileSpy4.mockRestore();
+  containsSpy.mockRestore();
     });
   });
 
   describe('Static Utility Methods', () => {
     it('should generate VCF filename from contact name', () => {
-      vi.mocked(VCardFileOps.generateVCFFilename).mockReturnValue('John_Doe.vcf');
-      
+      const genSpy = vi.spyOn(require('../src/contacts/VCFile').VCardFileOpsInternal as any, 'generateVCFFilename').mockReturnValue('John_Doe.vcf');
+
       const result = VCFile.generateVCFFilename('John Doe');
       expect(result).toBe('John_Doe.vcf');
-      expect(VCardFileOps.generateVCFFilename).toHaveBeenCalledWith('John Doe');
+      expect(genSpy).toHaveBeenCalledWith('John Doe');
+
+      genSpy.mockRestore();
     });
 
     it('should generate VCF filename from VCard record', () => {
-      vi.mocked(VCardFileOps.generateVCFFilename).mockReturnValue('Jane_Smith.vcf');
-      
-      const record = { FN: 'Jane Smith', EMAIL: 'jane@example.com' };
-      const result = VCFile.generateVCFFilename(record);
-      expect(result).toBe('Jane_Smith.vcf');
-      expect(VCardFileOps.generateVCFFilename).toHaveBeenCalledWith('Jane Smith');
+  const genSpy2 = vi.spyOn(require('../src/contacts/VCFile').VCardFileOpsInternal as any, 'generateVCFFilename').mockReturnValue('Jane_Smith.vcf');
+
+  const record = { FN: 'Jane Smith', EMAIL: 'jane@example.com' };
+  const result = VCFile.generateVCFFilename(record);
+  expect(result).toBe('Jane_Smith.vcf');
+  expect(genSpy2).toHaveBeenCalledWith('Jane Smith');
+
+  genSpy2.mockRestore();
     });
 
     it('should create empty VCard record', async () => {
@@ -153,10 +167,12 @@ describe('VCFile', () => {
         VERSION: '4.0' 
       };
       
-      vi.mocked(vcard.createEmpty).mockResolvedValue(mockEmptyRecord);
+  const createSpy = vi.spyOn(require('../src/contacts/VCFile').VCardParserInternal as any, 'createEmpty').mockResolvedValue(mockEmptyRecord);
 
-      const result = await VCFile.createEmpty();
-      expect(result).toEqual(mockEmptyRecord);
+  const result = await VCFile.createEmpty();
+  expect(result).toEqual(mockEmptyRecord);
+
+  createSpy.mockRestore();
     });
   });
 

@@ -1,6 +1,7 @@
 import { App, TFile } from 'obsidian';
 import { ContactsPluginSettings } from '../settings/settings.d';
 import { loggingService } from '../services/loggingService';
+import { ContactNote } from './contactNote';
 
 /**
  * Interface for managing contact notes in the Obsidian vault.
@@ -67,10 +68,12 @@ export class ContactManager implements IContactManager {
   private settings: ContactsPluginSettings;
   private existingUIDs = new Set<string>();
   private contactFiles = new Map<string, TFile>(); // UID -> TFile mapping
+  private noteUtils: ContactNote;
 
   constructor(app: App, settings: ContactsPluginSettings) {
     this.app = app;
     this.settings = settings;
+  this.noteUtils = new ContactNote(app);
   }
 
   /**
@@ -98,38 +101,9 @@ export class ContactManager implements IContactManager {
    * @returns Promise resolving to the UID string or null if not found
    */
   async extractUIDFromFile(file: TFile): Promise<string | null> {
-    try {
-      // Try metadata cache first (most efficient)
-      const cache = this.app.metadataCache.getFileCache(file);
-      const uid = cache?.frontmatter?.UID;
-      
-      if (uid) {
-        loggingService.debug(`[ContactManager] Found UID "${uid}" via metadata cache from ${file.path}`);
-        return uid;
-      }
-
-      // Fallback: read file directly and parse frontmatter
-      try {
-        const content = await this.app.vault.read(file);
-        const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
-        if (frontmatterMatch) {
-          const frontmatterText = frontmatterMatch[1];
-          const uidMatch = frontmatterText.match(/^UID:\s*(.+)$/m);
-          if (uidMatch) {
-            const extractedUID = uidMatch[1].trim();
-            loggingService.debug(`[ContactManager] Found UID "${extractedUID}" via direct read from ${file.path}`);
-            return extractedUID;
-          }
-        }
-      } catch (readError) {
-        loggingService.debug(`[ContactManager] Failed to read file ${file.path} directly: ${readError.message}`);
-      }
-
-      return null;
-    } catch (error) {
-      loggingService.debug(`[ContactManager] Error extracting UID from ${file.path}: ${error.message}`);
-      return null;
-    }
+  const uid = await this.noteUtils.extractUIDFromFile(file);
+  if (uid) loggingService.debug(`[ContactManager] Found UID "${uid}" for ${file.path}`);
+  return uid;
   }
 
   /**
@@ -214,7 +188,7 @@ export class ContactManager implements IContactManager {
       loggingService.debug(`[ContactManager] Contacts folder path: "${contactsFolder}"`);
       
       const folder = this.app.vault.getAbstractFileByPath(contactsFolder);
-      
+
       if (!folder) {
         loggingService.warning(`[ContactManager] Contacts folder not found: ${contactsFolder}`);
         return;
@@ -222,18 +196,16 @@ export class ContactManager implements IContactManager {
 
       const allMarkdownFiles = this.app.vault.getMarkdownFiles();
       loggingService.debug(`[ContactManager] Total markdown files in vault: ${allMarkdownFiles.length}`);
-      
-      const files = allMarkdownFiles.filter(file => 
-        file.path.startsWith(contactsFolder)
-      );
+
+      const files = allMarkdownFiles.filter(file => file.path.startsWith(contactsFolder));
       loggingService.debug(`[ContactManager] Markdown files in contacts folder: ${files.length}`);
 
       let filesWithUID = 0;
       let filesWithoutUID = 0;
 
       for (const file of files) {
-        const uid = await this.extractUIDFromFile(file);
-        
+        const uid = await this.noteUtils.extractUIDFromFile(file);
+
         if (uid) {
           this.existingUIDs.add(uid);
           this.contactFiles.set(uid, file);
@@ -277,13 +249,13 @@ export class ContactManager implements IContactManager {
     
     if (!contactsFolder || contactsFolder === '/') {
       // If no specific folder, check all markdown files for UIDs
-      const allFiles = this.app.vault.getMarkdownFiles();
-      return allFiles.filter(file => this.isContactFile(file));
+  const allFiles = this.app.vault.getMarkdownFiles();
+  return allFiles.filter(file => this.noteUtils.isContactFile(file));
     }
 
     // Use same filtering approach as existing ContactUtils
     const files = this.app.vault.getMarkdownFiles().filter(file => {
-      return file.path.startsWith(contactsFolder) && this.isContactFile(file);
+      return file.path.startsWith(contactsFolder) && this.noteUtils.isContactFile(file, contactsFolder);
     });
 
     loggingService.debug(`[ContactManager] Found ${files.length} contact files in folder "${contactsFolder}"`);

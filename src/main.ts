@@ -8,7 +8,7 @@ import { VCFolderWatcher } from "src/services/vcfFolderWatcher";
 import { setupVCFDropHandler } from 'src/services/vcfDropHandler';
 import { setApp, clearApp } from "src/context/sharedAppContext";
 import { loggingService } from "src/services/loggingService";
-import { syncRelatedListToFrontmatter } from "src/util/relatedListSync";
+import { syncRelatedListToFrontmatter } from "src/contacts/relatedListSync";
 
 import { ContactsSettingTab, DEFAULT_SETTINGS } from './settings/settings';
 import { ContactsPluginSettings } from  './settings/settings.d';

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { generateRevTimestamp } from 'src/contacts/contactFrontmatter';
+import { generateRevTimestamp } from 'src/contacts/contactNote';
 
 describe('REV field demonstration', () => {
   it('should demonstrate REV timestamp format', () => {

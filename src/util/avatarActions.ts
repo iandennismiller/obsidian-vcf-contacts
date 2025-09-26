@@ -1,6 +1,6 @@
 import { Notice } from "obsidian";
 import { Contact, updateFrontMatterValue } from "src/contacts";
-import { openFilePicker } from "src/file/file";
+import { openFilePicker } from "src/contacts/contactNote";
 import { RunType } from "src/insights/insight.d";
 import { insightService } from "src/insights/insightService";
 

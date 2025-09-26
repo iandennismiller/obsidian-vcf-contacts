@@ -1,11 +1,10 @@
 import * as fs from 'fs/promises';
 import { App, Notice, TFile } from 'obsidian';
 import * as path from 'path';
-import { mdRender } from "src/contacts/contactMdTemplate";
-import { updateFrontMatterValue, generateRevTimestamp } from "src/contacts/contactFrontmatter";
+import { mdRender, updateFrontMatterValue, generateRevTimestamp } from "src/contacts/contactNote";
 import { VCFile, VCardForObsidianRecord } from "src/contacts/VCFile";
 import { ContactManager, RevisionUtils, VCFManager, VCFFileInfo } from "src/contacts";
-import { createContactFile } from "src/file/file";
+import { createContactFile } from "src/contacts/contactNote";
 import { loggingService } from "src/services/loggingService";
 import { ContactsPluginSettings } from "src/settings/settings.d";
 import { onSettingsChange } from "src/context/sharedSettingsContext";

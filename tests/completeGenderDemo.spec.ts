@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
-import { vcard } from 'src/contacts/vcard';
-import { mdRender } from 'src/contacts/contactMdTemplate';
-import { parseGender, type Gender } from 'src/util/genderUtils';
+import { VCFile as vcard } from 'src/contacts/VCFile';
+import { mdRender } from 'src/contacts/contactNote';
+import { parseGender, type Gender } from 'src/contacts/genderUtils';
 
 // Mock obsidian
 vi.mock('obsidian', () => ({
@@ -34,7 +34,7 @@ END:VCARD`;
 
     // Parse the VCard
     const results = [];
-    for await (const [slug, record] of vcard.parse(vcardData)) {
+  for await (const [slug, record] of vcard.parseVCardData(vcardData)) {
       results.push({ slug, record });
     }
 

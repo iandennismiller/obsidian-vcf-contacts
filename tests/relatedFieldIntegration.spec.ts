@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { VCardForObsidianRecord } from 'src/contacts/vcard';
+import { VCardForObsidianRecord } from 'src/contacts/VCFile';
 
 describe('RELATED field VCard roundtrip', () => {
   it('should parse and format RELATED fields correctly', async () => {

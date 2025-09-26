@@ -3,15 +3,15 @@
  */
 
 import { TFile, App, TAbstractFile } from 'obsidian';
-import { updateMultipleFrontMatterValues, updateFrontMatterValue } from 'src/contacts/contactFrontmatter';
-import { formatRelatedValue, extractRelationshipType } from 'src/util/relatedFieldUtils';
+import { updateMultipleFrontMatterValues, updateFrontMatterValue } from 'src/contacts/contactNote';
+import { formatRelatedValue, extractRelationshipType } from 'src/contacts/relatedFieldUtils';
 import { 
   parseGender, 
   getGenderedRelationshipTerm, 
   inferGenderFromRelationship,
   convertToGenderlessType,
   type Gender 
-} from 'src/util/genderUtils';
+} from 'src/contacts/genderUtils';
 import { loggingService } from 'src/services/loggingService';
 
 /**

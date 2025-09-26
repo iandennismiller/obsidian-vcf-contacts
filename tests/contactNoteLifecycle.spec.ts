@@ -4,8 +4,8 @@ import {
   parseRelatedSection,
   syncRelatedListToFrontmatter,
   resolveContact
-} from 'src/util/relatedListSync';
-import { convertToGenderlessType } from 'src/util/genderUtils';
+} from 'src/contacts/relatedListSync';
+import { convertToGenderlessType } from 'src/contacts/genderUtils';
 
 // Mock dependencies
 vi.mock('obsidian', () => ({
@@ -25,12 +25,12 @@ vi.mock('src/services/loggingService', () => ({
   }
 }));
 
-vi.mock('src/contacts/contactFrontmatter', () => ({
+vi.mock('src/contacts/contactNote', () => ({
   updateMultipleFrontMatterValues: vi.fn(),
   updateFrontMatterValue: vi.fn()
 }));
 
-vi.mock('src/util/relatedFieldUtils', () => ({
+vi.mock('src/contacts/relatedFieldUtils', () => ({
   formatRelatedValue: vi.fn((uid: string, name: string) => {
     if (uid) {
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -157,7 +157,7 @@ Initial contact note for John Doe.
       expect(result.success).toBe(true);
       
       // Should have attempted to update front matter with the new relationship
-      const { updateMultipleFrontMatterValues } = await import('src/contacts/contactFrontmatter');
+  const { updateMultipleFrontMatterValues } = await import('src/contacts/contactNote');
       expect(updateMultipleFrontMatterValues).toHaveBeenCalledWith(
         mockFile,
         { 'RELATED[parent]': 'name:Jane Doe' },
@@ -265,7 +265,7 @@ John Doe contact with growing relationships.
       result = await syncRelatedListToFrontmatter(mockApp, mockFile, mockContactsFolder);
       expect(result.success).toBe(true);
 
-      const { updateMultipleFrontMatterValues } = await import('src/contacts/contactFrontmatter');
+  const { updateMultipleFrontMatterValues } = await import('src/contacts/contactNote');
       
       // Verify that the sync function was called with the new relationships
       expect(updateMultipleFrontMatterValues).toHaveBeenCalledWith(
@@ -315,7 +315,7 @@ Contact with existing relationships in front matter.
       const result = await syncRelatedListToFrontmatter(mockApp, mockFile, mockContactsFolder);
       expect(result.success).toBe(true);
 
-      const { updateMultipleFrontMatterValues } = await import('src/contacts/contactFrontmatter');
+  const { updateMultipleFrontMatterValues } = await import('src/contacts/contactNote');
       
       // Should only add new relationships, not duplicate existing ones
       expect(updateMultipleFrontMatterValues).toHaveBeenCalledWith(
@@ -380,7 +380,7 @@ Contact with relationships to existing contacts.
       const result = await syncRelatedListToFrontmatter(mockApp, mockFile, mockContactsFolder);
       expect(result.success).toBe(true);
 
-      const { updateMultipleFrontMatterValues } = await import('src/contacts/contactFrontmatter');
+  const { updateMultipleFrontMatterValues } = await import('src/contacts/contactNote');
       
       // Should use UIDs for resolved contacts (formatted through formatRelatedValue mock)
       expect(updateMultipleFrontMatterValues).toHaveBeenCalledWith(
@@ -508,7 +508,7 @@ Testing sync with blank line after Related header.
       expect(result.success).toBe(true);
       expect(result.errors).toHaveLength(0);
       
-      const { updateMultipleFrontMatterValues } = await import('src/contacts/contactFrontmatter');
+  const { updateMultipleFrontMatterValues } = await import('src/contacts/contactNote');
       
       // Should successfully sync the relationships despite blank line
       // The current implementation has a bug with multiple same-type relationships, 
@@ -634,7 +634,7 @@ RELATED[parent]: name:Jane Doe
       expect(result.errors).toHaveLength(0);
 
       // Should not remove existing front matter relationships when Related section is empty
-      const { updateMultipleFrontMatterValues } = await import('src/contacts/contactFrontmatter');
+  const { updateMultipleFrontMatterValues } = await import('src/contacts/contactNote');
       expect(updateMultipleFrontMatterValues).not.toHaveBeenCalled();
     });
 
@@ -664,7 +664,7 @@ UID: urn:uuid:john-doe-123
       const result = await syncRelatedListToFrontmatter(mockApp, mockFile, mockContactsFolder);
       expect(result.success).toBe(true);
 
-      const { updateMultipleFrontMatterValues } = await import('src/contacts/contactFrontmatter');
+  const { updateMultipleFrontMatterValues } = await import('src/contacts/contactNote');
       
       // Should only add unique relationships
       expect(updateMultipleFrontMatterValues).toHaveBeenCalledWith(
@@ -730,7 +730,7 @@ Testing repeated sync operations.
         console.log(`✅ Sync round ${syncRound} completed successfully`);
       }
 
-      const { updateMultipleFrontMatterValues } = await import('src/contacts/contactFrontmatter');
+  const { updateMultipleFrontMatterValues } = await import('src/contacts/contactNote');
       
       // Should only update once (first sync) - subsequent syncs should detect existing relationships
       expect(updateMultipleFrontMatterValues).toHaveBeenCalledTimes(1);
@@ -778,7 +778,7 @@ Testing repeated sync operations.
         }
       ];
 
-      const { updateMultipleFrontMatterValues } = await import('src/contacts/contactFrontmatter');
+  const { updateMultipleFrontMatterValues } = await import('src/contacts/contactNote');
       
       for (let i = 0; i < syncStages.length; i++) {
         const stage = syncStages[i];
@@ -951,7 +951,7 @@ UID: urn:uuid:john-doe-123
       expect(result.success).toBe(true);
       expect(result.errors).toHaveLength(0);
       
-      const { updateMultipleFrontMatterValues } = await import('src/contacts/contactFrontmatter');
+  const { updateMultipleFrontMatterValues } = await import('src/contacts/contactNote');
       
       // Should create indexed keys for multiple friends
       expect(updateMultipleFrontMatterValues).toHaveBeenCalledWith(
@@ -995,7 +995,7 @@ UID: urn:uuid:john-doe-123
       const result = await syncRelatedListToFrontmatter(mockApp, mockFile, mockContactsFolder);
       expect(result.success).toBe(true);
       
-      const { updateMultipleFrontMatterValues } = await import('src/contacts/contactFrontmatter');
+  const { updateMultipleFrontMatterValues } = await import('src/contacts/contactNote');
       
       // Should handle mixed types with proper indexing
       expect(updateMultipleFrontMatterValues).toHaveBeenCalledWith(

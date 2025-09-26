@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { extractRelationshipType, parseRelatedValue } from 'src/util/relatedFieldUtils';
+import { extractRelationshipType, parseRelatedValue } from 'src/contacts/relatedFieldUtils';
 
 describe('RELATED field markdown generation demo', () => {
   it('should demonstrate RELATED field processing for markdown', () => {

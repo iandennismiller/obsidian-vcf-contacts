@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TFile, App } from 'obsidian';
 import { RevisionUtils } from '../src/contacts/revisionUtils';
-import { VCardForObsidianRecord } from '../src/contacts/vcard/shared/vcard.d';
+import { VCardForObsidianRecord } from '../src/contacts/VCFile';
 import { loggingService } from '../src/services/loggingService';
 
 // Mock the logging service

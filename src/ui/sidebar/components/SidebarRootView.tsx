@@ -11,7 +11,7 @@ import {
   findContactFiles, isFileInFolder,
   openFilePicker,
   saveVcardFilePicker
-} from "src/file/file";
+} from "src/contacts/contactNote";
 import { ContactsListView } from "src/ui/sidebar/components/ContactsListView";
 import { HeaderView } from "src/ui/sidebar/components/HeaderView";
 import { InsightsView } from "src/ui/sidebar/components/InsightsView";

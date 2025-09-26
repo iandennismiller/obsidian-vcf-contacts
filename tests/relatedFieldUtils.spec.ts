@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatRelatedValue, parseRelatedValue, extractRelationshipType } from 'src/util/relatedFieldUtils';
+import { formatRelatedValue, parseRelatedValue, extractRelationshipType } from 'src/contacts/relatedFieldUtils';
 
 describe('relatedFieldUtils', () => {
   describe('formatRelatedValue', () => {

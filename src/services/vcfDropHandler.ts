@@ -1,9 +1,10 @@
 import * as fs from 'fs/promises';
 import { App, Notice, TFile } from 'obsidian';
 import * as path from 'path';
-import { mdRender } from 'src/contacts/contactMdTemplate';
+import { mdRender } from 'src/contacts/contactNote';
 import { VCFile } from 'src/contacts/VCFile';
-import { createContactFile } from 'src/file/file';
+import { createFileName, createFileName as _createFileName } from 'src/contacts/contactNote';
+import { createContactFile } from 'src/contacts/contactNote';
 import { loggingService } from 'src/services/loggingService';
 import { ContactsPluginSettings } from 'src/settings/settings.d';
 

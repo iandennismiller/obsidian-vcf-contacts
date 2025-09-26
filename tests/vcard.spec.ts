@@ -1,6 +1,5 @@
 import { App, TFile } from "obsidian";
-import { vcard, VCardForObsidianRecord } from "src/contacts/vcard";
-import { VCardKinds } from "src/contacts/vcard/shared/structuredFields";
+import { VCFile as vcard, VCardForObsidianRecord, VCardKinds } from "src/contacts/VCFile";
 import { setApp } from "src/context/sharedAppContext";
 import { NamingPayload } from "src/ui/modals/contactNameModal";
 import { fixtures } from "tests/fixtures/fixtures";
@@ -9,7 +8,7 @@ import { describe, expect, it, vi } from 'vitest';
 // Helper function to parse vCards and collect only those with valid slugs
 const parseValidVCards = async (vcfData: string) => {
   const cards: VCardForObsidianRecord[] = [];
-  for await (const [slug, card] of vcard.parse(vcfData))
+  for await (const [slug, card] of vcard.parseVCardData(vcfData))
     if (slug) cards.push(card);
   return cards;
 };
@@ -209,7 +208,7 @@ END:VCARD`;
 
 describe('vcard tostring', () => {
   it('should be able to turn base frontmatter to vcf string', async () => {
-    const result = await vcard.toString([{ basename: 'base.frontmatter' } as TFile]);
+  const result = await vcard.generateVCardString([{ basename: 'base.frontmatter' } as TFile]);
     const { vcards, errors } = result;
 
     expect(errors).toEqual([]);
@@ -227,7 +226,7 @@ describe('vcard tostring', () => {
   });
 
   it('should export with FN if there is no naming given at all.', async () => {
-    const result = await vcard.toString([{ basename: 'noName.frontmatter' } as TFile]);
+  const result = await vcard.generateVCardString([{ basename: 'noName.frontmatter' } as TFile]);
     const { vcards, errors } = result;
     expect(errors).toEqual([]);
     expect(vcards).toMatch(/^ADR;TYPE=HOME:;;18 Clover Court;Dublin;;D02;Ireland$/m);
@@ -241,7 +240,7 @@ describe('vcard tostring', () => {
 
 
   it('should be able revert the indexed fields to lines', async () => {
-    const result = await vcard.toString([{ basename: 'hasDuplicateParameters.frontmatter' } as TFile]);
+  const result = await vcard.generateVCardString([{ basename: 'hasDuplicateParameters.frontmatter' } as TFile]);
     const { vcards, errors } = result;
 
     const aniLines = vcards.match(/^ANNIVERSARY:.*$/gm) || [];
@@ -255,7 +254,7 @@ describe('vcard tostring', () => {
   });
 
   it('should collect and return a error if there is any type of failure', async () => {
-    const result = await vcard.toString([{ basename: 'no-exist.frontmatter' } as TFile]);
+  const result = await vcard.generateVCardString([{ basename: 'no-exist.frontmatter' } as TFile]);
     const { vcards, errors } = result;
     expect(errors.length).toBe(1)
     expect(errors[0].file).toBe('no-exist.frontmatter');

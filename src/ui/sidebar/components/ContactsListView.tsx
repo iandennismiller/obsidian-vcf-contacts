@@ -1,7 +1,7 @@
 import { TFile } from "obsidian";
 import * as React from "react";
 import { Contact } from "src/contacts";
-import { fileId } from "src/file/file";
+import { fileId } from "src/contacts/contactNote";
 import { ContactView } from "src/ui/sidebar/components/ContactView";
 import { Sort } from "src/util/constants";
 import myScrollTo from "src/util/myScrollTo";

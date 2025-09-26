@@ -1,7 +1,7 @@
 import { App, TFile } from "obsidian";
 import { VCFolderWatcher } from "src/services/vcfFolderWatcher";
 import { ContactsPluginSettings } from "src/settings/settings.d";
-import { updateFrontMatterValue } from "src/contacts/contactFrontmatter";
+import { updateFrontMatterValue } from "src/contacts/contactNote";
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import * as fs from 'fs/promises';
 
@@ -18,12 +18,12 @@ vi.mock('fs/promises', () => ({
 const mockedFs = vi.mocked(fs);
 
 // Mock the mdRender function to avoid stringifyYaml issues in tests
-vi.mock("src/contacts/contactMdTemplate", () => ({
+vi.mock("src/contacts/contactNote", () => ({
   mdRender: vi.fn().mockReturnValue("---\nUID: test-uid-123\n---\nMocked content\n")
 }));
 
 // Mock the contactFrontmatter module
-vi.mock("src/contacts/contactFrontmatter", () => ({
+vi.mock("src/contacts/contactNote", () => ({
   updateFrontMatterValue: vi.fn().mockResolvedValue(undefined)
 }));
 

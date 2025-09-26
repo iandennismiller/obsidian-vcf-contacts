@@ -1,4 +1,4 @@
-import { createFileName } from 'src/file/file';
+import { createFileName } from 'src/contacts/contactNote';
 import { createNameSlug } from "src/util/nameUtils";
 import { describe, expect, it } from 'vitest';
 

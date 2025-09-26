@@ -5,11 +5,11 @@ import {
   findContactByName,
   resolveContact,
   syncRelatedListToFrontmatter
-} from 'src/util/relatedListSync';
+} from 'src/contacts/relatedListSync';
 import {
   inferGenderFromRelationship,
   convertToGenderlessType
-} from 'src/util/genderUtils';
+} from 'src/contacts/genderUtils';
 
 // Mock dependencies
 vi.mock('obsidian', () => ({
@@ -28,12 +28,12 @@ vi.mock('src/services/loggingService', () => ({
   }
 }));
 
-vi.mock('src/contacts/contactFrontmatter', () => ({
+vi.mock('src/contacts/contactNote', () => ({
   updateMultipleFrontMatterValues: vi.fn(),
   updateFrontMatterValue: vi.fn()
 }));
 
-vi.mock('src/util/relatedFieldUtils', () => ({
+vi.mock('src/contacts/relatedFieldUtils', () => ({
   formatRelatedValue: vi.fn((uid: string, name: string) => {
     if (uid) {
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

@@ -2,7 +2,7 @@ import { setIcon, TFile } from "obsidian";
 import * as React from "react";
 import { Contact, parseKey } from "src/contacts";
 import { getApp } from "src/context/sharedAppContext";
-import { fileId, openFile } from "src/file/file";
+import { fileId, openFile } from "src/contacts/contactNote";
 import Avatar from "src/ui/sidebar/components/Avatar";
 import { CopyableItem } from "src/ui/sidebar/components/CopyableItem";
 import { getUiName, uiSafeString } from "src/util/nameUtils";
