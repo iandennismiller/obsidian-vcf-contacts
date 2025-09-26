@@ -52,8 +52,23 @@ vi.mock('src/contacts/VCFile', () => ({
 }));
 
 vi.mock('src/contacts/contactNote', () => ({
+  ContactNote: vi.fn().mockImplementation(() => ({
+    mdRender: vi.fn().mockReturnValue('mock md content'),
+    updateFrontMatterValue: vi.fn().mockResolvedValue(undefined),
+    extractUIDFromFile: vi.fn().mockResolvedValue('test-uid-123'),
+    generateRevTimestamp: vi.fn().mockReturnValue('20240201T120000Z'),
+    getFrontmatterFromFiles: vi.fn().mockResolvedValue([]),
+    updateMultipleFrontMatterValues: vi.fn().mockResolvedValue(undefined),
+    fileId: vi.fn().mockReturnValue('123456'),
+    createFileName: vi.fn().mockReturnValue('test-contact.md'),
+    isFileInFolder: vi.fn().mockReturnValue(true),
+    isContactFile: vi.fn().mockReturnValue(true)
+  })),
   createContactFile: vi.fn(),
-  mdRender: vi.fn(() => 'mock md content')
+  mdRender: vi.fn(() => 'mock md content'),
+  updateFrontMatterValue: vi.fn().mockResolvedValue(undefined),
+  updateMultipleFrontMatterValues: vi.fn().mockResolvedValue(undefined),
+  generateRevTimestamp: vi.fn().mockReturnValue('20240201T120000Z')
 }));
 
 describe('VCFolderWatcher - Ignore Functionality', () => {
