@@ -1,10 +1,18 @@
 import { App, TFile } from "obsidian";
+import { describe, expect, it, vi } from 'vitest';
+
+// Mock ContactManager first before importing VcardFile
+vi.mock('src/contacts/contactManager', () => ({
+  ContactManager: {
+    ensureHasNameStatic: vi.fn((obj) => Promise.resolve({ ...obj, 'N.GN': 'Foo', 'N.FN': 'Bar', 'FN': 'Foo Bar' }))
+  }
+}));
+
 import { VcardFile } from "src/contacts/vcardFile";
 import { VCardForObsidianRecord, VCardKinds } from "src/contacts/vcardFile";
 import { setApp } from "src/context/sharedAppContext";
 import { NamingPayload } from "src/ui/modals/contactNameModal";
 import { fixtures } from "tests/fixtures/fixtures";
-import { describe, expect, it, vi } from 'vitest';
 
 // Helper function to parse vCards and collect only those with valid slugs
 const parseValidVCards = async (vcfData: string) => {

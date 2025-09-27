@@ -7,18 +7,22 @@ import {
   findContactByName,
   resolveContact,
   syncRelatedListToFrontmatter
-} from 'src/util/relatedListSync';
+} from 'src/contacts/contactNote';
 import {
   inferGenderFromRelationship,
   convertToGenderlessType
-} from 'src/util/genderUtils';
+} from 'src/contacts/contactNote';
 
 // Mock dependencies
 vi.mock('obsidian', () => ({
   TFile: vi.fn(),
   App: vi.fn(),
   TFolder: vi.fn(),
-  Notice: vi.fn()
+  Notice: vi.fn(),
+  Modal: vi.fn().mockImplementation((app) => ({
+    open: vi.fn(),
+    close: vi.fn()
+  }))
 }));
 
 vi.mock('src/services/loggingService', () => ({

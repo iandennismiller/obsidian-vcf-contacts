@@ -4,8 +4,8 @@ import { ContactNote } from 'src/contacts/contactNote';
 const createTestContactNote = () => new ContactNote(null as any, null as any, null as any);
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TFile, App } from 'obsidian';
-import { RevisionUtils } from '../src/contacts/revisionUtils';
-import { VCardForObsidianRecord } from '../src/contacts/vcard/shared/vcard.d';
+import { ContactNote } from 'src/contacts/contactNote';
+import { VCardForObsidianRecord } from 'src/contacts/vcardFile';
 import { loggingService } from '../src/services/loggingService';
 
 // Mock the logging service

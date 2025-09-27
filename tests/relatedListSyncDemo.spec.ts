@@ -4,7 +4,7 @@ import { describe, it, expect, vi } from 'vitest';
 import {
   parseRelatedSection,
   syncRelatedListToFrontmatter
-} from 'src/util/relatedListSync';
+} from 'src/contacts/contactNote';
 import {
   inferGenderFromRelationship,
   convertToGenderlessType
