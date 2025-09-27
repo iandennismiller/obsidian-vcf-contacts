@@ -1,5 +1,5 @@
-import { VCardKinds } from "src/contacts/vcard-types";
-import { createNameSlug, isKind } from "src/util/nameUtils";
+import { VCardKinds } from "src/contacts/vcardFile";
+import { createNameSlug, isKind } from "src/contacts/contactNote";
 import { describe, expect, it } from 'vitest';
 
 

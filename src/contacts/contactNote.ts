@@ -1160,6 +1160,41 @@ export function createNameSlug(record: VCardForObsidianRecord): string {
 }
 
 /**
+ * Creates a kebab-case slug from vCard records for use as identifiers
+ */
+export function createContactSlug(record: VCardForObsidianRecord): string {
+  let fileName: string | undefined = undefined;
+  if (isKind(record, VCardKinds.Individual)) {
+    fileName = [
+      record["N.PREFIX"],
+      record["N.GN"],
+      record["N.MN"],
+      record["N.FN"],
+      record["N.SUFFIX"],
+    ]
+      .map((part) => part?.trim())
+      .filter((part) => part)
+      .join(" ") || undefined;
+  }
+
+  if (!fileName && record["FN"]) {
+    fileName = record["FN"];
+  }
+
+  if (!fileName) {
+    throw new Error(`Failed to update, create file name due to missing FN property"`);
+  }
+
+  // Create a kebab-case slug for use as identifier
+  return sanitizeFileName(fileName)
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
+/**
  * Get sort name for contact sorting
  * Migrated from src/util/nameUtils.ts
  */

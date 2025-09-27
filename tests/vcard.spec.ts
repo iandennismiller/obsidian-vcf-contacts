@@ -1,6 +1,6 @@
 import { App, TFile } from "obsidian";
 import { VcardFile } from "src/contacts/vcardFile";
-import { VCardForObsidianRecord, VCardKinds } from "src/contacts/vcard-types";
+import { VCardForObsidianRecord, VCardKinds } from "src/contacts/vcardFile";
 import { setApp } from "src/context/sharedAppContext";
 import { NamingPayload } from "src/ui/modals/contactNameModal";
 import { fixtures } from "tests/fixtures/fixtures";

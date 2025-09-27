@@ -1,5 +1,5 @@
 import { TFile, App } from "obsidian";
-import { ContactNote, createNameSlug } from "./contactNote";
+import { ContactNote, createNameSlug, createContactSlug } from "./contactNote";
 
 import { getApp } from "src/context/sharedAppContext";
 
@@ -177,7 +177,7 @@ export class VcardFile {
       }
 
       try {
-        const slug = createNameSlug(vCardObject);
+        const slug = createContactSlug(vCardObject);
         yield [slug, vCardObject];
       } catch (error) {
         yield [undefined, vCardObject];
