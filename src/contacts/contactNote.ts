@@ -1224,3 +1224,33 @@ export function isKind(record: VCardForObsidianRecord, kind: VCardKind): boolean
   const myKind = record["KIND"] || VCardKinds.Individual;
   return myKind === kind;
 }
+
+// File utility functions migrated from src/file/file.ts
+
+/**
+ * Generate a unique ID from a file path
+ * Migrated from src/file/file.ts
+ */
+export function fileId(file: TFile): string {
+  let hash = 0;
+  for (let i = 0; i < file.path.length; i++) {
+    hash = (hash << 5) - hash + file.path.charCodeAt(i);
+    hash |= 0; // Convert to 32-bit integer
+  }
+  return Math.abs(hash).toString(); // Ensure it's positive
+}
+
+/**
+ * Create filename from contact records
+ * Migrated from src/file/file.ts
+ */
+export function createFileName(records: Record<string, string>): string {
+  const nameSlug = createNameSlug(records);
+
+  if (!nameSlug) {
+    console.error('No name found for record', records);
+    throw new Error('No name found for record');
+  }
+
+  return nameSlug + '.md';
+}

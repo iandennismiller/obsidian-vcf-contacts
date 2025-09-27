@@ -1,5 +1,6 @@
 import { MarkdownView, WorkspaceLeaf } from "obsidian";
-import { fileId, isFileInFolder } from "src/file/file";
+import { fileId } from "src/contacts/contactNote";
+import { ContactManager } from "src/contacts/contactManager";
 
 let debounceTimer: number
 let lastContactLeaf: WorkspaceLeaf | null = null;

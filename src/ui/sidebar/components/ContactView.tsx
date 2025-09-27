@@ -2,7 +2,8 @@ import { setIcon, TFile } from "obsidian";
 import * as React from "react";
 import { Contact, parseKey } from "src/contacts";
 import { getApp } from "src/context/sharedAppContext";
-import { fileId, openFile } from "src/file/file";
+import { fileId } from "src/contacts/contactNote";
+import { ContactManager } from "src/contacts/contactManager";
 import Avatar from "src/ui/sidebar/components/Avatar";
 import { CopyableItem } from "src/ui/sidebar/components/CopyableItem";
 import { getUiName, uiSafeString } from "src/contacts/contactNote";
@@ -162,7 +163,7 @@ export const ContactView = (props: ContactProps) => {
 	return (
 		<div
 			className="contact-card"
-			onClick={() => openFile(contact.file, workspace)}
+			onClick={() => ContactManager.openFileStatic(getApp(), contact.file, workspace)}
 			id={fileId(contact.file)}
 		>
 			<div className="content">

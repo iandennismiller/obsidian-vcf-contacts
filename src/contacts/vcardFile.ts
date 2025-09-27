@@ -4,7 +4,7 @@ import { ContactNote, createNameSlug } from "./contactNote";
 import { getApp } from "src/context/sharedAppContext";
 
 
-import { ensureHasName } from "src/contacts/ensureHasName";
+import { ContactManager } from "./contactManager";
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { loggingService } from '../services/loggingService';
@@ -152,7 +152,7 @@ export class VcardFile {
       "VERSION": "4.0"
     };
     
-    const namedObject = await ensureHasName(vCardObject);
+    const namedObject = await ContactManager.ensureHasNameStatic(vCardObject);
     // Convert the object back to VCF format
     const vcfContent = VcardFile.objectToVcf(namedObject);
     return new VcardFile(vcfContent);

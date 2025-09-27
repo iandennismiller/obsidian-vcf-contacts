@@ -4,8 +4,8 @@ import * as path from 'path';
 import { ContactNote } from "src/contacts/contactNote";
 import { VcardFile } from "src/contacts/vcardFile";
 import { VCardForObsidianRecord } from "src/contacts/vcardFile";
-import { ContactManager, VCFManager, VCFFileInfo } from "src/contacts";
-import { createContactFile } from "src/file/file";
+import { VCFManager, VCFFileInfo } from "src/contacts";
+import { ContactManager } from "src/contacts/contactManager";
 import { loggingService } from "src/services/loggingService";
 import { ContactsPluginSettings } from "src/settings/settings.d";
 import { onSettingsChange } from "src/context/sharedSettingsContext";
@@ -288,7 +288,7 @@ export class VCFolderWatcher {
               const mdContent = contactNote.mdRender(record, this.settings.defaultHashtag);
               const filename = slug + '.md';
               
-              createContactFile(this.app, this.settings.contactsFolder, mdContent, filename);
+              ContactManager.createContactFileStatic(this.app, this.settings.contactsFolder, mdContent, filename);
               
               // Note: We'll let the ContactManager discover the new file naturally through cache refresh
               // or through the file tracking events
