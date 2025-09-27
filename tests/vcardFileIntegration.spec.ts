@@ -12,12 +12,15 @@ vi.mock('src/context/sharedAppContext', () => ({
   }))
 }));
 
-vi.mock('src/contacts/vcard/shared/ensureHasName', () => ({
-  ensureHasName: vi.fn((obj) => Promise.resolve({ ...obj, 'FN': 'Test Name' }))
+vi.mock('src/contacts/contactManager', () => ({
+  ContactManager: {
+    ensureHasNameStatic: vi.fn((obj) => Promise.resolve({ ...obj, 'FN': 'Test Name' }))
+  }
 }));
 
-vi.mock('src/util/nameUtils', () => ({
-  createNameSlug: vi.fn(() => 'test-contact')
+vi.mock('src/contacts/contactNote', () => ({
+  createNameSlug: vi.fn(() => 'test-contact'),
+  createContactSlug: vi.fn(() => 'test-contact')
 }));
 
 describe('VcardFile Integration', () => {

@@ -4,7 +4,7 @@ import { getSettings } from "src/context/sharedSettingsContext";
 import { RunType } from "src/insights/insight.d";
 import { insightService } from "src/insights/insightService";
 import { FileExistsModal } from "src/ui/modals/fileExistsModal";
-import { createNameSlug } from "src/util/nameUtils";
+import { createNameSlug } from "src/contacts/contactNote";
 
 
 export async function openFile(file: TFile, workspace: Workspace) {

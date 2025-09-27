@@ -1,5 +1,5 @@
 import { createFileName } from 'src/file/file';
-import { createNameSlug } from "src/util/nameUtils";
+import { createNameSlug } from "src/contacts/contactNote";
 import { describe, expect, it } from 'vitest';
 
 

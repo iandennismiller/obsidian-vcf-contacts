@@ -16,7 +16,7 @@ import { ContactsListView } from "src/ui/sidebar/components/ContactsListView";
 import { HeaderView } from "src/ui/sidebar/components/HeaderView";
 import { InsightsView } from "src/ui/sidebar/components/InsightsView";
 import { processAvatar } from "src/util/avatarActions";
-import { Sort } from "src/util/constants";
+
 import myScrollTo from "src/util/myScrollTo";
 
 interface SidebarRootViewProps {
@@ -54,7 +54,7 @@ export const SidebarRootView = (props: SidebarRootViewProps) => {
   const { vault, workspace } = app;
   const [contacts, setContacts] = React.useState<Contact[]>([]);
   const [displayInsightsView, setDisplayInsightsView] = React.useState<boolean>(false);
-	const [sort, setSort] = React.useState<Sort>(Sort.NAME);
+	const [sort, setSort] = React.useState<typeof VcardFile.Sort[keyof typeof VcardFile.Sort]>(VcardFile.Sort.NAME);
 	let settings = getSettings();
 
 	const parseContacts = () => {

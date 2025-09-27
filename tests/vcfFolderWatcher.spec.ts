@@ -1,7 +1,7 @@
 import { App, TFile } from "obsidian";
 import { VCFolderWatcher } from "src/services/vcfFolderWatcher";
 import { ContactsPluginSettings } from "src/settings/settings.d";
-import { updateFrontMatterValue } from "src/contacts/contactFrontmatter";
+import { updateFrontMatterValue } from "src/contacts/contactNote";
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import * as fs from 'fs/promises';
 
@@ -13,6 +13,19 @@ vi.mock('fs/promises', () => ({
   readFile: vi.fn(),
   writeFile: vi.fn()
 }));
+
+// Mock Obsidian classes
+vi.mock('obsidian', async () => {
+  const actual = await vi.importActual('obsidian');
+  return {
+    ...actual,
+    Notice: vi.fn().mockImplementation((message) => {
+      console.log('Notice:', message);
+    }),
+    App: vi.fn(),
+    TFile: vi.fn(),
+  };
+});
 
 // Get the mocked fs functions
 const mockedFs = vi.mocked(fs);
@@ -112,6 +125,9 @@ describe('VCFolderWatcher', () => {
         getMarkdownFiles: vi.fn(() => []),
         on: vi.fn(),
         off: vi.fn()
+      },
+      workspace: {
+        getActiveFile: vi.fn(() => null) // or return a mock file if needed
       },
       metadataCache: {
         getFileCache: vi.fn()

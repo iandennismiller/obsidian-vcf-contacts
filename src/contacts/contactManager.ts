@@ -1,7 +1,12 @@
-import { App, TFile, EventRef, WorkspaceLeaf } from 'obsidian';
+import { App, TFile, EventRef, WorkspaceLeaf, TFolder, Vault, normalizePath, Notice, Workspace } from 'obsidian';
 import { ContactsPluginSettings } from '../settings/settings.d';
 import { loggingService } from '../services/loggingService';
-import { ContactNote } from './contactNote';
+import { ContactNote, getFrontmatterFromFiles } from './contactNote';
+import { VCardForObsidianRecord } from './vcardFile';
+import { getSettings } from '../context/sharedSettingsContext';
+import { RunType } from '../insights/insight.d';
+import { insightService } from '../insights/insightService';
+import { FileExistsModal } from '../ui/modals/fileExistsModal';
 
 /**
  * Interface for managing contact notes in the Obsidian vault.
@@ -452,5 +457,222 @@ export class ContactManager implements IContactManager {
     } catch (error) {
       loggingService.error(`[ContactManager] Error syncing contact file ${file.basename}: ${error.message}`);
     }
+  }
+
+  /**
+   * Ensure vCard object has a name before processing
+   * Migrated from src/contacts/ensureHasName.ts
+   */
+  async ensureHasName(vCardObject: VCardForObsidianRecord): Promise<VCardForObsidianRecord> {
+    return ContactManager.ensureHasNameStatic(vCardObject);
+  }
+
+  /**
+   * Static version of ensureHasName for use in static contexts
+   */
+  static async ensureHasNameStatic(vCardObject: VCardForObsidianRecord): Promise<VCardForObsidianRecord> {
+    const { createNameSlug } = await import('./contactNote');
+    const { VCardKinds } = await import('./vcardFile');
+    const { ContactNameModal } = await import('../ui/modals/contactNameModal');
+    const { getApp } = await import('../context/sharedAppContext');
+    
+    // Import the type separately
+    type NamingPayload = import('../ui/modals/contactNameModal').NamingPayload;
+    
+    try {
+      // if we can create a file name then we meet the minimum requirements
+      createNameSlug(vCardObject);
+      return Promise.resolve(vCardObject);
+    } catch (error) {
+      // Need to prompt for some form of name information.
+      const app = getApp();
+      return new Promise((resolve) => {
+        console.warn("No name found for record", vCardObject);
+        new ContactNameModal(app, (nameData: NamingPayload) => {
+          if (nameData.kind === VCardKinds.Individual) {
+            vCardObject["N.PREFIX"] ??= "";
+            vCardObject["N.GN"] = nameData.given;
+            vCardObject["N.MN"] ??= "";
+            vCardObject["N.FN"] = nameData.family;
+            vCardObject["N.SUFFIX"] ??= "";
+          } else {
+            vCardObject["FN"] ??= nameData.fn;
+          }
+          vCardObject["KIND"] ??= nameData.kind;
+          resolve(vCardObject);
+        }).open();
+      });
+    }
+  }
+
+  // File management methods migrated from src/file/file.ts
+
+  /**
+   * Open a file in the workspace
+   * Migrated from src/file/file.ts
+   */
+  async openFile(file: TFile, workspace?: Workspace): Promise<void> {
+    const ws = workspace || this.app.workspace;
+    const leaf = ws.getLeaf();
+    await leaf.openFile(file, { active: true });
+  }
+
+  /**
+   * Find all contact files in a folder
+   * Migrated from src/file/file.ts
+   */
+  findContactFiles(contactsFolder: TFolder): TFile[] {
+    const contactFiles: TFile[] = [];
+    Vault.recurseChildren(contactsFolder, async (contactNote) => {
+      if (contactNote instanceof TFile) {
+        contactFiles.push(contactNote);
+      }
+    });
+    return contactFiles;
+  }
+
+  /**
+   * Open a created file by its path
+   * Migrated from src/file/file.ts
+   */
+  private openCreatedFile(filePath: string): void {
+    const file = this.app.vault.getAbstractFileByPath(filePath);
+    if (file instanceof TFile) {
+      this.openFile(file);
+    }
+  }
+
+  /**
+   * Handle file creation with existence checking
+   * Migrated from src/file/file.ts
+   */
+  private async handleFileCreation(filePath: string, content: string): Promise<void> {
+    const fileExists = await this.app.vault.adapter.exists(filePath);
+
+    if (fileExists) {
+      new FileExistsModal(this.app, filePath, async (action: "replace" | "skip") => {
+        if (action === "skip") {
+          new Notice("File creation skipped.");
+          return;
+        }
+
+        if (action === "replace") {
+          await this.app.vault.adapter.write(filePath, content);
+          this.openCreatedFile(filePath);
+          new Notice(`File overwritten.`);
+        }
+      }).open();
+    } else {
+      const createdFile = await this.app.vault.create(filePath, content);
+      await new Promise(r => setTimeout(r, 50));
+      const contact = await getFrontmatterFromFiles([createdFile]);
+      await insightService.process(contact, RunType.IMMEDIATELY);
+      this.openFile(createdFile);
+    }
+  }
+
+  /**
+   * Create a contact file in the appropriate folder
+   * Migrated from src/file/file.ts
+   */
+  async createContactFile(folderPath: string, content: string, filename: string): Promise<void> {
+    return ContactManager.createContactFileStatic(this.app, folderPath, content, filename);
+  }
+
+  /**
+   * Static version of createContactFile for use in static contexts
+   */
+  static async createContactFileStatic(app: App, folderPath: string, content: string, filename: string): Promise<void> {
+    const folder = app.vault.getAbstractFileByPath(folderPath !== '' ? folderPath : '/');
+    if (!folder) {
+      new Notice(`Can not find path: '${folderPath}'. Please update "Contacts" plugin settings`);
+      return;
+    }
+    const activeFile = app.workspace.getActiveFile();
+    const parentFolder = activeFile?.parent; // Get the parent folder if it's a file
+
+    const fileJoin = (...parts: string[]): string => {
+      return parts
+        .filter(Boolean)
+        .join("/")
+        .replace(/\/{2,}/g, "/")
+        .replace(/\/+$/, "");
+    };
+
+    if (parentFolder?.path?.contains(folderPath)) {
+      const filePath = normalizePath(fileJoin(parentFolder.path, filename));
+      await ContactManager.handleFileCreationStatic(app, filePath, content);
+    } else {
+      const filePath = normalizePath(fileJoin(folderPath, filename));
+      await ContactManager.handleFileCreationStatic(app, filePath, content);
+    }
+  }
+
+  /**
+   * Static version of handleFileCreation
+   */
+  static async handleFileCreationStatic(app: App, filePath: string, content: string): Promise<void> {
+    const fileExists = await app.vault.adapter.exists(filePath);
+
+    if (fileExists) {
+      new FileExistsModal(app, filePath, async (action: "replace" | "skip") => {
+        if (action === "skip") {
+          new Notice("File creation skipped.");
+          return;
+        }
+
+        if (action === "replace") {
+          await app.vault.adapter.write(filePath, content);
+          ContactManager.openCreatedFileStatic(app, filePath);
+          new Notice(`File overwritten.`);
+        }
+      }).open();
+    } else {
+      const createdFile = await app.vault.create(filePath, content);
+      await new Promise(r => setTimeout(r, 50));
+      const contact = await getFrontmatterFromFiles([createdFile]);
+      await insightService.process(contact, RunType.IMMEDIATELY);
+      ContactManager.openFileStatic(app, createdFile);
+    }
+  }
+
+  /**
+   * Static version of openFile
+   */
+  static async openFileStatic(app: App, file: TFile, workspace?: Workspace): Promise<void> {
+    const ws = workspace || app.workspace;
+    const leaf = ws.getLeaf();
+    await leaf.openFile(file, { active: true });
+  }
+
+  /**
+   * Static version of openCreatedFile
+   */
+  static openCreatedFileStatic(app: App, filePath: string): void {
+    const file = app.vault.getAbstractFileByPath(filePath);
+    if (file instanceof TFile) {
+      ContactManager.openFileStatic(app, file);
+    }
+  }
+
+  /**
+   * Check if a file is in the contacts folder
+   * Migrated from src/file/file.ts
+   */
+  isFileInContactsFolder(file: TFile): boolean {
+    const settings = getSettings();
+    return file.path.startsWith(settings.contactsFolder);
+  }
+
+  /**
+   * Join file path parts
+   * Migrated from src/file/file.ts
+   */
+  private fileJoin(...parts: string[]): string {
+    return parts
+      .filter(Boolean)
+      .join("/")
+      .replace(/\/{2,}/g, "/")
+      .replace(/\/+$/, "");
   }
 }

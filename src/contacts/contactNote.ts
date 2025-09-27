@@ -6,9 +6,10 @@
 
 import { TFile, App, parseYaml, stringifyYaml } from 'obsidian';
 import { ContactsPluginSettings } from '../settings/settings.d';
-import { VCardForObsidianRecord } from './vcard-types';
+import { VCardForObsidianRecord, VCardKind, VCardKinds } from './vcardFile';
 import { loggingService } from '../services/loggingService';
 import { getApp } from '../context/sharedAppContext';
+import { getSettings } from '../context/sharedSettingsContext';
 
 export type Contact = {
   data: Record<string, any>;
@@ -1105,3 +1106,288 @@ export function mdRender(record: Record<string, any>, hashtags: string, genderLo
   const tempContactNote = new ContactNote(getApp(), getSettings(), null as any);
   return tempContactNote.mdRender(record, hashtags, genderLookup);
 }
+
+// Name utility functions migrated from src/util/nameUtils.ts
+
+/**
+ * Doing our best for the user with minimal code to clean up the filename.
+ */
+function sanitizeFileName(input: string): string {
+  const illegalRe = /[\/\?<>\\:\*\|"]/g;
+  const controlRe = /[\x00-\x1f\x80-\x9f]/g;
+  const reservedRe = /^\.+$/;
+  const windowsReservedRe = /^(con|prn|aux|nul|com[0-9]|lpt[0-9])(\..*)?$/i;
+  const windowsTrailingRe = /[\. ]+$/;
+  const multipleSpacesRe = /\s+/g;
+  return input
+    .replace(illegalRe, ' ')
+    .replace(controlRe, ' ')
+    .replace(reservedRe, ' ')
+    .replace(windowsReservedRe, ' ')
+    .replace(windowsTrailingRe, ' ')
+    .replace(multipleSpacesRe, " ")
+    .trim();
+}
+
+/**
+ * Creates a name slug from vCard records. FN is a mandatory field in the spec so we fall back to that.
+ * Migrated from src/util/nameUtils.ts
+ */
+export function createNameSlug(record: VCardForObsidianRecord): string {
+  let fileName: string | undefined = undefined;
+  if (isKind(record, VCardKinds.Individual)) {
+    fileName = [
+      record["N.PREFIX"],
+      record["N.GN"],
+      record["N.MN"],
+      record["N.FN"],
+      record["N.SUFFIX"],
+    ]
+      .map((part) => part?.trim())
+      .filter((part) => part)
+      .join(" ") || undefined;
+  }
+
+  if (!fileName && record["FN"]) {
+    fileName = record["FN"];
+  }
+
+  if (!fileName) {
+    throw new Error(`Failed to update, create file name due to missing FN property"`);
+  }
+
+  return sanitizeFileName(fileName);
+}
+
+/**
+ * Creates a kebab-case slug from vCard records for use as identifiers
+ */
+export function createContactSlug(record: VCardForObsidianRecord): string {
+  let fileName: string | undefined = undefined;
+  if (isKind(record, VCardKinds.Individual)) {
+    fileName = [
+      record["N.PREFIX"],
+      record["N.GN"],
+      record["N.MN"],
+      record["N.FN"],
+      record["N.SUFFIX"],
+    ]
+      .map((part) => part?.trim())
+      .filter((part) => part)
+      .join(" ") || undefined;
+  }
+
+  if (!fileName && record["FN"]) {
+    fileName = record["FN"];
+  }
+
+  if (!fileName) {
+    throw new Error(`Failed to update, create file name due to missing FN property"`);
+  }
+
+  // Create a kebab-case slug for use as identifier
+  return sanitizeFileName(fileName)
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
+/**
+ * Get sort name for contact sorting
+ * Migrated from src/util/nameUtils.ts
+ */
+export function getSortName(contact: VCardForObsidianRecord): string {
+  if (isKind(contact, VCardKinds.Individual)) {
+    const name = contact["N.GN"] + contact["N.FN"];
+    if (!name) {
+      return contact["FN"];
+    }
+    return name;
+  }
+  return contact["FN"];
+}
+
+/**
+ * Convert input to UI-safe string
+ * Migrated from src/util/nameUtils.ts
+ */
+export function uiSafeString(input: unknown): string | undefined {
+  if (input === null || input === undefined) {
+    return undefined;
+  }
+
+  if (typeof input === 'string') {
+    return input.trim();
+  } else if (typeof input === 'number' || input instanceof Date || typeof input === 'boolean') {
+    return input.toString();
+  } else {
+    return undefined;
+  }
+}
+
+/**
+ * Get UI display name for contact
+ * Migrated from src/util/nameUtils.ts
+ */
+export function getUiName(contact: VCardForObsidianRecord): string {
+  if (isKind(contact, VCardKinds.Individual)) {
+    const myName = [
+      contact["N.PREFIX"],
+      contact["N.GN"],
+      contact["N.MN"],
+      contact["N.FN"],
+      contact["N.SUFFIX"]
+    ]
+      .map(uiSafeString)
+      .filter((value) => value !== undefined)
+      .join(' ');
+
+    if (myName.length > 0) {
+      return myName;
+    }
+  }
+  return uiSafeString(contact["FN"]) || '';
+}
+
+/**
+ * Check if record is of a specific kind
+ * Migrated from src/util/nameUtils.ts
+ */
+export function isKind(record: VCardForObsidianRecord, kind: VCardKind): boolean {
+  const myKind = record["KIND"] || VCardKinds.Individual;
+  return myKind === kind;
+}
+
+// File utility functions migrated from src/file/file.ts
+
+/**
+ * Generate a unique ID from a file path
+ * Migrated from src/file/file.ts
+ */
+export function fileId(file: TFile): string {
+  let hash = 0;
+  for (let i = 0; i < file.path.length; i++) {
+    hash = (hash << 5) - hash + file.path.charCodeAt(i);
+    hash |= 0; // Convert to 32-bit integer
+  }
+  return Math.abs(hash).toString(); // Ensure it's positive
+}
+
+/**
+ * Create filename from contact records
+ * Migrated from src/file/file.ts
+ */
+export function createFileName(records: Record<string, string>): string {
+  const nameSlug = createNameSlug(records);
+
+  if (!nameSlug) {
+    console.error('No name found for record', records);
+    throw new Error('No name found for record');
+  }
+
+  return nameSlug + '.md';
+}
+
+// Reciprocal relationship utilities migrated from src/util/reciprocalRelationships.ts
+
+/**
+ * Represents a missing reciprocal relationship
+ */
+export interface MissingReciprocal {
+  /** Contact file that is missing the reciprocal */
+  targetFile: TFile;
+  /** Name of the target contact */
+  targetName: string;
+  /** The reciprocal relationship type that should be added */
+  reciprocalType: string;
+  /** Name of the source contact (the one with the original relationship) */
+  sourceContactName: string;
+}
+
+/**
+ * Result of checking reciprocal relationships
+ */
+export interface ReciprocalCheckResult {
+  /** Whether all relationships have proper reciprocals */
+  allReciprocalExists: boolean;
+  /** List of missing reciprocal relationships */
+  missingReciprocals: MissingReciprocal[];
+  /** Any errors encountered during the check */
+  errors: string[];
+}
+
+/**
+ * Result of fixing missing reciprocal relationships
+ */
+export interface FixReciprocalResult {
+  /** Whether all reciprocals were successfully fixed */
+  success: boolean;
+  /** Number of reciprocal relationships that were added */
+  addedCount: number;
+  /** Any errors encountered during the fix operation */
+  errors: string[];
+}
+
+/**
+ * Get the reciprocal relationship type for a given type
+ * Migrated from src/util/reciprocalRelationships.ts
+ */
+export function getReciprocalRelationshipType(relationshipType: string): string | null {
+  // Convert to genderless form for consistent mapping
+  const tempContactNote = new ContactNote(getApp(), getSettings(), null as any);
+  const genderlessType = tempContactNote.convertToGenderlessType(relationshipType.toLowerCase());
+  
+  const reciprocalMap: Record<string, string> = {
+    'parent': 'child',
+    'child': 'parent',
+    'sibling': 'sibling',
+    'spouse': 'spouse',
+    'partner': 'partner',
+    'friend': 'friend',
+    'colleague': 'colleague',
+    'relative': 'relative',
+    'auncle': 'nibling',  // aunt/uncle -> nibling (niece/nephew)
+    'nibling': 'auncle',  // nibling (niece/nephew) -> aunt/uncle
+    'grandparent': 'grandchild',
+    'grandchild': 'grandparent',
+    'cousin': 'cousin'
+  };
+  
+  return reciprocalMap[genderlessType] || null;
+}
+
+/**
+ * Check if a relationship type is symmetric (has the same reciprocal)
+ * Migrated from src/util/reciprocalRelationships.ts
+ */
+export function isSymmetricRelationship(relationshipType: string): boolean {
+  const tempContactNote = new ContactNote(getApp(), getSettings(), null as any);
+  const genderlessType = tempContactNote.convertToGenderlessType(relationshipType.toLowerCase());
+  const symmetricTypes = ['sibling', 'spouse', 'partner', 'friend', 'colleague', 'relative', 'cousin'];
+  return symmetricTypes.includes(genderlessType);
+}
+
+/**
+ * Check if two relationship types are equivalent (considering gender variations)
+ * Migrated from src/util/reciprocalRelationships.ts
+ */
+export function areRelationshipTypesEquivalent(type1: string, type2: string): boolean {
+  if (type1 === type2) {
+    return true;
+  }
+  
+  const tempContactNote = new ContactNote(getApp(), getSettings(), null as any);
+  const genderless1 = tempContactNote.convertToGenderlessType(type1.toLowerCase());
+  const genderless2 = tempContactNote.convertToGenderlessType(type2.toLowerCase());
+  
+  return genderless1 === genderless2;
+}
+
+// For now, re-export the complex reciprocal relationship functions
+// These will be fully migrated in a future refactoring
+export { 
+  findMissingReciprocalRelationships, 
+  fixMissingReciprocalRelationships 
+} from '../util/reciprocalRelationships';

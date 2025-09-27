@@ -10,6 +10,7 @@ describe('REV field demonstration', () => {
     const mockDate = new Date('2025-09-23T23:19:28.000Z');
     vi.spyOn(global, 'Date').mockImplementation(() => mockDate);
     
+    const contactNote = createTestContactNote();
     const revTimestamp = contactNote.generateRevTimestamp();
     
     console.log('Generated REV timestamp:', revTimestamp);
@@ -28,6 +29,7 @@ describe('REV field demonstration', () => {
   });
   
   it('should demonstrate REV format specification', () => {
+    const contactNote = createTestContactNote();
     const timestamp = contactNote.generateRevTimestamp();
     
     // Verify format: YYYYMMDDTHHMMSSZ

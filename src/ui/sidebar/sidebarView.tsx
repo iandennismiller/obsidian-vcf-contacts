@@ -6,7 +6,7 @@ import { clearApp, setApp } from "src/context/sharedAppContext";
 import { clearSettings, setSettings } from "src/context/sharedSettingsContext";
 import ContactsPlugin from "src/main";
 import { SidebarRootView } from "src/ui/sidebar/components/SidebarRootView";
-import { CONTACTS_VIEW_CONFIG } from "src/util/constants";
+import { VcardFile } from "src/contacts/vcardFile";
 
 
 export type SidebarAPI = {
@@ -49,15 +49,15 @@ export class ContactsView extends ItemView {
   }
 
 	getViewType(): string {
-		return CONTACTS_VIEW_CONFIG.type;
+		return VcardFile.CONTACTS_VIEW_CONFIG.type;
 	}
 
 	getDisplayText(): string {
-		return CONTACTS_VIEW_CONFIG.name;
+		return VcardFile.CONTACTS_VIEW_CONFIG.name;
 	}
 
 	getIcon(): string {
-		return CONTACTS_VIEW_CONFIG.icon;
+		return VcardFile.CONTACTS_VIEW_CONFIG.icon;
 	}
 
 	async onOpen(){

@@ -37,16 +37,15 @@ vi.mock('src/contacts', () => ({
   })
 }));
 
-vi.mock('src/util/nameUtils', () => ({
-  createNameSlug: vi.fn(() => 'john-doe')
+vi.mock('src/contacts/contactNote', () => ({
+  createNameSlug: vi.fn(() => 'test-user'),
+  createContactSlug: vi.fn(() => 'john-doe')
 }));
 
-vi.mock('src/util/photoLineFromV3toV4', () => ({
-  photoLineFromV3toV4: vi.fn((line) => line)
-}));
-
-vi.mock('src/contacts/vcard/shared/ensureHasName', () => ({
-  ensureHasName: vi.fn((obj) => Promise.resolve({ ...obj, 'FN': 'Test Name' }))
+vi.mock('./contactManager', () => ({
+  ContactManager: {
+    ensureHasNameStatic: vi.fn((obj) => Promise.resolve({ ...obj, 'FN': 'Test User' }))
+  }
 }));
 
 vi.mock('../../services/loggingService', () => ({

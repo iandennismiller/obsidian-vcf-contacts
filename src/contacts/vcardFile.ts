@@ -1,13 +1,78 @@
 import { TFile, App } from "obsidian";
-import { ContactNote } from "./contactNote";
-import { StructuredFields, VCardToStringError, VCardToStringReply, VCardForObsidianRecord, VCardSupportedKey } from "src/contacts/vcard-types";
+import { ContactNote, createNameSlug, createContactSlug } from "./contactNote";
+
 import { getApp } from "src/context/sharedAppContext";
-import { createNameSlug } from "src/util/nameUtils";
-import { photoLineFromV3toV4 } from "src/util/photoLineFromV3toV4";
-import { ensureHasName } from "src/contacts/ensureHasName";
+
+
+import { ContactManager } from "./contactManager";
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { loggingService } from '../services/loggingService';
+
+// vCard types and enums migrated from src/contacts/vcard-types.ts
+
+export enum VCardSupportedKey {
+	VERSION = "vCard Version",
+	N = "Name",
+	FN = "Full Name",
+	NICKNAME = "Nickname",
+	ADR = "Address",
+	ADR_LABEL = "Address Label",
+	AGENT = "Agent (Representative)",
+	ANNIVERSARY = "Anniversary Date",
+	BDAY = "Birthday Date",
+	CATEGORIES = "Categories (Tags)",
+	CLASS = "Classification (Privacy Level)",
+	EMAIL = "Email Address",
+	GENDER = "Gender",
+	GEO = "Geolocation (Latitude/Longitude)",
+	KIND = "Contact Type",
+	LANG = "Language Spoken",
+	MEMBER = "Group Member",
+	NAME = "Name Identifier",
+	NOTE = "Notes",
+	ORG = "Organization Name",
+	PHOTO = "Profile Photo",
+	REV = "Last Updated Timestamp",
+	ROLE = "Job Role or Title",
+	SOURCE = "vCard Source URL",
+	TEL = "Telephone Number",
+	TITLE = "Job Title",
+	TZ = "Time Zone",
+	UID = "Unique Identifier",
+	URL = "Website URL",
+  SOCIALPROFILE = "Social Profile",
+  RELATED = "Related Contact"
+}
+
+export interface VCardForObsidianRecord {
+	[key: string]: string,
+}
+
+export interface VCardToStringError {
+  status: string;
+  file: string;
+  message: string;
+}
+
+export interface VCardToStringReply {
+  vcards: string;
+  errors: VCardToStringError[];
+}
+
+export type VCardKind = "individual" | "org" | "group" | "location";
+
+export const StructuredFields = {
+  N: ["FN", "GN", "MN", "PREFIX", "SUFFIX"],
+  ADR: ["PO", "EXT", "STREET", "LOCALITY", "REGION", "POSTAL", "COUNTRY"]
+} as const;
+
+export const VCardKinds = {
+  Individual: "individual",
+  Organisation: "org",
+  Group: "group",
+  Location: "location",
+} as const;
 
 /**
  * A unified interface for interacting with vCard files (VCF)
@@ -87,7 +152,7 @@ export class VcardFile {
       "VERSION": "4.0"
     };
     
-    const namedObject = await ensureHasName(vCardObject);
+    const namedObject = await ContactManager.ensureHasNameStatic(vCardObject);
     // Convert the object back to VCF format
     const vcfContent = VcardFile.objectToVcf(namedObject);
     return new VcardFile(vcfContent);
@@ -112,7 +177,7 @@ export class VcardFile {
       }
 
       try {
-        const slug = createNameSlug(vCardObject);
+        const slug = createContactSlug(vCardObject);
         yield [slug, vCardObject];
       } catch (error) {
         yield [undefined, vCardObject];
@@ -358,7 +423,7 @@ export class VcardFile {
       if (paramsPart && paramsPart.includes('ENCODING=BASE64')) {
         // v3 format: reconstruct the line for processing
         const fullLine = `PHOTO${paramsPart}:${value}`;
-        return { [`${baseKey}${typeValues}`]: photoLineFromV3toV4(fullLine) };
+        return { [`${baseKey}${typeValues}`]: VcardFile.photoLineFromV3toV4(fullLine) };
       } else if (value.startsWith('data:')) {
         // v4 format
         return { [`${baseKey}${typeValues}`]: value };
@@ -493,4 +558,32 @@ export class VcardFile {
 
     return `BEGIN:VCARD\n${lines.join("\n")}\nEND:VCARD`;
   }
+
+  /**
+   * Convert vCard v3 photo format to v4 format
+   * Migrated from src/util/photoLineFromV3toV4.ts
+   */
+  static photoLineFromV3toV4(line: string): string {
+    const url = line.startsWith('PHOTO;') ? line.slice(6) : line;
+    const match = url.match(/^ENCODING=BASE64;(.*?):/);
+    if (match) {
+      const mimeType = match[1].toLowerCase(); // e.g., "jpeg"
+      const base64Data = url.split(':').slice(1).join(':');
+      return `data:image/${mimeType};base64,${base64Data}`;
+    }
+    return url;
+  }
+
+  // Constants migrated from src/util/constants.ts
+  static readonly CONTACTS_VIEW_CONFIG = {
+    type: "contacts-view",
+    name: "Contacts",
+    icon: "contact",
+  };
+
+  static readonly Sort = {
+    NAME: 0,
+    BIRTHDAY: 1,
+    ORG: 2
+  } as const;
 }
