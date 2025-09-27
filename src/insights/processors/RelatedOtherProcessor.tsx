@@ -82,16 +82,23 @@ export const RelatedOtherProcessor: InsightProcessor = {
     };
     
     // Helper function: Generate a RELATED key for frontmatter
-    const generateRelatedKey = (relationshipType: string, existingUpdates: Record<string, string>): string => {
-      // Use simple format for now - could be enhanced to match existing patterns
+    const generateRelatedKey = (
+      relationshipType: string, 
+      existingUpdates: Record<string, string>,
+      currentFrontmatter: Record<string, any>
+    ): string => {
       const baseKey = `RELATED[${relationshipType}]`;
-      
-      // If key already exists, add index
-      let index = 1;
       let key = baseKey;
-      while (existingUpdates[key]) {
+      
+      // If base key exists, use indexed format
+      if (currentFrontmatter[baseKey] || existingUpdates[baseKey]) {
+        let index = 1;
         key = `RELATED[${index}:${relationshipType}]`;
-        index++;
+        
+        while (currentFrontmatter[key] || existingUpdates[key]) {
+          index++;
+          key = `RELATED[${index}:${relationshipType}]`;
+        }
       }
       
       return key;
@@ -107,6 +114,7 @@ export const RelatedOtherProcessor: InsightProcessor = {
       
       // Get current frontmatter relationships for this contact
       const currentRelationships = await contactNote.parseFrontmatterRelationships();
+      const currentFrontmatter = await contactNote.getFrontmatter() || {};
       
       // Get all other contact files
       const allContactFiles = contactManager.getAllContactFiles();
@@ -139,7 +147,7 @@ export const RelatedOtherProcessor: InsightProcessor = {
                 
                 if (!hasReciprocal) {
                   // Add the reciprocal relationship to frontmatter
-                  const relationshipKey = generateRelatedKey(reciprocalType, frontmatterUpdates);
+                  const relationshipKey = generateRelatedKey(reciprocalType, frontmatterUpdates, currentFrontmatter);
                   const relationshipValue = otherContactFile.basename; // Using name format for simplicity
                   
                   frontmatterUpdates[relationshipKey] = relationshipValue;
