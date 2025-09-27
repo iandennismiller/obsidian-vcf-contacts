@@ -12,7 +12,7 @@ import { ContactNote } from "src/contacts/contactNote";
 import { 
   findMissingReciprocalRelationships, 
   fixMissingReciprocalRelationships 
-} from "src/util/reciprocalRelationships";
+} from "src/contacts/contactNote";
 import { ContactManager } from "src/contacts/contactManager";
 
 import { ContactsSettingTab, DEFAULT_SETTINGS } from './settings/settings';
