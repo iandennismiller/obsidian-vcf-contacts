@@ -1,13 +1,78 @@
 import { TFile, App } from "obsidian";
-import { ContactNote } from "./contactNote";
-import { StructuredFields, VCardToStringError, VCardToStringReply, VCardForObsidianRecord, VCardSupportedKey } from "src/contacts/vcard-types";
+import { ContactNote, createNameSlug } from "./contactNote";
+
 import { getApp } from "src/context/sharedAppContext";
-import { createNameSlug } from "src/util/nameUtils";
+
 
 import { ensureHasName } from "src/contacts/ensureHasName";
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { loggingService } from '../services/loggingService';
+
+// vCard types and enums migrated from src/contacts/vcard-types.ts
+
+export enum VCardSupportedKey {
+	VERSION = "vCard Version",
+	N = "Name",
+	FN = "Full Name",
+	NICKNAME = "Nickname",
+	ADR = "Address",
+	ADR_LABEL = "Address Label",
+	AGENT = "Agent (Representative)",
+	ANNIVERSARY = "Anniversary Date",
+	BDAY = "Birthday Date",
+	CATEGORIES = "Categories (Tags)",
+	CLASS = "Classification (Privacy Level)",
+	EMAIL = "Email Address",
+	GENDER = "Gender",
+	GEO = "Geolocation (Latitude/Longitude)",
+	KIND = "Contact Type",
+	LANG = "Language Spoken",
+	MEMBER = "Group Member",
+	NAME = "Name Identifier",
+	NOTE = "Notes",
+	ORG = "Organization Name",
+	PHOTO = "Profile Photo",
+	REV = "Last Updated Timestamp",
+	ROLE = "Job Role or Title",
+	SOURCE = "vCard Source URL",
+	TEL = "Telephone Number",
+	TITLE = "Job Title",
+	TZ = "Time Zone",
+	UID = "Unique Identifier",
+	URL = "Website URL",
+  SOCIALPROFILE = "Social Profile",
+  RELATED = "Related Contact"
+}
+
+export interface VCardForObsidianRecord {
+	[key: string]: string,
+}
+
+export interface VCardToStringError {
+  status: string;
+  file: string;
+  message: string;
+}
+
+export interface VCardToStringReply {
+  vcards: string;
+  errors: VCardToStringError[];
+}
+
+export type VCardKind = "individual" | "org" | "group" | "location";
+
+export const StructuredFields = {
+  N: ["FN", "GN", "MN", "PREFIX", "SUFFIX"],
+  ADR: ["PO", "EXT", "STREET", "LOCALITY", "REGION", "POSTAL", "COUNTRY"]
+} as const;
+
+export const VCardKinds = {
+  Individual: "individual",
+  Organisation: "org",
+  Group: "group",
+  Location: "location",
+} as const;
 
 /**
  * A unified interface for interacting with vCard files (VCF)

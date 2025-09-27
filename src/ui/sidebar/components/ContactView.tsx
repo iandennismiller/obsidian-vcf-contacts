@@ -5,7 +5,7 @@ import { getApp } from "src/context/sharedAppContext";
 import { fileId, openFile } from "src/file/file";
 import Avatar from "src/ui/sidebar/components/Avatar";
 import { CopyableItem } from "src/ui/sidebar/components/CopyableItem";
-import { getUiName, uiSafeString } from "src/util/nameUtils";
+import { getUiName, uiSafeString } from "src/contacts/contactNote";
 
 type ContactProps = {
 	contact: Contact;

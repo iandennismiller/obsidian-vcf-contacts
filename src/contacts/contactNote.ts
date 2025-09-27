@@ -6,9 +6,10 @@
 
 import { TFile, App, parseYaml, stringifyYaml } from 'obsidian';
 import { ContactsPluginSettings } from '../settings/settings.d';
-import { VCardForObsidianRecord } from './vcard-types';
+import { VCardForObsidianRecord, VCardKind, VCardKinds } from './vcardFile';
 import { loggingService } from '../services/loggingService';
 import { getApp } from '../context/sharedAppContext';
+import { getSettings } from '../context/sharedSettingsContext';
 
 export type Contact = {
   data: Record<string, any>;
@@ -1104,4 +1105,122 @@ export function mdRender(record: Record<string, any>, hashtags: string, genderLo
   // Create a temporary ContactNote instance just for the helper methods
   const tempContactNote = new ContactNote(getApp(), getSettings(), null as any);
   return tempContactNote.mdRender(record, hashtags, genderLookup);
+}
+
+// Name utility functions migrated from src/util/nameUtils.ts
+
+/**
+ * Doing our best for the user with minimal code to clean up the filename.
+ */
+function sanitizeFileName(input: string): string {
+  const illegalRe = /[\/\?<>\\:\*\|"]/g;
+  const controlRe = /[\x00-\x1f\x80-\x9f]/g;
+  const reservedRe = /^\.+$/;
+  const windowsReservedRe = /^(con|prn|aux|nul|com[0-9]|lpt[0-9])(\..*)?$/i;
+  const windowsTrailingRe = /[\. ]+$/;
+  const multipleSpacesRe = /\s+/g;
+  return input
+    .replace(illegalRe, ' ')
+    .replace(controlRe, ' ')
+    .replace(reservedRe, ' ')
+    .replace(windowsReservedRe, ' ')
+    .replace(windowsTrailingRe, ' ')
+    .replace(multipleSpacesRe, " ")
+    .trim();
+}
+
+/**
+ * Creates a name slug from vCard records. FN is a mandatory field in the spec so we fall back to that.
+ * Migrated from src/util/nameUtils.ts
+ */
+export function createNameSlug(record: VCardForObsidianRecord): string {
+  let fileName: string | undefined = undefined;
+  if (isKind(record, VCardKinds.Individual)) {
+    fileName = [
+      record["N.PREFIX"],
+      record["N.GN"],
+      record["N.MN"],
+      record["N.FN"],
+      record["N.SUFFIX"],
+    ]
+      .map((part) => part?.trim())
+      .filter((part) => part)
+      .join(" ") || undefined;
+  }
+
+  if (!fileName && record["FN"]) {
+    fileName = record["FN"];
+  }
+
+  if (!fileName) {
+    throw new Error(`Failed to update, create file name due to missing FN property"`);
+  }
+
+  return sanitizeFileName(fileName);
+}
+
+/**
+ * Get sort name for contact sorting
+ * Migrated from src/util/nameUtils.ts
+ */
+export function getSortName(contact: VCardForObsidianRecord): string {
+  if (isKind(contact, VCardKinds.Individual)) {
+    const name = contact["N.GN"] + contact["N.FN"];
+    if (!name) {
+      return contact["FN"];
+    }
+    return name;
+  }
+  return contact["FN"];
+}
+
+/**
+ * Convert input to UI-safe string
+ * Migrated from src/util/nameUtils.ts
+ */
+export function uiSafeString(input: unknown): string | undefined {
+  if (input === null || input === undefined) {
+    return undefined;
+  }
+
+  if (typeof input === 'string') {
+    return input.trim();
+  } else if (typeof input === 'number' || input instanceof Date || typeof input === 'boolean') {
+    return input.toString();
+  } else {
+    return undefined;
+  }
+}
+
+/**
+ * Get UI display name for contact
+ * Migrated from src/util/nameUtils.ts
+ */
+export function getUiName(contact: VCardForObsidianRecord): string {
+  if (isKind(contact, VCardKinds.Individual)) {
+    const myName = [
+      contact["N.PREFIX"],
+      contact["N.GN"],
+      contact["N.MN"],
+      contact["N.FN"],
+      contact["N.SUFFIX"]
+    ]
+      .map(uiSafeString)
+      .filter((value) => value !== undefined)
+      .join(' ');
+
+    if (myName.length > 0) {
+      return myName;
+    }
+  }
+  return uiSafeString(contact["FN"]) || '';
+}
+
+/**
+ * Check if record is of a specific kind
+ * Migrated from src/util/nameUtils.ts
+ */
+export function isKind(record: VCardForObsidianRecord, kind: VCardKind): boolean {
+  const myKind = record["KIND"] || VCardKinds.Individual;
+  return myKind === kind;
 }

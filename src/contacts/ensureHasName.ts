@@ -1,7 +1,7 @@
-import { VCardForObsidianRecord, VCardKinds } from "src/contacts/vcard-types";
+import { VCardForObsidianRecord, VCardKinds } from "src/contacts/vcardFile";
 import { getApp } from "src/context/sharedAppContext";
 import { ContactNameModal, NamingPayload } from "src/ui/modals/contactNameModal";
-import { createNameSlug } from "src/util/nameUtils";
+import { createNameSlug } from "src/contacts/contactNote";
 
 export async function ensureHasName(
   vCardObject: VCardForObsidianRecord

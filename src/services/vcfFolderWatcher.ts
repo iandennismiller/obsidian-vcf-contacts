@@ -3,7 +3,7 @@ import { App, Notice, TFile } from 'obsidian';
 import * as path from 'path';
 import { ContactNote } from "src/contacts/contactNote";
 import { VcardFile } from "src/contacts/vcardFile";
-import { VCardForObsidianRecord } from "src/contacts/vcard-types";
+import { VCardForObsidianRecord } from "src/contacts/vcardFile";
 import { ContactManager, VCFManager, VCFFileInfo } from "src/contacts";
 import { createContactFile } from "src/file/file";
 import { loggingService } from "src/services/loggingService";
