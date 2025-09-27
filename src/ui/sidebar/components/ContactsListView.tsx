@@ -3,14 +3,14 @@ import * as React from "react";
 import { Contact } from "src/contacts";
 import { fileId } from "src/file/file";
 import { ContactView } from "src/ui/sidebar/components/ContactView";
-import { Sort } from "src/util/constants";
+import { VcardFile } from "src/contacts/vcardFile";
 import myScrollTo from "src/util/myScrollTo";
 import { getSortName } from "src/util/nameUtils";
 
 
 type ContactsListProps = {
 	contacts: Contact[];
-	sort: Sort;
+	sort: typeof VcardFile.Sort[keyof typeof VcardFile.Sort];
 	processAvatar: (contact: Contact) => void;
 	exportVCF: (contactFile: TFile) => void;
 };
@@ -44,12 +44,12 @@ export const ContactsListView = (props: ContactsListProps) => {
 	React.useEffect(() => {
 		const sortedContacts = [...contacts].sort((a, b) => {
 			switch (sort) {
-				case Sort.NAME: {
+				case VcardFile.Sort.NAME: {
           const nameA= getSortName(a.data);
           const nameB= getSortName(b.data);
           return nameA.localeCompare(nameB);
         }
-				case Sort.BIRTHDAY: {
+				case VcardFile.Sort.BIRTHDAY: {
 					const aBday = a.data['BDAY'];
 					const bBday = b.data['BDAY'];
 
@@ -65,7 +65,7 @@ export const ContactsListView = (props: ContactsListProps) => {
 					// Sort by the computed next birthday (earlier dates come first).
 					return nextA.getTime() - nextB.getTime();
 				}
-				case Sort.ORG: {
+				case VcardFile.Sort.ORG: {
 					const orgA = a.data['ORG'];
 					const orgB = b.data['ORG'];
 

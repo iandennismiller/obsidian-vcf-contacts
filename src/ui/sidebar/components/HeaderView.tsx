@@ -1,12 +1,12 @@
 import { setIcon } from "obsidian";
 import { Dispatch, SetStateAction } from "react";
 import * as React from "react";
-import { Sort } from "src/util/constants";
+import { VcardFile } from "src/contacts/vcardFile";
 
 
 type HeaderProps = {
-  onSortChange: React.Dispatch<React.SetStateAction<Sort>>;
-  sort: Sort;
+  onSortChange: React.Dispatch<React.SetStateAction<typeof VcardFile.Sort[keyof typeof VcardFile.Sort]>>;
+  sort: typeof VcardFile.Sort[keyof typeof VcardFile.Sort];
   onCreateContact: () => void;
   importVCF: () => void;
   exportAllVCF: () => void;
@@ -50,26 +50,26 @@ export const HeaderView = (props: HeaderProps) => {
         id="sort-by-name-btn"
         data-icon="baseline"
         className={"clickable-icon nav-action-button " +
-          (props.sort === Sort.NAME && "is-active")}
+          (props.sort === VcardFile.Sort.NAME && "is-active")}
         aria-label="Sort by name"
         ref={(element) => (buttons.current[4] = element)}
-        onClick={() => props.onSortChange(Sort.NAME)}/>
+        onClick={() => props.onSortChange(VcardFile.Sort.NAME)}/>
       <div
         id="sort-by-birthday-btn"
         data-icon="cake"
         className={"clickable-icon nav-action-button " +
-          (props.sort === Sort.BIRTHDAY && "is-active")}
+          (props.sort === VcardFile.Sort.BIRTHDAY && "is-active")}
         aria-label="Sort by birthday"
         ref={(element) => (buttons.current[6] = element)}
-        onClick={() => props.onSortChange(Sort.BIRTHDAY)}/>
+        onClick={() => props.onSortChange(VcardFile.Sort.BIRTHDAY)}/>
       <div
         id="sort-by-organization-btn"
         data-icon="building"
         className={"clickable-icon nav-action-button " +
-          (props.sort === Sort.ORG && "is-active")}
+          (props.sort === VcardFile.Sort.ORG && "is-active")}
         aria-label="Sort by organization"
         ref={(element) => (buttons.current[7] = element)}
-        onClick={() => props.onSortChange(Sort.ORG)}/>
+        onClick={() => props.onSortChange(VcardFile.Sort.ORG)}/>
 
       <div className="menu-vert"></div>
 

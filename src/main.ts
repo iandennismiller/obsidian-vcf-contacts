@@ -2,7 +2,7 @@ import "src/insights/insightLoading";
 
 import { Plugin, Notice } from 'obsidian';
 import { ContactsView } from "src/ui/sidebar/sidebarView";
-import { CONTACTS_VIEW_CONFIG } from "src/util/constants";
+import { VcardFile } from "src/contacts/vcardFile";
 import myScrollTo from "src/util/myScrollTo";
 import { VCFolderWatcher } from "src/services/vcfFolderWatcher";
 import { setupVCFDropHandler } from 'src/services/vcfDropHandler';
@@ -44,7 +44,7 @@ export default class ContactsPlugin extends Plugin {
 		this.vcfDropCleanup = setupVCFDropHandler(this.app, this.settings);
 
 		this.registerView(
-			CONTACTS_VIEW_CONFIG.type,
+			VcardFile.CONTACTS_VIEW_CONFIG.type,
 			(leaf) => new ContactsView(leaf, this)
 		);
 
@@ -339,18 +339,18 @@ export default class ContactsPlugin extends Plugin {
 	}
 
 	async activateSidebarView() {
-		if (this.app.workspace.getLeavesOfType(CONTACTS_VIEW_CONFIG.type).length < 1) {
+		if (this.app.workspace.getLeavesOfType(VcardFile.CONTACTS_VIEW_CONFIG.type).length < 1) {
       const leaf = this.app.workspace.getRightLeaf(false);
       if (leaf) {
         await leaf.setViewState({
-          type: CONTACTS_VIEW_CONFIG.type,
+          type: VcardFile.CONTACTS_VIEW_CONFIG.type,
           active: true,
         });
       }
 		}
 
     // Grab the leaf
-    const leaf = this.app.workspace.getLeavesOfType(CONTACTS_VIEW_CONFIG.type)[0];
+    const leaf = this.app.workspace.getLeavesOfType(VcardFile.CONTACTS_VIEW_CONFIG.type)[0];
     if (!leaf) return null;
 
     await this.app.workspace.revealLeaf(leaf);

@@ -3,7 +3,7 @@ import { ContactNote } from "./contactNote";
 import { StructuredFields, VCardToStringError, VCardToStringReply, VCardForObsidianRecord, VCardSupportedKey } from "src/contacts/vcard-types";
 import { getApp } from "src/context/sharedAppContext";
 import { createNameSlug } from "src/util/nameUtils";
-import { photoLineFromV3toV4 } from "src/util/photoLineFromV3toV4";
+
 import { ensureHasName } from "src/contacts/ensureHasName";
 import * as fs from 'fs/promises';
 import * as path from 'path';
@@ -358,7 +358,7 @@ export class VcardFile {
       if (paramsPart && paramsPart.includes('ENCODING=BASE64')) {
         // v3 format: reconstruct the line for processing
         const fullLine = `PHOTO${paramsPart}:${value}`;
-        return { [`${baseKey}${typeValues}`]: photoLineFromV3toV4(fullLine) };
+        return { [`${baseKey}${typeValues}`]: VcardFile.photoLineFromV3toV4(fullLine) };
       } else if (value.startsWith('data:')) {
         // v4 format
         return { [`${baseKey}${typeValues}`]: value };
@@ -493,4 +493,32 @@ export class VcardFile {
 
     return `BEGIN:VCARD\n${lines.join("\n")}\nEND:VCARD`;
   }
+
+  /**
+   * Convert vCard v3 photo format to v4 format
+   * Migrated from src/util/photoLineFromV3toV4.ts
+   */
+  static photoLineFromV3toV4(line: string): string {
+    const url = line.startsWith('PHOTO;') ? line.slice(6) : line;
+    const match = url.match(/^ENCODING=BASE64;(.*?):/);
+    if (match) {
+      const mimeType = match[1].toLowerCase(); // e.g., "jpeg"
+      const base64Data = url.split(':').slice(1).join(':');
+      return `data:image/${mimeType};base64,${base64Data}`;
+    }
+    return url;
+  }
+
+  // Constants migrated from src/util/constants.ts
+  static readonly CONTACTS_VIEW_CONFIG = {
+    type: "contacts-view",
+    name: "Contacts",
+    icon: "contact",
+  };
+
+  static readonly Sort = {
+    NAME: 0,
+    BIRTHDAY: 1,
+    ORG: 2
+  } as const;
 }
