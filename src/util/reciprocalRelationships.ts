@@ -9,7 +9,6 @@ import {
   type FrontmatterRelationship,
   type Gender 
 } from '../contacts/contactNote';
-import { loggingService } from '../services/loggingService';
 
 /**
  * Represents a missing reciprocal relationship
@@ -138,7 +137,7 @@ export async function hasReciprocalRelationshipInFrontmatter(
     return false;
     
   } catch (error) {
-    loggingService.error(`Error checking reciprocal relationship in ${targetFile.path}: ${error.message}`);
+    console.log(`Error checking reciprocal relationship in ${targetFile.path}: ${error.message}`);
     return false;
   }
 }
@@ -168,7 +167,7 @@ export async function hasReciprocalRelationshipInRelatedList(
     );
     
   } catch (error) {
-    loggingService.error(`Error checking reciprocal relationship in Related list for ${targetFile.path}: ${error.message}`);
+    console.log(`Error checking reciprocal relationship in Related list for ${targetFile.path}: ${error.message}`);
     return false;
   }
 }
@@ -212,7 +211,7 @@ export async function addReciprocalRelationshipToRelatedList(
     );
     
     if (reciprocalExists) {
-      loggingService.debug(`Reciprocal relationship already exists in Related list: ${targetFile.basename} -> ${reciprocalType} -> ${sourceContactName}`);
+
       return true;
     }
     
@@ -224,11 +223,11 @@ export async function addReciprocalRelationshipToRelatedList(
     
     // Update content with new relationships
     await contactNote.updateRelatedSectionInContent(updatedRelationships);
-    loggingService.info(`Added reciprocal relationship to Related list: ${targetFile.basename} -> ${reciprocalType} -> ${sourceContactName}`);
+    // Added reciprocal relationship to Related list
     return true;
     
   } catch (error) {
-    loggingService.error(`Failed to add reciprocal relationship to Related list in ${targetFile.path}: ${error.message}`);
+    console.log(`Failed to add reciprocal relationship to Related list in ${targetFile.path}: ${error.message}`);
     return false;
   }
 }
@@ -259,7 +258,7 @@ export async function fixMissingReciprocalRelationships(
     }
     
     if (checkResult.missingReciprocals.length === 0) {
-      loggingService.info(`No missing reciprocal relationships found for ${contactFile.basename}`);
+      // No missing reciprocal relationships found
       return {
         success: true,
         addedCount: 0,
@@ -285,7 +284,7 @@ export async function fixMissingReciprocalRelationships(
           
           if (syncResult.success) {
             addedCount++;
-            loggingService.info(`Successfully added reciprocal relationship: ${missing.targetName} -> ${missing.reciprocalType} -> ${missing.sourceContactName}`);
+            // Successfully added reciprocal relationship
             
             if (syncResult.errors.length > 0) {
               errors.push(...syncResult.errors);
@@ -313,7 +312,7 @@ export async function fixMissingReciprocalRelationships(
     
   } catch (error) {
     const errorMsg = `Error fixing missing reciprocal relationships for ${contactFile.path}: ${error.message}`;
-    loggingService.error(errorMsg);
+    console.log(errorMsg);
     errors.push(errorMsg);
     
     return {
@@ -404,7 +403,7 @@ export async function findMissingReciprocalRelationships(
     
   } catch (error) {
     const errorMsg = `Error finding missing reciprocal relationships for ${contactFile.path}: ${error.message}`;
-    loggingService.error(errorMsg);
+    console.log(errorMsg);
     errors.push(errorMsg);
     
     return {
