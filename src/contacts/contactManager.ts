@@ -1,6 +1,5 @@
 import { App, TFile, EventRef, WorkspaceLeaf, TFolder, Vault, normalizePath, Notice, Workspace } from 'obsidian';
 import { ContactsPluginSettings } from '../settings/settings.d';
-import { loggingService } from '../services/loggingService';
 import { ContactNote, getFrontmatterFromFiles } from './contactNote';
 import { VCardForObsidianRecord } from './vcardFile';
 import { getSettings } from '../context/sharedSettingsContext';
@@ -120,7 +119,7 @@ export class ContactManager implements IContactManager {
       const uid = cache?.frontmatter?.UID;
       
       if (uid) {
-        loggingService.debug(`[ContactManager] Found UID "${uid}" via metadata cache from ${file.path}`);
+
         return uid;
       }
 
@@ -133,17 +132,17 @@ export class ContactManager implements IContactManager {
           const uidMatch = frontmatterText.match(/^UID:\s*(.+)$/m);
           if (uidMatch) {
             const extractedUID = uidMatch[1].trim();
-            loggingService.debug(`[ContactManager] Found UID "${extractedUID}" via direct read from ${file.path}`);
+
             return extractedUID;
           }
         }
       } catch (readError) {
-        loggingService.debug(`[ContactManager] Failed to read file ${file.path} directly: ${readError.message}`);
+
       }
 
       return null;
     } catch (error) {
-      loggingService.debug(`[ContactManager] Error extracting UID from ${file.path}: ${error.message}`);
+
       return null;
     }
   }
@@ -159,26 +158,26 @@ export class ContactManager implements IContactManager {
    * @returns Promise resolving to the TFile or null if not found
    */
   async findContactFileByUID(uid: string): Promise<TFile | null> {
-    loggingService.debug(`[ContactManager] Looking for contact with UID: "${uid}"`);
+
     
     // First check the cached contactFiles map
     const cachedFile = this.contactFiles.get(uid);
     if (cachedFile) {
-      loggingService.debug(`[ContactManager] Found cached file for UID "${uid}": ${cachedFile.path}`);
+
       // Verify the file still exists and has the correct UID
       const fileUID = await this.extractUIDFromFile(cachedFile);
       if (fileUID === uid) {
-        loggingService.debug(`[ContactManager] Cache verification successful for UID "${uid}"`);
+
         return cachedFile;
       } else {
-        loggingService.debug(`[ContactManager] Cache verification failed for UID "${uid}": file UID is "${fileUID}"`);
+
         // Remove stale cache entry
         this.contactFiles.delete(uid);
         this.existingUIDs.delete(uid);
-        loggingService.debug(`[ContactManager] Removed stale cache entry for UID "${uid}"`);
+
       }
     } else {
-      loggingService.debug(`[ContactManager] No cached file found for UID "${uid}"`);
+
     }
 
     // Fall back to searching all files if not in cache or cache is stale
@@ -188,7 +187,7 @@ export class ContactManager implements IContactManager {
         file.path.startsWith(contactsFolder)
       );
 
-      loggingService.debug(`[ContactManager] Searching ${files.length} files in "${contactsFolder}" for UID "${uid}"`);
+
 
       for (const file of files) {
         const fileUID = await this.extractUIDFromFile(file);
@@ -197,14 +196,14 @@ export class ContactManager implements IContactManager {
           // Update the cache
           this.contactFiles.set(uid, file);
           this.existingUIDs.add(uid);
-          loggingService.debug(`[ContactManager] Found matching file for UID "${uid}": ${file.path}`);
+
           return file;
         }
       }
       
-      loggingService.debug(`[ContactManager] No file found for UID "${uid}" after searching ${files.length} files`);
+
     } catch (error) {
-      loggingService.error(`[ContactManager] Error finding contact file by UID: ${error.message}`);
+      console.log(`[ContactManager] Error finding contact file by UID: ${error.message}`);
     }
     
     return null;
@@ -223,26 +222,26 @@ export class ContactManager implements IContactManager {
     this.existingUIDs.clear();
     this.contactFiles.clear();
     
-    loggingService.info("[ContactManager] Building UID cache from existing contacts...");
+
     
     try {
       const contactsFolder = this.getContactsFolder();
-      loggingService.debug(`[ContactManager] Contacts folder path: "${contactsFolder}"`);
+
       
       const folder = this.app.vault.getAbstractFileByPath(contactsFolder);
       
       if (!folder) {
-        loggingService.warning(`[ContactManager] Contacts folder not found: ${contactsFolder}`);
+        console.log(`[ContactManager] Contacts folder not found: ${contactsFolder}`);
         return;
       }
 
       const allMarkdownFiles = this.app.vault.getMarkdownFiles();
-      loggingService.debug(`[ContactManager] Total markdown files in vault: ${allMarkdownFiles.length}`);
+
       
       const files = allMarkdownFiles.filter(file => 
         file.path.startsWith(contactsFolder)
       );
-      loggingService.debug(`[ContactManager] Markdown files in contacts folder: ${files.length}`);
+
 
       let filesWithUID = 0;
       let filesWithoutUID = 0;
@@ -254,17 +253,17 @@ export class ContactManager implements IContactManager {
           this.existingUIDs.add(uid);
           this.contactFiles.set(uid, file);
           filesWithUID++;
-          loggingService.debug(`[ContactManager] Found UID "${uid}" in file: ${file.path}`);
+
         } else {
           filesWithoutUID++;
-          loggingService.debug(`[ContactManager] No UID found in file: ${file.path}`);
+
         }
       }
 
-      loggingService.info(`[ContactManager] UID cache built successfully: ${this.existingUIDs.size} existing contacts indexed`);
-      loggingService.debug(`[ContactManager] Files with UID: ${filesWithUID}, without UID: ${filesWithoutUID}`);
+
+
     } catch (error) {
-      loggingService.error(`[ContactManager] Failed to build UID cache: ${error.message}`);
+      console.log(`[ContactManager] Failed to build UID cache: ${error.message}`);
     }
   }
 
@@ -274,7 +273,7 @@ export class ContactManager implements IContactManager {
   clearCache(): void {
     this.existingUIDs.clear();
     this.contactFiles.clear();
-    loggingService.debug("[ContactManager] Cache cleared");
+
   }
 
   /**
@@ -302,7 +301,7 @@ export class ContactManager implements IContactManager {
       return file.path.startsWith(contactsFolder) && this.isContactFile(file);
     });
 
-    loggingService.debug(`[ContactManager] Found ${files.length} contact files in folder "${contactsFolder}"`);
+
     return files;
   }
 
@@ -330,7 +329,7 @@ export class ContactManager implements IContactManager {
   addToCache(uid: string, file: TFile): void {
     this.existingUIDs.add(uid);
     this.contactFiles.set(uid, file);
-    loggingService.debug(`[ContactManager] Added to cache: UID "${uid}" -> ${file.path}`);
+
   }
 
   /**
@@ -339,7 +338,7 @@ export class ContactManager implements IContactManager {
   removeFromCache(uid: string): void {
     this.existingUIDs.delete(uid);
     this.contactFiles.delete(uid);
-    loggingService.debug(`[ContactManager] Removed from cache: UID "${uid}"`);
+
   }
 
   /**
@@ -348,7 +347,7 @@ export class ContactManager implements IContactManager {
   updateCacheForRename(uid: string, newFile: TFile): void {
     if (this.existingUIDs.has(uid)) {
       this.contactFiles.set(uid, newFile);
-      loggingService.debug(`[ContactManager] Updated cache for rename: UID "${uid}" -> ${newFile.path}`);
+
     }
   }
 
@@ -379,7 +378,7 @@ export class ContactManager implements IContactManager {
       this.handleActiveLeafChange(leaf);
     });
 
-    loggingService.info('[ContactManager] Event listeners set up for active-leaf-change');
+
   }
 
   /**
@@ -389,7 +388,7 @@ export class ContactManager implements IContactManager {
     if (this.eventRef) {
       this.app.workspace.offref(this.eventRef);
       this.eventRef = null;
-      loggingService.info('[ContactManager] Event listeners cleaned up');
+
     }
   }
 
@@ -406,7 +405,7 @@ export class ContactManager implements IContactManager {
         this.isContactFile(this.currentActiveFile)) {
       
       const fileToSync = this.currentActiveFile;
-      loggingService.info(`[ContactManager] Navigating away from contact file: ${fileToSync.path} - starting sync`);
+
       
       // Sync the related list to frontmatter for the file we're leaving
       this.syncContactFile(fileToSync);
@@ -425,37 +424,37 @@ export class ContactManager implements IContactManager {
       const contactNote = new ContactNote(this.app, this.settings, file);
 
       // Step 1: Sync from frontmatter to Related list
-      loggingService.info(`[ContactManager] Syncing frontmatter to Related list for: ${file.basename}`);
+
       const frontmatterToRelatedResult = await contactNote.syncFrontmatterToRelatedList();
 
       if (frontmatterToRelatedResult.success) {
-        loggingService.info(`[ContactManager] Successfully synced frontmatter to Related list for: ${file.basename}`);
+
         if (frontmatterToRelatedResult.errors.length > 0) {
-          loggingService.warning(`[ContactManager] Frontmatter sync completed with warnings for ${file.basename}`);
-          frontmatterToRelatedResult.errors.forEach(error => loggingService.warning(error));
+          console.log(`[ContactManager] Frontmatter sync completed with warnings for ${file.basename}`);
+          frontmatterToRelatedResult.errors.forEach(error => console.log(error));
         }
       } else {
-        loggingService.error(`[ContactManager] Failed to sync frontmatter to Related list for: ${file.basename}`);
-        frontmatterToRelatedResult.errors.forEach(error => loggingService.error(error));
+        console.log(`[ContactManager] Failed to sync frontmatter to Related list for: ${file.basename}`);
+        frontmatterToRelatedResult.errors.forEach(error => console.log(error));
       }
 
       // Step 2: Sync from Related list to frontmatter
-      loggingService.info(`[ContactManager] Syncing Related list to frontmatter for: ${file.basename}`);
+
       const relatedToFrontmatterResult = await contactNote.syncRelatedListToFrontmatter();
 
       if (relatedToFrontmatterResult.success) {
-        loggingService.info(`[ContactManager] Successfully synced Related list to frontmatter for: ${file.basename}`);
+
         if (relatedToFrontmatterResult.errors.length > 0) {
-          loggingService.warning(`[ContactManager] Related list sync completed with warnings for ${file.basename}`);
-          relatedToFrontmatterResult.errors.forEach(error => loggingService.warning(error));
+          console.log(`[ContactManager] Related list sync completed with warnings for ${file.basename}`);
+          relatedToFrontmatterResult.errors.forEach(error => console.log(error));
         }
       } else {
-        loggingService.error(`[ContactManager] Failed to sync Related list to frontmatter for: ${file.basename}`);
-        relatedToFrontmatterResult.errors.forEach(error => loggingService.error(error));
+        console.log(`[ContactManager] Failed to sync Related list to frontmatter for: ${file.basename}`);
+        relatedToFrontmatterResult.errors.forEach(error => console.log(error));
       }
 
     } catch (error) {
-      loggingService.error(`[ContactManager] Error syncing contact file ${file.basename}: ${error.message}`);
+      console.log(`[ContactManager] Error syncing contact file ${file.basename}: ${error.message}`);
     }
   }
 

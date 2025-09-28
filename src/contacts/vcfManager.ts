@@ -1,6 +1,5 @@
 import * as path from 'path';
 import { VcardFile } from './vcardFile';
-import { loggingService } from '../services/loggingService';
 import { ContactsPluginSettings } from '../settings/settings.d';
 
 /**
@@ -49,7 +48,7 @@ export class VCFManager {
   async listVCFFiles(): Promise<string[]> {
     const watchFolder = this.getWatchFolder();
     if (!watchFolder) {
-      loggingService.debug(`[VCFManager] No watch folder configured`);
+
       return [];
     }
 
@@ -67,7 +66,7 @@ export class VCFManager {
     const shouldIgnore = this.settings.vcfIgnoreFilenames.includes(filename);
     
     if (shouldIgnore) {
-      loggingService.info(`[VCFManager] Skipping ignored VCF file: ${filename}`);
+      // Skipping ignored VCF file
     }
     
     return shouldIgnore;
@@ -83,7 +82,7 @@ export class VCFManager {
     const shouldIgnore = this.settings.vcfIgnoreUIDs.includes(uid);
     
     if (shouldIgnore) {
-      loggingService.info(`[VCFManager] Skipping ignored UID: ${uid}`);
+      // Skipping ignored UID
     }
     
     return shouldIgnore;
@@ -128,7 +127,7 @@ export class VCFManager {
       }
       return parsedEntries;
     } catch (error) {
-      loggingService.error(`[VCFManager] Error parsing VCF file ${filePath}: ${error.message}`);
+      console.log(`[VCFManager] Error parsing VCF file ${filePath}: ${error.message}`);
       return null;
     }
   }
@@ -143,7 +142,7 @@ export class VCFManager {
   async writeVCFFile(filename: string, content: string): Promise<string | null> {
     const watchFolder = this.getWatchFolder();
     if (!watchFolder) {
-      loggingService.error(`[VCFManager] No watch folder configured for writing VCF file`);
+      console.log(`[VCFManager] No watch folder configured for writing VCF file`);
       return null;
     }
 
@@ -169,7 +168,7 @@ export class VCFManager {
           return filePath;
         }
       } catch (error) {
-        loggingService.debug(`[VCFManager] Error reading VCF file ${filePath}: ${error.message}`);
+
       }
     }
 
@@ -189,7 +188,7 @@ export class VCFManager {
 
     const exists = await VcardFile.folderExists(watchFolder);
     if (!exists) {
-      loggingService.warning(`[VCFManager] VCF watch folder does not exist: ${watchFolder}`);
+      console.log(`[VCFManager] VCF watch folder does not exist: ${watchFolder}`);
     }
     
     return exists;

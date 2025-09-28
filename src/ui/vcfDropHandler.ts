@@ -4,7 +4,6 @@ import * as path from 'path';
 import { ContactNote } from 'src/contacts/contactNote';
 import { VcardFile } from 'src/contacts/vcardFile';
 import { ContactManager } from 'src/contacts/contactManager';
-import { loggingService } from 'src/services/loggingService';
 import { ContactsPluginSettings } from 'src/settings/settings.d';
 
 /**
@@ -20,18 +19,16 @@ export function setupVCFDropHandler(app: App, settings: ContactsPluginSettings):
       if (!file || !file.name.toLowerCase().endsWith('.vcf')) return;
 
       if (!settings.vcfWatchFolder) {
-        loggingService.warning('VCF drop ignored because vcfWatchFolder is not configured');
+        console.log('VCF drop ignored because vcfWatchFolder is not configured');
         return;
       }
-
-      loggingService.debug(`VCF file dropped into vault: ${file.path}`);
 
       // Read file contents from the vault
       let content: string;
       try {
         content = await app.vault.read(file);
       } catch (err) {
-        loggingService.error(`Failed to read dropped VCF ${file.path}: ${err.message}`);
+        console.log(`Failed to read dropped VCF ${file.path}: ${err.message}`);
         return;
       }
 
@@ -54,7 +51,7 @@ export function setupVCFDropHandler(app: App, settings: ContactsPluginSettings):
             }
           }
         } catch (err) {
-          loggingService.debug(`Error searching for existing contact for UID ${record.UID}: ${err.message}`);
+          // Remove debug logging - error searching for existing contact
         }
 
         const contactNote = new ContactNote(app, settings, null as any); // We'll create the file first
@@ -64,7 +61,7 @@ export function setupVCFDropHandler(app: App, settings: ContactsPluginSettings):
           try {
             const existingContent = await app.vault.read(existingContact);
             if (existingContent !== mdContent) {
-              loggingService.debug(`Dropped VCF has changes for UID ${record.UID}; updating contact ${existingContact.path}`);
+              // Update contact if changes detected
 
               // Rename if necessary
               const newFilename = (slug || existingContact.basename.replace(/\.md$/i, '')) + '.md';
@@ -73,26 +70,26 @@ export function setupVCFDropHandler(app: App, settings: ContactsPluginSettings):
                 try {
                   await app.vault.rename(existingContact, newPath);
                 } catch (err) {
-                  loggingService.debug(`Failed to rename contact file ${existingContact.path} -> ${newPath}: ${err.message}`);
+                  // Remove debug logging - failed to rename contact file
                 }
               }
 
               // Modify with new content
               await app.vault.modify(existingContact, mdContent);
             } else {
-              loggingService.debug(`Dropped VCF matches existing contact for UID ${record.UID}; no update needed`);
+              // No update needed - VCF matches existing contact
             }
           } catch (err) {
-            loggingService.error(`Failed comparing/updating contact for UID ${record.UID}: ${err.message}`);
+            console.log(`Failed comparing/updating contact for UID ${record.UID}: ${err.message}`);
           }
         } else {
           // Create new contact file
           try {
             const filename = (slug || 'contact') + '.md';
             await ContactManager.createContactFileStatic(app, settings.contactsFolder, mdContent, filename);
-            loggingService.debug(`Imported contact from dropped VCF: ${filename} (UID: ${record.UID})`);
+            // Contact imported from dropped VCF
           } catch (err) {
-            loggingService.error(`Failed to create contact from dropped VCF UID ${record.UID}: ${err.message}`);
+            console.log(`Failed to create contact from dropped VCF UID ${record.UID}: ${err.message}`);
           }
         }
       }
@@ -113,25 +110,25 @@ export function setupVCFDropHandler(app: App, settings: ContactsPluginSettings):
 
         if (write) {
           await fs.writeFile(targetPath, content, 'utf-8');
-          loggingService.info(`Copied dropped VCF to watch folder: ${targetPath}`);
+          // Copied dropped VCF to watch folder
         } else {
-          loggingService.debug(`Dropped VCF identical to existing vcf in watch folder: ${targetPath}`);
+          // Dropped VCF identical to existing VCF in watch folder
         }
       } catch (err) {
-        loggingService.error(`Failed to copy dropped VCF into watch folder: ${err.message}`);
+        console.log(`Failed to copy dropped VCF into watch folder: ${err.message}`);
         return;
       }
 
       // Remove original VCF from the vault
       try {
         await app.vault.delete(file);
-        loggingService.info(`Removed dropped VCF from vault: ${file.path}`);
+        // Removed dropped VCF from vault
       } catch (err) {
-        loggingService.error(`Failed to remove dropped VCF from vault: ${err.message}`);
+        console.log(`Failed to remove dropped VCF from vault: ${err.message}`);
       }
 
     } catch (error) {
-      loggingService.error(`Error handling dropped VCF file ${file?.path}: ${error.message}`);
+      console.log(`Error handling dropped VCF file ${file?.path}: ${error.message}`);
     }
   };
 

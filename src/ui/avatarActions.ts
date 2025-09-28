@@ -2,7 +2,7 @@ import { Notice } from "obsidian";
 import { Contact, ContactNote } from "src/contacts";
 import { getApp } from "src/context/sharedAppContext";
 import { getSettings } from "src/context/sharedSettingsContext";
-import { openFilePicker } from "src/file/file";
+import { openFilePicker } from "src/ui/fileOperations";
 import { RunType } from "src/insights/insight.d";
 import { insightService } from "src/insights/insightService";
 

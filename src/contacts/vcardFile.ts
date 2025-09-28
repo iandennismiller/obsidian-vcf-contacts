@@ -7,7 +7,6 @@ import { getApp } from "src/context/sharedAppContext";
 import { ContactManager } from "./contactManager";
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { loggingService } from '../services/loggingService';
 
 // vCard types and enums migrated from src/contacts/vcard-types.ts
 
@@ -92,12 +91,12 @@ export class VcardFile {
     try {
       const content = await fs.readFile(filePath, 'utf-8');
       if (!content) {
-        loggingService.warning(`[VcardFile] Empty or unreadable VCF file: ${path.basename(filePath)}`);
+        console.log(`[VcardFile] Empty or unreadable VCF file: ${path.basename(filePath)}`);
         return null;
       }
       return new VcardFile(content);
     } catch (error) {
-      loggingService.error(`[VcardFile] Error reading VCF file ${filePath}: ${error.message}`);
+      console.log(`[VcardFile] Error reading VCF file ${filePath}: ${error.message}`);
       return null;
     }
   }
@@ -198,10 +197,10 @@ export class VcardFile {
   async saveToFile(filePath: string): Promise<boolean> {
     try {
       await fs.writeFile(filePath, this.data, 'utf-8');
-      loggingService.debug(`[VcardFile] Successfully wrote VCF file: ${filePath}`);
+
       return true;
     } catch (error) {
-      loggingService.error(`[VcardFile] Error writing VCF file ${filePath}: ${error.message}`);
+      console.log(`[VcardFile] Error writing VCF file ${filePath}: ${error.message}`);
       return false;
     }
   }
@@ -215,14 +214,14 @@ export class VcardFile {
     try {
       const entries = await fs.readdir(folderPath, { withFileTypes: true });
       if (!entries || !Array.isArray(entries)) {
-        loggingService.debug(`[VcardFile] No entries returned from readdir for ${folderPath}`);
+
         return [];
       }
       return entries
         .filter(entry => entry.isFile() && entry.name.toLowerCase().endsWith('.vcf'))
         .map(entry => path.join(folderPath, entry.name));
     } catch (error) {
-      loggingService.error(`[VcardFile] Error listing VCF files: ${error.message}`);
+      console.log(`[VcardFile] Error listing VCF files: ${error.message}`);
       return [];
     }
   }
@@ -235,7 +234,7 @@ export class VcardFile {
       const stat = await fs.stat(filePath);
       return stat ? { mtimeMs: stat.mtimeMs } : null;
     } catch (error) {
-      loggingService.debug(`[VcardFile] Error getting file stats for ${filePath}: ${error.message}`);
+
       return null;
     }
   }
@@ -252,7 +251,7 @@ export class VcardFile {
       await fs.access(folderPath);
       return true;
     } catch (error) {
-      loggingService.debug(`[VcardFile] Folder does not exist: ${folderPath}`);
+
       return false;
     }
   }
@@ -279,12 +278,12 @@ export class VcardFile {
     try {
       const content = await fs.readFile(filePath, 'utf-8');
       if (!content) {
-        loggingService.warning(`[VcardFile] Empty or unreadable VCF file: ${path.basename(filePath)}`);
+        console.log(`[VcardFile] Empty or unreadable VCF file: ${path.basename(filePath)}`);
         return null;
       }
       return content;
     } catch (error) {
-      loggingService.error(`[VcardFile] Error reading VCF file ${filePath}: ${error.message}`);
+      console.log(`[VcardFile] Error reading VCF file ${filePath}: ${error.message}`);
       return null;
     }
   }
@@ -295,10 +294,10 @@ export class VcardFile {
   static async writeVCFFile(filePath: string, content: string): Promise<boolean> {
     try {
       await fs.writeFile(filePath, content, 'utf-8');
-      loggingService.debug(`[VcardFile] Successfully wrote VCF file: ${filePath}`);
+
       return true;
     } catch (error) {
-      loggingService.error(`[VcardFile] Error writing VCF file ${filePath}: ${error.message}`);
+      console.log(`[VcardFile] Error writing VCF file ${filePath}: ${error.message}`);
       return false;
     }
   }

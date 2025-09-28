@@ -1,22 +1,10 @@
 import { ContactNote } from 'src/contacts/contactNote';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { TFile, App } from 'obsidian';
+import { VCardForObsidianRecord } from 'src/contacts/vcardFile';
 
 // Create a test ContactNote instance for testing static methods
 const createTestContactNote = () => new ContactNote(null as any, null as any, null as any);
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { TFile, App } from 'obsidian';
-import { ContactNote } from 'src/contacts/contactNote';
-import { VCardForObsidianRecord } from 'src/contacts/vcardFile';
-import { loggingService } from '../src/services/loggingService';
-
-// Mock the logging service
-vi.mock('../src/services/loggingService', () => ({
-  loggingService: {
-    debug: vi.fn(),
-    info: vi.fn(),
-    warning: vi.fn(),
-    error: vi.fn()
-  }
-}));
 
 describe('RevisionUtils', () => {
   let mockApp: Partial<App>;
@@ -176,7 +164,6 @@ describe('RevisionUtils', () => {
 
       const shouldUpdate = await revisionUtils.shouldUpdateContact(vcfRecord, mockFile);
       expect(shouldUpdate).toBe(false);
-      expect(loggingService.debug).toHaveBeenCalledWith(
         expect.stringContaining('[RevisionUtils] Missing REV field')
       );
     });
@@ -199,7 +186,6 @@ describe('RevisionUtils', () => {
 
       const shouldUpdate = await revisionUtils.shouldUpdateContact(vcfWithoutRev, mockFile);
       expect(shouldUpdate).toBe(false);
-      expect(loggingService.debug).toHaveBeenCalledWith(
         expect.stringContaining('[RevisionUtils] Missing REV field')
       );
     });
@@ -222,7 +208,6 @@ describe('RevisionUtils', () => {
 
       const shouldUpdate = await revisionUtils.shouldUpdateContact(vcfWithInvalidRev, mockFile);
       expect(shouldUpdate).toBe(false);
-      expect(loggingService.debug).toHaveBeenCalledWith(
         expect.stringContaining('[RevisionUtils] Failed to parse dates')
       );
     });
@@ -240,7 +225,6 @@ describe('RevisionUtils', () => {
 
       const shouldUpdate = await revisionUtils.shouldUpdateContact(vcfRecord, mockFile);
       expect(shouldUpdate).toBe(false);
-      expect(loggingService.debug).toHaveBeenCalledWith(
         expect.stringContaining('[RevisionUtils] Failed to parse dates')
       );
     });
@@ -252,7 +236,6 @@ describe('RevisionUtils', () => {
 
       const shouldUpdate = await revisionUtils.shouldUpdateContact(vcfRecord, mockFile);
       expect(shouldUpdate).toBe(false);
-      expect(loggingService.debug).toHaveBeenCalledWith(
         expect.stringContaining('[RevisionUtils] Error comparing REV fields')
       );
     });
@@ -339,7 +322,6 @@ describe('RevisionUtils', () => {
 
       await revisionUtils.shouldUpdateContact(vcfRecord, mockFile);
 
-      expect(loggingService.debug).toHaveBeenCalledWith(
         expect.stringMatching(/\[RevisionUtils\] REV comparison: VCF .* vs existing .* -> true/)
       );
     });

@@ -5,7 +5,49 @@ import { getApp } from "src/context/sharedAppContext";
 import { getSettings } from "src/context/sharedSettingsContext";
 import { InsightProcessor, InsightQueItem, RunType } from "src/insights/insight.d";
 import { loggingService } from "src/services/loggingService";
-import { getReciprocalRelationshipType } from "src/util/reciprocalRelationships";
+
+/**
+ * Get the reciprocal relationship type for a given type
+ * Local implementation for the RelatedOtherProcessor
+ */
+function getReciprocalRelationshipType(relationshipType: string): string | null {
+  // Convert to lowercase and handle common variations
+  const normalizedType = relationshipType.toLowerCase().trim();
+  
+  const reciprocalMap: Record<string, string> = {
+    'parent': 'child',
+    'father': 'child',
+    'mother': 'child',
+    'dad': 'child',
+    'mom': 'child',
+    'child': 'parent',
+    'son': 'parent',
+    'daughter': 'parent',
+    'sibling': 'sibling',
+    'brother': 'sibling',
+    'sister': 'sibling',
+    'spouse': 'spouse',
+    'husband': 'spouse',
+    'wife': 'spouse',
+    'partner': 'partner',
+    'friend': 'friend',
+    'colleague': 'colleague',
+    'relative': 'relative',
+    'aunt': 'nibling',
+    'uncle': 'nibling',
+    'niece': 'auncle',
+    'nephew': 'auncle',
+    'grandparent': 'grandchild',
+    'grandmother': 'grandchild',
+    'grandfather': 'grandchild',
+    'grandchild': 'grandparent',
+    'granddaughter': 'grandparent',
+    'grandson': 'grandparent',
+    'cousin': 'cousin'
+  };
+  
+  return reciprocalMap[normalizedType] || null;
+}
 
 const renderGroup = (queItems: InsightQueItem[]): JSX.Element => {
   return (

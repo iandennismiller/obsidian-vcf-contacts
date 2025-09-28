@@ -5,19 +5,15 @@ import { VcardFile } from "src/contacts/vcardFile";
 import { getApp } from "src/context/sharedAppContext";
 import { getSettings, onSettingsChange } from "src/context/sharedSettingsContext";
 import { ContactsPluginSettings } from "src/settings/settings.d";
-import {
-  createContactFile,
-  createFileName,
-  findContactFiles, isFileInFolder,
-  openFilePicker,
-  saveVcardFilePicker
-} from "src/file/file";
+import { ContactManager } from "src/contacts/contactManager";
+import { createFileName } from "src/contacts/contactNote";
+import { openFilePicker, saveVcardFilePicker, isFileInFolder } from "src/ui/fileOperations";
 import { ContactsListView } from "src/ui/sidebar/components/ContactsListView";
 import { HeaderView } from "src/ui/sidebar/components/HeaderView";
 import { InsightsView } from "src/ui/sidebar/components/InsightsView";
-import { processAvatar } from "src/util/avatarActions";
+import { processAvatar } from "src/ui/avatarActions";
 
-import myScrollTo from "src/util/myScrollTo";
+import myScrollTo from "src/ui/myScrollTo";
 
 interface SidebarRootViewProps {
   sideBarApi: (api: { createNewContact: () => void }) => void;
@@ -36,7 +32,7 @@ const importVCFContacts = async (fileContent: string, app: App, settings: Contac
     if (slug) {
       const mdContent = mdRender(record, settings.defaultHashtag);
       const filename = slug + '.md';
-      createContactFile(app, settings.contactsFolder, mdContent, filename);
+      ContactManager.createContactFileStatic(app, settings.contactsFolder, mdContent, filename);
       imported++;
     } else {
       // Contact has no valid name/slug
@@ -67,7 +63,8 @@ export const SidebarRootView = (props: SidebarRootViewProps) => {
 			return;
 		}
 
-    const contactFiles = findContactFiles(contactsFolder);
+    const contactManager = new ContactManager(app, settings);
+    const contactFiles = contactManager.findContactFiles(contactsFolder);
 		getFrontmatterFromFiles(contactFiles).then((contactsData) =>{
 			setContacts(contactsData);
 		});
@@ -133,7 +130,7 @@ export const SidebarRootView = (props: SidebarRootViewProps) => {
         Object.assign(records, record);
       }
       const mdContent = mdRender(records, settings.defaultHashtag);
-      createContactFile(app, settings.contactsFolder, mdContent, createFileName(records))
+      ContactManager.createContactFileStatic(app, settings.contactsFolder, mdContent, createFileName(records))
   }
 
 	return (

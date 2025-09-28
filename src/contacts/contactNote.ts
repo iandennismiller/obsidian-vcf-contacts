@@ -7,7 +7,6 @@
 import { TFile, App, parseYaml, stringifyYaml } from 'obsidian';
 import { ContactsPluginSettings } from '../settings/settings.d';
 import { VCardForObsidianRecord, VCardKind, VCardKinds } from './vcardFile';
-import { loggingService } from '../services/loggingService';
 import { getApp } from '../context/sharedAppContext';
 import { getSettings } from '../context/sharedSettingsContext';
 
@@ -118,7 +117,7 @@ export class ContactNote {
         try {
           this._frontmatter = parseYaml(match[1]) || {};
         } catch (error) {
-          loggingService.error(`[ContactNote] Error parsing frontmatter for ${this.file.path}: ${error.message}`);
+          console.log(`[ContactNote] Error parsing frontmatter for ${this.file.path}: ${error.message}`);
           this._frontmatter = {};
         }
       } else {
@@ -481,7 +480,7 @@ export class ContactNote {
       
       return date;
     } catch (error) {
-      loggingService.debug(`[ContactNote] Error parsing REV date: ${revString} - ${error.message}`);
+
       return null;
     }
   }
@@ -508,7 +507,7 @@ export class ContactNote {
 
       return vcfRevDate > existingRevDate;
     } catch (error) {
-      loggingService.debug(`[ContactNote] Error comparing REV fields: ${error.message}`);
+
       return false;
     }
   }
@@ -679,7 +678,7 @@ export class ContactNote {
       const relationships = await this.parseRelatedSection();
       
       if (relationships.length === 0) {
-        loggingService.info(`No relationships found in Related section for ${this.file.basename}`);
+        // No relationships found in Related section
         return { success: true, errors: [] };
       }
       
@@ -742,7 +741,7 @@ export class ContactNote {
               try {
                 const targetContact = new ContactNote(this.app, this.settings, resolvedContact.file);
                 await targetContact.updateGender(inferredGender);
-                loggingService.info(`Inferred and updated gender for ${resolvedContact.name}: ${inferredGender}`);
+                // Inferred and updated gender
               } catch (error) {
                 errors.push(`Failed to update gender for ${resolvedContact.name}: ${error.message}`);
               }
@@ -755,16 +754,16 @@ export class ContactNote {
       
       if (Object.keys(frontmatterUpdates).length > 0) {
         await this.updateMultipleFrontmatterValues(frontmatterUpdates);
-        loggingService.info(`Updated ${Object.keys(frontmatterUpdates).length} relationships in ${this.file.basename}`);
+        // Updated relationships
       } else {
-        loggingService.info(`No new relationships to add for ${this.file.basename}`);
+        // No new relationships to add
       }
       
       return { success: true, errors };
       
     } catch (error) {
       const errorMsg = `Failed to sync Related list for ${this.file.basename}: ${error.message}`;
-      loggingService.error(errorMsg);
+      console.log(errorMsg);
       errors.push(errorMsg);
       return { success: false, errors };
     }
@@ -780,7 +779,7 @@ export class ContactNote {
       const frontmatterRelationships = await this.parseFrontmatterRelationships();
       
       if (frontmatterRelationships.length === 0) {
-        loggingService.info(`No relationships found in frontmatter for ${this.file.basename}`);
+        // No relationships found in frontmatter
         return { success: true, errors: [] };
       }
       
@@ -827,7 +826,7 @@ export class ContactNote {
       }
       
       if (missingRelationships.length === 0) {
-        loggingService.info(`No missing relationships to sync for ${this.file.basename}`);
+        // No missing relationships to sync
         return { success: true, errors };
       }
       
@@ -837,13 +836,13 @@ export class ContactNote {
       ];
       
       await this.updateRelatedSectionInContent(allRelationships);
-      loggingService.info(`Synced ${missingRelationships.length} missing relationships to Related section in: ${this.file.basename}`);
+      // Synced missing relationships to Related section
       
       return { success: true, errors };
       
     } catch (error) {
       const errorMsg = `Failed to sync frontmatter to Related list for ${this.file.basename}: ${error.message}`;
-      loggingService.error(errorMsg);
+      console.log(errorMsg);
       errors.push(errorMsg);
       return { success: false, errors };
     }
@@ -1289,105 +1288,3 @@ export function createFileName(records: Record<string, string>): string {
 
   return nameSlug + '.md';
 }
-
-// Reciprocal relationship utilities migrated from src/util/reciprocalRelationships.ts
-
-/**
- * Represents a missing reciprocal relationship
- */
-export interface MissingReciprocal {
-  /** Contact file that is missing the reciprocal */
-  targetFile: TFile;
-  /** Name of the target contact */
-  targetName: string;
-  /** The reciprocal relationship type that should be added */
-  reciprocalType: string;
-  /** Name of the source contact (the one with the original relationship) */
-  sourceContactName: string;
-}
-
-/**
- * Result of checking reciprocal relationships
- */
-export interface ReciprocalCheckResult {
-  /** Whether all relationships have proper reciprocals */
-  allReciprocalExists: boolean;
-  /** List of missing reciprocal relationships */
-  missingReciprocals: MissingReciprocal[];
-  /** Any errors encountered during the check */
-  errors: string[];
-}
-
-/**
- * Result of fixing missing reciprocal relationships
- */
-export interface FixReciprocalResult {
-  /** Whether all reciprocals were successfully fixed */
-  success: boolean;
-  /** Number of reciprocal relationships that were added */
-  addedCount: number;
-  /** Any errors encountered during the fix operation */
-  errors: string[];
-}
-
-/**
- * Get the reciprocal relationship type for a given type
- * Migrated from src/util/reciprocalRelationships.ts
- */
-export function getReciprocalRelationshipType(relationshipType: string): string | null {
-  // Convert to genderless form for consistent mapping
-  const tempContactNote = new ContactNote(getApp(), getSettings(), null as any);
-  const genderlessType = tempContactNote.convertToGenderlessType(relationshipType.toLowerCase());
-  
-  const reciprocalMap: Record<string, string> = {
-    'parent': 'child',
-    'child': 'parent',
-    'sibling': 'sibling',
-    'spouse': 'spouse',
-    'partner': 'partner',
-    'friend': 'friend',
-    'colleague': 'colleague',
-    'relative': 'relative',
-    'auncle': 'nibling',  // aunt/uncle -> nibling (niece/nephew)
-    'nibling': 'auncle',  // nibling (niece/nephew) -> aunt/uncle
-    'grandparent': 'grandchild',
-    'grandchild': 'grandparent',
-    'cousin': 'cousin'
-  };
-  
-  return reciprocalMap[genderlessType] || null;
-}
-
-/**
- * Check if a relationship type is symmetric (has the same reciprocal)
- * Migrated from src/util/reciprocalRelationships.ts
- */
-export function isSymmetricRelationship(relationshipType: string): boolean {
-  const tempContactNote = new ContactNote(getApp(), getSettings(), null as any);
-  const genderlessType = tempContactNote.convertToGenderlessType(relationshipType.toLowerCase());
-  const symmetricTypes = ['sibling', 'spouse', 'partner', 'friend', 'colleague', 'relative', 'cousin'];
-  return symmetricTypes.includes(genderlessType);
-}
-
-/**
- * Check if two relationship types are equivalent (considering gender variations)
- * Migrated from src/util/reciprocalRelationships.ts
- */
-export function areRelationshipTypesEquivalent(type1: string, type2: string): boolean {
-  if (type1 === type2) {
-    return true;
-  }
-  
-  const tempContactNote = new ContactNote(getApp(), getSettings(), null as any);
-  const genderless1 = tempContactNote.convertToGenderlessType(type1.toLowerCase());
-  const genderless2 = tempContactNote.convertToGenderlessType(type2.toLowerCase());
-  
-  return genderless1 === genderless2;
-}
-
-// For now, re-export the complex reciprocal relationship functions
-// These will be fully migrated in a future refactoring
-export { 
-  findMissingReciprocalRelationships, 
-  fixMissingReciprocalRelationships 
-} from '../util/reciprocalRelationships';

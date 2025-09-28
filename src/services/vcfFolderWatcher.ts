@@ -6,10 +6,9 @@ import { VcardFile } from "src/contacts/vcardFile";
 import { VCardForObsidianRecord } from "src/contacts/vcardFile";
 import { VCFManager, VCFFileInfo } from "src/contacts";
 import { ContactManager } from "src/contacts/contactManager";
-import { loggingService } from "src/services/loggingService";
 import { ContactsPluginSettings } from "src/settings/settings.d";
 import { onSettingsChange } from "src/context/sharedSettingsContext";
-import { setupVCFDropHandler } from 'src/services/vcfDropHandler';
+import { setupVCFDropHandler } from 'src/ui/vcfDropHandler';
 
 /**
  * Information about a VCF file being tracked by the watcher
@@ -88,12 +87,11 @@ export class VCFolderWatcher {
     await this.contactManager.initializeCache();
 
     console.log(`Starting VCF folder watcher: ${this.settings.vcfWatchFolder}`);
-    loggingService.info(`VCF folder sync started: ${this.settings.vcfWatchFolder}`);
     
     // Set up contact file change tracking for write-back
     if (this.settings.vcfWriteBackEnabled) {
       this.setupContactFileTracking();
-      loggingService.info("VCF write-back enabled");
+      // VCF write-back enabled
     }
   // VCF drop handler is initialized from main plugin entrypoint
     
@@ -111,7 +109,7 @@ export class VCFolderWatcher {
       await this.updateSettings(newSettings);
     });
 
-    loggingService.info(`VCF folder polling started (interval: ${this.settings.vcfWatchPollingInterval}s)`);
+    // VCF folder polling started
   }
 
   /**
@@ -128,7 +126,6 @@ export class VCFolderWatcher {
       window.clearInterval(this.intervalId as unknown as number);
       this.intervalId = null;
       console.log('Stopped VCF folder watcher');
-      loggingService.info('VCF folder sync stopped');
     }
     
     // Clean up contact file listeners
@@ -160,19 +157,7 @@ export class VCFolderWatcher {
       this.settings.vcfWatchPollingInterval !== newSettings.vcfWatchPollingInterval ||
       this.settings.vcfWriteBackEnabled !== newSettings.vcfWriteBackEnabled;
 
-    // Log configuration changes
-    if (this.settings.vcfWatchEnabled !== newSettings.vcfWatchEnabled) {
-      loggingService.info(`VCF watch enabled changed: ${this.settings.vcfWatchEnabled} → ${newSettings.vcfWatchEnabled}`);
-    }
-    if (this.settings.vcfWatchFolder !== newSettings.vcfWatchFolder) {
-      loggingService.info(`VCF watch folder changed: ${this.settings.vcfWatchFolder} → ${newSettings.vcfWatchFolder}`);
-    }
-    if (this.settings.vcfWatchPollingInterval !== newSettings.vcfWatchPollingInterval) {
-      loggingService.debug(`VCF polling interval changed: ${this.settings.vcfWatchPollingInterval}s → ${newSettings.vcfWatchPollingInterval}s`);
-    }
-    if (this.settings.vcfWriteBackEnabled !== newSettings.vcfWriteBackEnabled) {
-      loggingService.debug(`VCF write-back enabled changed: ${this.settings.vcfWriteBackEnabled} → ${newSettings.vcfWriteBackEnabled}`);
-    }
+    // Log configuration changes - removed logging
 
     this.settings = newSettings;
 
@@ -209,18 +194,18 @@ export class VCFolderWatcher {
       
       if (files.length === 0) {
         const watchFolder = this.vcfManager.getWatchFolder();
-        loggingService.debug(`No VCF files found in ${watchFolder}`);
+        // No VCF files found
         return;
       }
 
-      loggingService.debug(`Scanning ${files.length} VCF files in ${this.vcfManager.getWatchFolder()}`);
+      // Scanning VCF files
       
       for (const filePath of files) {
         await this.processVCFFile(filePath);
       }
 
     } catch (error) {
-      loggingService.error(`Error scanning VCF folder: ${error.message}`);
+      console.log(`Error scanning VCF folder: ${error.message}`);
     }
   }
 
@@ -258,7 +243,7 @@ export class VCFolderWatcher {
       }
 
       const filename = path.basename(filePath);
-      loggingService.debug(`Processing VCF file: ${filename}`);
+      // Processing VCF file
 
       // Read and parse VCF content using VCFManager
       const parsedEntries = await this.vcfManager.readAndParseVCF(filePath);
@@ -293,9 +278,9 @@ export class VCFolderWatcher {
               // Note: We'll let the ContactManager discover the new file naturally through cache refresh
               // or through the file tracking events
               imported++;
-              loggingService.debug(`Imported new contact: ${slug} (UID: ${record.UID})`);
+              // Imported new contact
             } catch (error) {
-              loggingService.error(`Failed to import contact ${slug} from ${filename}: ${error.message}`);
+              console.log(`Failed to import contact ${slug} from ${filename}: ${error.message}`);
               skipped++;
             }
           } else {
@@ -307,9 +292,9 @@ export class VCFolderWatcher {
               try {
                 await this.updateExistingContact(record, existingFile, slug);
                 updated++;
-                loggingService.debug(`Updated existing contact: ${slug} (UID: ${record.UID})`);
+                // Updated existing contact
               } catch (error) {
-                loggingService.error(`Failed to update contact ${slug} from ${filename}: ${error.message}`);
+                console.log(`Failed to update contact ${slug} from ${filename}: ${error.message}`);
                 skipped++;
               }
             } else {
@@ -318,7 +303,7 @@ export class VCFolderWatcher {
           }
         } else {
           skipped++;
-          loggingService.debug(`Skipping VCF entry without valid slug or UID in ${filename}`);
+          // Skipping VCF entry without valid slug or UID
         }
       }
 
@@ -335,15 +320,15 @@ export class VCFolderWatcher {
         if (imported > 0) actions.push(`imported ${imported}`);
         if (updated > 0) actions.push(`updated ${updated}`);
         new Notice(`VCF Watcher: ${actions.join(', ')} contact(s) from ${filePath.split('/').pop()}`);
-        loggingService.debug(`VCF processing complete for ${filename}: ${imported} imported, ${updated} updated, ${skipped} skipped`);
+        // VCF processing complete
       }
 
       if (imported > 0 || updated > 0 || skipped > 0) {
-        loggingService.debug(`VCF Watcher processed ${filePath}: ${imported} imported, ${updated} updated, ${skipped} skipped`);
+      // VCF Watcher processed file results
       }
 
     } catch (error) {
-      loggingService.error(`Critical error processing VCF file ${path.basename(filePath)}: ${error.message}`);
+      console.log(`Critical error processing VCF file ${path.basename(filePath)}: ${error.message}`);
     }
   }
 
@@ -376,7 +361,7 @@ export class VCFolderWatcher {
         
         // Use Obsidian's rename API
         await this.app.vault.rename(existingFile, newPath);
-        loggingService.debug(`Renamed contact file from ${currentFilename} to ${newFilename}`);
+        // Renamed contact file
       }
       
       // Mark file as being updated to prevent loops
@@ -391,7 +376,7 @@ export class VCFolderWatcher {
       }
       
     } catch (error) {
-      loggingService.error(`Error updating existing contact: ${error.message}`);
+      console.log(`Error updating existing contact: ${error.message}`);
       throw error;
     }
   }
@@ -436,9 +421,9 @@ export class VCFolderWatcher {
         // Schedule debounced write-back to VCF
         this.scheduleWriteBack(file, uid);
 
-        loggingService.debug(`Updated contact file tracking for ${file.basename} (UID: ${uid})`);
+        // Updated contact file tracking
       } catch (error) {
-        loggingService.error(`Error updating contact file tracking: ${error.message}`);
+        console.log(`Error updating contact file tracking: ${error.message}`);
       }
     };
 
@@ -499,7 +484,7 @@ export class VCFolderWatcher {
         try {
           await this.writeContactToVCF(file, uid);
         } catch (err) {
-          loggingService.error(`Debounced write-back failed for ${file.path}: ${err.message}`);
+          console.log(`Debounced write-back failed for ${file.path}: ${err.message}`);
         } finally {
           this.writeBackTimers.delete(key);
         }
@@ -507,7 +492,7 @@ export class VCFolderWatcher {
 
       this.writeBackTimers.set(key, timer as unknown as number);
     } catch (error) {
-      loggingService.debug(`Error scheduling write-back for ${file.path}: ${error.message}`);
+      // Error scheduling write-back
     }
   }
 
@@ -552,7 +537,7 @@ export class VCFolderWatcher {
       const { vcards, errors } = await VcardFile.fromObsidianFiles([contactFile], this.app);
       
       if (errors.length > 0) {
-        loggingService.warning(`Error generating VCF for ${contactFile.name}: ${errors.map(e => e.message).join(', ')}`);
+        console.log(`Error generating VCF for ${contactFile.name}: ${errors.map(e => e.message).join(', ')}`);
         return;
       }
 
@@ -596,7 +581,7 @@ export class VCFolderWatcher {
       console.log(`Wrote contact ${contactFile.basename} to VCF: ${targetPath}`);
       
     } catch (error) {
-      loggingService.error(`Error writing contact to VCF: ${error.message}`);
+      console.log(`Error writing contact to VCF: ${error.message}`);
       new Notice(`Failed to write contact ${contactFile.basename} to VCF folder: ${error.message}`);
     }
   }
