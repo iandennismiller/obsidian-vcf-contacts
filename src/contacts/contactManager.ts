@@ -393,70 +393,16 @@ export class ContactManager implements IContactManager {
   }
 
   /**
-   * Handle active leaf change - sync the previous contact file if we're leaving one
+   * Handle active leaf change - track current active file
    */
   private handleActiveLeafChange(leaf: WorkspaceLeaf | null): void {
     // Check if the view has a file property (duck typing for MarkdownView)
     const newActiveFile = (leaf?.view && 'file' in leaf.view) ? (leaf.view as any).file : null;
     
-    // If we had a previous active contact file and we're switching away from it, sync it
-    if (this.currentActiveFile && 
-        this.currentActiveFile !== newActiveFile && 
-        this.isContactFile(this.currentActiveFile)) {
-      
-      const fileToSync = this.currentActiveFile;
-
-      
-      // Sync the related list to frontmatter for the file we're leaving
-      this.syncContactFile(fileToSync);
-    }
-    
     this.currentActiveFile = newActiveFile;
   }
 
-  /**
-   * Sync a contact file bidirectionally:
-   * 1. First sync frontmatter to Related list (add missing relationships to Related section)
-   * 2. Then sync Related list to frontmatter (ensure frontmatter is complete)
-   */
-  private async syncContactFile(file: TFile): Promise<void> {
-    try {
-      const contactNote = new ContactNote(this.app, this.settings, file);
 
-      // Step 1: Sync from frontmatter to Related list
-
-      const frontmatterToRelatedResult = await contactNote.syncFrontmatterToRelatedList();
-
-      if (frontmatterToRelatedResult.success) {
-
-        if (frontmatterToRelatedResult.errors.length > 0) {
-          console.log(`[ContactManager] Frontmatter sync completed with warnings for ${file.basename}`);
-          frontmatterToRelatedResult.errors.forEach(error => console.log(error));
-        }
-      } else {
-        console.log(`[ContactManager] Failed to sync frontmatter to Related list for: ${file.basename}`);
-        frontmatterToRelatedResult.errors.forEach(error => console.log(error));
-      }
-
-      // Step 2: Sync from Related list to frontmatter
-
-      const relatedToFrontmatterResult = await contactNote.syncRelatedListToFrontmatter();
-
-      if (relatedToFrontmatterResult.success) {
-
-        if (relatedToFrontmatterResult.errors.length > 0) {
-          console.log(`[ContactManager] Related list sync completed with warnings for ${file.basename}`);
-          relatedToFrontmatterResult.errors.forEach(error => console.log(error));
-        }
-      } else {
-        console.log(`[ContactManager] Failed to sync Related list to frontmatter for: ${file.basename}`);
-        relatedToFrontmatterResult.errors.forEach(error => console.log(error));
-      }
-
-    } catch (error) {
-      console.log(`[ContactManager] Error syncing contact file ${file.basename}: ${error.message}`);
-    }
-  }
 
   /**
    * Ensure vCard object has a name before processing
