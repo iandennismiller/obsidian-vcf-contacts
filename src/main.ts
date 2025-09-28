@@ -7,7 +7,7 @@ import myScrollTo from "src/util/myScrollTo";
 import { VCFolderWatcher } from "src/services/vcfFolderWatcher";
 import { setupVCFDropHandler } from 'src/services/vcfDropHandler';
 import { setApp, clearApp } from "src/context/sharedAppContext";
-import { loggingService } from "src/services/loggingService";
+
 import { ContactNote } from "src/contacts/contactNote";
 import { 
   findMissingReciprocalRelationships, 
@@ -26,8 +26,6 @@ export default class ContactsPlugin extends Plugin {
 
 	async onload() {
 		await this.loadSettings();
-		// Initialize logging service early
-		loggingService.initialize(this.settings.logLevel, "VCF Contacts plugin loaded");
 		// Set up app context for shared utilities
 		setApp(this.app);
 
@@ -104,11 +102,11 @@ export default class ContactsPlugin extends Plugin {
 					new Notice('Related list synced successfully!');
 					if (result.errors.length > 0) {
 						new Notice(`Sync completed with ${result.errors.length} warnings - check console for details`);
-						result.errors.forEach(error => loggingService.warn(error));
+						result.errors.forEach(error => console.log(error));
 					}
 				} else {
 					new Notice('Failed to sync Related list - check console for details');
-					result.errors.forEach(error => loggingService.error(error));
+					result.errors.forEach(error => console.log(error));
 				}
 			},
 		});
@@ -145,11 +143,11 @@ export default class ContactsPlugin extends Plugin {
 					new Notice('Frontmatter synced successfully!');
 					if (result.errors.length > 0) {
 						new Notice(`Sync completed with ${result.errors.length} warnings - check console for details`);
-						result.errors.forEach(error => loggingService.warn(error));
+						result.errors.forEach(error => console.log(error));
 					}
 				} else {
 					new Notice('Failed to sync frontmatter - check console for details');
-					result.errors.forEach(error => loggingService.error(error));
+					result.errors.forEach(error => console.log(error));
 				}
 			},
 		});
@@ -194,13 +192,13 @@ export default class ContactsPlugin extends Plugin {
 					new Notice('Bidirectional sync completed successfully!');
 					if (totalErrors > 0) {
 						new Notice(`Sync completed with ${totalErrors} warnings - check console for details`);
-						frontmatterResult.errors.forEach(error => loggingService.warn(error));
-						relatedResult.errors.forEach(error => loggingService.warn(error));
+						frontmatterResult.errors.forEach(error => console.log(error));
+						relatedResult.errors.forEach(error => console.log(error));
 					}
 				} else {
 					new Notice('Bidirectional sync failed - check console for details');
-					frontmatterResult.errors.forEach(error => loggingService.error(error));
-					relatedResult.errors.forEach(error => loggingService.error(error));
+					frontmatterResult.errors.forEach(error => console.log(error));
+					relatedResult.errors.forEach(error => console.log(error));
 				}
 			},
 		});
@@ -242,16 +240,12 @@ export default class ContactsPlugin extends Plugin {
 					const count = result.missingReciprocals.length;
 					new Notice(`Found ${count} missing reciprocal relationship${count > 1 ? 's' : ''}. Use "Fix missing reciprocal relationships" to add them.`);
 					
-					// Log details to console
-					loggingService.info(`Missing reciprocal relationships for ${activeFile.basename}:`);
-					result.missingReciprocals.forEach(missing => {
-						loggingService.info(`  ${missing.targetName} is missing: ${missing.reciprocalType} -> ${missing.sourceContactName}`);
-					});
+					// Log details to console - removed info logging
 				}
 
 				if (result.errors.length > 0) {
 					new Notice(`Check completed with ${result.errors.length} errors - check console for details`);
-					result.errors.forEach(error => loggingService.error(error));
+					result.errors.forEach(error => console.log(error));
 				}
 			},
 		});
@@ -299,7 +293,7 @@ export default class ContactsPlugin extends Plugin {
 
 				if (result.errors.length > 0) {
 					new Notice(`Fix completed with ${result.errors.length} warnings - check console for details`);
-					result.errors.forEach(error => loggingService.warn(error));
+					result.errors.forEach(error => console.log(error));
 				}
 			},
 		});
@@ -326,8 +320,6 @@ export default class ContactsPlugin extends Plugin {
 			this.vcfDropCleanup();
 			this.vcfDropCleanup = null;
 		}
-		// Clean up loggingService event listener
-		loggingService.cleanup();
 	}
 
 	async loadSettings() {
