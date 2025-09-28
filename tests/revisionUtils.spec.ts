@@ -1,4 +1,4 @@
-import { ContactNote } from 'src/contacts/contactNote';
+import { ContactNote } from 'src/contactNote';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TFile, App } from 'obsidian';
 import { VCardForObsidianRecord } from 'src/contacts/vcardFile';
@@ -164,8 +164,6 @@ describe('RevisionUtils', () => {
 
       const shouldUpdate = await revisionUtils.shouldUpdateContact(vcfRecord, mockFile);
       expect(shouldUpdate).toBe(false);
-        expect.stringContaining('[RevisionUtils] Missing REV field')
-      );
     });
 
     it('should not update when VCF has no REV', async () => {
@@ -186,8 +184,6 @@ describe('RevisionUtils', () => {
 
       const shouldUpdate = await revisionUtils.shouldUpdateContact(vcfWithoutRev, mockFile);
       expect(shouldUpdate).toBe(false);
-        expect.stringContaining('[RevisionUtils] Missing REV field')
-      );
     });
 
     it('should not update when REV dates cannot be parsed', async () => {
@@ -208,8 +204,6 @@ describe('RevisionUtils', () => {
 
       const shouldUpdate = await revisionUtils.shouldUpdateContact(vcfWithInvalidRev, mockFile);
       expect(shouldUpdate).toBe(false);
-        expect.stringContaining('[RevisionUtils] Failed to parse dates')
-      );
     });
 
     it('should handle mixed valid/invalid REV dates', async () => {
@@ -225,8 +219,6 @@ describe('RevisionUtils', () => {
 
       const shouldUpdate = await revisionUtils.shouldUpdateContact(vcfRecord, mockFile);
       expect(shouldUpdate).toBe(false);
-        expect.stringContaining('[RevisionUtils] Failed to parse dates')
-      );
     });
 
     it('should handle metadata cache errors gracefully', async () => {
@@ -236,8 +228,6 @@ describe('RevisionUtils', () => {
 
       const shouldUpdate = await revisionUtils.shouldUpdateContact(vcfRecord, mockFile);
       expect(shouldUpdate).toBe(false);
-        expect.stringContaining('[RevisionUtils] Error comparing REV fields')
-      );
     });
 
     it('should work with different date formats', async () => {

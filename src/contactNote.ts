@@ -5,10 +5,10 @@
  */
 
 import { TFile, App, parseYaml, stringifyYaml } from 'obsidian';
-import { ContactsPluginSettings } from '../settings/settings.d';
+import { ContactsPluginSettings } from './settings/settings.d';
 import { VCardForObsidianRecord, VCardKind, VCardKinds } from './vcardFile';
-import { getApp } from '../context/sharedAppContext';
-import { getSettings } from '../context/sharedSettingsContext';
+import { getApp } from './context/sharedAppContext';
+import { getSettings } from './context/sharedSettingsContext';
 
 export type Contact = {
   data: Record<string, any>;

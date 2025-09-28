@@ -1,6 +1,6 @@
 import * as path from 'path';
 import { VcardFile } from './vcardFile';
-import { ContactsPluginSettings } from '../settings/settings.d';
+import { ContactsPluginSettings } from './settings/settings.d';
 
 /**
  * Information about a VCard file being managed

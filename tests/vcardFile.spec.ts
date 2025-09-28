@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { VcardFile } from 'src/contacts/vcardFile';
+import { VcardFile } from 'src/vcardFile';
 import * as fs from 'fs/promises';
 
 // Mock fs module
@@ -26,7 +26,7 @@ vi.mock('src/context/sharedAppContext', () => ({
   }))
 }));
 
-vi.mock('src/contacts', () => ({
+vi.mock('src', () => ({
   parseKey: vi.fn((key) => {
     const typeMatch = key.match(/\[([^\]]+)\]/);
     const baseKey = key.replace(/\[.*?\].*/, '');
@@ -37,7 +37,7 @@ vi.mock('src/contacts', () => ({
   })
 }));
 
-vi.mock('src/contacts/contactNote', () => ({
+vi.mock('src/contactNote', () => ({
   createNameSlug: vi.fn(() => 'test-user'),
   createContactSlug: vi.fn(() => 'john-doe')
 }));
@@ -48,6 +48,8 @@ vi.mock('./contactManager', () => ({
   }
 }));
 
+vi.mock('../src/services/loggingService', () => ({
+  loggingService: {
     debug: vi.fn(),
     warning: vi.fn(),
     error: vi.fn()

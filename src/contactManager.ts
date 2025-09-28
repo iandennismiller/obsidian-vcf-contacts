@@ -1,11 +1,11 @@
 import { App, TFile, EventRef, WorkspaceLeaf, TFolder, Vault, normalizePath, Notice, Workspace } from 'obsidian';
-import { ContactsPluginSettings } from '../settings/settings.d';
+import { ContactsPluginSettings } from './settings/settings.d';
 import { ContactNote, getFrontmatterFromFiles } from './contactNote';
 import { VCardForObsidianRecord } from './vcardFile';
-import { getSettings } from '../context/sharedSettingsContext';
-import { RunType } from '../insights/insight.d';
-import { insightService } from '../insights/insightService';
-import { FileExistsModal } from '../ui/modals/fileExistsModal';
+import { getSettings } from './context/sharedSettingsContext';
+import { RunType } from './insights/insight.d';
+import { insightService } from './insights/insightService';
+import { FileExistsModal } from './ui/modals/fileExistsModal';
 
 /**
  * Interface for managing contact notes in the Obsidian vault.
@@ -688,6 +688,44 @@ export class ContactManager implements IContactManager {
     }
     
     return changedContacts;
+  }
+
+  /**
+   * Static version of ensureHasName for use in static contexts
+   */
+  static async ensureHasNameStatic(vCardObject: VCardForObsidianRecord): Promise<VCardForObsidianRecord> {
+    const { createNameSlug } = await import('./contactNote');
+    const { VCardKinds } = await import('./vcardFile');
+    const { ContactNameModal } = await import('./ui/modals/contactNameModal');
+    const { getApp } = await import('./context/sharedAppContext');
+    
+    // Import the type separately
+    type NamingPayload = import('./ui/modals/contactNameModal').NamingPayload;
+    
+    try {
+      // if we can create a file name then we meet the minimum requirements
+      createNameSlug(vCardObject);
+      return Promise.resolve(vCardObject);
+    } catch (error) {
+      // Need to prompt for some form of name information.
+      const app = getApp();
+      return new Promise((resolve) => {
+        console.warn("No name found for record", vCardObject);
+        new ContactNameModal(app, (nameData: NamingPayload) => {
+          if (nameData.kind === VCardKinds.Individual) {
+            vCardObject["N.PREFIX"] ??= "";
+            vCardObject["N.GN"] = nameData.given;
+            vCardObject["N.MN"] ??= "";
+            vCardObject["N.FN"] = nameData.family;
+            vCardObject["N.SUFFIX"] ??= "";
+          } else {
+            vCardObject["FN"] ??= nameData.fn;
+          }
+          vCardObject["KIND"] ??= nameData.kind;
+          resolve(vCardObject);
+        }).open();
+      });
+    }
   }
 
 }

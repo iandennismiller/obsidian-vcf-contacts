@@ -6,7 +6,7 @@ import {
   updateFrontMatterValue, 
   updateMultipleFrontMatterValues, 
   generateRevTimestamp 
-} from 'src/contacts/contactNote';
+} from 'src/contactNote';
 
 // Mock obsidian
 vi.mock('obsidian', () => ({
