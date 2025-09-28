@@ -12,10 +12,13 @@ import { afterEach,describe, expect, it, vi } from 'vitest';
 const mockSettings: ContactsPluginSettings = {
   contactsFolder: 'Contacts',
   defaultHashtag: '',
+  vcfStorageMethod: 'vcf-folder',
+  vcfFilename: 'contacts.vcf',
   vcfWatchFolder: '',
   vcfWatchEnabled: false,
   vcfWatchPollingInterval: 30,
   vcfWriteBackEnabled: false,
+  vcfCustomizeIgnoreList: false,
   vcfIgnoreFilenames: [],
   vcfIgnoreUIDs: [],
   enableSync: true,

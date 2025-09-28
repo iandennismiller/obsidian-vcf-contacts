@@ -43,10 +43,13 @@ describe('vcfDropHandler', () => {
     settings = {
       contactsFolder: 'Contacts',
       defaultHashtag: '',
+      vcfStorageMethod: 'vcf-folder',
+      vcfFilename: 'contacts.vcf',
       vcfWatchFolder: '/tmp/vcfwatch',
       vcfWatchEnabled: false,
       vcfWatchPollingInterval: 30,
       vcfWriteBackEnabled: false,
+      vcfCustomizeIgnoreList: false,
       vcfIgnoreFilenames: [],
       vcfIgnoreUIDs: [],
       enableSync: true,

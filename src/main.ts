@@ -4,7 +4,7 @@ import { Plugin, Notice } from 'obsidian';
 import { ContactsView } from "src/ui/sidebar/sidebarView";
 import { VcardFile } from "src/vcardFile";
 import myScrollTo from "src/ui/myScrollTo";
-import { FolderWatcher } from "src/services/folderWatcher";
+import { SyncWatcher } from "src/services/syncWatcher";
 import { setupVCFDropHandler } from 'src/ui/vcfDropHandler';
 import { setApp, clearApp } from "src/context/sharedAppContext";
 import { InsightCommands } from "src/insights/insightCommands";
@@ -17,7 +17,7 @@ import { ContactsPluginSettings } from  './settings/settings.d';
 
 export default class ContactsPlugin extends Plugin {
 	settings: ContactsPluginSettings;
-	private vcfWatcher: FolderWatcher | null = null;
+	private syncWatcher: SyncWatcher | null = null;
 	private vcfDropCleanup: (() => void) | null = null;
 	private contactManager: ContactManager | null = null;
 	private insightCommands: InsightCommands | null = null;
@@ -42,9 +42,9 @@ export default class ContactsPlugin extends Plugin {
 			console.log(`Error during contact data consistency check: ${error.message}`);
 		}
 
-		// Initialize VCard folder watcher
-		this.vcfWatcher = new FolderWatcher(this.app, this.settings);
-		await this.vcfWatcher.start();
+		// Initialize VCard sync watcher
+		this.syncWatcher = new SyncWatcher(this.app, this.settings);
+		await this.syncWatcher.start();
 
 		// Initialize VCF drop handler (watch for .vcf files created in the vault)
 		this.vcfDropCleanup = setupVCFDropHandler(this.app, this.settings);
@@ -95,10 +95,10 @@ export default class ContactsPlugin extends Plugin {
 		// Clean up app context
 		clearApp();
 
-		// Clean up VCF folder watcher
-		if (this.vcfWatcher) {
-			this.vcfWatcher.stop();
-			this.vcfWatcher = null;
+		// Clean up VCF sync watcher
+		if (this.syncWatcher) {
+			this.syncWatcher.stop();
+			this.syncWatcher = null;
 		}
 
 		// Clean up VCF drop handler
