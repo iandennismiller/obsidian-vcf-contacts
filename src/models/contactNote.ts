@@ -21,7 +21,9 @@ import {
   RelatedFieldOperations,
   RelatedListOperations,
   ParsedRelationship,
-  FrontmatterRelationship
+  FrontmatterRelationship,
+  SyncOperations,
+  NamingOperations
 } from './contactNote/index';
 
 export type Contact = {
@@ -58,6 +60,7 @@ export class ContactNote {
   private markdownOps: MarkdownOperations;
   private relatedFieldOps: RelatedFieldOperations;
   private relatedListOps: RelatedListOperations;
+  private syncOps: SyncOperations;
 
   constructor(app: App, settings: ContactsPluginSettings, file: TFile) {
     this.app = app;
@@ -77,6 +80,16 @@ export class ContactNote {
       this.frontmatterOps, 
       this.genderOps,
       this.relatedFieldOps
+    );
+    this.syncOps = new SyncOperations(
+      app,
+      settings,
+      file,
+      this.genderOps,
+      this.frontmatterOps,
+      this.vaultOps,
+      this.relatedFieldOps,
+      this.relatedListOps
     );
   }
 
@@ -267,38 +280,15 @@ export class ContactNote {
    * Sync Related list from markdown to frontmatter
    */
   async syncRelatedListToFrontmatter(): Promise<{ success: boolean; errors: string[] }> {
-    // Implementation would go here - this is just the method signature
-    // The full implementation is complex and was in the original file
-    return { success: true, errors: [] };
+    return this.syncOps.syncRelatedListToFrontmatter();
   }
 
   /**
    * Sync frontmatter RELATED fields to Related list in markdown
    */
   async syncFrontmatterToRelatedList(): Promise<{ success: boolean; errors: string[] }> {
-    // Implementation would go here - this is just the method signature
-    // The full implementation is complex and was in the original file
-    return { success: true, errors: [] };
+    return this.syncOps.syncFrontmatterToRelatedList();
   }
-}
-
-/**
- * Utility function to get frontmatter data from multiple files and create Contact objects
- * This is a static utility function that doesn't require a ContactNote instance
- */
-export async function getFrontmatterFromFiles(files: TFile[]): Promise<Contact[]> {
-  const { metadataCache } = getApp();
-  const contactsData: Contact[] = [];
-  for (const file of files) {
-    const frontMatter = metadataCache.getFileCache(file)?.frontmatter;
-    if ((frontMatter?.['N.GN'] && frontMatter?.['N.FN']) || frontMatter?.['FN']) {
-      contactsData.push({
-        file,
-        data: frontMatter,
-      });
-    }
-  }
-  return contactsData;
 }
 
 /**
@@ -358,91 +348,21 @@ export function mdRender(record: Record<string, any>, hashtags: string, genderLo
   return tempContactNote.mdRender(record, hashtags, genderLookup);
 }
 
-// Name utility functions migrated from src/util/nameUtils.ts
-
-/**
- * Doing our best for the user with minimal code to clean up the filename.
- */
-function sanitizeFileName(input: string): string {
-  const illegalRe = /[\/\?<>\\:\*\|"]/g;
-  const controlRe = /[\x00-\x1f\x80-\x9f]/g;
-  const reservedRe = /^\.+$/;
-  const windowsReservedRe = /^(con|prn|aux|nul|com[0-9]|lpt[0-9])(\..*)?$/i;
-  const windowsTrailingRe = /[\. ]+$/;
-  const multipleSpacesRe = /\s+/g;
-  return input
-    .replace(illegalRe, ' ')
-    .replace(controlRe, ' ')
-    .replace(reservedRe, ' ')
-    .replace(windowsReservedRe, ' ')
-    .replace(windowsTrailingRe, ' ')
-    .replace(multipleSpacesRe, " ")
-    .trim();
-}
+// Name utility functions - delegated to NamingOperations
 
 /**
  * Creates a name slug from vCard records. FN is a mandatory field in the spec so we fall back to that.
  * Migrated from src/util/nameUtils.ts
  */
 export function createNameSlug(record: VCardForObsidianRecord): string {
-  let fileName: string | undefined = undefined;
-  if (isKind(record, VCardKinds.Individual)) {
-    fileName = [
-      record["N.PREFIX"],
-      record["N.GN"],
-      record["N.MN"],
-      record["N.FN"],
-      record["N.SUFFIX"],
-    ]
-      .map((part) => part?.trim())
-      .filter((part) => part)
-      .join(" ") || undefined;
-  }
-
-  if (!fileName && record["FN"]) {
-    fileName = record["FN"];
-  }
-
-  if (!fileName) {
-    throw new Error(`Failed to update, create file name due to missing FN property"`);
-  }
-
-  return sanitizeFileName(fileName);
+  return NamingOperations.createNameSlug(record);
 }
 
 /**
  * Creates a kebab-case slug from vCard records for use as identifiers
  */
 export function createContactSlug(record: VCardForObsidianRecord): string {
-  let fileName: string | undefined = undefined;
-  if (isKind(record, VCardKinds.Individual)) {
-    fileName = [
-      record["N.PREFIX"],
-      record["N.GN"],
-      record["N.MN"],
-      record["N.FN"],
-      record["N.SUFFIX"],
-    ]
-      .map((part) => part?.trim())
-      .filter((part) => part)
-      .join(" ") || undefined;
-  }
-
-  if (!fileName && record["FN"]) {
-    fileName = record["FN"];
-  }
-
-  if (!fileName) {
-    throw new Error(`Failed to update, create file name due to missing FN property"`);
-  }
-
-  // Create a kebab-case slug for use as identifier
-  return sanitizeFileName(fileName)
-    .toLowerCase()
-    .replace(/\s+/g, '-')
-    .replace(/[^a-z0-9-]/g, '')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '');
+  return NamingOperations.createContactSlug(record);
 }
 
 /**
@@ -450,6 +370,5 @@ export function createContactSlug(record: VCardForObsidianRecord): string {
  * Migrated from src/util/nameUtils.ts
  */
 export function isKind(record: VCardForObsidianRecord, kind: VCardKind): boolean {
-  const myKind = record["KIND"] || VCardKinds.Individual;
-  return myKind === kind;
+  return NamingOperations.isKind(record, kind);
 }

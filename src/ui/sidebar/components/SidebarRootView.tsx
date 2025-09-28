@@ -1,6 +1,6 @@
 import { App, MarkdownView, normalizePath, Notice, TFile, TFolder } from "obsidian";
 import * as React from "react";
-import { Contact, getFrontmatterFromFiles, mdRender } from "src";
+import { Contact, mdRender } from "src";
 import { VcardFile } from "src/vcardFile";
 import { getApp } from "src/context/sharedAppContext";
 import { getSettings, onSettingsChange } from "src/context/sharedSettingsContext";
@@ -65,7 +65,7 @@ export const SidebarRootView = (props: SidebarRootViewProps) => {
 
     const contactManager = new ContactManager(app, settings);
     const contactFiles = contactManager.findContactFiles(contactsFolder);
-		getFrontmatterFromFiles(contactFiles).then((contactsData) =>{
+		contactManager.getFrontmatterFromFiles(contactFiles).then((contactsData) =>{
 			setContacts(contactsData);
 		});
 	};

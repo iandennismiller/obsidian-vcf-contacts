@@ -1,7 +1,7 @@
 import * as fs from 'fs/promises';
 import { App, Notice, TFile } from 'obsidian';
 import * as path from 'path';
-import { ContactNote, getFrontmatterFromFiles } from "../models/contactNote";
+import { ContactNote } from "../models/contactNote";
 import { VcardFile } from "../models/vcardFile";
 import { VCardForObsidianRecord } from "../models/vcardFile";
 import { VcardManager, VCardFileInfo } from "../models/vcardManager";
@@ -244,7 +244,7 @@ export class SyncWatcher {
         console.log(`Triggering processors on ${contactsToProcess.length} contacts from ${vcfFilePath}`);
         
         // Get contacts data for insight processing
-        const contacts = await getFrontmatterFromFiles(contactsToProcess);
+        const contacts = await this.contactManager.getFrontmatterFromFiles(contactsToProcess);
         
         // Trigger immediate processors (like VcfSyncPreProcessor)
         await insightService.process(contacts, RunType.IMMEDIATELY);
@@ -388,7 +388,7 @@ export class SyncWatcher {
         console.log(`Triggering processors on ${contactsToProcess.length} contacts from ${filename}`);
         
         // Get contacts data for insight processing
-        const contacts = await getFrontmatterFromFiles(contactsToProcess);
+        const contacts = await this.contactManager.getFrontmatterFromFiles(contactsToProcess);
         
         // Trigger immediate processors (like VcfSyncPreProcessor)
         await insightService.process(contacts, RunType.IMMEDIATELY);
