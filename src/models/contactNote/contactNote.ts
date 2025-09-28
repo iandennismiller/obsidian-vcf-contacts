@@ -5,27 +5,20 @@
  */
 
 import { TFile, App } from 'obsidian';
-import { ContactsPluginSettings } from '../settings/settings.d';
-import { VCardForObsidianRecord, VCardKind, VCardKinds } from './vcardFile';
-import { getApp } from '../context/sharedAppContext';
-import { getSettings } from '../context/sharedSettingsContext';
+import { ContactsPluginSettings } from '../../settings/settings.d';
+import { VCardForObsidianRecord, VCardKind, VCardKinds } from '../vcardFile';
+import { getApp } from '../../context/sharedAppContext';
+import { getSettings } from '../../context/sharedSettingsContext';
 
-// Import all the extracted classes and types
-import {
-  GenderOperations,
-  Gender,
-  FrontmatterOperations,
-  parseKey,
-  VaultOperations,
-  ResolvedContact,
-  MarkdownOperations,
-  RelatedFieldOperations,
-  RelatedListOperations,
-  ParsedRelationship,
-  FrontmatterRelationship,
-  SyncOperations,
-  NamingOperations
-} from './contactNote/index';
+// Import all the extracted classes and types directly to avoid circular dependencies
+import { GenderOperations, Gender } from './gender';
+import { FrontmatterOperations, parseKey } from './frontmatter';
+import { VaultOperations, ResolvedContact } from './vault';
+import { MarkdownOperations } from './markdown';
+import { RelatedFieldOperations } from './relatedField';
+import { RelatedListOperations, ParsedRelationship, FrontmatterRelationship } from './relatedList';
+import { SyncOperations } from './sync';
+import { NamingOperations } from './naming';
 
 export type Contact = {
   data: Record<string, any>;
@@ -33,7 +26,7 @@ export type Contact = {
 }
 
 // Re-export types that were previously exported from utility modules
-export type { Gender } from './contactNote/index';
+export type { Gender };
 
 export interface ParsedKey {
   key: string;
@@ -43,7 +36,7 @@ export interface ParsedKey {
 }
 
 // Re-export interfaces from the extracted modules
-export type { ParsedRelationship, ResolvedContact, FrontmatterRelationship } from './contactNote/index';
+export type { ParsedRelationship, ResolvedContact, FrontmatterRelationship };
 
 /**
  * Unified class for interacting with a contact note in Obsidian.
@@ -320,7 +313,7 @@ export function createContactSlug(record: VCardForObsidianRecord): string {
 }
 
 // Re-export utility functions that are now in extracted modules
-export { parseKey } from './contactNote/index';
+export { parseKey };
 
 /**
  * Check if record is of a specific kind

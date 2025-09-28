@@ -479,8 +479,7 @@ export class VcardFile {
     const structuredFields: Array<[string, string]> = [];
 
     entries.forEach(([key, value]) => {
-      const contactNote = new ContactNote(null as any, null as any, null as any);
-      const keyObj = contactNote.parseKey(key);
+      const keyObj = parseKey(key);
 
       if (['ADR', 'N'].includes(keyObj.key)) {
         structuredFields.push([key, value]);
