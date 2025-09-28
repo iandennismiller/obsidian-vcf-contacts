@@ -1,11 +1,11 @@
 import * as fs from 'fs/promises';
 import { App, Notice, TFile } from 'obsidian';
 import * as path from 'path';
-import { ContactNote, getFrontmatterFromFiles } from "src/contactNote";
-import { VcardFile } from "src/vcardFile";
-import { VCardForObsidianRecord } from "src/vcardFile";
-import { VcardManager, VCardFileInfo } from "src/vcardManager";
-import { ContactManager } from "src/contactManager";
+import { ContactNote, getFrontmatterFromFiles } from "../models/contactNote";
+import { VcardFile } from "../models/vcardFile";
+import { VCardForObsidianRecord } from "../models/vcardFile";
+import { VcardManager, VCardFileInfo } from "../models/vcardManager";
+import { ContactManager } from "../models/contactManager";
 import { ContactsPluginSettings } from "src/settings/settings.d";
 import { onSettingsChange } from "src/context/sharedSettingsContext";
 import { setupVCFDropHandler } from 'src/ui/vcfDropHandler';
@@ -15,7 +15,7 @@ import { RunType } from "src/insights/insight.d";
 /**
  * Information about a VCard file being tracked by the watcher
  */
-export type { VCardFileInfo } from 'src/vcardManager';
+export type { VCardFileInfo } from '../models/vcardManager';
 
 /**
  * Watches for VCard files and triggers insight processors when changes are detected.

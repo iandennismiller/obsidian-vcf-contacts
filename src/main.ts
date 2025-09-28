@@ -2,15 +2,15 @@ import "src/insights/insightLoading";
 
 import { Plugin, Notice } from 'obsidian';
 import { ContactsView } from "src/ui/sidebar/sidebarView";
-import { VcardFile } from "src/vcardFile";
+import { VcardFile } from "./models/vcardFile";
 import myScrollTo from "src/ui/myScrollTo";
 import { SyncWatcher } from "src/services/syncWatcher";
 import { setupVCFDropHandler } from 'src/ui/vcfDropHandler';
 import { setApp, clearApp } from "src/context/sharedAppContext";
 import { InsightCommands } from "src/insights/insightCommands";
 
-import { ContactNote } from "src/contactNote";
-import { ContactManager } from "src/contactManager";
+import { ContactNote } from "./models/contactNote";
+import { ContactManager } from "./models/contactManager";
 
 import { ContactsSettingTab, DEFAULT_SETTINGS } from './settings/settings';
 import { ContactsPluginSettings } from  './settings/settings.d';
