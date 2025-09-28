@@ -6,6 +6,7 @@ import { RelatedFrontMatterProcessor } from 'src/insights/processors/RelatedFron
 import { RelatedListProcessor } from 'src/insights/processors/RelatedListProcessor';
 import { VcfSyncPostProcessor } from 'src/insights/processors/VcfSyncPostProcessor';
 import { GenderInferenceProcessor } from 'src/insights/processors/GenderInferenceProcessor';
+import { GenderRenderProcessor } from 'src/insights/processors/GenderRenderProcessor';
 
 insightService.register(UidProcessor);
 insightService.register(VcfSyncPreProcessor);
@@ -14,3 +15,4 @@ insightService.register(RelatedFrontMatterProcessor);
 insightService.register(RelatedListProcessor);
 insightService.register(VcfSyncPostProcessor);
 insightService.register(GenderInferenceProcessor);
+insightService.register(GenderRenderProcessor);
