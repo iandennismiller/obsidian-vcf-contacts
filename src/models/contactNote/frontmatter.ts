@@ -3,6 +3,7 @@
  */
 
 import { TFile, App, parseYaml, stringifyYaml } from 'obsidian';
+import { ParsedKey } from '../contactNote';
 
 export class FrontmatterOperations {
   private app: App;
@@ -108,4 +109,52 @@ export class FrontmatterOperations {
     await this.app.vault.modify(this.file, newContent);
     this.invalidateCache(); // Invalidate cache after modification
   }
+
+}
+  
+/**
+ * Utility function to parse a vCard property key in the format: key[index:type].subkey
+ * This is a static utility function that doesn't require a ContactNote instance
+ */
+export function parseKey(input: string): ParsedKey {
+  const extractSubkey = (input: string): { main: string; subkey?: string } => {
+    const dotIndex = input.indexOf('.');
+    if (dotIndex === -1) {
+      return { main: input, subkey: '' };
+    }
+    return {
+      main: input.substring(0, dotIndex),
+      subkey: input.substring(dotIndex + 1)
+    };
+  };
+
+  const parseBracketContent = (content: string): { index?: string; type?: string } => {
+    if (content.includes(':')) {
+      const [index, type] = content.split(':');
+      return { index, type };
+    }
+    return { type: content };
+  };
+
+  const parseKeyPart = (main: string): { key: string; index?: string; type?: string } => {
+    const openBracketIndex = main.indexOf('[');
+    if (openBracketIndex === -1) {
+      return { key: main };
+    }
+
+    const key = main.substring(0, openBracketIndex);
+    const closeBracketIndex = main.indexOf(']', openBracketIndex);
+    if (closeBracketIndex === -1) {
+      throw new Error('Invalid vcard property key encountered please correct.');
+    }
+
+    const bracketContent = main.substring(openBracketIndex + 1, closeBracketIndex); 
+    const { index, type } = parseBracketContent(bracketContent);
+
+    return { key, index, type };
+  };
+
+  const { main, subkey } = extractSubkey(input);
+  const { key, index, type } = parseKeyPart(main);
+  return { key, index, type, subkey };
 }
