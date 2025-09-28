@@ -48,14 +48,6 @@ vi.mock('./contactManager', () => ({
   }
 }));
 
-vi.mock('../src/services/loggingService', () => ({
-  loggingService: {
-    debug: vi.fn(),
-    warning: vi.fn(),
-    error: vi.fn()
-  }
-}));
-
 describe('VcardFile', () => {
   beforeEach(() => {
     vi.clearAllMocks();

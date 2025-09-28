@@ -5,7 +5,6 @@ import { VcardFile } from "src/vcardFile";
 import { getApp } from "src/context/sharedAppContext";
 import { getSettings } from "src/context/sharedSettingsContext";
 import { InsightProcessor, InsightQueItem, RunType } from "src/insights/insight.d";
-import { loggingService } from "src/services/loggingService";
 
 const renderGroup = (queItems: InsightQueItem[]): JSX.Element => {
   return (
@@ -54,12 +53,12 @@ export const VcardSyncPostProcessor: InsightProcessor = {
       try {
         const vcfResult = await VcardFile.fromObsidianFiles([file], app);
         if (vcfResult.errors.length > 0) {
-          loggingService.warning(`[VcardSyncPostProcessor] Warnings generating VCF for ${file.basename}:`);
-          vcfResult.errors.forEach(error => loggingService.warning(`  ${error.message}`));
+          console.warn(`[VcardSyncPostProcessor] Warnings generating VCF for ${file.basename}:`);
+          vcfResult.errors.forEach(error => console.warn(`  ${error.message}`));
         }
         return vcfResult.vcards || null;
       } catch (error) {
-        loggingService.error(`[VcardSyncPostProcessor] Error generating VCF for ${file.basename}: ${error.message}`);
+        console.error(`[VcardSyncPostProcessor] Error generating VCF for ${file.basename}: ${error.message}`);
         return null;
       }
     };
@@ -90,7 +89,7 @@ export const VcardSyncPostProcessor: InsightProcessor = {
         // No VCF exists - create it
         shouldWriteVCF = true;
         action = 'created';
-        loggingService.info(`[VcardSyncPostProcessor] No VCF found for UID ${contactUID}, will create new VCF`);
+        console.log(`[VcardSyncPostProcessor] No VCF found for UID ${contactUID}, will create new VCF`);
       } else {
         // VCF exists - check REV timestamps
         try {
@@ -112,14 +111,14 @@ export const VcardSyncPostProcessor: InsightProcessor = {
                 // Either contact is newer or VCF has no REV
                 shouldWriteVCF = true;
                 action = 'updated';
-                loggingService.info(
+                console.log(
                   `[VcardSyncPostProcessor] Contact REV ${contactREV} is newer than VCF REV ${vcfREV || 'none'}, will update VCF`
                 );
               }
             }
           }
         } catch (error) {
-          loggingService.error(`[VcardSyncPostProcessor] Error reading existing VCF ${existingVCFPath}: ${error.message}`);
+          console.error(`[VcardSyncPostProcessor] Error reading existing VCF ${existingVCFPath}: ${error.message}`);
           // If we can't read the VCF, assume we should recreate it
           shouldWriteVCF = true;
           action = 'recreated';
@@ -133,7 +132,7 @@ export const VcardSyncPostProcessor: InsightProcessor = {
       // Generate VCF content from contact file
       const vcfContent = await generateVCFFromContact(contact.file, app);
       if (!vcfContent) {
-        loggingService.error(`[VcardSyncPostProcessor] Failed to generate VCF content for ${contact.file.name}`);
+        console.error(`[VcardSyncPostProcessor] Failed to generate VCF content for ${contact.file.name}`);
         return Promise.resolve(undefined);
       }
       
@@ -146,7 +145,7 @@ export const VcardSyncPostProcessor: InsightProcessor = {
       // Queue VCard write instead of writing directly
       await vcardManager.queueVcardWrite(contactUID, vcfContent);
       
-      loggingService.info(`[VcardSyncPostProcessor] Successfully queued ${action} VCard for ${contact.file.name} (UID: ${contactUID})`);
+      console.log(`[VcardSyncPostProcessor] Successfully queued ${action} VCard for ${contact.file.name} (UID: ${contactUID})`);
       
       return Promise.resolve({
         name: this.name,
@@ -158,7 +157,7 @@ export const VcardSyncPostProcessor: InsightProcessor = {
       });
       
     } catch (error) {
-      loggingService.error(`[VcardSyncPostProcessor] Error processing contact ${contact.file.name}: ${error.message}`);
+      console.error(`[VcardSyncPostProcessor] Error processing contact ${contact.file.name}: ${error.message}`);
       return Promise.resolve(undefined);
     }
   }

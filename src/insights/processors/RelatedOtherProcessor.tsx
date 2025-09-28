@@ -4,7 +4,6 @@ import { ContactManager } from "src/contactManager";
 import { getApp } from "src/context/sharedAppContext";
 import { getSettings } from "src/context/sharedSettingsContext";
 import { InsightProcessor, InsightQueItem, RunType } from "src/insights/insight.d";
-import { loggingService } from "src/services/loggingService";
 
 /**
  * Get the reciprocal relationship type for a given type
@@ -195,7 +194,7 @@ export const RelatedOtherProcessor: InsightProcessor = {
                   frontmatterUpdates[relationshipKey] = relationshipValue;
                   changesCount++;
                   
-                  loggingService.info(
+                  console.log(
                     `[RelatedOtherProcessor] Adding reciprocal relationship: ${thisContactName} -> ${reciprocalType} -> ${otherContactFile.basename}`
                   );
                 }
@@ -204,7 +203,7 @@ export const RelatedOtherProcessor: InsightProcessor = {
           }
           
         } catch (error) {
-          loggingService.error(
+          console.error(
             `[RelatedOtherProcessor] Error processing other contact ${otherContactFile.basename}: ${error.message}`
           );
         }
@@ -230,7 +229,7 @@ export const RelatedOtherProcessor: InsightProcessor = {
       return Promise.resolve(undefined);
       
     } catch (error) {
-      loggingService.error(`[RelatedOtherProcessor] Error processing contact ${contact.file.name}: ${error.message}`);
+      console.error(`[RelatedOtherProcessor] Error processing contact ${contact.file.name}: ${error.message}`);
       return Promise.resolve(undefined);
     }
   }

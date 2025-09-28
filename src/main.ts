@@ -7,6 +7,7 @@ import myScrollTo from "src/ui/myScrollTo";
 import { FolderWatcher } from "src/services/folderWatcher";
 import { setupVCFDropHandler } from 'src/ui/vcfDropHandler';
 import { setApp, clearApp } from "src/context/sharedAppContext";
+import { InsightCommands } from "src/insights/insightCommands";
 
 import { ContactNote } from "src/contactNote";
 import { ContactManager } from "src/contactManager";
@@ -19,6 +20,7 @@ export default class ContactsPlugin extends Plugin {
 	private vcfWatcher: FolderWatcher | null = null;
 	private vcfDropCleanup: (() => void) | null = null;
 	private contactManager: ContactManager | null = null;
+	private insightCommands: InsightCommands | null = null;
 
 	async onload() {
 		await this.loadSettings();
@@ -29,6 +31,9 @@ export default class ContactsPlugin extends Plugin {
 		this.contactManager = new ContactManager(this.app, this.settings);
 		await this.contactManager.initializeCache();
 		this.contactManager.setupEventListeners();
+
+		// Initialize InsightCommands
+		this.insightCommands = new InsightCommands(this.app, this.settings, this.contactManager);
 
 		// Ensure contact data consistency during initialization
 		try {
@@ -73,95 +78,8 @@ export default class ContactsPlugin extends Plugin {
 			},
 		});
 
-		this.addCommand({
-			id: 'run-insight-processors-current',
-			name: "Run insight processors on current contact",
-			callback: async () => {
-				const activeFile = this.app.workspace.getActiveFile();
-				if (!activeFile) {
-					new Notice('No active file found');
-					return;
-				}
-
-				// Check if the file is in the contacts folder
-				if (!activeFile.path.startsWith(this.settings.contactsFolder)) {
-					new Notice('Active file is not in the contacts folder');
-					return;
-				}
-
-				// Check if file has UID (is a contact file)
-				const cache = this.app.metadataCache.getFileCache(activeFile);
-				if (!cache?.frontmatter?.UID) {
-					new Notice('Active file is not a contact file (missing UID)');
-					return;
-				}
-
-				new Notice('Running insight processors on current contact...');
-				
-				try {
-					const { getFrontmatterFromFiles } = await import('./contacts/contactNote');
-					const { insightService } = await import('./insights/insightService');
-					const { RunType } = await import('./insights/insight.d');
-					
-					// Get contact data
-					const contacts = await getFrontmatterFromFiles([activeFile]);
-					
-					// Run all processors
-					const immediateResults = await insightService.process(contacts, RunType.IMMEDIATELY);
-					const improvementResults = await insightService.process(contacts, RunType.INPROVEMENT);
-					const upcomingResults = await insightService.process(contacts, RunType.UPCOMMING);
-					
-					const totalResults = immediateResults.length + improvementResults.length + upcomingResults.length;
-					if (totalResults > 0) {
-						new Notice(`Insight processors completed: ${totalResults} actions taken`);
-					} else {
-						new Notice('Insight processors completed: No actions needed');
-					}
-				} catch (error) {
-					new Notice(`Error running insight processors: ${error.message}`);
-					console.log('Insight processor error:', error);
-				}
-			},
-		});
-
-		this.addCommand({
-			id: 'run-insight-processors-all',
-			name: "Run insight processors on all contacts",
-			callback: async () => {
-				new Notice('Running insight processors on all contacts...');
-				
-				try {
-					const { getFrontmatterFromFiles } = await import('./contacts/contactNote');
-					const { insightService } = await import('./insights/insightService');
-					const { RunType } = await import('./insights/insight.d');
-					
-					// Get all contact files
-					const contactFiles = this.contactManager?.getAllContactFiles() || [];
-					if (contactFiles.length === 0) {
-						new Notice('No contact files found');
-						return;
-					}
-					
-					// Get contact data
-					const contacts = await getFrontmatterFromFiles(contactFiles);
-					
-					// Run all processors
-					const immediateResults = await insightService.process(contacts, RunType.IMMEDIATELY);
-					const improvementResults = await insightService.process(contacts, RunType.INPROVEMENT);
-					const upcomingResults = await insightService.process(contacts, RunType.UPCOMMING);
-					
-					const totalResults = immediateResults.length + improvementResults.length + upcomingResults.length;
-					if (totalResults > 0) {
-						new Notice(`Insight processors completed on ${contacts.length} contacts: ${totalResults} actions taken`);
-					} else {
-						new Notice(`Insight processors completed on ${contacts.length} contacts: No actions needed`);
-					}
-				} catch (error) {
-					new Notice(`Error running insight processors: ${error.message}`);
-					console.log('Insight processor error:', error);
-				}
-			},
-		});
+		// Register insight processor commands
+		this.insightCommands.registerCommands(this);
 	}
 
 	onunload() {
@@ -170,6 +88,9 @@ export default class ContactsPlugin extends Plugin {
 			this.contactManager.cleanupEventListeners();
 			this.contactManager = null;
 		}
+
+		// Clean up InsightCommands
+		this.insightCommands = null;
 
 		// Clean up app context
 		clearApp();

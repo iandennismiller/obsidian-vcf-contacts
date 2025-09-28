@@ -5,7 +5,6 @@ import { VcardManager } from "src/vcardManager";
 import { getApp } from "src/context/sharedAppContext";
 import { getSettings } from "src/context/sharedSettingsContext";
 import { InsightProcessor, InsightQueItem, RunType } from "src/insights/insight.d";
-import { loggingService } from "src/services/loggingService";
 
 const renderGroup = (queItems: InsightQueItem[]):JSX.Element => {
   return (
@@ -98,7 +97,7 @@ export const VcardSyncPreProcessor: InsightProcessor = {
       try {
         vcfFrontmatter = parseYaml(frontmatterMatch[1]) || {};
       } catch (error) {
-        loggingService.error(`[VcfSyncPreProcessor] Error parsing VCF frontmatter: ${error.message}`);
+        console.error(`[VcfSyncPreProcessor] Error parsing VCF frontmatter: ${error.message}`);
         return Promise.resolve(undefined);
       }
 
@@ -131,7 +130,7 @@ export const VcardSyncPreProcessor: InsightProcessor = {
       return Promise.resolve(undefined);
 
     } catch (error) {
-      loggingService.error(`[VcfSyncPreProcessor] Error processing contact ${contact.file.name}: ${error.message}`);
+      console.error(`[VcfSyncPreProcessor] Error processing contact ${contact.file.name}: ${error.message}`);
       return Promise.resolve(undefined);
     }
   },

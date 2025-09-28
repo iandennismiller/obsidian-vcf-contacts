@@ -3,7 +3,6 @@ import { Contact, ContactNote } from "src";
 import { getApp } from "src/context/sharedAppContext";
 import { getSettings } from "src/context/sharedSettingsContext";
 import { InsightProcessor, InsightQueItem, RunType } from "src/insights/insight.d";
-import { loggingService } from "src/services/loggingService";
 
 const renderGroup = (queItems: InsightQueItem[]): JSX.Element => {
   return (
@@ -85,7 +84,7 @@ export const GenderRenderProcessor: InsightProcessor = {
               `${relationship.type} [[${relationship.contactName}]] → ${genderedTerm} [[${relationship.contactName}]]`
             );
             
-            loggingService.info(
+            console.log(
               `[GenderRenderProcessor] Updated relationship term: "${relationship.type}" → "${genderedTerm}" for ${relationship.contactName} (gender: ${relatedContact.gender}) in ${contact.file.basename}`
             );
             
@@ -102,7 +101,7 @@ export const GenderRenderProcessor: InsightProcessor = {
           }
           
         } catch (error) {
-          loggingService.error(
+          console.error(
             `[GenderRenderProcessor] Error processing relationship ${relationship.type} -> ${relationship.contactName}: ${error.message}`
           );
           
@@ -118,7 +117,7 @@ export const GenderRenderProcessor: InsightProcessor = {
       if (changesCount > 0) {
         await contactNote.updateRelatedSectionInContent(updatedRelationships);
         
-        loggingService.info(
+        console.log(
           `[GenderRenderProcessor] Updated ${changesCount} relationship term${changesCount !== 1 ? 's' : ''} in Related section of ${contact.file.basename}`
         );
         
@@ -135,7 +134,7 @@ export const GenderRenderProcessor: InsightProcessor = {
       return Promise.resolve(undefined);
       
     } catch (error) {
-      loggingService.error(`[GenderRenderProcessor] Error processing contact ${contact.file.name}: ${error.message}`);
+      console.error(`[GenderRenderProcessor] Error processing contact ${contact.file.name}: ${error.message}`);
       return Promise.resolve(undefined);
     }
   }

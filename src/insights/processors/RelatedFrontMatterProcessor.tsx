@@ -3,7 +3,6 @@ import { Contact, ContactNote } from "src";
 import { getApp } from "src/context/sharedAppContext";
 import { getSettings } from "src/context/sharedSettingsContext";
 import { InsightProcessor, InsightQueItem, RunType } from "src/insights/insight.d";
-import { loggingService } from "src/services/loggingService";
 
 const renderGroup = (queItems: InsightQueItem[]): JSX.Element => {
   return (
@@ -93,22 +92,22 @@ export const RelatedFrontMatterProcessor: InsightProcessor = {
       const syncResult = await contactNote.syncFrontmatterToRelatedList();
       
       if (!syncResult.success) {
-        loggingService.error(`[RelatedFrontMatterProcessor] Failed to sync frontmatter to Related list for ${contact.file.name}`);
-        syncResult.errors.forEach(error => loggingService.error(error));
+        console.error(`[RelatedFrontMatterProcessor] Failed to sync frontmatter to Related list for ${contact.file.name}`);
+        syncResult.errors.forEach(error => console.error(error));
         return Promise.resolve(undefined);
       }
       
       // Log the added relationships
       missingRelationships.forEach(rel => {
-        loggingService.info(
+        console.log(
           `[RelatedFrontMatterProcessor] Added missing relationship to Related section: ${contact.file.basename} -> ${rel}`
         );
       });
       
       // Log any warnings but return success
       if (syncResult.errors.length > 0) {
-        loggingService.warning(`[RelatedFrontMatterProcessor] Sync completed with warnings for ${contact.file.name}`);
-        syncResult.errors.forEach(error => loggingService.warning(error));
+        console.warn(`[RelatedFrontMatterProcessor] Sync completed with warnings for ${contact.file.name}`);
+        syncResult.errors.forEach(error => console.warn(error));
       }
       
       return Promise.resolve({
@@ -121,7 +120,7 @@ export const RelatedFrontMatterProcessor: InsightProcessor = {
       });
       
     } catch (error) {
-      loggingService.error(`[RelatedFrontMatterProcessor] Error processing contact ${contact.file.name}: ${error.message}`);
+      console.error(`[RelatedFrontMatterProcessor] Error processing contact ${contact.file.name}: ${error.message}`);
       return Promise.resolve(undefined);
     }
   }
