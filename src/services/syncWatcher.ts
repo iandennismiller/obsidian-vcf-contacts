@@ -6,6 +6,7 @@ import { VcardFile } from "../models/vcardFile";
 import { VCardForObsidianRecord } from "../models/vcardFile";
 import { VcardManager, VCardFileInfo } from "../models/vcardManager";
 import { ContactManager } from "../models/contactManager";
+import { ContactManagerUtils } from "../models/contactManager/contactManagerUtils";
 import { ContactsPluginSettings } from "src/settings/settings.d";
 import { onSettingsChange } from "src/context/sharedSettingsContext";
 import { setupVCFDropHandler } from 'src/ui/vcfDropHandler';
@@ -224,7 +225,7 @@ export class SyncWatcher {
               const mdContent = contactNote.mdRender(record, this.settings.defaultHashtag);
               const filename = slug + '.md';
               
-              await ContactManager.createContactFileStatic(this.app, this.settings.contactsFolder, mdContent, filename);
+              await ContactManagerUtils.createContactFile(this.app, this.settings.contactsFolder, mdContent, filename);
               
               // Find the newly created file and add to processing
               const newFile = await this.contactManager.findContactFileByUID(record.UID);
@@ -368,7 +369,7 @@ export class SyncWatcher {
               const mdContent = contactNote.mdRender(record, this.settings.defaultHashtag);
               const filename = slug + '.md';
               
-              await ContactManager.createContactFileStatic(this.app, this.settings.contactsFolder, mdContent, filename);
+              await ContactManagerUtils.createContactFile(this.app, this.settings.contactsFolder, mdContent, filename);
               
               // Find the newly created file and add to processing
               const newFile = await this.contactManager.findContactFileByUID(record.UID);
