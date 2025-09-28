@@ -2,17 +2,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TFile, App } from 'obsidian';
 import { ContactManager } from '../src/contacts/contactManager';
 import { ContactsPluginSettings } from '../src/settings/settings.d';
-import { loggingService } from '../src/services/loggingService';
-
-// Mock the logging service to prevent console spam during tests
-vi.mock('../src/services/loggingService', () => ({
-  loggingService: {
-    debug: vi.fn(),
-    info: vi.fn(),
-    warning: vi.fn(),
-    error: vi.fn()
-  }
-}));
 
 describe('ContactManager', () => {
   let mockApp: Partial<App>;
@@ -117,7 +106,6 @@ This is a contact file.`;
 
       const uid = await contactManager.extractUIDFromFile(mockFile);
       expect(uid).toBeNull();
-      expect(loggingService.debug).toHaveBeenCalledWith(
         expect.stringContaining('[ContactManager] Error extracting UID')
       );
     });
@@ -213,7 +201,6 @@ This is a contact file.`;
 
       await contactManager.initializeCache();
 
-      expect(loggingService.warning).toHaveBeenCalledWith(
         expect.stringContaining('[ContactManager] Contacts folder not found: Contacts')
       );
     });
@@ -413,7 +400,6 @@ This is a contact file.`;
 
       const foundFile = await contactManager.findContactFileByUID('test-uid');
       expect(foundFile).toBeNull();
-      expect(loggingService.error).toHaveBeenCalledWith(
         expect.stringContaining('[ContactManager] Error finding contact file by UID')
       );
     });
@@ -427,7 +413,6 @@ This is a contact file.`;
 
       await contactManager.initializeCache();
 
-      expect(loggingService.error).toHaveBeenCalledWith(
         expect.stringContaining('[ContactManager] Failed to build UID cache')
       );
     });

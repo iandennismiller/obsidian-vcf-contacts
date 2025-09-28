@@ -48,8 +48,6 @@ vi.mock('./contactManager', () => ({
   }
 }));
 
-vi.mock('../../services/loggingService', () => ({
-  loggingService: {
     debug: vi.fn(),
     warning: vi.fn(),
     error: vi.fn()

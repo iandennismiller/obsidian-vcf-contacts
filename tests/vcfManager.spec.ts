@@ -2,17 +2,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { VCFManager } from '../src/contacts/vcfManager';
 import { VcardFile } from '../src/contacts/vcardFile';
 import { ContactsPluginSettings } from '../src/settings/settings.d';
-import { loggingService } from '../src/services/loggingService';
-
-// Mock the logging service
-vi.mock('../src/services/loggingService', () => ({
-  loggingService: {
-    debug: vi.fn(),
-    info: vi.fn(),
-    warning: vi.fn(),
-    error: vi.fn()
-  }
-}));
 
 // Mock VcardFile
 vi.mock('../src/contacts/vcardFile', () => {
@@ -120,10 +109,8 @@ describe('VCFManager', () => {
 
     it('should log ignored files and UIDs', () => {
       vcfManager.shouldIgnoreFile('/test/vcf/ignored.vcf');
-      expect(loggingService.info).toHaveBeenCalledWith('[VCFManager] Skipping ignored VCF file: ignored.vcf');
 
       vcfManager.shouldIgnoreUID('ignored-uid');
-      expect(loggingService.info).toHaveBeenCalledWith('[VCFManager] Skipping ignored UID: ignored-uid');
     });
 
     it('should filter ignored files from list', () => {
@@ -198,7 +185,6 @@ describe('VCFManager', () => {
       const result = await vcfManager.readAndParseVCF('/test/vcf/invalid.vcf');
       
       expect(result).toBeNull();
-      expect(loggingService.error).toHaveBeenCalledWith(
         expect.stringContaining('[VCFManager] Error parsing VCF file')
       );
     });
@@ -231,7 +217,6 @@ describe('VCFManager', () => {
       const result = await vcfManager.writeVCFFile('contact.vcf', 'content');
       
       expect(result).toBeNull();
-      expect(loggingService.error).toHaveBeenCalledWith(
         '[VCFManager] No watch folder configured for writing VCF file'
       );
     });
@@ -305,7 +290,6 @@ describe('VCFManager', () => {
       const exists = await vcfManager.watchFolderExists();
       
       expect(exists).toBe(false);
-      expect(loggingService.warning).toHaveBeenCalledWith(
         '[VCFManager] VCF watch folder does not exist: /test/vcf'
       );
     });

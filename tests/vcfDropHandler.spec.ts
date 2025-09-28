@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { setupVCFDropHandler } from 'src/services/vcfDropHandler';
+import { setupVCFDropHandler } from 'src/ui/vcfDropHandler';
 import type { ContactsPluginSettings } from 'src/settings/settings.d';
 import type { App, TFile } from 'obsidian';
 
