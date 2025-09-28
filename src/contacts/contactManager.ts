@@ -71,6 +71,11 @@ export interface IContactManager {
    * Clean up event listeners
    */
   cleanupEventListeners(): void;
+
+  /**
+   * Ensure consistency of contact data by processing through insight processors
+   */
+  ensureContactDataConsistency(maxIterations?: number): Promise<void>;
 }
 
 /**
@@ -598,6 +603,149 @@ export class ContactManager implements IContactManager {
     if (file instanceof TFile) {
       ContactManager.openFileStatic(app, file);
     }
+  }
+
+  /**
+   * Ensure consistency of contact data by processing all contacts through insight processors.
+   * This method iteratively processes contacts until no more changes are made or max iterations reached.
+   * 
+   * @param maxIterations - Maximum number of iterations before stopping (default: 10)
+   * @returns Promise that resolves when consistency check is complete
+   */
+  async ensureContactDataConsistency(maxIterations: number = 10): Promise<void> {
+    console.log('[ContactManager] Starting contact data consistency check...');
+    
+    try {
+      // Get all contact files
+      const allContactFiles = this.getAllContactFiles();
+      if (allContactFiles.length === 0) {
+        console.log('[ContactManager] No contacts found for consistency check');
+        return;
+      }
+
+      console.log(`[ContactManager] Processing ${allContactFiles.length} contacts for consistency`);
+
+      // Create initial task list with contacts and their REV timestamps
+      let taskList = await this.createContactTaskList(allContactFiles);
+      let iteration = 0;
+      let hasChanges = true;
+
+      // Temporarily disable vcardSyncPostProcessor by storing its original state
+      const originalVcardSyncPostProcessorState = getSettings().vcfSyncPostProcessor;
+      
+      try {
+        // Disable vcardSyncPostProcessor during consistency checks
+        const currentSettings = getSettings();
+        currentSettings.vcfSyncPostProcessor = false;
+
+        // Iteratively process contacts until no changes or max iterations
+        while (hasChanges && iteration < maxIterations) {
+          iteration++;
+          console.log(`[ContactManager] Consistency check iteration ${iteration}/${maxIterations}`);
+
+          const changedContacts = await this.processTaskListForConsistency(taskList);
+          
+          if (changedContacts.length === 0) {
+            hasChanges = false;
+            console.log(`[ContactManager] No changes detected in iteration ${iteration}, consistency achieved`);
+          } else {
+            console.log(`[ContactManager] ${changedContacts.length} contacts changed in iteration ${iteration}`);
+            // Create new task list with only changed contacts
+            taskList = await this.createContactTaskList(changedContacts);
+          }
+        }
+
+        // Check if we hit max iterations
+        if (iteration >= maxIterations && hasChanges) {
+          console.log(`[ContactManager] WARNING: Consistency check stopped after ${maxIterations} iterations. Some contacts may still need processing.`);
+        }
+
+      } finally {
+        // Restore original vcardSyncPostProcessor state
+        const currentSettings = getSettings();
+        currentSettings.vcfSyncPostProcessor = originalVcardSyncPostProcessorState;
+      }
+
+      // Finally, process all contacts one more time with just vcardSyncPostProcessor
+      if (originalVcardSyncPostProcessorState) {
+        console.log('[ContactManager] Running final vcardSyncPostProcessor pass...');
+        const allContacts = await getFrontmatterFromFiles(allContactFiles);
+        await insightService.process(allContacts, RunType.INPROVEMENT);
+        console.log('[ContactManager] Final vcardSyncPostProcessor pass completed');
+      }
+
+      console.log(`[ContactManager] Contact data consistency check completed after ${iteration} iterations`);
+
+    } catch (error) {
+      console.log(`[ContactManager] Error during consistency check: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Create a task list of contacts with their current REV timestamps
+   */
+  private async createContactTaskList(contactFiles: TFile[]): Promise<Map<string, { file: TFile; originalRev: string | null }>> {
+    const taskList = new Map<string, { file: TFile; originalRev: string | null }>();
+    
+    for (const file of contactFiles) {
+      try {
+        const contactNote = new ContactNote(this.app, this.settings, file);
+        const frontmatter = await contactNote.getFrontmatter();
+        const originalRev = frontmatter?.REV || null;
+        
+        const uid = await this.extractUIDFromFile(file);
+        if (uid) {
+          taskList.set(uid, { file, originalRev });
+        }
+      } catch (error) {
+        console.log(`[ContactManager] Error reading contact ${file.basename}: ${error.message}`);
+      }
+    }
+    
+    return taskList;
+  }
+
+  /**
+   * Process a task list of contacts and return those that were changed (REV updated)
+   */
+  private async processTaskListForConsistency(taskList: Map<string, { file: TFile; originalRev: string | null }>): Promise<TFile[]> {
+    const changedContacts: TFile[] = [];
+    const contactFiles = Array.from(taskList.values()).map(item => item.file);
+    
+    try {
+      // Get contact data for processing
+      const contacts = await getFrontmatterFromFiles(contactFiles);
+      
+      // Process with all insight processors except vcardSyncPostProcessor
+      // Note: vcardSyncPostProcessor is already disabled by the caller
+      await insightService.process(contacts, RunType.IMMEDIATELY);
+      await insightService.process(contacts, RunType.INPROVEMENT);
+      await insightService.process(contacts, RunType.UPCOMMING);
+      
+      // Check which contacts had their REV timestamp updated
+      for (const [uid, taskItem] of taskList) {
+        try {
+          const contactNote = new ContactNote(this.app, this.settings, taskItem.file);
+          const currentFrontmatter = await contactNote.getFrontmatter();
+          const currentRev = currentFrontmatter?.REV || null;
+          
+          // Compare REV timestamps to detect changes
+          if (currentRev !== taskItem.originalRev) {
+            changedContacts.push(taskItem.file);
+            console.log(`[ContactManager] Contact ${taskItem.file.basename} REV changed: ${taskItem.originalRev} -> ${currentRev}`);
+          }
+        } catch (error) {
+          console.log(`[ContactManager] Error checking REV for ${taskItem.file.basename}: ${error.message}`);
+        }
+      }
+      
+    } catch (error) {
+      console.log(`[ContactManager] Error processing task list: ${error.message}`);
+      throw error;
+    }
+    
+    return changedContacts;
   }
 
   /**

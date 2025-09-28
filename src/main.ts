@@ -30,6 +30,13 @@ export default class ContactsPlugin extends Plugin {
 		await this.contactManager.initializeCache();
 		this.contactManager.setupEventListeners();
 
+		// Ensure contact data consistency during initialization
+		try {
+			await this.contactManager.ensureContactDataConsistency();
+		} catch (error) {
+			console.log(`Error during contact data consistency check: ${error.message}`);
+		}
+
 		// Initialize VCF folder watcher
 		this.vcfWatcher = new VCFolderWatcher(this.app, this.settings);
 		await this.vcfWatcher.start();
