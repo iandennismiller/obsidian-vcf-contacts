@@ -2,11 +2,11 @@
  * Index file for ContactNote module components
  */
 
-export { GenderOperations, Gender } from './genderOperations';
-export { FrontmatterOperations } from './frontmatterOperations';
-export { VaultOperations, ResolvedContact } from './vaultOperations';
-export { MarkdownOperations } from './markdownOperations';
-export { RelatedFieldOperations } from './relatedFieldOperations';
-export { RelatedListOperations, ParsedRelationship, FrontmatterRelationship } from './relatedListOperations';
-export { SyncOperations } from './syncOperations';
-export { NamingOperations } from './namingOperations';
+export { GenderOperations, Gender } from './gender';
+export { FrontmatterOperations, parseKey } from './frontmatter';
+export { VaultOperations, ResolvedContact } from './vault';
+export { MarkdownOperations } from './markdown';
+export { RelatedFieldOperations } from './relatedField';
+export { RelatedListOperations, ParsedRelationship, FrontmatterRelationship } from './relatedList';
+export { SyncOperations } from './sync';
+export { NamingOperations } from './naming';

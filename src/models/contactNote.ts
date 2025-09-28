@@ -15,6 +15,7 @@ import {
   GenderOperations,
   Gender,
   FrontmatterOperations,
+  parseKey,
   VaultOperations,
   ResolvedContact,
   MarkdownOperations,
@@ -317,6 +318,9 @@ export function createNameSlug(record: VCardForObsidianRecord): string {
 export function createContactSlug(record: VCardForObsidianRecord): string {
   return NamingOperations.createContactSlug(record);
 }
+
+// Re-export utility functions that are now in extracted modules
+export { parseKey } from './contactNote/index';
 
 /**
  * Check if record is of a specific kind

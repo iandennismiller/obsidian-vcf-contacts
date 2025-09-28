@@ -1,6 +1,6 @@
 import { Notice, App } from 'obsidian';
 import { ContactsPluginSettings } from '../settings/settings.d';
-import { ContactManager } from '../contactManager';
+import { ContactManager } from '../models/contactManager';
 
 /**
  * Insight processor commands for the VCF Contacts plugin
@@ -59,7 +59,7 @@ export class InsightCommands {
     new Notice('Running insight processors on current contact...');
     
     try {
-      const { ContactManager } = await import('../contactManager');
+      const { ContactManager } = await import('../models/contactManager');
       const { insightService } = await import('./insightService');
       const { RunType } = await import('./insight.d');
       

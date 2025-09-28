@@ -1,5 +1,5 @@
 import { TFile, App } from "obsidian";
-import { ContactNote, createNameSlug, createContactSlug } from "./contactNote";
+import { ContactNote, createNameSlug, createContactSlug, parseKey } from "./contactNote";
 
 import { getApp } from "./context/sharedAppContext";
 
@@ -509,8 +509,7 @@ export class VcardFile {
     const uniqueKeys = [...new Set(partialKeys)];
 
     const structuredLines = uniqueKeys.map((key) => {
-      const contactNote = new ContactNote(null as any, null as any, null as any);
-      const keyObj = contactNote.parseKey(key);
+      const keyObj = parseKey(key);
       const type = keyObj.type ? `;TYPE=${keyObj.type}` : '';
       switch (keyObj.key) {
         case 'N': {
@@ -529,8 +528,7 @@ export class VcardFile {
   }
 
   private static renderSingleKey([key, value]: [string, string]): string {
-    const contactNote = new ContactNote(null as any, null as any, null as any);
-    const keyObj = contactNote.parseKey(key);
+    const keyObj = parseKey(key);
     const type = keyObj.type ? `;TYPE=${keyObj.type}` : '';
     return `${keyObj.key}${type}:${value}`;
   }
@@ -541,8 +539,7 @@ export class VcardFile {
     const structuredFields: Array<[string, string]> = [];
 
     entries.forEach(([key, value]) => {
-      const contactNote = new ContactNote(null as any, null as any, null as any);
-      const keyObj = contactNote.parseKey(key);
+      const keyObj = parseKey(key);
 
       if (['ADR', 'N'].includes(keyObj.key)) {
         structuredFields.push([key, value]);
