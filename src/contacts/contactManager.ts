@@ -631,12 +631,12 @@ export class ContactManager implements IContactManager {
       let hasChanges = true;
 
       // Temporarily disable vcardSyncPostProcessor by storing its original state
-      const originalVcardSyncPostProcessorState = getSettings().vcfSyncPostProcessor;
+      const originalVcardSyncPostProcessorState = getSettings().vcardSyncPostProcessor;
       
       try {
         // Disable vcardSyncPostProcessor during consistency checks
         const currentSettings = getSettings();
-        currentSettings.vcfSyncPostProcessor = false;
+        currentSettings.vcardSyncPostProcessor = false;
 
         // Iteratively process contacts until no changes or max iterations
         while (hasChanges && iteration < maxIterations) {
@@ -663,7 +663,7 @@ export class ContactManager implements IContactManager {
       } finally {
         // Restore original vcardSyncPostProcessor state
         const currentSettings = getSettings();
-        currentSettings.vcfSyncPostProcessor = originalVcardSyncPostProcessorState;
+        currentSettings.vcardSyncPostProcessor = originalVcardSyncPostProcessorState;
       }
 
       // Finally, process all contacts one more time with just vcardSyncPostProcessor

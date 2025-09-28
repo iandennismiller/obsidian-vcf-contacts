@@ -4,7 +4,7 @@ import { Plugin, Notice } from 'obsidian';
 import { ContactsView } from "src/ui/sidebar/sidebarView";
 import { VcardFile } from "src/contacts/vcardFile";
 import myScrollTo from "src/ui/myScrollTo";
-import { VCFolderWatcher } from "src/services/vcfFolderWatcher";
+import { FolderWatcher } from "src/services/folderWatcher";
 import { setupVCFDropHandler } from 'src/ui/vcfDropHandler';
 import { setApp, clearApp } from "src/context/sharedAppContext";
 
@@ -16,7 +16,7 @@ import { ContactsPluginSettings } from  './settings/settings.d';
 
 export default class ContactsPlugin extends Plugin {
 	settings: ContactsPluginSettings;
-	private vcfWatcher: VCFolderWatcher | null = null;
+	private vcfWatcher: FolderWatcher | null = null;
 	private vcfDropCleanup: (() => void) | null = null;
 	private contactManager: ContactManager | null = null;
 
@@ -37,8 +37,8 @@ export default class ContactsPlugin extends Plugin {
 			console.log(`Error during contact data consistency check: ${error.message}`);
 		}
 
-		// Initialize VCF folder watcher
-		this.vcfWatcher = new VCFolderWatcher(this.app, this.settings);
+		// Initialize VCard folder watcher
+		this.vcfWatcher = new FolderWatcher(this.app, this.settings);
 		await this.vcfWatcher.start();
 
 		// Initialize VCF drop handler (watch for .vcf files created in the vault)
