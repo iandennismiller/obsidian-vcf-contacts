@@ -1,12 +1,12 @@
 import { App, MarkdownView, normalizePath, Notice, TFile, TFolder } from "obsidian";
 import * as React from "react";
-import { Contact, mdRender } from "src";
-import { VcardFile } from "src/vcardFile";
+import { Contact, mdRender } from "src/models";
+import { VcardFile } from "src/models/vcardFile";
 import { getApp } from "src/context/sharedAppContext";
 import { getSettings, onSettingsChange } from "src/context/sharedSettingsContext";
 import { ContactsPluginSettings } from "src/settings/settings.d";
-import { ContactManager } from "src/contactManager";
-import { createFileName } from "src/contactNote";
+import { ContactManager } from "src/models/contactManager";
+import { createFileName } from "src/models/contactNote";
 import { openFilePicker, saveVcardFilePicker, isFileInFolder } from "src/ui/fileOperations";
 import { ContactsListView } from "src/ui/sidebar/components/ContactsListView";
 import { HeaderView } from "src/ui/sidebar/components/HeaderView";

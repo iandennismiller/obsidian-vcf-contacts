@@ -4,7 +4,7 @@
 
 import { TFile, App } from 'obsidian';
 import { ContactsPluginSettings } from '../../settings/settings.d';
-import { GenderOperations, Gender } from './genderOperations';
+import { GenderOperations, Gender } from './gender';
 
 export interface ResolvedContact {
   name: string;

@@ -1,12 +1,11 @@
 import { ItemView, Notice, WorkspaceLeaf } from "obsidian";
-import { createRef } from "react";
 import * as React from "react";
 import { createRoot } from "react-dom/client";
 import { clearApp, setApp } from "src/context/sharedAppContext";
 import { clearSettings, setSettings } from "src/context/sharedSettingsContext";
 import ContactsPlugin from "src/main";
 import { SidebarRootView } from "src/ui/sidebar/components/SidebarRootView";
-import { VcardFile } from "src/vcardFile";
+import { VcardFile } from "src/models/vcardFile";
 
 
 export type SidebarAPI = {

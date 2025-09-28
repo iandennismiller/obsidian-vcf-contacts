@@ -3,10 +3,10 @@
  */
 
 import { TFile, App } from 'obsidian';
-import { VaultOperations } from './vaultOperations';
-import { FrontmatterOperations } from './frontmatterOperations';
-import { GenderOperations } from './genderOperations';
-import { RelatedFieldOperations } from './relatedFieldOperations';
+import { VaultOperations } from './vault';
+import { FrontmatterOperations } from './frontmatter';
+import { GenderOperations } from './gender';
+import { RelatedFieldOperations } from './relatedField';
 
 export interface ParsedRelationship {
   type: string;

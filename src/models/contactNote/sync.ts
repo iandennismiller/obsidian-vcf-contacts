@@ -4,11 +4,11 @@
 
 import { TFile, App } from 'obsidian';
 import { ContactsPluginSettings } from '../../settings/settings.d';
-import { GenderOperations } from './genderOperations';
-import { FrontmatterOperations } from './frontmatterOperations';
-import { VaultOperations, ResolvedContact } from './vaultOperations';
-import { RelatedFieldOperations } from './relatedFieldOperations';
-import { RelatedListOperations, ParsedRelationship, FrontmatterRelationship } from './relatedListOperations';
+import { GenderOperations } from './gender';
+import { FrontmatterOperations } from './frontmatter';
+import { VaultOperations, ResolvedContact } from './vault';
+import { RelatedFieldOperations } from './relatedField';
+import { RelatedListOperations, ParsedRelationship, FrontmatterRelationship } from './relatedList';
 
 export class SyncOperations {
   private app: App;

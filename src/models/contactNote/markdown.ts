@@ -3,7 +3,7 @@
  */
 
 import { stringifyYaml } from 'obsidian';
-import { GenderOperations, Gender } from './genderOperations';
+import { GenderOperations, Gender } from './gender';
 
 export class MarkdownOperations {
   private genderOps: GenderOperations;

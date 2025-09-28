@@ -696,8 +696,8 @@ export class ContactManager implements IContactManager {
   static async ensureHasNameStatic(vCardObject: VCardForObsidianRecord): Promise<VCardForObsidianRecord> {
     const { createNameSlug } = await import('./contactNote');
     const { VCardKinds } = await import('./vcardFile');
-    const { ContactNameModal } = await import('./ui/modals/contactNameModal');
-    const { getApp } = await import('./context/sharedAppContext');
+    const { ContactNameModal } = await import('../ui/modals/contactNameModal');
+    const { getApp } = await import('../context/sharedAppContext');
     
     // Import the type separately
     type NamingPayload = import('./ui/modals/contactNameModal').NamingPayload;

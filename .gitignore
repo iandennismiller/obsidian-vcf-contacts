@@ -10,7 +10,7 @@ node_modules
 
 # Don't include the compiled files in the repo.
 # They should be uploaded to GitHub releases instead.
-main.js
+/**/main.js
 coverage
 
 # Exclude sourcemaps
@@ -24,3 +24,5 @@ data.json
 
 # Claude
 .claude
+
+/build

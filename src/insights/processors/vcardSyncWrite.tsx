@@ -1,7 +1,7 @@
 import * as React from "react";
-import { Contact, ContactNote } from "src";
-import { VcardManager } from "src/vcardManager";
-import { VcardFile } from "src/vcardFile";
+import { Contact, ContactNote } from "src/models";
+import { VcardManager } from "src/models/vcardManager";
+import { VcardFile } from "src/models/vcardFile";
 import { getApp } from "src/context/sharedAppContext";
 import { getSettings } from "src/context/sharedSettingsContext";
 import { InsightProcessor, InsightQueItem, RunType } from "src/insights/insight.d";
