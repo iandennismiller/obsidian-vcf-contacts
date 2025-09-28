@@ -283,6 +283,60 @@ export class ContactNote {
   async syncFrontmatterToRelatedList(): Promise<{ success: boolean; errors: string[] }> {
     return this.syncOps.syncFrontmatterToRelatedList();
   }
+
+  // --- Revision / VCF helpers ---
+
+  /**
+   * Generate a REV timestamp string compatible with existing plugin format.
+   * Example: 20250928T123456Z (no separators)
+   */
+  generateRevTimestamp(): string {
+    return new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+  }
+
+  /**
+   * Parse a REV timestamp string into a Date or null.
+   */
+  parseRevisionDate(value: string | null): Date | null {
+    if (!value) return null;
+    try {
+      let normalized = value;
+      // support YYYYMMDDTHHMMSSZ and ISO formats
+      if (/^\d{8}T\d{6}Z?$/.test(value)) {
+        // YYYYMMDDTHHMMSSZ -> YYYY-MM-DDTHH:MM:SSZ
+        normalized = `${value.substring(0,4)}-${value.substring(4,6)}-${value.substring(6,8)}T${value.substring(9,11)}:${value.substring(11,13)}:${value.substring(13,15)}Z`;
+      }
+      const d = new Date(normalized);
+      if (isNaN(d.getTime())) return null;
+      return d;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /**
+   * Update the frontmatter REV timestamp for this contact
+   */
+  async updateRevTimestamp(): Promise<void> {
+    const ts = this.generateRevTimestamp();
+    await this.updateFrontmatterValue('REV', ts);
+  }
+
+  /**
+   * Decide whether a contact should be updated from a VCF record based on REV timestamps.
+   */
+  async shouldUpdateFromVCF(record: Record<string, any>): Promise<boolean> {
+    const vcfRev = record['REV'] || null;
+    const currentFrontmatter = await this.getFrontmatter();
+    const currentRev = currentFrontmatter?.REV || null;
+
+    const vcfDate = this.parseRevisionDate(vcfRev);
+    const currentDate = this.parseRevisionDate(currentRev);
+
+    if (!vcfDate) return false;
+    if (!currentDate) return true;
+    return vcfDate.getTime() > currentDate.getTime();
+  }
 }
 
 /**
@@ -321,4 +375,72 @@ export { parseKey };
  */
 export function isKind(record: VCardForObsidianRecord, kind: VCardKind): boolean {
   return NamingOperations.isKind(record, kind);
+}
+
+// --- UI / helper utilities ---
+
+/**
+ * Produce a DOM-friendly id for a contact file.
+ * Uses the file.path but replaces slashes with `--` so it is a valid id.
+ */
+export function fileId(file: TFile): string {
+  if (!file) return '';
+  return `contact-${String(file.path).replace(/[\/]/g, '--')}`;
+}
+
+/**
+ * Return a UI-friendly display name for a contact vCard data object.
+ */
+export function getUiName(data: Record<string, any>): string {
+  if (!data) return '';
+  if (data['FN']) return String(data['FN']);
+  if (data['N.FN']) return String(data['N.FN']);
+
+  const parts = [data['N.PREFIX'], data['N.GN'], data['N.MN'], data['N.FN'], data['N.SUFFIX']]
+    .filter(Boolean)
+    .map((p) => String(p).trim())
+    .filter(Boolean);
+  if (parts.length) return parts.join(' ');
+
+  // Fallbacks
+  if (data['ORG']) return String(data['ORG']);
+  return '';
+}
+
+/**
+ * Safely convert a value to a UI string or return undefined for missing values.
+ */
+export function uiSafeString(value: any): string | undefined {
+  if (value === undefined || value === null) return undefined;
+  if (Array.isArray(value)) {
+    const joined = value.map((v) => (v === undefined || v === null ? '' : String(v))).join(' ');
+    return joined === '' ? undefined : joined;
+  }
+  const s = String(value).trim();
+  return s === '' ? undefined : s;
+}
+
+/**
+ * Get a stable sortable name string from vCard data.
+ * Uses FN or N.FN where available and lowercases for consistent sorting.
+ */
+export function getSortName(data: Record<string, any>): string {
+  if (!data) return '';
+  const name = data['N.FN'] || data['FN'] || '';
+  return String(name).toLowerCase();
+}
+
+/**
+ * Create a filesystem-friendly file name for a new contact record.
+ * Delegates to createNameSlug and appends `.md`.
+ */
+export function createFileName(record: any): string {
+  try {
+    const slug = createNameSlug(record as VCardForObsidianRecord);
+    return `${slug}.md`;
+  } catch (e) {
+    // Fallback: a timestamp-based filename
+    const fallback = `contact-${Date.now()}`;
+    return `${fallback}.md`;
+  }
 }

@@ -11,7 +11,8 @@ export const App = {
   }
 };
 export class Modal {
-  constructor(app) {
+  app: any;
+  constructor(app: any) {
     this.app = app;
   }
   open() {}

@@ -1,6 +1,6 @@
 import * as path from 'path';
-import { VcardFile } from './vcardFile';
-import { ContactsPluginSettings } from './settings/settings.d';
+import { VcardFile, VCardForObsidianRecord } from './vcardFile';
+import { ContactsPluginSettings } from '../settings/settings.d';
 
 /**
  * Information about a VCard file being managed
@@ -116,18 +116,19 @@ export class VcardManager {
    * @param filePath - Full path to the VCF file
    * @returns Promise resolving to parsed VCF content or null if error
    */
-  async readAndParseVCF(filePath: string): Promise<Array<[string, any]> | null> {
+  async readAndParseVCF(filePath: string): Promise<Array<[string, VCardForObsidianRecord]> | null> {
     const content = await VcardFile.readVCFFile(filePath);
     if (!content) {
       return null;
     }
 
     try {
-      const parsedEntries: Array<[string, any]> = [];
+      const parsedEntries: Array<[string, VCardForObsidianRecord]> = [];
       const vcardFile = new VcardFile(content);
       for await (const entry of vcardFile.parse()) {
         if (entry[0]) { // Only push entries with valid slugs
-          parsedEntries.push(entry);
+          // entry[0] is guaranteed to be string here
+          parsedEntries.push([entry[0] as string, entry[1]]);
         }
       }
       return parsedEntries;

@@ -699,8 +699,8 @@ export class ContactManager implements IContactManager {
     const { ContactNameModal } = await import('../ui/modals/contactNameModal');
     const { getApp } = await import('../context/sharedAppContext');
     
-    // Import the type separately
-    type NamingPayload = import('./ui/modals/contactNameModal').NamingPayload;
+  // Import the type separately
+  type NamingPayload = import('../ui/modals/contactNameModal').NamingPayload;
     
     try {
       // if we can create a file name then we meet the minimum requirements

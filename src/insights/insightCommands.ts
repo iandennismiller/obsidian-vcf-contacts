@@ -63,9 +63,8 @@ export class InsightCommands {
       const { insightService } = await import('./insightService');
       const { RunType } = await import('./insight.d');
       
-      // Get contact data
-      const contactManager = new ContactManager(app);
-      const contacts = await contactManager.getFrontmatterFromFiles([activeFile]);
+  // Get contact data
+  const contacts = await this.contactManager.getFrontmatterFromFiles([activeFile]);
       
       // Run all processors
       const immediateResults = await insightService.process(contacts, RunType.IMMEDIATELY);
@@ -101,8 +100,8 @@ export class InsightCommands {
         return;
       }
       
-      // Get contact data
-      const contacts = await this.contactManager.getFrontmatterFromFiles(contactFiles);
+  // Get contact data
+  const contacts = await this.contactManager.getFrontmatterFromFiles(contactFiles);
       
       // Run all processors
       const immediateResults = await insightService.process(contacts, RunType.IMMEDIATELY);
