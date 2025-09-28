@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { GenderRenderProcessor } from '../src/insights/processors/GenderRenderProcessor';
+import { GenderRenderProcessor } from '../src/insights/processors/genderRender';
 import { RunType } from '../src/insights/insight.d';
 
 describe('GenderRenderProcessor', () => {

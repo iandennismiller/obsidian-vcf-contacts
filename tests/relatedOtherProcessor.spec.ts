@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { RelatedOtherProcessor } from '../src/insights/processors/RelatedOtherProcessor';
+import { RelatedOtherProcessor } from '../src/insights/processors/relatedOther';
 import { RunType } from '../src/insights/insight.d';
 
 describe('RelatedOtherProcessor', () => {

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TFile, App } from 'obsidian';
-import { ContactManager } from '../src/contactManager';
+import { ContactManager } from '../src/models/contactManager';
 import { ContactsPluginSettings } from '../src/settings/settings.d';
 
 describe('ContactManager', () => {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { ContactNote } from 'src/contactNote';
+import { ContactNote } from 'src/models/contactNote';
 
 // Create a test ContactNote instance for testing static methods
 const createTestContactNote = () => new ContactNote(null as any, null as any, null as any);
