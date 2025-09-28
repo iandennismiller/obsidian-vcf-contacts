@@ -29,10 +29,10 @@ const render = (queItem: InsightQueItem): JSX.Element => {
 }
 
 export const VcfSyncPostProcessor: InsightProcessor = {
-  name: "VcfSyncPostProcessor",
+  name: "VCF Sync Post Processor",
   runType: RunType.INPROVEMENT,
   settingPropertyName: "vcfSyncPostProcessor",
-  settingDescription: "Automatically writes contact data back to VCF files when Obsidian contact has newer revision data",
+  settingDescription: "VCF Write Back: Automatically writes contact data back to VCF files when Obsidian contact has newer revision data. Requires both VCF Folder Watching and VCF Write Back to be enabled.",
   settingDefaultValue: true,
 
   async process(contact: Contact): Promise<InsightQueItem | undefined> {

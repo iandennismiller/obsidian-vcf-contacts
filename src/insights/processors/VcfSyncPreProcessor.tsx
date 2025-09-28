@@ -29,10 +29,10 @@ const render = (queItem: InsightQueItem):JSX.Element => {
 }
 
 export const VcfSyncPreProcessor: InsightProcessor = {
-  name: "VcfSyncPreProcessor",
+  name: "VCF Sync Pre Processor",
   runType: RunType.IMMEDIATELY,
   settingPropertyName: "vcfSyncPreProcessor",
-  settingDescription: "Automatically syncs contact frontmatter with matching VCF files when the VCF has newer revision data",
+  settingDescription: "VCF Folder Watcher: Automatically imports/updates contact data from VCF files when they have newer revision data. Requires VCF Folder Watching to be enabled.",
   settingDefaultValue: true,
 
   async process(contact:Contact): Promise<InsightQueItem | undefined> {
