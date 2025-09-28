@@ -6,7 +6,7 @@ import { clearApp, setApp } from "src/context/sharedAppContext";
 import { clearSettings, setSettings } from "src/context/sharedSettingsContext";
 import ContactsPlugin from "src/main";
 import { SidebarRootView } from "src/ui/sidebar/components/SidebarRootView";
-import { VcardFile } from "src/contacts/vcardFile";
+import { VcardFile } from "src/vcardFile";
 
 
 export type SidebarAPI = {

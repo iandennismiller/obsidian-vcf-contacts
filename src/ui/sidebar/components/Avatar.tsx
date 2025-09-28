@@ -1,6 +1,6 @@
 import { init } from "es-module-lexer";
 import * as React from "react";
-import { VcardFile } from "src/contacts/vcardFile";
+import { VcardFile } from "src/vcardFile";
 
 
 interface AvatarProps {

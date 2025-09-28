@@ -1,6 +1,6 @@
 import * as React from "react";
-import { Contact, ContactNote } from "src/contacts";
-import { ContactManager } from "src/contacts/contactManager";
+import { Contact, ContactNote } from "src";
+import { ContactManager } from "src/contactManager";
 import { getApp } from "src/context/sharedAppContext";
 import { getSettings } from "src/context/sharedSettingsContext";
 import { InsightProcessor, InsightQueItem, RunType } from "src/insights/insight.d";

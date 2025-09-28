@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Contact, ContactNote } from "src/contacts";
+import { Contact, ContactNote } from "src";
 import { getApp } from "src/context/sharedAppContext";
 import { getSettings } from "src/context/sharedSettingsContext";
 import { InsightProcessor, InsightQueItem, RunType } from "src/insights/insight.d";

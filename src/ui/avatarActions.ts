@@ -1,5 +1,5 @@
 import { Notice } from "obsidian";
-import { Contact, ContactNote } from "src/contacts";
+import { Contact, ContactNote } from "src";
 import { getApp } from "src/context/sharedAppContext";
 import { getSettings } from "src/context/sharedSettingsContext";
 import { openFilePicker } from "src/ui/fileOperations";

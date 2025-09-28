@@ -1,5 +1,5 @@
 import { TFile } from "obsidian";
-import { Contact } from "src/contacts";
+import { Contact } from "src";
 
 export interface InsightQueItem {
   name: string;

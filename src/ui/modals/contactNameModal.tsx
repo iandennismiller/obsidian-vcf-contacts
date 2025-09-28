@@ -2,7 +2,7 @@ import { App, Modal, Notice } from "obsidian";
 import { useState } from "react";
 import * as React from "react";
 import { createRoot, Root } from "react-dom/client"
-import { VCardKind, VCardKinds } from "src/contacts/vcardFile";
+import { VCardKind, VCardKinds } from "src/vcardFile";
 
 type IndividualPayload = {
   kind: typeof VCardKinds.Individual;
