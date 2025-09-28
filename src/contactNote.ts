@@ -48,95 +48,9 @@ export interface FrontmatterRelationship {
 }
 
 /**
- * Unified class for interacting with a contact note in Obsidian.
- * Provides methods for managing frontmatter, relationships, gender, and markdown rendering.
+ * Handles all gender-related operations for contacts
  */
-export class ContactNote {
-  private app: App;
-  private settings: ContactsPluginSettings;
-  private file: TFile;
-  private _frontmatter: Record<string, any> | null = null;
-  private _content: string | null = null;
-
-  constructor(app: App, settings: ContactsPluginSettings, file: TFile) {
-    this.app = app;
-    this.settings = settings;
-    this.file = file;
-  }
-
-  // === Core File Operations ===
-
-  /**
-   * Get the TFile object for this contact
-   */
-  getFile(): TFile {
-    return this.file;
-  }
-
-  /**
-   * Get the contact's UID from frontmatter
-   */
-  async getUID(): Promise<string | null> {
-    const frontmatter = await this.getFrontmatter();
-    return frontmatter?.UID || null;
-  }
-
-  /**
-   * Get the contact's display name
-   */
-  getDisplayName(): string {
-    return this.file.basename;
-  }
-
-  /**
-   * Get the file content, with caching
-   */
-  async getContent(): Promise<string> {
-    if (this._content === null) {
-      this._content = await this.app.vault.read(this.file);
-    }
-    return this._content;
-  }
-
-  /**
-   * Get the frontmatter, with caching
-   */
-  async getFrontmatter(): Promise<Record<string, any> | null> {
-    if (this._frontmatter === null) {
-      // Try metadata cache first (most efficient)
-      const cache = this.app.metadataCache.getFileCache(this.file);
-      if (cache?.frontmatter) {
-        this._frontmatter = cache.frontmatter;
-        return this._frontmatter;
-      }
-
-      // Fallback: parse from content
-      const content = await this.getContent();
-      const match = content.match(/^---\n([\s\S]*?)\n---/);
-      if (match) {
-        try {
-          this._frontmatter = parseYaml(match[1]) || {};
-        } catch (error) {
-          console.log(`[ContactNote] Error parsing frontmatter for ${this.file.path}: ${error.message}`);
-          this._frontmatter = {};
-        }
-      } else {
-        this._frontmatter = {};
-      }
-    }
-    return this._frontmatter;
-  }
-
-  /**
-   * Invalidate caches when file is modified externally
-   */
-  invalidateCache(): void {
-    this._frontmatter = null;
-    this._content = null;
-  }
-
-  // === Gender Operations ===
-
+class GenderOperations {
   /**
    * Parse GENDER field value from vCard
    */
@@ -162,26 +76,6 @@ export class ContactNote {
         return 'U';
       default:
         return null;
-    }
-  }
-
-  /**
-   * Get the contact's gender from frontmatter
-   */
-  async getGender(): Promise<Gender> {
-    const frontmatter = await this.getFrontmatter();
-    const genderValue = frontmatter?.GENDER;
-    return genderValue ? this.parseGender(genderValue) : null;
-  }
-
-  /**
-   * Update the contact's gender in frontmatter
-   */
-  async updateGender(gender: Gender): Promise<void> {
-    if (gender) {
-      await this.updateFrontmatterValue('GENDER', gender);
-    } else {
-      await this.updateFrontmatterValue('GENDER', '');
     }
   }
 
@@ -266,9 +160,360 @@ export class ContactNote {
     
     return relationshipType;
   }
+}
 
-  // === Related Field Operations ===
+/**
+ * Handles all frontmatter-related operations for contacts
+ */
+class FrontmatterOperations {
+  private app: App;
+  private file: TFile;
+  private _frontmatter: Record<string, any> | null = null;
 
+  constructor(app: App, file: TFile) {
+    this.app = app;
+    this.file = file;
+  }
+
+  /**
+   * Get the frontmatter, with caching
+   */
+  async getFrontmatter(): Promise<Record<string, any> | null> {
+    if (this._frontmatter === null) {
+      // Try metadata cache first (most efficient)
+      const cache = this.app.metadataCache.getFileCache(this.file);
+      if (cache?.frontmatter) {
+        this._frontmatter = cache.frontmatter;
+        return this._frontmatter;
+      }
+
+      // Fallback: parse from content
+      const content = await this.app.vault.read(this.file);
+      const match = content.match(/^---\n([\s\S]*?)\n---/);
+      if (match) {
+        try {
+          this._frontmatter = parseYaml(match[1]) || {};
+        } catch (error) {
+          console.log(`[ContactNote] Error parsing frontmatter for ${this.file.path}: ${error.message}`);
+          this._frontmatter = {};
+        }
+      } else {
+        this._frontmatter = {};
+      }
+    }
+    return this._frontmatter;
+  }
+
+  /**
+   * Invalidate caches when file is modified externally
+   */
+  invalidateCache(): void {
+    this._frontmatter = null;
+  }
+
+  /**
+   * Update a single frontmatter value
+   */
+  async updateFrontmatterValue(key: string, value: string): Promise<void> {
+    const content = await this.app.vault.read(this.file);
+    const match = content.match(/^---\n([\s\S]*?)\n---\n?/);
+
+    let yamlObj: any = {};
+    let body = content;
+
+    if (match) {
+      yamlObj = parseYaml(match[1]) || {};
+      body = content.slice(match[0].length);
+    }
+
+    if (value === '') {
+      delete yamlObj[key];
+    } else {
+      yamlObj[key] = value;
+    }
+
+    const newFrontMatter = '---\n' + stringifyYaml(yamlObj) + '---\n';
+    const newContent = newFrontMatter + body;
+
+    await this.app.vault.modify(this.file, newContent);
+    this.invalidateCache(); // Invalidate cache after modification
+  }
+
+  /**
+   * Update multiple frontmatter values in a single operation
+   */
+  async updateMultipleFrontmatterValues(updates: Record<string, string>): Promise<void> {
+    const content = await this.app.vault.read(this.file);
+    const match = content.match(/^---\n([\s\S]*?)\n---\n?/);
+
+    let yamlObj: any = {};
+    let body = content;
+
+    if (match) {
+      yamlObj = parseYaml(match[1]) || {};
+      body = content.slice(match[0].length);
+    }
+
+    // Apply all updates
+    for (const [key, value] of Object.entries(updates)) {
+      if (value === '') {
+        delete yamlObj[key];
+      } else {
+        yamlObj[key] = value;
+      }
+    }
+
+    const newFrontMatter = '---\n' + stringifyYaml(yamlObj) + '---\n';
+    const newContent = newFrontMatter + body;
+
+    await this.app.vault.modify(this.file, newContent);
+    this.invalidateCache(); // Invalidate cache after modification
+  }
+}
+
+/**
+ * Handles all vault/file-related operations for contacts
+ */
+class VaultOperations {
+  private app: App;
+  private settings: ContactsPluginSettings;
+  private file: TFile;
+  private _content: string | null = null;
+
+  constructor(app: App, settings: ContactsPluginSettings, file: TFile) {
+    this.app = app;
+    this.settings = settings;
+    this.file = file;
+  }
+
+  /**
+   * Get the file content, with caching
+   */
+  async getContent(): Promise<string> {
+    if (this._content === null) {
+      this._content = await this.app.vault.read(this.file);
+    }
+    return this._content;
+  }
+
+  /**
+   * Invalidate content cache when file is modified externally
+   */
+  invalidateContentCache(): void {
+    this._content = null;
+  }
+
+  /**
+   * Find contact by name in the contacts folder
+   */
+  async findContactByName(contactName: string): Promise<TFile | null> {
+    const contactsFolder = this.settings.contactsFolder || '/';
+    const contactFile = this.app.vault.getAbstractFileByPath(`${contactsFolder}/${contactName}.md`);
+    
+    if (contactFile && contactFile instanceof TFile) {
+      return contactFile;
+    }
+    
+    const folder = this.app.vault.getAbstractFileByPath(contactsFolder);
+    if (!folder || !('children' in folder)) {
+      return null;
+    }
+    
+    for (const child of (folder as any).children) {
+      if (child && child instanceof TFile && child.basename === contactName) {
+        return child;
+      }
+    }
+    
+    return null;
+  }
+
+  /**
+   * Resolve contact information from contact name
+   */
+  async resolveContact(contactName: string, genderOps: GenderOperations): Promise<ResolvedContact | null> {
+    const file = await this.findContactByName(contactName);
+    if (!file) {
+      return null;
+    }
+    
+    const cache = this.app.metadataCache.getFileCache(file);
+    const frontmatter = cache?.frontmatter;
+    
+    if (!frontmatter) {
+      return null;
+    }
+    
+    const uid = frontmatter.UID;
+    if (!uid) {
+      return null;
+    }
+    
+    const genderValue = frontmatter.GENDER;
+    const gender = genderValue ? genderOps.parseGender(genderValue) : null;
+    
+    return {
+      name: contactName,
+      uid,
+      file,
+      gender
+    };
+  }
+}
+
+/**
+ * Handles markdown rendering and related operations for contacts
+ */
+class MarkdownOperations {
+  private genderOps: GenderOperations;
+
+  constructor(genderOps: GenderOperations) {
+    this.genderOps = genderOps;
+  }
+
+  /**
+   * Render the contact as markdown from vCard record data
+   */
+  mdRender(record: Record<string, any>, hashtags: string, genderLookup?: (contactRef: string) => Gender): string {
+    const { NOTE, ...recordWithoutNote } = record;
+    const groups = this.groupVCardFields(recordWithoutNote);
+    const myNote = NOTE ? NOTE.replace(/\\n/g, '\n') : '';
+    let additionalTags = '';
+    
+    if (recordWithoutNote.CATEGORIES) {
+      const tempTags = recordWithoutNote.CATEGORIES.split(',');
+      additionalTags = `#${tempTags.join(' #')}`;
+    }
+
+    const frontmatter = {
+      ...this.sortNameItems(groups.name),
+      ...this.sortedPriorityItems(groups.priority),
+      ...groups.address,
+      ...groups.other
+    };
+
+    const relatedSection = this.generateRelatedList(recordWithoutNote, genderLookup);
+
+    return `---\n${stringifyYaml(frontmatter)}---\n#### Notes\n${myNote}\n${relatedSection}\n\n${hashtags} ${additionalTags}\n`;
+  }
+
+  private groupVCardFields(record: Record<string, any>) {
+    const nameKeys = ["N", "FN"];
+    const priorityKeys = [
+      "EMAIL", "TEL", "BDAY", "URL",
+      "ORG", "TITLE", "ROLE", "PHOTO", "RELATED", "GENDER"
+    ];
+    const addressKeys = ["ADR"];
+
+    const groups = {
+      name: {} as Record<string, any>,
+      priority: {} as Record<string, any>,
+      address: {} as Record<string, any>,
+      other: {} as Record<string, any>
+    };
+
+    for (const [key, value] of Object.entries(record)) {
+      const baseKey = this.extractBaseKey(key);
+      
+      if (nameKeys.includes(baseKey)) {
+        groups.name[key] = value;
+      } else if (priorityKeys.includes(baseKey)) {
+        groups.priority[key] = value;
+      } else if (addressKeys.includes(baseKey)) {
+        groups.address[key] = value;
+      } else {
+        groups.other[key] = value;
+      }
+    }
+
+    return groups;
+  }
+
+  private extractBaseKey(key: string): string {
+    if (key.includes("[")) {
+      return key.split("[")[0];
+    } else if (key.includes(".")) {
+      return key.split(".")[0];
+    }
+    return key;
+  }
+
+  private sortNameItems(nameItems: Record<string, any>): Record<string, any> {
+    return Object.fromEntries(
+      Object.entries(nameItems).sort(([keyA], [keyB]) => {
+        const order = ["N", "FN"];
+        const indexA = order.indexOf(keyA.split('.')[0]);
+        const indexB = order.indexOf(keyB.split('.')[0]);
+        return (indexA === -1 ? 999 : indexA) - (indexB === -1 ? 999 : indexB);
+      })
+    );
+  }
+
+  private sortedPriorityItems(priorityItems: Record<string, any>): Record<string, any> {
+    return Object.fromEntries(
+      Object.entries(priorityItems).sort(([keyA], [keyB]) => {
+        const order = ["EMAIL", "TEL", "BDAY", "URL", "ORG", "TITLE", "ROLE", "PHOTO", "RELATED", "GENDER"];
+        const indexA = order.indexOf(keyA.split('.')[0]);
+        const indexB = order.indexOf(keyB.split('.')[0]);
+        return (indexA === -1 ? 999 : indexA) - (indexB === -1 ? 999 : indexB);
+      })
+    );
+  }
+
+  private generateRelatedList(record: Record<string, any>, genderLookup?: (contactRef: string) => Gender): string {
+    const relatedFields = Object.entries(record).filter(([key]) => 
+      this.extractBaseKey(key) === 'RELATED'
+    );
+    
+    if (relatedFields.length === 0) {
+      return '';
+    }
+
+    const relationships: { type: string; contact: string }[] = [];
+    
+    relatedFields.forEach(([key, value]) => {
+      const typeMatch = key.match(/RELATED(?:\[(?:\d+:)?([^\]]+)\])?/);
+      const type = typeMatch ? typeMatch[1] || 'related' : 'related';
+      
+      let contact = '';
+      if (typeof value === 'string') {
+        if (value.startsWith('urn:uuid:')) {
+          contact = value.substring(9);
+        } else if (value.startsWith('uid:')) {
+          contact = value.substring(4);
+        } else if (value.startsWith('name:')) {
+          contact = value.substring(5);
+        } else {
+          contact = value;
+        }
+        
+        // Apply gender lookup if provided
+        let displayType = type;
+        if (genderLookup) {
+          const gender = genderLookup(contact);
+          displayType = this.genderOps.getGenderedRelationshipTerm(type, gender);
+        }
+        
+        relationships.push({ type: displayType, contact });
+      }
+    });
+
+    if (relationships.length === 0) {
+      return '';
+    }
+
+    const relationshipList = relationships
+      .map(rel => `- ${rel.type} [[${rel.contact}]]`)
+      .join('\n');
+
+    return `\n## Related\n${relationshipList}\n`;
+  }
+}
+
+/**
+ * Handles parsing and operations for related field formats
+ */
+class RelatedFieldOperations {
   /**
    * Format a related value for vCard RELATED field
    */
@@ -303,6 +548,326 @@ export class ContactNote {
   extractRelationshipType(key: string): string {
     const typeMatch = key.match(/RELATED(?:\[(?:\d+:)?([^\]]+)\])?/);
     return typeMatch ? typeMatch[1] || 'related' : 'related';
+  }
+}
+
+/**
+ * Handles related list parsing, synchronization, and management
+ */
+class RelatedListOperations {
+  private app: App;
+  private file: TFile;
+  private vaultOps: VaultOperations;
+  private frontmatterOps: FrontmatterOperations;
+  private genderOps: GenderOperations;
+  private relatedFieldOps: RelatedFieldOperations;
+
+  constructor(
+    app: App, 
+    file: TFile, 
+    vaultOps: VaultOperations, 
+    frontmatterOps: FrontmatterOperations, 
+    genderOps: GenderOperations,
+    relatedFieldOps: RelatedFieldOperations
+  ) {
+    this.app = app;
+    this.file = file;
+    this.vaultOps = vaultOps;
+    this.frontmatterOps = frontmatterOps;
+    this.genderOps = genderOps;
+    this.relatedFieldOps = relatedFieldOps;
+  }
+
+  /**
+   * Parse Related section from markdown content
+   */
+  async parseRelatedSection(): Promise<ParsedRelationship[]> {
+    const content = await this.vaultOps.getContent();
+    const relationships: ParsedRelationship[] = [];
+    
+    const relatedMatch = content.match(/##\s*Related\s*(?:\r?\n)((?:^\s*-\s*.*(?:\r?\n)?)*)/m);
+    if (!relatedMatch) {
+      return relationships;
+    }
+    
+    const relatedSection = relatedMatch[1];
+    const lines = relatedSection.split('\n').filter(line => line.trim());
+    
+    for (const line of lines) {
+      const match = line.match(/^\s*-\s*([^\[\]]+)\s*\[\[([^\[\]]+)\]\]/);
+      if (match) {
+        const type = match[1].trim();
+        const contactName = match[2].trim();
+        
+        if (type.length === 0) {
+          continue;
+        }
+        
+        relationships.push({
+          type,
+          contactName,
+          originalType: type
+        });
+      }
+    }
+    
+    return relationships;
+  }
+
+  /**
+   * Parse RELATED fields from frontmatter
+   */
+  async parseFrontmatterRelationships(): Promise<FrontmatterRelationship[]> {
+    const frontmatter = await this.frontmatterOps.getFrontmatter();
+    const relationships: FrontmatterRelationship[] = [];
+    
+    if (!frontmatter) return relationships;
+    
+    for (const [key, value] of Object.entries(frontmatter)) {
+      if (key.startsWith('RELATED') && value) {
+        const type = this.relatedFieldOps.extractRelationshipType(key);
+        const parsedValue = this.relatedFieldOps.parseRelatedValue(value);
+        
+        if (parsedValue) {
+          relationships.push({
+            type,
+            value,
+            parsedValue
+          });
+        }
+      }
+    }
+    
+    return relationships;
+  }
+
+  /**
+   * Update Related section in markdown content
+   */
+  async updateRelatedSectionInContent(relationships: { type: string; contactName: string }[]): Promise<void> {
+    const content = await this.vaultOps.getContent();
+    const relatedMatch = content.match(/^(#{1,6})\s*Related\s*(?:\r?\n)((?:^\s*-\s*.*(?:\r?\n)?)*)/m);
+    
+    const relatedListItems = relationships.map(rel => 
+      `- ${rel.type} [[${rel.contactName}]]`
+    );
+    
+    const relatedSection = relatedListItems.length > 0 
+      ? `## Related\n${relatedListItems.join('\n')}\n`
+      : `## Related\n\n`;
+    
+    let newContent: string;
+    if (relatedMatch) {
+      newContent = content.replace(relatedMatch[0], relatedSection);
+    } else {
+      const firstSectionMatch = content.match(/^#{1,6}\s+/m);
+      if (firstSectionMatch) {
+        const insertPos = content.indexOf(firstSectionMatch[0]);
+        newContent = content.slice(0, insertPos) + relatedSection + '\n' + content.slice(insertPos);
+      } else {
+        newContent = content.trimEnd() + '\n\n' + relatedSection;
+      }
+    }
+    
+    await this.app.vault.modify(this.file, newContent);
+    this.vaultOps.invalidateContentCache();
+  }
+
+  areRelationshipTypesEquivalent(type1: string, type2: string): boolean {
+    if (type1 === type2) {
+      return true;
+    }
+    
+    const genderless1 = this.genderOps.convertToGenderlessType(type1.toLowerCase());
+    const genderless2 = this.genderOps.convertToGenderlessType(type2.toLowerCase());
+    
+    return genderless1 === genderless2;
+  }
+
+  generateRelatedKey(
+    genderlessType: string, 
+    typeIndexes: Record<string, number>, 
+    currentFrontmatter: Record<string, any>, 
+    frontmatterUpdates: Record<string, string>
+  ): string {
+    const baseKey = `RELATED[${genderlessType}]`;
+    let key = baseKey;
+    
+    if (currentFrontmatter[baseKey] || frontmatterUpdates[baseKey]) {
+      if (!typeIndexes[genderlessType]) {
+        typeIndexes[genderlessType] = 1;
+      }
+      key = `RELATED[${typeIndexes[genderlessType]}:${genderlessType}]`;
+      typeIndexes[genderlessType]++;
+    }
+    
+    while (currentFrontmatter[key] || frontmatterUpdates[key]) {
+      if (!typeIndexes[genderlessType]) {
+        typeIndexes[genderlessType] = 1;
+      }
+      key = `RELATED[${typeIndexes[genderlessType]}:${genderlessType}]`;
+      typeIndexes[genderlessType]++;
+    }
+    
+    return key;
+  }
+}
+
+/**
+ * Unified class for interacting with a contact note in Obsidian.
+ * Provides methods for managing frontmatter, relationships, gender, and markdown rendering.
+ */
+export class ContactNote {
+  private app: App;
+  private settings: ContactsPluginSettings;
+  private file: TFile;
+  
+  // Delegate classes
+  private genderOps: GenderOperations;
+  private frontmatterOps: FrontmatterOperations;
+  private vaultOps: VaultOperations;
+  private markdownOps: MarkdownOperations;
+  private relatedFieldOps: RelatedFieldOperations;
+  private relatedListOps: RelatedListOperations;
+
+  constructor(app: App, settings: ContactsPluginSettings, file: TFile) {
+    this.app = app;
+    this.settings = settings;
+    this.file = file;
+    
+    // Initialize delegate classes
+    this.genderOps = new GenderOperations();
+    this.frontmatterOps = new FrontmatterOperations(app, file);
+    this.vaultOps = new VaultOperations(app, settings, file);
+    this.markdownOps = new MarkdownOperations(this.genderOps);
+    this.relatedFieldOps = new RelatedFieldOperations();
+    this.relatedListOps = new RelatedListOperations(
+      app, 
+      file, 
+      this.vaultOps, 
+      this.frontmatterOps, 
+      this.genderOps,
+      this.relatedFieldOps
+    );
+  }
+
+  // === Core File Operations ===
+
+  /**
+   * Get the TFile object for this contact
+   */
+  getFile(): TFile {
+    return this.file;
+  }
+
+  /**
+   * Get the contact's UID from frontmatter
+   */
+  async getUID(): Promise<string | null> {
+    const frontmatter = await this.getFrontmatter();
+    return frontmatter?.UID || null;
+  }
+
+  /**
+   * Get the contact's display name
+   */
+  getDisplayName(): string {
+    return this.file.basename;
+  }
+
+  /**
+   * Get the file content, with caching
+   */
+  async getContent(): Promise<string> {
+    return this.vaultOps.getContent();
+  }
+
+  /**
+   * Get the frontmatter, with caching
+   */
+  async getFrontmatter(): Promise<Record<string, any> | null> {
+    return this.frontmatterOps.getFrontmatter();
+  }
+
+  /**
+   * Invalidate caches when file is modified externally
+   */
+  invalidateCache(): void {
+    this.frontmatterOps.invalidateCache();
+    this.vaultOps.invalidateContentCache();
+  }
+
+  // === Gender Operations ===
+
+  /**
+   * Parse GENDER field value from vCard
+   */
+  parseGender(value: string): Gender {
+    return this.genderOps.parseGender(value);
+  }
+
+  /**
+   * Get the contact's gender from frontmatter
+   */
+  async getGender(): Promise<Gender> {
+    const frontmatter = await this.getFrontmatter();
+    const genderValue = frontmatter?.GENDER;
+    return genderValue ? this.parseGender(genderValue) : null;
+  }
+
+  /**
+   * Update the contact's gender in frontmatter
+   */
+  async updateGender(gender: Gender): Promise<void> {
+    if (gender) {
+      await this.updateFrontmatterValue('GENDER', gender);
+    } else {
+      await this.updateFrontmatterValue('GENDER', '');
+    }
+  }
+
+  /**
+   * Get the display term for a relationship based on the contact's gender
+   */
+  getGenderedRelationshipTerm(relationshipType: string, contactGender: Gender): string {
+    return this.genderOps.getGenderedRelationshipTerm(relationshipType, contactGender);
+  }
+
+  /**
+   * Infer gender from a gendered relationship term
+   */
+  inferGenderFromRelationship(relationshipType: string): Gender {
+    return this.genderOps.inferGenderFromRelationship(relationshipType);
+  }
+
+  /**
+   * Convert gendered relationship term to genderless equivalent
+   */
+  convertToGenderlessType(relationshipType: string): string {
+    return this.genderOps.convertToGenderlessType(relationshipType);
+  }
+
+  // === Related Field Operations ===
+
+  /**
+   * Format a related value for vCard RELATED field
+   */
+  formatRelatedValue(targetUid: string, targetName: string): string {
+    return this.relatedFieldOps.formatRelatedValue(targetUid, targetName);
+  }
+
+  /**
+   * Parse a vCard RELATED value to extract UID or name
+   */
+  parseRelatedValue(value: string): { type: 'uuid' | 'uid' | 'name'; value: string } | null {
+    return this.relatedFieldOps.parseRelatedValue(value);
+  }
+
+  /**
+   * Extract relationship type from RELATED key format
+   */
+  extractRelationshipType(key: string): string {
+    return this.relatedFieldOps.extractRelationshipType(key);
   }
 
   // === Key Parsing Operations ===
@@ -359,59 +924,14 @@ export class ContactNote {
    * Update a single frontmatter value
    */
   async updateFrontmatterValue(key: string, value: string): Promise<void> {
-    const content = await this.getContent();
-    const match = content.match(/^---\n([\s\S]*?)\n---\n?/);
-
-    let yamlObj: any = {};
-    let body = content;
-
-    if (match) {
-      yamlObj = parseYaml(match[1]) || {};
-      body = content.slice(match[0].length);
-    }
-
-    if (value === '') {
-      delete yamlObj[key];
-    } else {
-      yamlObj[key] = value;
-    }
-
-    const newFrontMatter = '---\n' + stringifyYaml(yamlObj) + '---\n';
-    const newContent = newFrontMatter + body;
-
-    await this.app.vault.modify(this.file, newContent);
-    this.invalidateCache(); // Invalidate cache after modification
+    await this.frontmatterOps.updateFrontmatterValue(key, value);
   }
 
   /**
    * Update multiple frontmatter values in a single operation
    */
   async updateMultipleFrontmatterValues(updates: Record<string, string>): Promise<void> {
-    const content = await this.getContent();
-    const match = content.match(/^---\n([\s\S]*?)\n---\n?/);
-
-    let yamlObj: any = {};
-    let body = content;
-
-    if (match) {
-      yamlObj = parseYaml(match[1]) || {};
-      body = content.slice(match[0].length);
-    }
-
-    // Apply all updates
-    for (const [key, value] of Object.entries(updates)) {
-      if (value === '') {
-        delete yamlObj[key];
-      } else {
-        yamlObj[key] = value;
-      }
-    }
-
-    const newFrontMatter = '---\n' + stringifyYaml(yamlObj) + '---\n';
-    const newContent = newFrontMatter + body;
-
-    await this.app.vault.modify(this.file, newContent);
-    this.invalidateCache(); // Invalidate cache after modification
+    await this.frontmatterOps.updateMultipleFrontmatterValues(updates);
   }
 
   // === Revision Operations ===
@@ -518,152 +1038,35 @@ export class ContactNote {
    * Parse Related section from markdown content
    */
   async parseRelatedSection(): Promise<ParsedRelationship[]> {
-    const content = await this.getContent();
-    const relationships: ParsedRelationship[] = [];
-    
-    const relatedMatch = content.match(/##\s*Related\s*(?:\r?\n)((?:^\s*-\s*.*(?:\r?\n)?)*)/m);
-    if (!relatedMatch) {
-      return relationships;
-    }
-    
-    const relatedSection = relatedMatch[1];
-    const lines = relatedSection.split('\n').filter(line => line.trim());
-    
-    for (const line of lines) {
-      const match = line.match(/^\s*-\s*([^\[\]]+)\s*\[\[([^\[\]]+)\]\]/);
-      if (match) {
-        const type = match[1].trim();
-        const contactName = match[2].trim();
-        
-        if (type.length === 0) {
-          continue;
-        }
-        
-        relationships.push({
-          type,
-          contactName,
-          originalType: type
-        });
-      }
-    }
-    
-    return relationships;
+    return this.relatedListOps.parseRelatedSection();
   }
 
   /**
    * Parse RELATED fields from frontmatter
    */
   async parseFrontmatterRelationships(): Promise<FrontmatterRelationship[]> {
-    const frontmatter = await this.getFrontmatter();
-    const relationships: FrontmatterRelationship[] = [];
-    
-    if (!frontmatter) return relationships;
-    
-    for (const [key, value] of Object.entries(frontmatter)) {
-      if (key.startsWith('RELATED') && value) {
-        const type = this.extractRelationshipType(key);
-        const parsedValue = this.parseRelatedValue(value);
-        
-        if (parsedValue) {
-          relationships.push({
-            type,
-            value,
-            parsedValue
-          });
-        }
-      }
-    }
-    
-    return relationships;
+    return this.relatedListOps.parseFrontmatterRelationships();
   }
 
   /**
    * Update Related section in markdown content
    */
   async updateRelatedSectionInContent(relationships: { type: string; contactName: string }[]): Promise<void> {
-    const content = await this.getContent();
-    const relatedMatch = content.match(/^(#{1,6})\s*Related\s*(?:\r?\n)((?:^\s*-\s*.*(?:\r?\n)?)*)/m);
-    
-    const relatedListItems = relationships.map(rel => 
-      `- ${rel.type} [[${rel.contactName}]]`
-    );
-    
-    const relatedSection = relatedListItems.length > 0 
-      ? `## Related\n${relatedListItems.join('\n')}\n`
-      : `## Related\n\n`;
-    
-    let newContent: string;
-    if (relatedMatch) {
-      newContent = content.replace(relatedMatch[0], relatedSection);
-    } else {
-      const firstSectionMatch = content.match(/^#{1,6}\s+/m);
-      if (firstSectionMatch) {
-        const insertPos = content.indexOf(firstSectionMatch[0]);
-        newContent = content.slice(0, insertPos) + relatedSection + '\n' + content.slice(insertPos);
-      } else {
-        newContent = content.trimEnd() + '\n\n' + relatedSection;
-      }
-    }
-    
-    await this.app.vault.modify(this.file, newContent);
-    this.invalidateCache();
+    await this.relatedListOps.updateRelatedSectionInContent(relationships);
   }
 
   /**
    * Find contact by name in the contacts folder
    */
   async findContactByName(contactName: string): Promise<TFile | null> {
-    const contactsFolder = this.settings.contactsFolder || '/';
-    const contactFile = this.app.vault.getAbstractFileByPath(`${contactsFolder}/${contactName}.md`);
-    
-    if (contactFile && (contactFile instanceof TFile || ('basename' in contactFile && contactFile.basename !== undefined))) {
-      return contactFile as TFile;
-    }
-    
-    const folder = this.app.vault.getAbstractFileByPath(contactsFolder);
-    if (!folder || !('children' in folder)) {
-      return null;
-    }
-    
-    for (const child of (folder as any).children) {
-      if (child && (child instanceof TFile || ('basename' in child && child.basename !== undefined)) && child.basename === contactName) {
-        return child as TFile;
-      }
-    }
-    
-    return null;
+    return this.vaultOps.findContactByName(contactName);
   }
 
   /**
    * Resolve contact information from contact name
    */
   async resolveContact(contactName: string): Promise<ResolvedContact | null> {
-    const file = await this.findContactByName(contactName);
-    if (!file) {
-      return null;
-    }
-    
-    const cache = this.app.metadataCache.getFileCache(file);
-    const frontmatter = cache?.frontmatter;
-    
-    if (!frontmatter) {
-      return null;
-    }
-    
-    const uid = frontmatter.UID;
-    if (!uid) {
-      return null;
-    }
-    
-    const genderValue = frontmatter.GENDER;
-    const gender = genderValue ? this.parseGender(genderValue) : null;
-    
-    return {
-      name: contactName,
-      uid,
-      file,
-      gender
-    };
+    return this.vaultOps.resolveContact(contactName, this.genderOps);
   }
 
   // === Relationship Sync Operations ===
@@ -711,7 +1114,7 @@ export class ContactNote {
               continue;
             }
             
-            let key = this.generateRelatedKey(genderlessType, typeIndexes, currentFrontmatter || {}, frontmatterUpdates);
+            let key = this.relatedListOps.generateRelatedKey(genderlessType, typeIndexes, currentFrontmatter || {}, frontmatterUpdates);
             frontmatterUpdates[key] = relatedValue;
             
           } else {
@@ -732,7 +1135,7 @@ export class ContactNote {
               continue;
             }
             
-            let key = this.generateRelatedKey(genderlessType, typeIndexes, currentFrontmatter || {}, frontmatterUpdates);
+            let key = this.relatedListOps.generateRelatedKey(genderlessType, typeIndexes, currentFrontmatter || {}, frontmatterUpdates);
             frontmatterUpdates[key] = relatedValue;
             
             // Infer and update gender if needed
@@ -814,7 +1217,7 @@ export class ContactNote {
         
         const relationshipExists = existingRelationships.some(existing => 
           existing.contactName === contactName && 
-          this.areRelationshipTypesEquivalent(existing.type, fmRel.type)
+          this.relatedListOps.areRelationshipTypesEquivalent(existing.type, fmRel.type)
         );
         
         if (!relationshipExists) {
@@ -854,179 +1257,7 @@ export class ContactNote {
    * Render the contact as markdown from vCard record data
    */
   mdRender(record: Record<string, any>, hashtags: string, genderLookup?: (contactRef: string) => Gender): string {
-    const { NOTE, ...recordWithoutNote } = record;
-    const groups = this.groupVCardFields(recordWithoutNote);
-    const myNote = NOTE ? NOTE.replace(/\\n/g, '\n') : '';
-    let additionalTags = '';
-    
-    if (recordWithoutNote.CATEGORIES) {
-      const tempTags = recordWithoutNote.CATEGORIES.split(',');
-      additionalTags = `#${tempTags.join(' #')}`;
-    }
-
-    const frontmatter = {
-      ...this.sortNameItems(groups.name),
-      ...this.sortedPriorityItems(groups.priority),
-      ...groups.address,
-      ...groups.other
-    };
-
-    const relatedSection = this.generateRelatedList(recordWithoutNote, genderLookup);
-
-    return `---\n${stringifyYaml(frontmatter)}---\n#### Notes\n${myNote}\n${relatedSection}\n\n${hashtags} ${additionalTags}\n`;
-  }
-
-  // === Private Helper Methods ===
-
-  private generateRelatedKey(
-    genderlessType: string, 
-    typeIndexes: Record<string, number>, 
-    currentFrontmatter: Record<string, any>, 
-    frontmatterUpdates: Record<string, string>
-  ): string {
-    const baseKey = `RELATED[${genderlessType}]`;
-    let key = baseKey;
-    
-    if (currentFrontmatter[baseKey] || frontmatterUpdates[baseKey]) {
-      if (!typeIndexes[genderlessType]) {
-        typeIndexes[genderlessType] = 1;
-      }
-      key = `RELATED[${typeIndexes[genderlessType]}:${genderlessType}]`;
-      typeIndexes[genderlessType]++;
-    }
-    
-    while (currentFrontmatter[key] || frontmatterUpdates[key]) {
-      if (!typeIndexes[genderlessType]) {
-        typeIndexes[genderlessType] = 1;
-      }
-      key = `RELATED[${typeIndexes[genderlessType]}:${genderlessType}]`;
-      typeIndexes[genderlessType]++;
-    }
-    
-    return key;
-  }
-
-  private areRelationshipTypesEquivalent(type1: string, type2: string): boolean {
-    if (type1 === type2) {
-      return true;
-    }
-    
-    const genderless1 = this.convertToGenderlessType(type1.toLowerCase());
-    const genderless2 = this.convertToGenderlessType(type2.toLowerCase());
-    
-    return genderless1 === genderless2;
-  }
-
-  private groupVCardFields(record: Record<string, any>) {
-    const nameKeys = ["N", "FN"];
-    const priorityKeys = [
-      "EMAIL", "TEL", "BDAY", "URL",
-      "ORG", "TITLE", "ROLE", "PHOTO", "RELATED", "GENDER"
-    ];
-    const addressKeys = ["ADR"];
-
-    const groups = {
-      name: {} as Record<string, any>,
-      priority: {} as Record<string, any>,
-      address: {} as Record<string, any>,
-      other: {} as Record<string, any>
-    };
-
-    for (const [key, value] of Object.entries(record)) {
-      const baseKey = this.extractBaseKey(key);
-      
-      if (nameKeys.includes(baseKey)) {
-        groups.name[key] = value;
-      } else if (priorityKeys.includes(baseKey)) {
-        groups.priority[key] = value;
-      } else if (addressKeys.includes(baseKey)) {
-        groups.address[key] = value;
-      } else {
-        groups.other[key] = value;
-      }
-    }
-
-    return groups;
-  }
-
-  private extractBaseKey(key: string): string {
-    if (key.includes("[")) {
-      return key.split("[")[0];
-    } else if (key.includes(".")) {
-      return key.split(".")[0];
-    }
-    return key;
-  }
-
-  private sortNameItems(nameItems: Record<string, any>): Record<string, any> {
-    return Object.fromEntries(
-      Object.entries(nameItems).sort(([keyA], [keyB]) => {
-        const order = ["N", "FN"];
-        const indexA = order.indexOf(keyA.split('.')[0]);
-        const indexB = order.indexOf(keyB.split('.')[0]);
-        return (indexA === -1 ? 999 : indexA) - (indexB === -1 ? 999 : indexB);
-      })
-    );
-  }
-
-  private sortedPriorityItems(priorityItems: Record<string, any>): Record<string, any> {
-    return Object.fromEntries(
-      Object.entries(priorityItems).sort(([keyA], [keyB]) => {
-        const order = ["EMAIL", "TEL", "BDAY", "URL", "ORG", "TITLE", "ROLE", "PHOTO", "RELATED", "GENDER"];
-        const indexA = order.indexOf(keyA.split('.')[0]);
-        const indexB = order.indexOf(keyB.split('.')[0]);
-        return (indexA === -1 ? 999 : indexA) - (indexB === -1 ? 999 : indexB);
-      })
-    );
-  }
-
-  private generateRelatedList(record: Record<string, any>, genderLookup?: (contactRef: string) => Gender): string {
-    const relatedFields = Object.entries(record).filter(([key]) => 
-      this.extractBaseKey(key) === 'RELATED'
-    );
-    
-    if (relatedFields.length === 0) {
-      return '';
-    }
-
-    const relationships: { type: string; contact: string }[] = [];
-    
-    relatedFields.forEach(([key, value]) => {
-      const typeMatch = key.match(/RELATED(?:\[(?:\d+:)?([^\]]+)\])?/);
-      const type = typeMatch ? typeMatch[1] || 'related' : 'related';
-      
-      let contact = '';
-      if (typeof value === 'string') {
-        if (value.startsWith('urn:uuid:')) {
-          contact = value.substring(9);
-        } else if (value.startsWith('uid:')) {
-          contact = value.substring(4);
-        } else if (value.startsWith('name:')) {
-          contact = value.substring(5);
-        } else {
-          contact = value;
-        }
-        
-        // Apply gender lookup if provided
-        let displayType = type;
-        if (genderLookup) {
-          const gender = genderLookup(contact);
-          displayType = this.getGenderedRelationshipTerm(type, gender);
-        }
-        
-        relationships.push({ type: displayType, contact });
-      }
-    });
-
-    if (relationships.length === 0) {
-      return '';
-    }
-
-    const relationshipList = relationships
-      .map(rel => `- ${rel.type} [[${rel.contact}]]`)
-      .join('\n');
-
-    return `\n## Related\n${relationshipList}\n`;
+    return this.markdownOps.mdRender(record, hashtags, genderLookup);
   }
 }
 
