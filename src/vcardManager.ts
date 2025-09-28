@@ -1,12 +1,12 @@
 import * as path from 'path';
 import { VcardFile } from './vcardFile';
-import { ContactsPluginSettings } from '../settings/settings.d';
+import { ContactsPluginSettings } from './settings/settings.d';
 
 /**
- * Information about a VCF file being managed
+ * Information about a VCard file being managed
  */
-export interface VCFFileInfo {
-  /** Full file system path to the VCF file */
+export interface VCardFileInfo {
+  /** Full file system path to the VCard file */
   path: string;
   /** Last modified timestamp in milliseconds */
   lastModified: number;
@@ -15,12 +15,15 @@ export interface VCFFileInfo {
 }
 
 /**
- * Manages a collection of VCF files in the VCF watch folder.
- * Provides high-level operations for managing VCF file collections
+ * Manages a collection of VCard files in the VCard watch folder.
+ * Provides high-level operations for managing VCard file collections
  * while delegating low-level file operations to VcardFile.
+ * Includes a write queue for controlled updates to VCard files.
  */
-export class VCFManager {
+export class VcardManager {
   private settings: ContactsPluginSettings;
+  private writeQueue: Map<string, { vcardData: string; timestamp: number }> = new Map();
+  private processingQueue: boolean = false;
 
   constructor(settings: ContactsPluginSettings) {
     this.settings = settings;
@@ -231,5 +234,109 @@ export class VCFManager {
    */
   filterIgnoredFiles(filePaths: string[]): string[] {
     return filePaths.filter(filePath => !this.shouldIgnoreFile(filePath));
+  }
+
+  /**
+   * Add a VCard to the write queue for controlled updates.
+   * If the VCard is already in the queue, it moves to the end.
+   * 
+   * @param uid - Unique identifier for the VCard
+   * @param vcardData - VCard data to write
+   * @returns Promise that resolves when the VCard is queued
+   */
+  async queueVcardWrite(uid: string, vcardData: string): Promise<void> {
+    // Remove existing entry if present (moves to end of queue)
+    if (this.writeQueue.has(uid)) {
+      this.writeQueue.delete(uid);
+    }
+    
+    // Add to end of queue
+    this.writeQueue.set(uid, {
+      vcardData,
+      timestamp: Date.now()
+    });
+    
+    console.log(`[VcardManager] Queued VCard write for UID: ${uid} (queue size: ${this.writeQueue.size})`);
+    
+    // Process the queue if not already processing
+    if (!this.processingQueue) {
+      this.processWriteQueue();
+    }
+  }
+
+  /**
+   * Process the write queue by writing VCards to the filesystem
+   */
+  private async processWriteQueue(): Promise<void> {
+    if (this.processingQueue || this.writeQueue.size === 0) {
+      return;
+    }
+
+    this.processingQueue = true;
+    console.log(`[VcardManager] Processing write queue with ${this.writeQueue.size} items`);
+
+    try {
+      // Process all items in the queue
+      const queueEntries = Array.from(this.writeQueue.entries());
+      
+      for (const [uid, queueItem] of queueEntries) {
+        try {
+          // Find existing VCard file by UID
+          const existingPath = await this.findVCFFileByUID(uid);
+          let targetPath: string;
+
+          if (existingPath) {
+            // Update existing file
+            targetPath = existingPath;
+          } else {
+            // Create new file with UID-based name
+            const filename = `contact-${uid}.vcf`;
+            targetPath = path.join(this.getWatchFolder(), filename);
+          }
+
+          // Write VCard data to file
+          const success = await this.writeVCFFile(path.basename(targetPath), queueItem.vcardData);
+          
+          if (success) {
+            console.log(`[VcardManager] Successfully wrote VCard to: ${targetPath}`);
+            this.writeQueue.delete(uid);
+          } else {
+            console.log(`[VcardManager] Failed to write VCard for UID: ${uid}`);
+          }
+          
+        } catch (error) {
+          console.log(`[VcardManager] Error writing VCard for UID ${uid}: ${error.message}`);
+          this.writeQueue.delete(uid); // Remove failed items
+        }
+      }
+      
+    } catch (error) {
+      console.log(`[VcardManager] Error processing write queue: ${error.message}`);
+    } finally {
+      this.processingQueue = false;
+      
+      // If there are still items in the queue, schedule another processing
+      if (this.writeQueue.size > 0) {
+        setTimeout(() => this.processWriteQueue(), 1000);
+      }
+    }
+  }
+
+  /**
+   * Get the current write queue status
+   */
+  getWriteQueueStatus(): { size: number; processing: boolean } {
+    return {
+      size: this.writeQueue.size,
+      processing: this.processingQueue
+    };
+  }
+
+  /**
+   * Clear the write queue (for testing or emergency purposes)
+   */
+  clearWriteQueue(): void {
+    this.writeQueue.clear();
+    console.log(`[VcardManager] Write queue cleared`);
   }
 }

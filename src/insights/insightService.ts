@@ -1,5 +1,5 @@
 
-import { Contact } from "src/contacts";
+import { Contact } from "src";
 import { InsighSettingProperties, InsightProcessor, InsightQueItem, RunType } from "src/insights/insight.d";
 
 const processors = new Map<string, InsightProcessor>();

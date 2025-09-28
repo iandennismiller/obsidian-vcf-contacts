@@ -1,9 +1,8 @@
 import * as React from "react";
-import { Contact, ContactNote } from "src/contacts";
+import { Contact, ContactNote } from "src";
 import { getApp } from "src/context/sharedAppContext";
 import { getSettings } from "src/context/sharedSettingsContext";
 import { InsightProcessor, InsightQueItem, RunType } from "src/insights/insight.d";
-import { loggingService } from "src/services/loggingService";
 
 const renderGroup = (queItems: InsightQueItem[]): JSX.Element => {
   return (
@@ -84,8 +83,8 @@ export const RelatedListProcessor: InsightProcessor = {
       const syncResult = await contactNote.syncRelatedListToFrontmatter();
       
       if (!syncResult.success) {
-        loggingService.error(`[RelatedListProcessor] Failed to sync Related list to frontmatter for ${contact.file.name}`);
-        syncResult.errors.forEach(error => loggingService.error(error));
+        console.error(`[RelatedListProcessor] Failed to sync Related list to frontmatter for ${contact.file.name}`);
+        syncResult.errors.forEach(error => console.error(error));
         return Promise.resolve(undefined);
       }
       
@@ -93,20 +92,20 @@ export const RelatedListProcessor: InsightProcessor = {
       if (missingCount > 0) {
         const revTimestamp = contactNote.generateRevTimestamp();
         await contactNote.updateFrontmatterValue('REV', revTimestamp);
-        loggingService.info(`[RelatedListProcessor] Updated REV timestamp: ${revTimestamp}`);
+        console.log(`[RelatedListProcessor] Updated REV timestamp: ${revTimestamp}`);
       }
       
       // Log the added relationships
       missingRelationships.forEach(rel => {
-        loggingService.info(
+        console.log(
           `[RelatedListProcessor] Added missing relationship to frontmatter: ${contact.file.basename} -> ${rel}`
         );
       });
       
       // Log any warnings but return success
       if (syncResult.errors.length > 0) {
-        loggingService.warning(`[RelatedListProcessor] Sync completed with warnings for ${contact.file.name}`);
-        syncResult.errors.forEach(error => loggingService.warning(error));
+        console.warn(`[RelatedListProcessor] Sync completed with warnings for ${contact.file.name}`);
+        syncResult.errors.forEach(error => console.warn(error));
       }
       
       return Promise.resolve({
@@ -119,7 +118,7 @@ export const RelatedListProcessor: InsightProcessor = {
       });
       
     } catch (error) {
-      loggingService.error(`[RelatedListProcessor] Error processing contact ${contact.file.name}: ${error.message}`);
+      console.error(`[RelatedListProcessor] Error processing contact ${contact.file.name}: ${error.message}`);
       return Promise.resolve(undefined);
     }
   }

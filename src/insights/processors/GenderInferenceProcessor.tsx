@@ -1,10 +1,9 @@
 import * as React from "react";
-import { Contact, ContactNote } from "src/contacts";
-import { ContactManager } from "src/contacts/contactManager";
+import { Contact, ContactNote } from "src";
+import { ContactManager } from "src/contactManager";
 import { getApp } from "src/context/sharedAppContext";
 import { getSettings } from "src/context/sharedSettingsContext";
 import { InsightProcessor, InsightQueItem, RunType } from "src/insights/insight.d";
-import { loggingService } from "src/services/loggingService";
 
 const renderGroup = (queItems: InsightQueItem[]): JSX.Element => {
   return (
@@ -74,7 +73,7 @@ export const GenderInferenceProcessor: InsightProcessor = {
           
           if (!relatedContact) {
             // Could not find the related contact file
-            loggingService.debug(
+            console.log(
               `[GenderInferenceProcessor] Could not resolve contact: ${relationship.contactName}`
             );
             continue;
@@ -97,12 +96,12 @@ export const GenderInferenceProcessor: InsightProcessor = {
             `${relationship.contactName} → ${inferredGender} (from relationship "${relationship.type}")`
           );
           
-          loggingService.info(
+          console.log(
             `[GenderInferenceProcessor] Inferred gender ${inferredGender} for ${relationship.contactName} based on relationship "${relationship.type}" from ${contact.file.basename}`
           );
           
         } catch (error) {
-          loggingService.error(
+          console.error(
             `[GenderInferenceProcessor] Error processing relationship ${relationship.type} -> ${relationship.contactName}: ${error.message}`
           );
         }
@@ -123,7 +122,7 @@ export const GenderInferenceProcessor: InsightProcessor = {
       return Promise.resolve(undefined);
       
     } catch (error) {
-      loggingService.error(`[GenderInferenceProcessor] Error processing contact ${contact.file.name}: ${error.message}`);
+      console.error(`[GenderInferenceProcessor] Error processing contact ${contact.file.name}: ${error.message}`);
       return Promise.resolve(undefined);
     }
   }

@@ -114,7 +114,7 @@ export class ContactsSettingTab extends PluginSettingTab {
     // VCF Watch Enabled Toggle (always shown)
     new Setting(containerEl)
       .setName("Enable VCF Folder Watching")
-      .setDesc("When enabled, the plugin will automatically import new VCF files from the watched folder.")
+      .setDesc("When enabled, the plugin will monitor the VCF folder for changes and trigger VCF sync processors. Controls both VCF Sync Pre Processor (import) and VCF Sync Post Processor (write-back).")
       .addToggle(toggle =>
         toggle
           .setValue(this.plugin.settings.vcfWatchEnabled)
@@ -167,7 +167,7 @@ export class ContactsSettingTab extends PluginSettingTab {
       // VCF Write Back Toggle (only shown when folder watching is enabled)
       new Setting(containerEl)
         .setName("Enable VCF Write Back")
-        .setDesc("When enabled, changes to contacts in Obsidian will be written back to the corresponding VCF files in the watched folder. Disable to prevent any modifications to VCF files.")
+        .setDesc("When enabled, the VCF Sync Post Processor will write changes from Obsidian contacts back to VCF files in the watched folder. Disable to prevent any modifications to VCF files.")
         .addToggle(toggle =>
           toggle
             .setValue(this.plugin.settings.vcfWriteBackEnabled)

@@ -1,7 +1,7 @@
 import { TFile, App } from "obsidian";
 import { ContactNote, createNameSlug, createContactSlug } from "./contactNote";
 
-import { getApp } from "src/context/sharedAppContext";
+import { getApp } from "./context/sharedAppContext";
 
 
 import { ContactManager } from "./contactManager";

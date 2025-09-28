@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { VcardFile } from 'src/contacts/vcardFile';
+import { VcardFile } from 'src/vcardFile';
 
 describe('RELATED field support', () => {
   it('should parse RELATED fields from VCard', async () => {

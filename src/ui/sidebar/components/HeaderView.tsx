@@ -1,7 +1,7 @@
 import { setIcon } from "obsidian";
 import { Dispatch, SetStateAction } from "react";
 import * as React from "react";
-import { VcardFile } from "src/contacts/vcardFile";
+import { VcardFile } from "src/vcardFile";
 
 
 type HeaderProps = {

@@ -1,11 +1,11 @@
 import { App, TFile, EventRef, WorkspaceLeaf, TFolder, Vault, normalizePath, Notice, Workspace } from 'obsidian';
-import { ContactsPluginSettings } from '../settings/settings.d';
+import { ContactsPluginSettings } from './settings/settings.d';
 import { ContactNote, getFrontmatterFromFiles } from './contactNote';
 import { VCardForObsidianRecord } from './vcardFile';
-import { getSettings } from '../context/sharedSettingsContext';
-import { RunType } from '../insights/insight.d';
-import { insightService } from '../insights/insightService';
-import { FileExistsModal } from '../ui/modals/fileExistsModal';
+import { getSettings } from './context/sharedSettingsContext';
+import { RunType } from './insights/insight.d';
+import { insightService } from './insights/insightService';
+import { FileExistsModal } from './ui/modals/fileExistsModal';
 
 /**
  * Interface for managing contact notes in the Obsidian vault.
@@ -71,6 +71,11 @@ export interface IContactManager {
    * Clean up event listeners
    */
   cleanupEventListeners(): void;
+
+  /**
+   * Ensure consistency of contact data by processing through insight processors
+   */
+  ensureContactDataConsistency(maxIterations?: number): Promise<void>;
 }
 
 /**
@@ -393,128 +398,18 @@ export class ContactManager implements IContactManager {
   }
 
   /**
-   * Handle active leaf change - sync the previous contact file if we're leaving one
+   * Handle active leaf change - track current active file
    */
   private handleActiveLeafChange(leaf: WorkspaceLeaf | null): void {
     // Check if the view has a file property (duck typing for MarkdownView)
     const newActiveFile = (leaf?.view && 'file' in leaf.view) ? (leaf.view as any).file : null;
     
-    // If we had a previous active contact file and we're switching away from it, sync it
-    if (this.currentActiveFile && 
-        this.currentActiveFile !== newActiveFile && 
-        this.isContactFile(this.currentActiveFile)) {
-      
-      const fileToSync = this.currentActiveFile;
-
-      
-      // Sync the related list to frontmatter for the file we're leaving
-      this.syncContactFile(fileToSync);
-    }
-    
     this.currentActiveFile = newActiveFile;
   }
 
-  /**
-   * Sync a contact file bidirectionally:
-   * 1. First sync frontmatter to Related list (add missing relationships to Related section)
-   * 2. Then sync Related list to frontmatter (ensure frontmatter is complete)
-   */
-  private async syncContactFile(file: TFile): Promise<void> {
-    try {
-      const contactNote = new ContactNote(this.app, this.settings, file);
 
-      // Step 1: Sync from frontmatter to Related list
-
-      const frontmatterToRelatedResult = await contactNote.syncFrontmatterToRelatedList();
-
-      if (frontmatterToRelatedResult.success) {
-
-        if (frontmatterToRelatedResult.errors.length > 0) {
-          console.log(`[ContactManager] Frontmatter sync completed with warnings for ${file.basename}`);
-          frontmatterToRelatedResult.errors.forEach(error => console.log(error));
-        }
-      } else {
-        console.log(`[ContactManager] Failed to sync frontmatter to Related list for: ${file.basename}`);
-        frontmatterToRelatedResult.errors.forEach(error => console.log(error));
-      }
-
-      // Step 2: Sync from Related list to frontmatter
-
-      const relatedToFrontmatterResult = await contactNote.syncRelatedListToFrontmatter();
-
-      if (relatedToFrontmatterResult.success) {
-
-        if (relatedToFrontmatterResult.errors.length > 0) {
-          console.log(`[ContactManager] Related list sync completed with warnings for ${file.basename}`);
-          relatedToFrontmatterResult.errors.forEach(error => console.log(error));
-        }
-      } else {
-        console.log(`[ContactManager] Failed to sync Related list to frontmatter for: ${file.basename}`);
-        relatedToFrontmatterResult.errors.forEach(error => console.log(error));
-      }
-
-    } catch (error) {
-      console.log(`[ContactManager] Error syncing contact file ${file.basename}: ${error.message}`);
-    }
-  }
-
-  /**
-   * Ensure vCard object has a name before processing
-   * Migrated from src/contacts/ensureHasName.ts
-   */
-  async ensureHasName(vCardObject: VCardForObsidianRecord): Promise<VCardForObsidianRecord> {
-    return ContactManager.ensureHasNameStatic(vCardObject);
-  }
-
-  /**
-   * Static version of ensureHasName for use in static contexts
-   */
-  static async ensureHasNameStatic(vCardObject: VCardForObsidianRecord): Promise<VCardForObsidianRecord> {
-    const { createNameSlug } = await import('./contactNote');
-    const { VCardKinds } = await import('./vcardFile');
-    const { ContactNameModal } = await import('../ui/modals/contactNameModal');
-    const { getApp } = await import('../context/sharedAppContext');
-    
-    // Import the type separately
-    type NamingPayload = import('../ui/modals/contactNameModal').NamingPayload;
-    
-    try {
-      // if we can create a file name then we meet the minimum requirements
-      createNameSlug(vCardObject);
-      return Promise.resolve(vCardObject);
-    } catch (error) {
-      // Need to prompt for some form of name information.
-      const app = getApp();
-      return new Promise((resolve) => {
-        console.warn("No name found for record", vCardObject);
-        new ContactNameModal(app, (nameData: NamingPayload) => {
-          if (nameData.kind === VCardKinds.Individual) {
-            vCardObject["N.PREFIX"] ??= "";
-            vCardObject["N.GN"] = nameData.given;
-            vCardObject["N.MN"] ??= "";
-            vCardObject["N.FN"] = nameData.family;
-            vCardObject["N.SUFFIX"] ??= "";
-          } else {
-            vCardObject["FN"] ??= nameData.fn;
-          }
-          vCardObject["KIND"] ??= nameData.kind;
-          resolve(vCardObject);
-        }).open();
-      });
-    }
-  }
 
   // File management methods migrated from src/file/file.ts
-
-  /**
-   * Open a file in the workspace
-   * Migrated from src/file/file.ts
-   */
-  async openFile(file: TFile, workspace?: Workspace): Promise<void> {
-    const ws = workspace || this.app.workspace;
-    const leaf = ws.getLeaf();
-    await leaf.openFile(file, { active: true });
-  }
 
   /**
    * Find all contact files in a folder
@@ -537,7 +432,10 @@ export class ContactManager implements IContactManager {
   private openCreatedFile(filePath: string): void {
     const file = this.app.vault.getAbstractFileByPath(filePath);
     if (file instanceof TFile) {
-      this.openFile(file);
+      // Open file directly in workspace
+      const workspace = this.app.workspace;
+      const leaf = workspace.getLeaf();
+      leaf.openFile(file, { active: true });
     }
   }
 
@@ -566,16 +464,11 @@ export class ContactManager implements IContactManager {
       await new Promise(r => setTimeout(r, 50));
       const contact = await getFrontmatterFromFiles([createdFile]);
       await insightService.process(contact, RunType.IMMEDIATELY);
-      this.openFile(createdFile);
+      // Open the created file directly in workspace
+      const workspace = this.app.workspace;
+      const leaf = workspace.getLeaf();
+      leaf.openFile(createdFile, { active: true });
     }
-  }
-
-  /**
-   * Create a contact file in the appropriate folder
-   * Migrated from src/file/file.ts
-   */
-  async createContactFile(folderPath: string, content: string, filename: string): Promise<void> {
-    return ContactManager.createContactFileStatic(this.app, folderPath, content, filename);
   }
 
   /**
@@ -655,23 +548,184 @@ export class ContactManager implements IContactManager {
   }
 
   /**
-   * Check if a file is in the contacts folder
-   * Migrated from src/file/file.ts
+   * Ensure consistency of contact data by processing all contacts through insight processors.
+   * This method iteratively processes contacts until no more changes are made or max iterations reached.
+   * 
+   * @param maxIterations - Maximum number of iterations before stopping (default: 10)
+   * @returns Promise that resolves when consistency check is complete
    */
-  isFileInContactsFolder(file: TFile): boolean {
-    const settings = getSettings();
-    return file.path.startsWith(settings.contactsFolder);
+  async ensureContactDataConsistency(maxIterations: number = 10): Promise<void> {
+    console.log('[ContactManager] Starting contact data consistency check...');
+    
+    try {
+      // Get all contact files
+      const allContactFiles = this.getAllContactFiles();
+      if (allContactFiles.length === 0) {
+        console.log('[ContactManager] No contacts found for consistency check');
+        return;
+      }
+
+      console.log(`[ContactManager] Processing ${allContactFiles.length} contacts for consistency`);
+
+      // Create initial task list with contacts and their REV timestamps
+      let taskList = await this.createContactTaskList(allContactFiles);
+      let iteration = 0;
+      let hasChanges = true;
+
+      // Temporarily disable vcardSyncPostProcessor by storing its original state
+      const originalVcardSyncPostProcessorState = getSettings().vcardSyncPostProcessor;
+      
+      try {
+        // Disable vcardSyncPostProcessor during consistency checks
+        const currentSettings = getSettings();
+        currentSettings.vcardSyncPostProcessor = false;
+
+        // Iteratively process contacts until no changes or max iterations
+        while (hasChanges && iteration < maxIterations) {
+          iteration++;
+          console.log(`[ContactManager] Consistency check iteration ${iteration}/${maxIterations}`);
+
+          const changedContacts = await this.processTaskListForConsistency(taskList);
+          
+          if (changedContacts.length === 0) {
+            hasChanges = false;
+            console.log(`[ContactManager] No changes detected in iteration ${iteration}, consistency achieved`);
+          } else {
+            console.log(`[ContactManager] ${changedContacts.length} contacts changed in iteration ${iteration}`);
+            // Create new task list with only changed contacts
+            taskList = await this.createContactTaskList(changedContacts);
+          }
+        }
+
+        // Check if we hit max iterations
+        if (iteration >= maxIterations && hasChanges) {
+          console.log(`[ContactManager] WARNING: Consistency check stopped after ${maxIterations} iterations. Some contacts may still need processing.`);
+        }
+
+      } finally {
+        // Restore original vcardSyncPostProcessor state
+        const currentSettings = getSettings();
+        currentSettings.vcardSyncPostProcessor = originalVcardSyncPostProcessorState;
+      }
+
+      // Finally, process all contacts one more time with just vcardSyncPostProcessor
+      if (originalVcardSyncPostProcessorState) {
+        console.log('[ContactManager] Running final vcardSyncPostProcessor pass...');
+        const allContacts = await getFrontmatterFromFiles(allContactFiles);
+        await insightService.process(allContacts, RunType.INPROVEMENT);
+        console.log('[ContactManager] Final vcardSyncPostProcessor pass completed');
+      }
+
+      console.log(`[ContactManager] Contact data consistency check completed after ${iteration} iterations`);
+
+    } catch (error) {
+      console.log(`[ContactManager] Error during consistency check: ${error.message}`);
+      throw error;
+    }
   }
 
   /**
-   * Join file path parts
-   * Migrated from src/file/file.ts
+   * Create a task list of contacts with their current REV timestamps
    */
-  private fileJoin(...parts: string[]): string {
-    return parts
-      .filter(Boolean)
-      .join("/")
-      .replace(/\/{2,}/g, "/")
-      .replace(/\/+$/, "");
+  private async createContactTaskList(contactFiles: TFile[]): Promise<Map<string, { file: TFile; originalRev: string | null }>> {
+    const taskList = new Map<string, { file: TFile; originalRev: string | null }>();
+    
+    for (const file of contactFiles) {
+      try {
+        const contactNote = new ContactNote(this.app, this.settings, file);
+        const frontmatter = await contactNote.getFrontmatter();
+        const originalRev = frontmatter?.REV || null;
+        
+        const uid = await this.extractUIDFromFile(file);
+        if (uid) {
+          taskList.set(uid, { file, originalRev });
+        }
+      } catch (error) {
+        console.log(`[ContactManager] Error reading contact ${file.basename}: ${error.message}`);
+      }
+    }
+    
+    return taskList;
   }
+
+  /**
+   * Process a task list of contacts and return those that were changed (REV updated)
+   */
+  private async processTaskListForConsistency(taskList: Map<string, { file: TFile; originalRev: string | null }>): Promise<TFile[]> {
+    const changedContacts: TFile[] = [];
+    const contactFiles = Array.from(taskList.values()).map(item => item.file);
+    
+    try {
+      // Get contact data for processing
+      const contacts = await getFrontmatterFromFiles(contactFiles);
+      
+      // Process with all insight processors except vcardSyncPostProcessor
+      // Note: vcardSyncPostProcessor is already disabled by the caller
+      await insightService.process(contacts, RunType.IMMEDIATELY);
+      await insightService.process(contacts, RunType.INPROVEMENT);
+      await insightService.process(contacts, RunType.UPCOMMING);
+      
+      // Check which contacts had their REV timestamp updated
+      for (const [uid, taskItem] of taskList) {
+        try {
+          const contactNote = new ContactNote(this.app, this.settings, taskItem.file);
+          const currentFrontmatter = await contactNote.getFrontmatter();
+          const currentRev = currentFrontmatter?.REV || null;
+          
+          // Compare REV timestamps to detect changes
+          if (currentRev !== taskItem.originalRev) {
+            changedContacts.push(taskItem.file);
+            console.log(`[ContactManager] Contact ${taskItem.file.basename} REV changed: ${taskItem.originalRev} -> ${currentRev}`);
+          }
+        } catch (error) {
+          console.log(`[ContactManager] Error checking REV for ${taskItem.file.basename}: ${error.message}`);
+        }
+      }
+      
+    } catch (error) {
+      console.log(`[ContactManager] Error processing task list: ${error.message}`);
+      throw error;
+    }
+    
+    return changedContacts;
+  }
+
+  /**
+   * Static version of ensureHasName for use in static contexts
+   */
+  static async ensureHasNameStatic(vCardObject: VCardForObsidianRecord): Promise<VCardForObsidianRecord> {
+    const { createNameSlug } = await import('./contactNote');
+    const { VCardKinds } = await import('./vcardFile');
+    const { ContactNameModal } = await import('./ui/modals/contactNameModal');
+    const { getApp } = await import('./context/sharedAppContext');
+    
+    // Import the type separately
+    type NamingPayload = import('./ui/modals/contactNameModal').NamingPayload;
+    
+    try {
+      // if we can create a file name then we meet the minimum requirements
+      createNameSlug(vCardObject);
+      return Promise.resolve(vCardObject);
+    } catch (error) {
+      // Need to prompt for some form of name information.
+      const app = getApp();
+      return new Promise((resolve) => {
+        console.warn("No name found for record", vCardObject);
+        new ContactNameModal(app, (nameData: NamingPayload) => {
+          if (nameData.kind === VCardKinds.Individual) {
+            vCardObject["N.PREFIX"] ??= "";
+            vCardObject["N.GN"] = nameData.given;
+            vCardObject["N.MN"] ??= "";
+            vCardObject["N.FN"] = nameData.family;
+            vCardObject["N.SUFFIX"] ??= "";
+          } else {
+            vCardObject["FN"] ??= nameData.fn;
+          }
+          vCardObject["KIND"] ??= nameData.kind;
+          resolve(vCardObject);
+        }).open();
+      });
+    }
+  }
+
 }

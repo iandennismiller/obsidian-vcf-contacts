@@ -1,11 +1,10 @@
 import * as React from "react";
-import { Contact, ContactNote } from "src/contacts";
-import { VCFManager } from "src/contacts/vcfManager";
-import { VcardFile } from "src/contacts/vcardFile";
+import { Contact, ContactNote } from "src";
+import { VcardManager } from "src/vcardManager";
+import { VcardFile } from "src/vcardFile";
 import { getApp } from "src/context/sharedAppContext";
 import { getSettings } from "src/context/sharedSettingsContext";
 import { InsightProcessor, InsightQueItem, RunType } from "src/insights/insight.d";
-import { loggingService } from "src/services/loggingService";
 
 const renderGroup = (queItems: InsightQueItem[]): JSX.Element => {
   return (
@@ -28,11 +27,11 @@ const render = (queItem: InsightQueItem): JSX.Element => {
   );
 }
 
-export const VcfSyncPostProcessor: InsightProcessor = {
-  name: "VcfSyncPostProcessor",
+export const VcardSyncPostProcessor: InsightProcessor = {
+  name: "VCard Sync Post Processor",
   runType: RunType.INPROVEMENT,
-  settingPropertyName: "vcfSyncPostProcessor",
-  settingDescription: "Automatically writes contact data back to VCF files when Obsidian contact has newer revision data",
+  settingPropertyName: "vcardSyncPostProcessor",
+  settingDescription: "VCard Write Back: Automatically writes contact data back to VCard files when Obsidian contact has newer revision data. Requires both VCard Folder Watching and VCard Write Back to be enabled.",
   settingDefaultValue: true,
 
   async process(contact: Contact): Promise<InsightQueItem | undefined> {
@@ -46,7 +45,7 @@ export const VcfSyncPostProcessor: InsightProcessor = {
     }
 
     const app = getApp();
-    const vcfManager = new VCFManager(settings);
+    const vcardManager = new VcardManager(settings);
     const contactNote = new ContactNote(app, settings, contact.file);
     
     // Helper function to generate VCF content from a contact file
@@ -54,19 +53,19 @@ export const VcfSyncPostProcessor: InsightProcessor = {
       try {
         const vcfResult = await VcardFile.fromObsidianFiles([file], app);
         if (vcfResult.errors.length > 0) {
-          loggingService.warning(`[VcfSyncPostProcessor] Warnings generating VCF for ${file.basename}:`);
-          vcfResult.errors.forEach(error => loggingService.warning(`  ${error.message}`));
+          console.warn(`[VcardSyncPostProcessor] Warnings generating VCF for ${file.basename}:`);
+          vcfResult.errors.forEach(error => console.warn(`  ${error.message}`));
         }
         return vcfResult.vcards || null;
       } catch (error) {
-        loggingService.error(`[VcfSyncPostProcessor] Error generating VCF for ${file.basename}: ${error.message}`);
+        console.error(`[VcardSyncPostProcessor] Error generating VCF for ${file.basename}: ${error.message}`);
         return null;
       }
     };
     
     try {
       // Check if VCF folder exists
-      const watchFolderExists = await vcfManager.watchFolderExists();
+      const watchFolderExists = await vcardManager.watchFolderExists();
       if (!watchFolderExists) {
         return Promise.resolve(undefined);
       }
@@ -81,7 +80,7 @@ export const VcfSyncPostProcessor: InsightProcessor = {
       }
 
       // Check if VCF file exists for this UID
-      const existingVCFPath = await vcfManager.findVCFFileByUID(contactUID);
+      const existingVCFPath = await vcardManager.findVCFFileByUID(contactUID);
       
       let shouldWriteVCF = false;
       let action = '';
@@ -90,12 +89,12 @@ export const VcfSyncPostProcessor: InsightProcessor = {
         // No VCF exists - create it
         shouldWriteVCF = true;
         action = 'created';
-        loggingService.info(`[VcfSyncPostProcessor] No VCF found for UID ${contactUID}, will create new VCF`);
+        console.log(`[VcardSyncPostProcessor] No VCF found for UID ${contactUID}, will create new VCF`);
       } else {
         // VCF exists - check REV timestamps
         try {
           const vcfContent = await VcardFile.readVCFFile(existingVCFPath);
-          const parsedEntries = await vcfManager.readAndParseVCF(existingVCFPath);
+          const parsedEntries = await vcardManager.readAndParseVCF(existingVCFPath);
           
           if (parsedEntries && parsedEntries.length > 0) {
             const vcfRecord = parsedEntries.find(([slug, record]) => record.UID === contactUID);
@@ -112,14 +111,14 @@ export const VcfSyncPostProcessor: InsightProcessor = {
                 // Either contact is newer or VCF has no REV
                 shouldWriteVCF = true;
                 action = 'updated';
-                loggingService.info(
-                  `[VcfSyncPostProcessor] Contact REV ${contactREV} is newer than VCF REV ${vcfREV || 'none'}, will update VCF`
+                console.log(
+                  `[VcardSyncPostProcessor] Contact REV ${contactREV} is newer than VCF REV ${vcfREV || 'none'}, will update VCF`
                 );
               }
             }
           }
         } catch (error) {
-          loggingService.error(`[VcfSyncPostProcessor] Error reading existing VCF ${existingVCFPath}: ${error.message}`);
+          console.error(`[VcardSyncPostProcessor] Error reading existing VCF ${existingVCFPath}: ${error.message}`);
           // If we can't read the VCF, assume we should recreate it
           shouldWriteVCF = true;
           action = 'recreated';
@@ -133,7 +132,7 @@ export const VcfSyncPostProcessor: InsightProcessor = {
       // Generate VCF content from contact file
       const vcfContent = await generateVCFFromContact(contact.file, app);
       if (!vcfContent) {
-        loggingService.error(`[VcfSyncPostProcessor] Failed to generate VCF content for ${contact.file.name}`);
+        console.error(`[VcardSyncPostProcessor] Failed to generate VCF content for ${contact.file.name}`);
         return Promise.resolve(undefined);
       }
       
@@ -143,26 +142,22 @@ export const VcfSyncPostProcessor: InsightProcessor = {
         filename = `${filename}.vcf`;
       }
       
-      // Write VCF file
-      const writtenPath = await vcfManager.writeVCFFile(filename, vcfContent);
-      if (!writtenPath) {
-        loggingService.error(`[VcfSyncPostProcessor] Failed to write VCF file for ${contact.file.name}`);
-        return Promise.resolve(undefined);
-      }
+      // Queue VCard write instead of writing directly
+      await vcardManager.queueVcardWrite(contactUID, vcfContent);
       
-      loggingService.info(`[VcfSyncPostProcessor] Successfully ${action} VCF file: ${writtenPath}`);
+      console.log(`[VcardSyncPostProcessor] Successfully queued ${action} VCard for ${contact.file.name} (UID: ${contactUID})`);
       
       return Promise.resolve({
         name: this.name,
         runType: this.runType,
         file: contact.file,
-        message: `VCF file ${action} for ${contact.file.name}`,
+        message: `VCard file ${action} queued for ${contact.file.name}`,
         render,
         renderGroup
       });
       
     } catch (error) {
-      loggingService.error(`[VcfSyncPostProcessor] Error processing contact ${contact.file.name}: ${error.message}`);
+      console.error(`[VcardSyncPostProcessor] Error processing contact ${contact.file.name}: ${error.message}`);
       return Promise.resolve(undefined);
     }
   }

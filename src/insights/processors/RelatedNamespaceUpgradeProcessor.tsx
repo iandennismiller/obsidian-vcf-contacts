@@ -1,10 +1,9 @@
 import * as React from "react";
-import { Contact, ContactNote } from "src/contacts";
-import { ContactManager } from "src/contacts/contactManager";
+import { Contact, ContactNote } from "src";
+import { ContactManager } from "src/contactManager";
 import { getApp } from "src/context/sharedAppContext";
 import { getSettings } from "src/context/sharedSettingsContext";
 import { InsightProcessor, InsightQueItem, RunType } from "src/insights/insight.d";
-import { loggingService } from "src/services/loggingService";
 
 const renderGroup = (queItems: InsightQueItem[]): JSX.Element => {
   return (
@@ -85,7 +84,7 @@ export const RelatedNamespaceUpgradeProcessor: InsightProcessor = {
           
           if (!contactFileByUID) {
             // This shouldn't happen since we just resolved it, but be safe
-            loggingService.warning(
+            console.warn(
               `[RelatedNamespaceUpgradeProcessor] Could not find contact file for UID ${resolvedContact.uid} in ${contact.file.basename}`
             );
             continue;
@@ -103,7 +102,7 @@ export const RelatedNamespaceUpgradeProcessor: InsightProcessor = {
           
           if (uidCount > 1) {
             // UID is not unique - log warning and leave unchanged
-            loggingService.warning(
+            console.warn(
               `[RelatedNamespaceUpgradeProcessor] UID ${resolvedContact.uid} is not unique (found in ${uidCount} contacts). Leaving name-based relationship unchanged for ${contactName} in ${contact.file.basename}`
             );
             continue;
@@ -124,7 +123,7 @@ export const RelatedNamespaceUpgradeProcessor: InsightProcessor = {
           }
           
           if (!relationshipKey) {
-            loggingService.error(
+            console.error(
               `[RelatedNamespaceUpgradeProcessor] Could not find frontmatter key for relationship ${relationship.value} in ${contact.file.basename}`
             );
             continue;
@@ -139,12 +138,12 @@ export const RelatedNamespaceUpgradeProcessor: InsightProcessor = {
             `${relationship.type}: name:${contactName} → ${namespace}${resolvedContact.uid}`
           );
           
-          loggingService.info(
+          console.log(
             `[RelatedNamespaceUpgradeProcessor] Upgraded relationship in ${contact.file.basename}: ${relationship.type} from name:${contactName} to ${upgradedValue}`
           );
           
         } catch (error) {
-          loggingService.error(
+          console.error(
             `[RelatedNamespaceUpgradeProcessor] Error processing relationship ${relationship.type} -> ${relationship.value}: ${error.message}`
           );
         }
@@ -154,7 +153,7 @@ export const RelatedNamespaceUpgradeProcessor: InsightProcessor = {
       if (upgradeCount > 0) {
         await contactNote.updateMultipleFrontmatterValues(frontmatterUpdates);
         
-        loggingService.info(
+        console.log(
           `[RelatedNamespaceUpgradeProcessor] Upgraded ${upgradeCount} relationship${upgradeCount !== 1 ? 's' : ''} in ${contact.file.basename}`
         );
         
@@ -171,7 +170,7 @@ export const RelatedNamespaceUpgradeProcessor: InsightProcessor = {
       return Promise.resolve(undefined);
       
     } catch (error) {
-      loggingService.error(`[RelatedNamespaceUpgradeProcessor] Error processing contact ${contact.file.name}: ${error.message}`);
+      console.error(`[RelatedNamespaceUpgradeProcessor] Error processing contact ${contact.file.name}: ${error.message}`);
       return Promise.resolve(undefined);
     }
   }

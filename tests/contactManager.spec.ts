@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TFile, App } from 'obsidian';
-import { ContactManager } from '../src/contacts/contactManager';
+import { ContactManager } from '../src/contactManager';
 import { ContactsPluginSettings } from '../src/settings/settings.d';
 
 describe('ContactManager', () => {
@@ -106,8 +106,6 @@ This is a contact file.`;
 
       const uid = await contactManager.extractUIDFromFile(mockFile);
       expect(uid).toBeNull();
-        expect.stringContaining('[ContactManager] Error extracting UID')
-      );
     });
   });
 
@@ -200,9 +198,6 @@ This is a contact file.`;
       mockApp.vault!.getAbstractFileByPath = vi.fn().mockReturnValue(null);
 
       await contactManager.initializeCache();
-
-        expect.stringContaining('[ContactManager] Contacts folder not found: Contacts')
-      );
     });
 
     it('should clear existing cache before initialization', async () => {
@@ -400,8 +395,6 @@ This is a contact file.`;
 
       const foundFile = await contactManager.findContactFileByUID('test-uid');
       expect(foundFile).toBeNull();
-        expect.stringContaining('[ContactManager] Error finding contact file by UID')
-      );
     });
 
     it('should handle cache initialization errors gracefully', async () => {
@@ -412,9 +405,6 @@ This is a contact file.`;
       });
 
       await contactManager.initializeCache();
-
-        expect.stringContaining('[ContactManager] Failed to build UID cache')
-      );
     });
   });
 });

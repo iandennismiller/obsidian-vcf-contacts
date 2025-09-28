@@ -1,11 +1,10 @@
 import * as React from "react";
 import { parseYaml } from "obsidian";
-import { Contact, ContactNote } from "src/contacts";
-import { VCFManager } from "src/contacts/vcfManager";
+import { Contact, ContactNote } from "src";
+import { VcardManager } from "src/vcardManager";
 import { getApp } from "src/context/sharedAppContext";
 import { getSettings } from "src/context/sharedSettingsContext";
 import { InsightProcessor, InsightQueItem, RunType } from "src/insights/insight.d";
-import { loggingService } from "src/services/loggingService";
 
 const renderGroup = (queItems: InsightQueItem[]):JSX.Element => {
   return (
@@ -28,11 +27,11 @@ const render = (queItem: InsightQueItem):JSX.Element => {
   );
 }
 
-export const VcfSyncPreProcessor: InsightProcessor = {
-  name: "VcfSyncPreProcessor",
+export const VcardSyncPreProcessor: InsightProcessor = {
+  name: "VCard Sync Pre Processor",
   runType: RunType.IMMEDIATELY,
-  settingPropertyName: "vcfSyncPreProcessor",
-  settingDescription: "Automatically syncs contact frontmatter with matching VCF files when the VCF has newer revision data",
+  settingPropertyName: "vcardSyncPreProcessor",
+  settingDescription: "VCard Folder Watcher: Automatically imports/updates contact data from VCard files when they have newer revision data. Requires VCard Folder Watching to be enabled.",
   settingDefaultValue: true,
 
   async process(contact:Contact): Promise<InsightQueItem | undefined> {
@@ -44,28 +43,28 @@ export const VcfSyncPreProcessor: InsightProcessor = {
     }
 
     const settings = getSettings();
-    const vcfManager = new VCFManager(settings);
+    const vcardManager = new VcardManager(settings);
     
     try {
       // Check if VCF folder exists
-      const watchFolderExists = await vcfManager.watchFolderExists();
+      const watchFolderExists = await vcardManager.watchFolderExists();
       if (!watchFolderExists) {
         return Promise.resolve(undefined);
       }
 
       // Find VCF file matching this contact's UID
-      const vcfFilePath = await vcfManager.findVCFFileByUID(contact.data["UID"]);
+      const vcfFilePath = await vcardManager.findVCFFileByUID(contact.data["UID"]);
       if (!vcfFilePath) {
         return Promise.resolve(undefined);
       }
 
       // Skip ignored files
-      if (vcfManager.shouldIgnoreFile(vcfFilePath)) {
+      if (vcardManager.shouldIgnoreFile(vcfFilePath)) {
         return Promise.resolve(undefined);
       }
 
       // Read and parse the VCF file
-      const parsedEntries = await vcfManager.readAndParseVCF(vcfFilePath);
+      const parsedEntries = await vcardManager.readAndParseVCF(vcfFilePath);
       if (!parsedEntries || parsedEntries.length === 0) {
         return Promise.resolve(undefined);
       }
@@ -98,7 +97,7 @@ export const VcfSyncPreProcessor: InsightProcessor = {
       try {
         vcfFrontmatter = parseYaml(frontmatterMatch[1]) || {};
       } catch (error) {
-        loggingService.error(`[VcfSyncPreProcessor] Error parsing VCF frontmatter: ${error.message}`);
+        console.error(`[VcfSyncPreProcessor] Error parsing VCF frontmatter: ${error.message}`);
         return Promise.resolve(undefined);
       }
 
@@ -131,7 +130,7 @@ export const VcfSyncPreProcessor: InsightProcessor = {
       return Promise.resolve(undefined);
 
     } catch (error) {
-      loggingService.error(`[VcfSyncPreProcessor] Error processing contact ${contact.file.name}: ${error.message}`);
+      console.error(`[VcfSyncPreProcessor] Error processing contact ${contact.file.name}: ${error.message}`);
       return Promise.resolve(undefined);
     }
   },

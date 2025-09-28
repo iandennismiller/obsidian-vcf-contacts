@@ -2,23 +2,25 @@ import "src/insights/insightLoading";
 
 import { Plugin, Notice } from 'obsidian';
 import { ContactsView } from "src/ui/sidebar/sidebarView";
-import { VcardFile } from "src/contacts/vcardFile";
+import { VcardFile } from "src/vcardFile";
 import myScrollTo from "src/ui/myScrollTo";
-import { VCFolderWatcher } from "src/services/vcfFolderWatcher";
+import { FolderWatcher } from "src/services/folderWatcher";
 import { setupVCFDropHandler } from 'src/ui/vcfDropHandler';
 import { setApp, clearApp } from "src/context/sharedAppContext";
+import { InsightCommands } from "src/insights/insightCommands";
 
-import { ContactNote } from "src/contacts/contactNote";
-import { ContactManager } from "src/contacts/contactManager";
+import { ContactNote } from "src/contactNote";
+import { ContactManager } from "src/contactManager";
 
 import { ContactsSettingTab, DEFAULT_SETTINGS } from './settings/settings';
 import { ContactsPluginSettings } from  './settings/settings.d';
 
 export default class ContactsPlugin extends Plugin {
 	settings: ContactsPluginSettings;
-	private vcfWatcher: VCFolderWatcher | null = null;
+	private vcfWatcher: FolderWatcher | null = null;
 	private vcfDropCleanup: (() => void) | null = null;
 	private contactManager: ContactManager | null = null;
+	private insightCommands: InsightCommands | null = null;
 
 	async onload() {
 		await this.loadSettings();
@@ -30,8 +32,18 @@ export default class ContactsPlugin extends Plugin {
 		await this.contactManager.initializeCache();
 		this.contactManager.setupEventListeners();
 
-		// Initialize VCF folder watcher
-		this.vcfWatcher = new VCFolderWatcher(this.app, this.settings);
+		// Initialize InsightCommands
+		this.insightCommands = new InsightCommands(this.app, this.settings, this.contactManager);
+
+		// Ensure contact data consistency during initialization
+		try {
+			await this.contactManager.ensureContactDataConsistency();
+		} catch (error) {
+			console.log(`Error during contact data consistency check: ${error.message}`);
+		}
+
+		// Initialize VCard folder watcher
+		this.vcfWatcher = new FolderWatcher(this.app, this.settings);
 		await this.vcfWatcher.start();
 
 		// Initialize VCF drop handler (watch for .vcf files created in the vault)
@@ -66,138 +78,8 @@ export default class ContactsPlugin extends Plugin {
 			},
 		});
 
-		this.addCommand({
-			id: 'sync-related-list',
-			name: "Sync Related list to frontmatter",
-			callback: async () => {
-				const activeFile = this.app.workspace.getActiveFile();
-				if (!activeFile) {
-					new Notice('No active file found');
-					return;
-				}
-
-				// Check if the file is in the contacts folder
-				if (!activeFile.path.startsWith(this.settings.contactsFolder)) {
-					new Notice('Active file is not in the contacts folder');
-					return;
-				}
-
-				// Check if file has UID (is a contact file)
-				const cache = this.app.metadataCache.getFileCache(activeFile);
-				if (!cache?.frontmatter?.UID) {
-					new Notice('Active file is not a contact file (missing UID)');
-					return;
-				}
-
-				// Perform the sync
-				new Notice('Syncing Related list to frontmatter...');
-				const contactNote = new ContactNote(this.app, this.settings, activeFile);
-				const result = await contactNote.syncRelatedListToFrontmatter();
-
-				if (result.success) {
-					new Notice('Related list synced successfully!');
-					if (result.errors.length > 0) {
-						new Notice(`Sync completed with ${result.errors.length} warnings - check console for details`);
-						result.errors.forEach(error => console.log(error));
-					}
-				} else {
-					new Notice('Failed to sync Related list - check console for details');
-					result.errors.forEach(error => console.log(error));
-				}
-			},
-		});
-
-		this.addCommand({
-			id: 'sync-frontmatter-to-related',
-			name: "Sync frontmatter to Related list",
-			callback: async () => {
-				const activeFile = this.app.workspace.getActiveFile();
-				if (!activeFile) {
-					new Notice('No active file found');
-					return;
-				}
-
-				// Check if the file is in the contacts folder
-				if (!activeFile.path.startsWith(this.settings.contactsFolder)) {
-					new Notice('Active file is not in the contacts folder');
-					return;
-				}
-
-				// Check if file has UID (is a contact file)
-				const cache = this.app.metadataCache.getFileCache(activeFile);
-				if (!cache?.frontmatter?.UID) {
-					new Notice('Active file is not a contact file (missing UID)');
-					return;
-				}
-
-				// Perform the sync
-				new Notice('Syncing frontmatter to Related list...');
-				const contactNote = new ContactNote(this.app, this.settings, activeFile);
-				const result = await contactNote.syncFrontmatterToRelatedList();
-
-				if (result.success) {
-					new Notice('Frontmatter synced successfully!');
-					if (result.errors.length > 0) {
-						new Notice(`Sync completed with ${result.errors.length} warnings - check console for details`);
-						result.errors.forEach(error => console.log(error));
-					}
-				} else {
-					new Notice('Failed to sync frontmatter - check console for details');
-					result.errors.forEach(error => console.log(error));
-				}
-			},
-		});
-
-		this.addCommand({
-			id: 'sync-bidirectional',
-			name: "Sync relationships bidirectionally",
-			callback: async () => {
-				const activeFile = this.app.workspace.getActiveFile();
-				if (!activeFile) {
-					new Notice('No active file found');
-					return;
-				}
-
-				// Check if the file is in the contacts folder
-				if (!activeFile.path.startsWith(this.settings.contactsFolder)) {
-					new Notice('Active file is not in the contacts folder');
-					return;
-				}
-
-				// Check if file has UID (is a contact file)
-				const cache = this.app.metadataCache.getFileCache(activeFile);
-				if (!cache?.frontmatter?.UID) {
-					new Notice('Active file is not a contact file (missing UID)');
-					return;
-				}
-
-				// Perform bidirectional sync
-				new Notice('Syncing relationships bidirectionally...');
-				
-				const contactNote = new ContactNote(this.app, this.settings, activeFile);
-				
-				// Step 1: Sync frontmatter to Related list
-				const frontmatterResult = await contactNote.syncFrontmatterToRelatedList();
-
-				// Step 2: Sync Related list to frontmatter
-				const relatedResult = await contactNote.syncRelatedListToFrontmatter();
-
-				// Report results
-				const totalErrors = frontmatterResult.errors.length + relatedResult.errors.length;
-				if (frontmatterResult.success && relatedResult.success) {
-					new Notice('Bidirectional sync completed successfully!');
-					if (totalErrors > 0) {
-						new Notice(`Sync completed with ${totalErrors} warnings - check console for details`);
-						frontmatterResult.errors.forEach(error => console.log(error));
-						relatedResult.errors.forEach(error => console.log(error));
-					}
-				} else {
-					new Notice('Bidirectional sync failed - check console for details');
-					frontmatterResult.errors.forEach(error => console.log(error));
-					relatedResult.errors.forEach(error => console.log(error));
-				}
-			},
-		});
+		// Register insight processor commands
+		this.insightCommands.registerCommands(this);
 	}
 
 	onunload() {
@@ -206,6 +88,9 @@ export default class ContactsPlugin extends Plugin {
 			this.contactManager.cleanupEventListeners();
 			this.contactManager = null;
 		}
+
+		// Clean up InsightCommands
+		this.insightCommands = null;
 
 		// Clean up app context
 		clearApp();
