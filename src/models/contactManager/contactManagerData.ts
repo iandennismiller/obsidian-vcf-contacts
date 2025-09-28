@@ -211,15 +211,18 @@ export class ContactManagerData {
   /**
    * Find contact file by UID - search operation grouped with cache access
    */
-  async findContactFileByUID(uid: string): Promise<TFile | null> {
+  async findContactFileByUID(uid: string, extractUIDCallback?: (file: TFile) => Promise<string | null>): Promise<TFile | null> {
     console.log(`[ContactManagerData] Looking for contact with UID: "${uid}"`);
+    
+    // Use the callback if provided, otherwise use internal method
+    const extractUID = extractUIDCallback || this.extractUIDFromFile.bind(this);
     
     // First check the cached contactFiles map
     const cachedFile = this.getCachedFile(uid);
     if (cachedFile) {
       console.log(`[ContactManagerData] Found cached file for UID "${uid}": ${cachedFile.path}`);
       // Verify the file still exists and has the correct UID
-      const fileUID = await this.extractUIDFromFile(cachedFile);
+      const fileUID = await extractUID(cachedFile);
       
       if (fileUID === uid) {
         console.log(`[ContactManagerData] Cache hit confirmed for UID "${uid}"`);
@@ -243,7 +246,7 @@ export class ContactManagerData {
       console.log(`[ContactManagerData] Scanning ${files.length} files for UID "${uid}"`);
       
       for (const file of files) {
-        const fileUID = await this.extractUIDFromFile(file);
+        const fileUID = await extractUID(file);
         
         if (fileUID === uid) {
           console.log(`[ContactManagerData] Found match for UID "${uid}": ${file.path}`);
@@ -264,21 +267,22 @@ export class ContactManagerData {
   /**
    * Get all contact files - file enumeration grouped with file operations
    */
-  getAllContactFiles(): TFile[] {
+  getAllContactFiles(isContactFileCallback?: (file: TFile) => boolean): TFile[] {
     if (this._contactFilesCache !== null) {
       return this._contactFilesCache;
     }
 
     const contactsFolder = this.getContactsFolder();
+    const isContactFile = isContactFileCallback || this.isContactFile.bind(this);
 
     if (!contactsFolder || contactsFolder === '/') {
       // Search entire vault if no specific contacts folder
       const allFiles = this.app.vault.getMarkdownFiles();
-      this._contactFilesCache = allFiles.filter(file => this.isContactFile(file));
+      this._contactFilesCache = allFiles.filter(file => isContactFile(file));
     } else {
       // Filter files in the specific contacts folder
       const files = this.app.vault.getMarkdownFiles().filter(file => {
-        return file.path.startsWith(contactsFolder) && this.isContactFile(file);
+        return file.path.startsWith(contactsFolder) && isContactFile(file);
       });
       this._contactFilesCache = files;
     }

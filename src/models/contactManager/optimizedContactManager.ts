@@ -127,14 +127,14 @@ export class ContactManager implements IContactManager {
    * Find a contact file by its UID
    */
   async findContactFileByUID(uid: string): Promise<TFile | null> {
-    return this.managerData.findContactFileByUID(uid);
+    return this.managerData.findContactFileByUID(uid, this.extractUIDFromFile.bind(this));
   }
 
   /**
    * Get all contact files from the vault
    */
   getAllContactFiles(): TFile[] {
-    return this.managerData.getAllContactFiles();
+    return this.managerData.getAllContactFiles(this.isContactFile.bind(this));
   }
 
   /**
