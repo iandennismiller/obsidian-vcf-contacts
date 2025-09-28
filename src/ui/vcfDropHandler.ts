@@ -1,9 +1,9 @@
 import * as fs from 'fs/promises';
 import { App, Notice, TFile } from 'obsidian';
 import * as path from 'path';
-import { ContactNote } from 'src/contactNote';
-import { VcardFile } from 'src/vcardFile';
-import { ContactManager } from 'src/contactManager';
+import { ContactNote } from 'src/models/contactNote';
+import { VcardFile } from 'src/models/vcardFile';
+import { ContactManager } from 'src/models/contactManager';
 import { ContactsPluginSettings } from 'src/settings/settings.d';
 
 /**

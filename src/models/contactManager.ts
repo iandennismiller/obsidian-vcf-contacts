@@ -1,11 +1,11 @@
 import { App, TFile, EventRef, WorkspaceLeaf, TFolder, Vault, normalizePath, Notice, Workspace } from 'obsidian';
-import { ContactsPluginSettings } from './settings/settings.d';
-import { ContactNote, getFrontmatterFromFiles } from './contactNote';
+import { ContactsPluginSettings } from '../settings/settings.d';
+import { ContactNote, Contact } from './contactNote';
 import { VCardForObsidianRecord } from './vcardFile';
-import { getSettings } from './context/sharedSettingsContext';
-import { RunType } from './insights/insight.d';
-import { insightService } from './insights/insightService';
-import { FileExistsModal } from './ui/modals/fileExistsModal';
+import { getSettings } from '../context/sharedSettingsContext';
+import { RunType } from '../insights/insight.d';
+import { insightService } from '../insights/insightService';
+import { FileExistsModal } from '../ui/modals/fileExistsModal';
 
 /**
  * Interface for managing contact notes in the Obsidian vault.
@@ -462,7 +462,7 @@ export class ContactManager implements IContactManager {
     } else {
       const createdFile = await this.app.vault.create(filePath, content);
       await new Promise(r => setTimeout(r, 50));
-      const contact = await getFrontmatterFromFiles([createdFile]);
+      const contact = await this.getFrontmatterFromFiles([createdFile]);
       await insightService.process(contact, RunType.IMMEDIATELY);
       // Open the created file directly in workspace
       const workspace = this.app.workspace;
@@ -522,7 +522,7 @@ export class ContactManager implements IContactManager {
     } else {
       const createdFile = await app.vault.create(filePath, content);
       await new Promise(r => setTimeout(r, 50));
-      const contact = await getFrontmatterFromFiles([createdFile]);
+      const contact = await ContactManager.getFrontmatterFromFilesStatic(app, [createdFile]);
       await insightService.process(contact, RunType.IMMEDIATELY);
       ContactManager.openFileStatic(app, createdFile);
     }
@@ -611,7 +611,7 @@ export class ContactManager implements IContactManager {
       // Finally, process all contacts one more time with just vcardSyncPostProcessor
       if (originalVcardSyncPostProcessorState) {
         console.log('[ContactManager] Running final vcardSyncPostProcessor pass...');
-        const allContacts = await getFrontmatterFromFiles(allContactFiles);
+        const allContacts = await this.getFrontmatterFromFiles(allContactFiles);
         await insightService.process(allContacts, RunType.INPROVEMENT);
         console.log('[ContactManager] Final vcardSyncPostProcessor pass completed');
       }
@@ -657,7 +657,7 @@ export class ContactManager implements IContactManager {
     
     try {
       // Get contact data for processing
-      const contacts = await getFrontmatterFromFiles(contactFiles);
+      const contacts = await this.getFrontmatterFromFiles(contactFiles);
       
       // Process with all insight processors except vcardSyncPostProcessor
       // Note: vcardSyncPostProcessor is already disabled by the caller
@@ -696,8 +696,8 @@ export class ContactManager implements IContactManager {
   static async ensureHasNameStatic(vCardObject: VCardForObsidianRecord): Promise<VCardForObsidianRecord> {
     const { createNameSlug } = await import('./contactNote');
     const { VCardKinds } = await import('./vcardFile');
-    const { ContactNameModal } = await import('./ui/modals/contactNameModal');
-    const { getApp } = await import('./context/sharedAppContext');
+    const { ContactNameModal } = await import('../ui/modals/contactNameModal');
+    const { getApp } = await import('../context/sharedAppContext');
     
     // Import the type separately
     type NamingPayload = import('./ui/modals/contactNameModal').NamingPayload;
@@ -726,6 +726,41 @@ export class ContactManager implements IContactManager {
         }).open();
       });
     }
+  }
+
+  /**
+   * Get frontmatter data from multiple files and create Contact objects
+   * This method operates on multiple files, which is appropriate for ContactManager
+   */
+  async getFrontmatterFromFiles(files: TFile[]): Promise<Contact[]> {
+    const contactsData: Contact[] = [];
+    for (const file of files) {
+      const frontMatter = this.app.metadataCache.getFileCache(file)?.frontmatter;
+      if ((frontMatter?.['N.GN'] && frontMatter?.['N.FN']) || frontMatter?.['FN']) {
+        contactsData.push({
+          file,
+          data: frontMatter,
+        });
+      }
+    }
+    return contactsData;
+  }
+
+  /**
+   * Static version of getFrontmatterFromFiles for use in static contexts
+   */
+  static async getFrontmatterFromFilesStatic(app: App, files: TFile[]): Promise<Contact[]> {
+    const contactsData: Contact[] = [];
+    for (const file of files) {
+      const frontMatter = app.metadataCache.getFileCache(file)?.frontmatter;
+      if ((frontMatter?.['N.GN'] && frontMatter?.['N.FN']) || frontMatter?.['FN']) {
+        contactsData.push({
+          file,
+          data: frontMatter,
+        });
+      }
+    }
+    return contactsData;
   }
 
 }

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TFile, App } from 'obsidian';
-import { ContactManager } from '../src/contactManager';
+import { ContactManager } from '../src/models/contactManager';
 import { ContactsPluginSettings } from '../src/settings/settings.d';
 
 describe('ContactManager', () => {
@@ -25,10 +25,13 @@ describe('ContactManager', () => {
     mockSettings = {
       contactsFolder: 'Contacts',
       defaultHashtag: '#Contact',
+      vcfStorageMethod: 'vcf-folder',
+      vcfFilename: 'contacts.vcf',
       vcfWatchFolder: '/test/vcf',
       vcfWatchEnabled: true,
       vcfWatchPollingInterval: 30,
       vcfWriteBackEnabled: false,
+      vcfCustomizeIgnoreList: false,
       vcfIgnoreFilenames: [],
       vcfIgnoreUIDs: [],
       logLevel: 'DEBUG'

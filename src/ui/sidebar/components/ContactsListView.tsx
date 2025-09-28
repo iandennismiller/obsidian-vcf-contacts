@@ -1,11 +1,11 @@
 import { TFile } from "obsidian";
 import * as React from "react";
-import { Contact } from "src";
-import { fileId } from "src/contactNote";
+import { Contact } from "src/models";
+import { fileId } from "src/models/contactNote";
 import { ContactView } from "src/ui/sidebar/components/ContactView";
-import { VcardFile } from "src/vcardFile";
+import { VcardFile } from "src/models/vcardFile";
 import myScrollTo from "src/ui/myScrollTo";
-import { getSortName } from "src/contactNote";
+import { getSortName } from "src/models/contactNote";
 
 
 type ContactsListProps = {

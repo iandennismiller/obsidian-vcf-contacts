@@ -1,6 +1,6 @@
 import { Notice, App } from 'obsidian';
 import { ContactsPluginSettings } from '../settings/settings.d';
-import { ContactManager } from '../contactManager';
+import { ContactManager } from '../models/contactManager';
 
 /**
  * Insight processor commands for the VCF Contacts plugin
@@ -59,12 +59,13 @@ export class InsightCommands {
     new Notice('Running insight processors on current contact...');
     
     try {
-      const { getFrontmatterFromFiles } = await import('../contactNote');
+      const { ContactManager } = await import('../models/contactManager');
       const { insightService } = await import('./insightService');
       const { RunType } = await import('./insight.d');
       
       // Get contact data
-      const contacts = await getFrontmatterFromFiles([activeFile]);
+      const contactManager = new ContactManager(app);
+      const contacts = await contactManager.getFrontmatterFromFiles([activeFile]);
       
       // Run all processors
       const immediateResults = await insightService.process(contacts, RunType.IMMEDIATELY);
@@ -90,7 +91,6 @@ export class InsightCommands {
     new Notice('Running insight processors on all contacts...');
     
     try {
-      const { getFrontmatterFromFiles } = await import('../contactNote');
       const { insightService } = await import('./insightService');
       const { RunType } = await import('./insight.d');
       
@@ -102,7 +102,7 @@ export class InsightCommands {
       }
       
       // Get contact data
-      const contacts = await getFrontmatterFromFiles(contactFiles);
+      const contacts = await this.contactManager.getFrontmatterFromFiles(contactFiles);
       
       // Run all processors
       const immediateResults = await insightService.process(contacts, RunType.IMMEDIATELY);

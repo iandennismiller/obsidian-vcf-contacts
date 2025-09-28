@@ -38,7 +38,7 @@ const ctx = await esbuild.context({
   sourcemap: prod ? false : "inline",
   treeShaking: true,
   minify: true,
-  outfile: "main.js",
+  outfile: "build/main.js",
 });
 
 if (process.argv[2] === "watch") {

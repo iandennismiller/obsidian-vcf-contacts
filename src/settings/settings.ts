@@ -3,7 +3,7 @@ import { setSettings } from "src/context/sharedSettingsContext";
 import { InsighSettingProperties } from "src/insights/insight.d";
 import { insightService } from "src/insights/insightService";
 import ContactsPlugin from "src/main";
-import { FolderSuggest } from "src/settings/FolderSuggest";
+import { FolderSuggest } from "src/ui/FolderSuggest";
 import { ContactsPluginSettings } from "src/settings/settings.d"
 
 const insightsSetting = insightService.settings();
@@ -15,10 +15,13 @@ const insightsSettingDefaults = insightsSetting.reduce((acc:Record<string, strin
 export const DEFAULT_SETTINGS: ContactsPluginSettings = {
   contactsFolder: "",
   defaultHashtag: "",
+  vcfStorageMethod: 'vcf-folder',
+  vcfFilename: "contacts.vcf",
   vcfWatchFolder: "",
   vcfWatchEnabled: false,
   vcfWatchPollingInterval: 30,
   vcfWriteBackEnabled: false,
+  vcfCustomizeIgnoreList: false,
   vcfIgnoreFilenames: [],
   vcfIgnoreUIDs: [],
   ...insightsSettingDefaults
@@ -107,14 +110,106 @@ export class ContactsSettingTab extends PluginSettingTab {
       }
     })
 
+    // VCF Storage Configuration
+    const vcfStorageTitle = containerEl.createEl("h3", { text: "VCF Storage Configuration" });
+    vcfStorageTitle.style.marginTop = "2em";
+
+    // VCF Storage Method
+    const storageMethodDesc = document.createDocumentFragment();
+    storageMethodDesc.append(
+      "Choose how vCard files are stored:",
+      storageMethodDesc.createEl("br"),
+      storageMethodDesc.createEl("strong", { text: "Single VCF: " }),
+      "All contacts in one vCard file",
+      storageMethodDesc.createEl("br"),
+      storageMethodDesc.createEl("strong", { text: "VCF Folder: " }),
+      "Separate vCard file for each contact"
+    );
+
+    new Setting(containerEl)
+      .setName("VCF Storage Method")
+      .setDesc(storageMethodDesc)
+      .addDropdown(dropdown => {
+        dropdown
+          .addOption('single-vcf', 'Single VCF')
+          .addOption('vcf-folder', 'VCF Folder')
+          .setValue(this.plugin.settings.vcfStorageMethod)
+          .onChange(async (value: 'single-vcf' | 'vcf-folder') => {
+            this.plugin.settings.vcfStorageMethod = value;
+            await this.plugin.saveSettings();
+            setSettings(this.plugin.settings);
+            // Refresh the display to show/hide dependent settings
+            this.display();
+          });
+      });
+
+    // VCF Filename (only shown for single VCF method)
+    if (this.plugin.settings.vcfStorageMethod === 'single-vcf') {
+      const vcfFilenameDesc = document.createDocumentFragment();
+      vcfFilenameDesc.append(
+        "Name of the single VCF file that will contain all contacts.",
+        vcfFilenameDesc.createEl("br"),
+        "Include the .vcf extension."
+      );
+
+      new Setting(containerEl)
+        .setName("VCF Filename")
+        .setDesc(vcfFilenameDesc)
+        .addText(text => text
+          .setPlaceholder("contacts.vcf")
+          .setValue(this.plugin.settings.vcfFilename)
+          .onChange(async (value) => {
+            this.plugin.settings.vcfFilename = value;
+            await this.plugin.saveSettings();
+            setSettings(this.plugin.settings);
+          }));
+    }
+
+    // VCF Folder Settings (only shown for VCF folder method)
+    if (this.plugin.settings.vcfStorageMethod === 'vcf-folder') {
+      const vcfFolderDesc = document.createDocumentFragment();
+      vcfFolderDesc.append(
+        "Folder path where individual VCF files will be stored.",
+        vcfFolderDesc.createEl("br"),
+        "Each contact will have its own .vcf file in this folder."
+      );
+
+      new Setting(containerEl)
+        .setName("VCF Folder")
+        .setDesc(vcfFolderDesc)
+        .addText(text => text
+          .setPlaceholder("Example: /Users/username/Documents/Contacts")
+          .setValue(this.plugin.settings.vcfWatchFolder)
+          .onChange(async (value) => {
+            this.plugin.settings.vcfWatchFolder = value;
+            await this.plugin.saveSettings();
+            setSettings(this.plugin.settings);
+          }));
+
+      // Customize Ignore List toggle (only for VCF folder method)
+      new Setting(containerEl)
+        .setName("Customize Ignore List")
+        .setDesc("Enable customization of files and UIDs to ignore during sync.")
+        .addToggle(toggle =>
+          toggle
+            .setValue(this.plugin.settings.vcfCustomizeIgnoreList)
+            .onChange(async (value) => {
+              this.plugin.settings.vcfCustomizeIgnoreList = value;
+              await this.plugin.saveSettings();
+              setSettings(this.plugin.settings);
+              // Refresh the display to show/hide ignore list settings
+              this.display();
+            }));
+    }
+
     // VCF Folder Watching Settings
-    const vcfWatchingTitle = containerEl.createEl("h3", { text: "VCF Folder Watching" });
+    const vcfWatchingTitle = containerEl.createEl("h3", { text: "Sync Contacts" });
     vcfWatchingTitle.style.marginTop = "2em";
 
     // VCF Watch Enabled Toggle (always shown)
     new Setting(containerEl)
-      .setName("Enable VCF Folder Watching")
-      .setDesc("When enabled, the plugin will monitor the VCF folder for changes and trigger VCF sync processors. Controls both VCF Sync Pre Processor (import) and VCF Sync Post Processor (write-back).")
+      .setName("Enable Contact Sync")
+      .setDesc("When enabled, the plugin will monitor for changes and trigger VCF sync processors. Controls both VCF Sync Pre Processor (import) and VCF Sync Post Processor (write-back).")
       .addToggle(toggle =>
         toggle
           .setValue(this.plugin.settings.vcfWatchEnabled)
@@ -128,30 +223,10 @@ export class ContactsSettingTab extends PluginSettingTab {
 
     // Show folder watching sub-settings only when watching is enabled
     if (this.plugin.settings.vcfWatchEnabled) {
-      // VCF Watch Folder
-      const vcfFolderDesc = document.createDocumentFragment();
-      vcfFolderDesc.append(
-        "Local filesystem folder to watch for VCF files.",
-        vcfFolderDesc.createEl("br"),
-        "Can be outside of your Obsidian vault. Leave empty to disable."
-      );
-
-      new Setting(containerEl)
-        .setName("VCF Watch Folder")
-        .setDesc(vcfFolderDesc)
-        .addText(text => text
-          .setPlaceholder("Example: /Users/username/Documents/Contacts")
-          .setValue(this.plugin.settings.vcfWatchFolder)
-          .onChange(async (value) => {
-            this.plugin.settings.vcfWatchFolder = value;
-            await this.plugin.saveSettings();
-            setSettings(this.plugin.settings);
-          }));
-
       // VCF Watch Polling Interval
       new Setting(containerEl)
         .setName("Polling Interval (seconds)")
-        .setDesc("How often to check the VCF folder for changes. Minimum 10 seconds.")
+        .setDesc("How often to check for changes. Minimum 10 seconds.")
         .addText(text => text
           .setPlaceholder("30")
           .setValue(String(this.plugin.settings.vcfWatchPollingInterval))
@@ -167,7 +242,7 @@ export class ContactsSettingTab extends PluginSettingTab {
       // VCF Write Back Toggle (only shown when folder watching is enabled)
       new Setting(containerEl)
         .setName("Enable VCF Write Back")
-        .setDesc("When enabled, the VCF Sync Post Processor will write changes from Obsidian contacts back to VCF files in the watched folder. Disable to prevent any modifications to VCF files.")
+        .setDesc("When enabled, the VCF Sync Post Processor will write changes from Obsidian contacts back to VCF files. Disable to prevent any modifications to VCF files.")
         .addToggle(toggle =>
           toggle
             .setValue(this.plugin.settings.vcfWriteBackEnabled)
@@ -180,8 +255,11 @@ export class ContactsSettingTab extends PluginSettingTab {
             }));
     }
 
-    // Ignore Lists Section (only shown when both folder watching and write back are enabled)
-    if (this.plugin.settings.vcfWatchEnabled && this.plugin.settings.vcfWriteBackEnabled) {
+    // Ignore Lists Section (only shown when VCF folder method, sync enabled, write back enabled, and customize ignore list is enabled)
+    if (this.plugin.settings.vcfStorageMethod === 'vcf-folder' && 
+        this.plugin.settings.vcfWatchEnabled && 
+        this.plugin.settings.vcfWriteBackEnabled && 
+        this.plugin.settings.vcfCustomizeIgnoreList) {
       const ignoreTitle = containerEl.createEl("h3", { text: "Ignore Lists" });
       ignoreTitle.style.marginTop = "2em";
 

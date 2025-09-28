@@ -5,4 +5,4 @@ export * from './vcardManager';
 export * from './vcardFile';
 
 // Re-export utility functions
-export { getFrontmatterFromFiles, parseKey, mdRender, createContactSlug, createNameSlug } from './contactNote';
+export { parseKey, mdRender, createContactSlug, createNameSlug } from './contactNote';

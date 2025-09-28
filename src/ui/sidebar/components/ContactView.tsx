@@ -1,12 +1,12 @@
 import { setIcon, TFile } from "obsidian";
 import * as React from "react";
-import { Contact, parseKey } from "src";
+import { Contact, parseKey } from "src/models";
 import { getApp } from "src/context/sharedAppContext";
-import { fileId } from "src/contactNote";
-import { ContactManager } from "src/contactManager";
+import { fileId } from "src/models/contactNote";
+import { ContactManager } from "src/models/contactManager";
 import Avatar from "src/ui/sidebar/components/Avatar";
 import { CopyableItem } from "src/ui/sidebar/components/CopyableItem";
-import { getUiName, uiSafeString } from "src/contactNote";
+import { getUiName, uiSafeString } from "src/models/contactNote";
 
 type ContactProps = {
 	contact: Contact;

@@ -97,7 +97,7 @@ export class VcardManager {
    * @param filePath - Full path to the VCF file
    * @returns Promise resolving to VCF file info or null if error
    */
-  async getVCFFileInfo(filePath: string): Promise<VCFFileInfo | null> {
+  async getVCFFileInfo(filePath: string): Promise<VCardFileInfo | null> {
     const stats = await VcardFile.getFileStats(filePath);
     if (!stats) {
       return null;
@@ -126,7 +126,9 @@ export class VcardManager {
       const parsedEntries: Array<[string, any]> = [];
       const vcardFile = new VcardFile(content);
       for await (const entry of vcardFile.parse()) {
-        parsedEntries.push(entry);
+        if (entry[0]) { // Only push entries with valid slugs
+          parsedEntries.push(entry);
+        }
       }
       return parsedEntries;
     } catch (error) {
@@ -212,9 +214,9 @@ export class VcardManager {
    * 
    * @returns Promise resolving to array of VCF file information
    */
-  async getAllVCFFiles(): Promise<VCFFileInfo[]> {
+  async getAllVCFFiles(): Promise<VCardFileInfo[]> {
     const filePaths = await this.listVCFFiles();
-    const fileInfos: VCFFileInfo[] = [];
+    const fileInfos: VCardFileInfo[] = [];
 
     for (const filePath of filePaths) {
       const fileInfo = await this.getVCFFileInfo(filePath);

@@ -1,7 +1,7 @@
 import * as React from "react";
 import { parseYaml } from "obsidian";
-import { Contact, ContactNote } from "src";
-import { VcardManager } from "src/vcardManager";
+import { Contact, ContactNote } from "src/models";
+import { VcardManager } from "src/models/vcardManager";
 import { getApp } from "src/context/sharedAppContext";
 import { getSettings } from "src/context/sharedSettingsContext";
 import { InsightProcessor, InsightQueItem, RunType } from "src/insights/insight.d";
