@@ -1,31 +1,39 @@
 /**
  * Index file for ContactNote module components
- * Exports both the individual component classes and the main ContactNote class
+ * Exports the optimized data-locality structure and maintains backward compatibility
  */
 
-// Export component classes
-export { GenderOperations } from './gender';
-export type { Gender } from './gender';
-export { FrontmatterOperations, parseKey } from './frontmatter';
-export { VaultOperations } from './vault';
-export type { ResolvedContact } from './vault';
-export { MarkdownOperations } from './markdown';
-export { RelatedFieldOperations } from './relatedField';
-export { RelatedListOperations } from './relatedList';
-export type { ParsedRelationship, FrontmatterRelationship } from './relatedList';
-export { SyncOperations } from './sync';
-export { NamingOperations } from './naming';
+// Export the optimized ContactNote class and related components
+export { ContactNote } from './optimizedContactNote';
+export type { Contact, ParsedKey } from './optimizedContactNote';
+export type { Gender, ParsedRelationship, FrontmatterRelationship, ResolvedContact } from './optimizedContactNote';
 
-// Export main ContactNote class and related types/utilities
+// Export optimized component classes for advanced usage
+export { ContactData } from './contactData';
+export { RelationshipOperations } from './relationshipOperations';
+export { MarkdownOperations } from './markdownOperations';
+export { SyncOperations } from './syncOperations';
+
+// Export utility functions for backward compatibility
 export { 
-  ContactNote, 
+  parseKey,
   mdRender,
   createNameSlug,
   createContactSlug,
-  isKind
-} from './contactNote';
+  isKind,
+  fileId,
+  getUiName,
+  uiSafeString,
+  getSortName,
+  createFileName
+} from './optimizedContactNote';
 
-export type { Contact, ParsedKey } from './contactNote';
-
-// Export helper utilities
-export { fileId, getUiName, uiSafeString, getSortName, createFileName } from './contactNote';
+// Re-export legacy component classes for backward compatibility (deprecated)
+export { GenderOperations } from './gender';
+export { FrontmatterOperations } from './frontmatter';
+export { VaultOperations } from './vault';
+export { MarkdownOperations as LegacyMarkdownOperations } from './markdown';
+export { RelatedFieldOperations } from './relatedField';
+export { RelatedListOperations } from './relatedList';
+export { SyncOperations as LegacySyncOperations } from './sync';
+export { NamingOperations } from './naming';
