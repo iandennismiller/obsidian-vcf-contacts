@@ -3,9 +3,9 @@ import "src/insights/insightLoading";
 import { Plugin, Notice } from 'obsidian';
 import { ContactsView } from "src/ui/sidebar/sidebarView";
 import { VcardFile } from "src/contacts/vcardFile";
-import myScrollTo from "src/util/myScrollTo";
+import myScrollTo from "src/ui/myScrollTo";
 import { VCFolderWatcher } from "src/services/vcfFolderWatcher";
-import { setupVCFDropHandler } from 'src/services/vcfDropHandler';
+import { setupVCFDropHandler } from 'src/ui/vcfDropHandler';
 import { setApp, clearApp } from "src/context/sharedAppContext";
 
 import { ContactNote } from "src/contacts/contactNote";

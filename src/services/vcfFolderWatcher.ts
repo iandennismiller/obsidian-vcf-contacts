@@ -8,7 +8,7 @@ import { VCFManager, VCFFileInfo } from "src/contacts";
 import { ContactManager } from "src/contacts/contactManager";
 import { ContactsPluginSettings } from "src/settings/settings.d";
 import { onSettingsChange } from "src/context/sharedSettingsContext";
-import { setupVCFDropHandler } from 'src/services/vcfDropHandler';
+import { setupVCFDropHandler } from 'src/ui/vcfDropHandler';
 
 /**
  * Information about a VCF file being tracked by the watcher

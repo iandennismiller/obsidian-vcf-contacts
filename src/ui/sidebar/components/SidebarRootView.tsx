@@ -15,9 +15,9 @@ import {
 import { ContactsListView } from "src/ui/sidebar/components/ContactsListView";
 import { HeaderView } from "src/ui/sidebar/components/HeaderView";
 import { InsightsView } from "src/ui/sidebar/components/InsightsView";
-import { processAvatar } from "src/util/avatarActions";
+import { processAvatar } from "src/ui/avatarActions";
 
-import myScrollTo from "src/util/myScrollTo";
+import myScrollTo from "src/ui/myScrollTo";
 
 interface SidebarRootViewProps {
   sideBarApi: (api: { createNewContact: () => void }) => void;

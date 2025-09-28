@@ -4,7 +4,7 @@ import { Contact } from "src/contacts";
 import { fileId } from "src/contacts/contactNote";
 import { ContactView } from "src/ui/sidebar/components/ContactView";
 import { VcardFile } from "src/contacts/vcardFile";
-import myScrollTo from "src/util/myScrollTo";
+import myScrollTo from "src/ui/myScrollTo";
 import { getSortName } from "src/contacts/contactNote";
 
 
