@@ -409,63 +409,7 @@ export class ContactManager implements IContactManager {
 
 
 
-  /**
-   * Ensure vCard object has a name before processing
-   * Migrated from src/contacts/ensureHasName.ts
-   */
-  async ensureHasName(vCardObject: VCardForObsidianRecord): Promise<VCardForObsidianRecord> {
-    return ContactManager.ensureHasNameStatic(vCardObject);
-  }
-
-  /**
-   * Static version of ensureHasName for use in static contexts
-   */
-  static async ensureHasNameStatic(vCardObject: VCardForObsidianRecord): Promise<VCardForObsidianRecord> {
-    const { createNameSlug } = await import('./contactNote');
-    const { VCardKinds } = await import('./vcardFile');
-    const { ContactNameModal } = await import('../ui/modals/contactNameModal');
-    const { getApp } = await import('../context/sharedAppContext');
-    
-    // Import the type separately
-    type NamingPayload = import('../ui/modals/contactNameModal').NamingPayload;
-    
-    try {
-      // if we can create a file name then we meet the minimum requirements
-      createNameSlug(vCardObject);
-      return Promise.resolve(vCardObject);
-    } catch (error) {
-      // Need to prompt for some form of name information.
-      const app = getApp();
-      return new Promise((resolve) => {
-        console.warn("No name found for record", vCardObject);
-        new ContactNameModal(app, (nameData: NamingPayload) => {
-          if (nameData.kind === VCardKinds.Individual) {
-            vCardObject["N.PREFIX"] ??= "";
-            vCardObject["N.GN"] = nameData.given;
-            vCardObject["N.MN"] ??= "";
-            vCardObject["N.FN"] = nameData.family;
-            vCardObject["N.SUFFIX"] ??= "";
-          } else {
-            vCardObject["FN"] ??= nameData.fn;
-          }
-          vCardObject["KIND"] ??= nameData.kind;
-          resolve(vCardObject);
-        }).open();
-      });
-    }
-  }
-
   // File management methods migrated from src/file/file.ts
-
-  /**
-   * Open a file in the workspace
-   * Migrated from src/file/file.ts
-   */
-  async openFile(file: TFile, workspace?: Workspace): Promise<void> {
-    const ws = workspace || this.app.workspace;
-    const leaf = ws.getLeaf();
-    await leaf.openFile(file, { active: true });
-  }
 
   /**
    * Find all contact files in a folder
@@ -488,7 +432,10 @@ export class ContactManager implements IContactManager {
   private openCreatedFile(filePath: string): void {
     const file = this.app.vault.getAbstractFileByPath(filePath);
     if (file instanceof TFile) {
-      this.openFile(file);
+      // Open file directly in workspace
+      const workspace = this.app.workspace;
+      const leaf = workspace.getLeaf();
+      leaf.openFile(file, { active: true });
     }
   }
 
@@ -517,16 +464,11 @@ export class ContactManager implements IContactManager {
       await new Promise(r => setTimeout(r, 50));
       const contact = await getFrontmatterFromFiles([createdFile]);
       await insightService.process(contact, RunType.IMMEDIATELY);
-      this.openFile(createdFile);
+      // Open the created file directly in workspace
+      const workspace = this.app.workspace;
+      const leaf = workspace.getLeaf();
+      leaf.openFile(createdFile, { active: true });
     }
-  }
-
-  /**
-   * Create a contact file in the appropriate folder
-   * Migrated from src/file/file.ts
-   */
-  async createContactFile(folderPath: string, content: string, filename: string): Promise<void> {
-    return ContactManager.createContactFileStatic(this.app, folderPath, content, filename);
   }
 
   /**
@@ -748,24 +690,4 @@ export class ContactManager implements IContactManager {
     return changedContacts;
   }
 
-  /**
-   * Check if a file is in the contacts folder
-   * Migrated from src/file/file.ts
-   */
-  isFileInContactsFolder(file: TFile): boolean {
-    const settings = getSettings();
-    return file.path.startsWith(settings.contactsFolder);
-  }
-
-  /**
-   * Join file path parts
-   * Migrated from src/file/file.ts
-   */
-  private fileJoin(...parts: string[]): string {
-    return parts
-      .filter(Boolean)
-      .join("/")
-      .replace(/\/{2,}/g, "/")
-      .replace(/\/+$/, "");
-  }
 }
