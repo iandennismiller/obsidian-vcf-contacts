@@ -3,7 +3,7 @@ import { setSettings } from "src/context/sharedSettingsContext";
 import { InsighSettingProperties } from "src/insights/insight.d";
 import { insightService } from "src/insights/insightService";
 import ContactsPlugin from "src/main";
-import { FolderSuggest } from "src/settings/FolderSuggest";
+import { FolderSuggest } from "src/ui/FolderSuggest";
 import { ContactsPluginSettings } from "src/settings/settings.d"
 
 const insightsSetting = insightService.settings();
