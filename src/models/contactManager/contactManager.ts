@@ -1,9 +1,11 @@
 import { App, TFile } from 'obsidian';
 import { ContactsPluginSettings } from '../../settings/settings.d';
+import { Contact } from '../contactNote';
 import { ContactCache } from './contactCache';
 import { ContactFileOperations } from './contactFileOperations';
 import { ContactEventHandlers } from './contactEventHandlers';
 import { ContactDataConsistency } from './contactDataConsistency';
+import { ContactManagerUtils } from './contactManagerUtils';
 
 /**
  * Interface for managing contact notes in the Obsidian vault.
@@ -236,5 +238,13 @@ export class ContactManager implements IContactManager {
    */
   findContactFiles(contactsFolder: any): TFile[] {
     return this.fileOperations.findContactFiles(contactsFolder);
+  }
+
+  /**
+   * Get frontmatter data from multiple files and create Contact objects
+   * This method operates on multiple files, which is appropriate for ContactManager
+   */
+  async getFrontmatterFromFiles(files: TFile[]): Promise<Contact[]> {
+    return ContactManagerUtils.getFrontmatterFromFiles(this.app, files);
   }
 }

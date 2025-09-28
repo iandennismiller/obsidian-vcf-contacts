@@ -6,6 +6,7 @@ import { getApp } from "src/context/sharedAppContext";
 import { getSettings, onSettingsChange } from "src/context/sharedSettingsContext";
 import { ContactsPluginSettings } from "src/settings/settings.d";
 import { ContactManager } from "src/models/contactManager";
+import { ContactManagerUtils } from "src/models/contactManager/contactManagerUtils";
 import { createFileName } from "src/models/contactNote";
 import { openFilePicker, saveVcardFilePicker, isFileInFolder } from "src/ui/fileOperations";
 import { ContactsListView } from "src/ui/sidebar/components/ContactsListView";
@@ -32,7 +33,7 @@ const importVCFContacts = async (fileContent: string, app: App, settings: Contac
     if (slug) {
       const mdContent = mdRender(record, settings.defaultHashtag);
       const filename = slug + '.md';
-      ContactManager.createContactFileStatic(app, settings.contactsFolder, mdContent, filename);
+      ContactManagerUtils.createContactFile(app, settings.contactsFolder, mdContent, filename);
       imported++;
     } else {
       // Contact has no valid name/slug
@@ -130,7 +131,7 @@ export const SidebarRootView = (props: SidebarRootViewProps) => {
         Object.assign(records, record);
       }
       const mdContent = mdRender(records, settings.defaultHashtag);
-      ContactManager.createContactFileStatic(app, settings.contactsFolder, mdContent, createFileName(records))
+      ContactManagerUtils.createContactFile(app, settings.contactsFolder, mdContent, createFileName(records))
   }
 
 	return (
