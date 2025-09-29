@@ -70,24 +70,33 @@ export class ContactData {
    */
   async getFrontmatter(): Promise<Record<string, any> | null> {
     if (this._frontmatter === null) {
-      // Try metadata cache first (most efficient)
-      const cache = this.app.metadataCache.getFileCache(this.file);
-      if (cache?.frontmatter) {
-        this._frontmatter = cache.frontmatter;
-        return this._frontmatter;
+      try {
+        // Try metadata cache first (most efficient)
+        const cache = this.app.metadataCache.getFileCache(this.file);
+        if (cache?.frontmatter) {
+          this._frontmatter = cache.frontmatter;
+          return this._frontmatter;
+        }
+      } catch (error) {
+        console.log(`[ContactData] Error accessing metadata cache for ${this.file.path}: ${error.message}`);
       }
 
-      // Fallback: parse from content
-      const content = await this.getContent();
-      const match = content.match(/^---\n([\s\S]*?)\n---/);
-      if (match) {
-        try {
-          this._frontmatter = parseYaml(match[1]) || {};
-        } catch (error) {
-          console.log(`[ContactData] Error parsing frontmatter for ${this.file.path}: ${error.message}`);
+      try {
+        // Fallback: parse from content
+        const content = await this.getContent();
+        const match = content.match(/^---\n([\s\S]*?)\n---/);
+        if (match) {
+          try {
+            this._frontmatter = parseYaml(match[1]) || {};
+          } catch (error) {
+            console.log(`[ContactData] Error parsing frontmatter for ${this.file.path}: ${error.message}`);
+            this._frontmatter = {};
+          }
+        } else {
           this._frontmatter = {};
         }
-      } else {
+      } catch (error) {
+        console.log(`[ContactData] Error reading content for ${this.file.path}: ${error.message}`);
         this._frontmatter = {};
       }
     }

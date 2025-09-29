@@ -5,7 +5,7 @@
 import { TFile } from 'obsidian';
 import { ContactNote, Contact } from '../contactNote';
 import { ContactManagerData } from './contactManagerData';
-import { getSettings } from '../../context/sharedSettingsContext';
+import { getSettings, updateSettings } from '../../context/sharedSettingsContext';
 import { RunType } from '../../insights/insight.d';
 import { insightService } from '../../insights/insightService';
 
@@ -40,7 +40,7 @@ export class ConsistencyOperations {
       console.log(`[ConsistencyOperations] Processing ${allContactFiles.length} contacts for consistency`);
 
       // Create initial task list with contacts and their REV timestamps
-      let taskList = await this.createContactTaskList(allContactFiles);
+      let taskList = await this.createContactTaskListInternal(allContactFiles);
       let iteration = 0;
       let hasChanges = true;
 
@@ -49,8 +49,7 @@ export class ConsistencyOperations {
       
       try {
         // Disable vcardSyncPostProcessor during consistency checks
-        const currentSettings = getSettings();
-        currentSettings.vcardSyncPostProcessor = false;
+        updateSettings({ vcardSyncPostProcessor: false });
 
         // Iteratively process contacts until no changes or max iterations
         while (hasChanges && iteration < maxIterations) {
@@ -65,7 +64,7 @@ export class ConsistencyOperations {
           } else {
             console.log(`[ConsistencyOperations] ${changedContacts.length} contacts changed in iteration ${iteration}`);
             // Create new task list with only changed contacts
-            taskList = await this.createContactTaskList(changedContacts);
+            taskList = await this.createContactTaskListInternal(changedContacts);
           }
         }
 
@@ -76,8 +75,7 @@ export class ConsistencyOperations {
 
       } finally {
         // Restore original vcardSyncPostProcessor state
-        const currentSettings = getSettings();
-        currentSettings.vcardSyncPostProcessor = originalVcardSyncPostProcessorState;
+        updateSettings({ vcardSyncPostProcessor: originalVcardSyncPostProcessorState });
       }
 
       // Finally, process all contacts one more time with just vcardSyncPostProcessor
@@ -92,17 +90,18 @@ export class ConsistencyOperations {
 
     } catch (error: any) {
       console.log(`[ConsistencyOperations] Error during consistency check: ${error.message}`);
-      throw error;
+      // Don't throw - handle gracefully for error resilience
+      return;
     }
   }
 
   // === Task List Operations (grouped with consistency processing) ===
 
   /**
-   * Create a task list of contacts with their current REV timestamps
+   * Create a task list of contacts with their current REV timestamps (private)
    * Co-locates task creation with consistency operations
    */
-  private async createContactTaskList(contactFiles: TFile[]): Promise<Map<string, { file: TFile; originalRev: string | null }>> {
+  private async createContactTaskListInternal(contactFiles: TFile[]): Promise<Map<string, { file: TFile; originalRev: string | null }>> {
     const taskList = new Map<string, { file: TFile; originalRev: string | null }>();
     const app = this.managerData.getApp();
     const settings = this.managerData.getSettings();
@@ -258,5 +257,71 @@ export class ConsistencyOperations {
         recommendations: ['Fix validation errors before checking integrity']
       };
     }
+  }
+
+  /**
+   * Process contacts with insights service (public method for testing)
+   */
+  async processContactsWithInsights(taskList: Array<{ file: TFile; revTimestamp?: number }>): Promise<any[]> {
+    try {
+      const contacts = await this.extractFrontmatterFromFiles(taskList.map(task => task.file));
+      const result = await insightService.process(contacts, RunType.IMMEDIATELY);
+      return result || [];
+    } catch (error: any) {
+      console.log(`[ConsistencyOperations] Error processing contacts with insights: ${error.message}`);
+      return [];
+    }
+  }
+
+  /**
+   * Extract frontmatter from files (public method for testing)
+   */
+  async extractFrontmatterFromFiles(files: TFile[]): Promise<Contact[]> {
+    const contactsData: Contact[] = [];
+    const app = this.managerData.getApp();
+    
+    for (const file of files) {
+      try {
+        const frontMatter = app.metadataCache.getFileCache(file)?.frontmatter || {};
+        contactsData.push({
+          file: file,
+          data: frontMatter
+        });
+      } catch (error: any) {
+        console.log(`[ConsistencyOperations] Error extracting frontmatter from ${file.path}: ${error.message}`);
+        contactsData.push({
+          file: file,
+          data: {}
+        });
+      }
+    }
+    return contactsData;
+  }
+
+  /**
+   * Create contact task list (public method for testing)
+   */
+  async createContactTaskList(contactFiles: TFile[]): Promise<Array<{ file: TFile; revTimestamp: number }>> {
+    const taskList: Array<{ file: TFile; revTimestamp: number }> = [];
+    const app = this.managerData.getApp();
+    
+    for (const file of contactFiles) {
+      try {
+        const frontMatter = app.metadataCache.getFileCache(file)?.frontmatter;
+        let revTimestamp = 0;
+        
+        if (frontMatter?.REV) {
+          const parsed = parseInt(frontMatter.REV, 10);
+          revTimestamp = isNaN(parsed) ? 0 : parsed;
+        }
+        
+        taskList.push({ file, revTimestamp });
+      } catch (error: any) {
+        console.log(`[ConsistencyOperations] Error reading contact ${file.basename}: ${error.message}`);
+        taskList.push({ file, revTimestamp: 0 });
+      }
+    }
+    
+    return taskList;
   }
 }

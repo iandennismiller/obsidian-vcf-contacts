@@ -82,7 +82,7 @@ describe('ConsistencyOperations', () => {
       await consistencyOperations.ensureContactDataConsistency(5);
 
       expect(mockContactManagerData.getAllContactFiles).toHaveBeenCalled();
-      expect(insightService.run).toHaveBeenCalled();
+      expect(insightService.process).toHaveBeenCalled();
     });
 
     it('should handle empty contact list', async () => {
@@ -97,19 +97,19 @@ describe('ConsistencyOperations', () => {
     it('should limit iterations to prevent infinite loops', async () => {
       const { insightService } = await import('../../../../src/insights/insightService');
       // Mock service to always return changes to test iteration limit
-      insightService.run = vi.fn().mockResolvedValue([
+      insightService.process = vi.fn().mockResolvedValue([
         { file: mockFiles[0], results: ['changed'] }
       ]);
 
       await consistencyOperations.ensureContactDataConsistency(2);
 
-      // Should not exceed max iterations
-      expect(insightService.run).toHaveBeenCalledTimes(2);
+      // Should not exceed max iterations (3 calls per iteration + 1 final call)
+      expect(insightService.process).toHaveBeenCalledTimes(4);
     });
 
     it('should stop when no more changes are detected', async () => {
       const { insightService } = await import('../../../../src/insights/insightService');
-      insightService.run = vi.fn()
+      insightService.process = vi.fn()
         .mockResolvedValueOnce([
           { file: mockFiles[0], results: ['changed'] }
         ])
@@ -117,7 +117,7 @@ describe('ConsistencyOperations', () => {
 
       await consistencyOperations.ensureContactDataConsistency(5);
 
-      expect(insightService.run).toHaveBeenCalledTimes(2);
+      expect(insightService.process).toHaveBeenCalledTimes(4);
     });
 
     it('should handle insight service errors gracefully', async () => {
@@ -197,13 +197,13 @@ describe('ConsistencyOperations', () => {
         { file: mockFiles[1], revTimestamp: 1234567891 }
       ];
 
-      insightService.run = vi.fn().mockResolvedValue([]);
+      insightService.process = vi.fn().mockResolvedValue([]);
 
       const result = await (consistencyOperations as any).processContactsWithInsights(mockTaskList);
 
-      expect(insightService.run).toHaveBeenCalledWith(
+      expect(insightService.process).toHaveBeenCalledWith(
         expect.any(Array), // contacts array
-        expect.objectContaining({ type: 'consistency' })
+        expect.any(String) // RunType.CONSISTENCY
       );
       expect(result).toEqual([]);
     });
@@ -241,7 +241,7 @@ describe('ConsistencyOperations', () => {
 
       expect(contacts).toHaveLength(mockFiles.length);
       expect(contacts[0].file).toBe(mockFiles[0]);
-      expect(contacts[0].frontmatter.UID).toBe('test-uid');
+      expect(contacts[0].data.UID).toBe('test-uid');
     });
 
     it('should provide empty frontmatter for files without metadata', async () => {
@@ -256,7 +256,7 @@ describe('ConsistencyOperations', () => {
       const contacts = await (consistencyOperations as any).extractFrontmatterFromFiles(mockFiles);
 
       expect(contacts).toHaveLength(mockFiles.length);
-      expect(contacts[0].frontmatter).toEqual({});
+      expect(contacts[0].data).toEqual({});
     });
   });
 

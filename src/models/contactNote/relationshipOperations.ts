@@ -135,22 +135,31 @@ export class RelationshipOperations {
    * Groups contact lookup with relationship operations for better data locality
    */
   async findContactByName(contactName: string): Promise<TFile | null> {
-    const app = this.contactData.getApp();
-    const contactsFolder = '/'; // TODO: Get from settings
-    const contactFile = app.vault.getAbstractFileByPath(`${contactsFolder}/${contactName}.md`);
-    
-    if (contactFile instanceof TFile) {
-      return contactFile;
+    try {
+      const app = this.contactData.getApp();
+      const contactsFolder = 'Contacts'; // TODO: Get from settings
+      
+      // Normalize the contact name for comparison (replace spaces with dashes, lowercase)
+      const normalizedContactName = contactName.toLowerCase().replace(/\s+/g, '-');
+      const contactFile = app.vault.getAbstractFileByPath(`${contactsFolder}/${normalizedContactName}.md`);
+      
+      if (contactFile instanceof TFile) {
+        return contactFile;
+      }
+
+      // Search for file in contacts folder
+      const allFiles = app.vault.getMarkdownFiles();
+      const matchingFiles = allFiles.filter(file => {
+        const normalizedBasename = file.basename.toLowerCase().replace(/\s+/g, '-');
+        return normalizedBasename === normalizedContactName &&
+          file.path.startsWith(contactsFolder);
+      });
+
+      return matchingFiles.length > 0 ? matchingFiles[0] : null;
+    } catch (error) {
+      console.error('Error finding contact by name:', error);
+      return null;
     }
-
-    // Search for file in contacts folder
-    const allFiles = app.vault.getMarkdownFiles();
-    const matchingFiles = allFiles.filter(file => 
-      file.basename.toLowerCase() === contactName.toLowerCase() &&
-      file.path.startsWith(contactsFolder)
-    );
-
-    return matchingFiles.length > 0 ? matchingFiles[0] : null;
   }
 
   /**

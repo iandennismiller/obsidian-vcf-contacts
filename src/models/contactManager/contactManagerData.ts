@@ -124,6 +124,13 @@ export class ContactManagerData {
   }
 
   /**
+   * Add UID to cache (alias for compatibility)
+   */
+  addToUIDCache(uid: string): void {
+    this.existingUIDs.add(uid);
+  }
+
+  /**
    * Remove from cache - cache operation grouped with cache data
    */
   removeFromCache(uid: string): void {
@@ -131,6 +138,15 @@ export class ContactManagerData {
     this.contactFiles.delete(uid);
     this._contactFilesCache = null; // Invalidate cache
     console.log(`[ContactManagerData] Removed from cache: UID "${uid}"`);
+  }
+
+  /**
+   * Remove UID from cache (alias for compatibility)
+   */
+  removeFromUIDCache(uid: string): void {
+    this.existingUIDs.delete(uid);
+    this.contactFiles.delete(uid);
+    this._contactFilesCache = null; // Invalidate cache
   }
 
   /**
@@ -152,6 +168,61 @@ export class ContactManagerData {
   }
 
   /**
+   * Set contact file by UID (alias for compatibility)
+   */
+  setContactFile(uid: string, file: TFile): void {
+    this.contactFiles.set(uid, file);
+    this.existingUIDs.add(uid);
+    this._contactFilesCache = null; // Invalidate cache
+  }
+
+  /**
+   * Get contact file by UID (alias for compatibility)
+   */
+  getContactFile(uid: string): TFile | null {
+    return this.contactFiles.get(uid) || null;
+  }
+
+  /**
+   * Remove contact file by UID (alias for compatibility)
+   */
+  removeContactFile(uid: string): void {
+    this.contactFiles.delete(uid);
+    this.existingUIDs.delete(uid);
+    this._contactFilesCache = null; // Invalidate cache
+  }
+
+  /**
+   * Get all contact files (alias for compatibility)
+   */
+  getContactFiles(): TFile[] {
+    return Array.from(this.contactFiles.values());
+  }
+
+  /**
+   * Clear contact files cache
+   */
+  clearContactFiles(): void {
+    this.contactFiles.clear();
+    this.existingUIDs.clear();
+    this._contactFilesCache = null;
+  }
+
+  /**
+   * Get all cached UIDs
+   */
+  getAllUIDs(): string[] {
+    return Array.from(this.existingUIDs);
+  }
+
+  /**
+   * Clear UID cache
+   */
+  clearUIDCache(): void {
+    this.existingUIDs.clear();
+  }
+
+  /**
    * Get all cached files - cache access grouped with cache data
    */
   getAllCachedFiles(): TFile[] {
@@ -161,10 +232,19 @@ export class ContactManagerData {
   /**
    * Get cache statistics - cache introspection grouped with cache data
    */
-  getCacheStats(): { uidCount: number; fileCount: number } {
+  getCacheStats(): { 
+    uidCount: number; 
+    fileCount: number; 
+    uidCacheSize: number; 
+    contactFilesCacheSize: number; 
+    hasContactFilesCache: boolean; 
+  } {
     return {
       uidCount: this.existingUIDs.size,
-      fileCount: this.contactFiles.size
+      fileCount: this.contactFiles.size,
+      uidCacheSize: this.existingUIDs.size,
+      contactFilesCacheSize: this.contactFiles.size,
+      hasContactFilesCache: this._contactFilesCache !== null
     };
   }
 
@@ -268,26 +348,41 @@ export class ContactManagerData {
    * Get all contact files - file enumeration grouped with file operations
    */
   getAllContactFiles(isContactFileCallback?: (file: TFile) => boolean): TFile[] {
-    if (this._contactFilesCache !== null) {
-      return this._contactFilesCache;
-    }
+    try {
+      // If we have cached contact files from setContactFile calls, return those first
+      if (this.contactFiles.size > 0 && this._contactFilesCache === null && !isContactFileCallback) {
+        return Array.from(this.contactFiles.values());
+      }
 
-    const contactsFolder = this.getContactsFolder();
-    const isContactFile = isContactFileCallback || this.isContactFile.bind(this);
+      if (this._contactFilesCache !== null) {
+        return this._contactFilesCache;
+      }
 
-    if (!contactsFolder || contactsFolder === '/') {
-      // Search entire vault if no specific contacts folder
+      const contactsFolder = this.getContactsFolder();
+      const isContactFile = isContactFileCallback || this.isContactFile.bind(this);
+
       const allFiles = this.app.vault.getMarkdownFiles();
-      this._contactFilesCache = allFiles.filter(file => isContactFile(file));
-    } else {
-      // Filter files in the specific contacts folder
-      const files = this.app.vault.getMarkdownFiles().filter(file => {
-        return file.path.startsWith(contactsFolder) && isContactFile(file);
-      });
-      this._contactFilesCache = files;
-    }
+      if (!allFiles) {
+        this._contactFilesCache = [];
+        return this._contactFilesCache;
+      }
 
-    return this._contactFilesCache;
+      if (!contactsFolder || contactsFolder === '/') {
+        // Search entire vault if no specific contacts folder
+        this._contactFilesCache = allFiles.filter(file => isContactFile(file));
+      } else {
+        // Filter files in the specific contacts folder
+        this._contactFilesCache = allFiles.filter(file => {
+          return file.path.startsWith(contactsFolder) && isContactFile(file);
+        });
+      }
+
+      return this._contactFilesCache;
+    } catch (error) {
+      console.error('Error getting all contact files:', error);
+      // Return cached files as fallback
+      return Array.from(this.contactFiles.values());
+    }
   }
 
   /**
@@ -359,5 +454,56 @@ export class ContactManagerData {
    */
   invalidateAllCaches(): void {
     this._contactFilesCache = null;
+  }
+
+  /**
+   * Invalidate contact files cache specifically
+   */
+  invalidateContactFilesCache(): void {
+    this._contactFilesCache = null;
+  }
+
+  /**
+   * Get contact files from vault with caching
+   */
+  getContactFilesFromVault(): TFile[] {
+    try {
+      if (this._contactFilesCache === null) {
+        const contactsFolder = this.getContactsFolder();
+        const allFiles = this.app.vault.getMarkdownFiles();
+        if (!allFiles) {
+          this._contactFilesCache = [];
+        } else {
+          this._contactFilesCache = allFiles.filter(file => 
+            file.path.startsWith(contactsFolder)
+          );
+        }
+      }
+      return this._contactFilesCache;
+    } catch (error) {
+      console.error('Error getting contact files from vault:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Set current active file
+   */
+  setCurrentActiveFile(file: TFile | null): void {
+    this.currentActiveFile = file;
+  }
+
+  /**
+   * Set event reference for cleanup
+   */
+  setEventRef(ref: EventRef | null): void {
+    this.eventRef = ref;
+  }
+
+  /**
+   * Get event reference
+   */
+  getEventRef(): EventRef | null {
+    return this.eventRef;
   }
 }
