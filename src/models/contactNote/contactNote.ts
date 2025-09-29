@@ -1,265 +1,233 @@
 /**
- * Unified interface for interacting with a contact note in Obsidian.
- * Consolidates functionality from genderUtils, relatedFieldUtils, relatedListSync,
- * contactMdTemplate, revisionUtils, contactFrontmatter, and contactDataKeys.
+ * Optimized ContactNote class with improved data locality.
+ * Groups methods close to the data they operate on for better cache performance.
  */
 
 import { TFile, App } from 'obsidian';
 import { ContactsPluginSettings } from '../../settings/settings.d';
 import { VCardForObsidianRecord, VCardKind, VCardKinds } from '../vcardFile';
-import { getApp } from '../../context/sharedAppContext';
-import { getSettings } from '../../context/sharedSettingsContext';
+import { Gender, Contact, ParsedKey, ParsedRelationship, FrontmatterRelationship, ResolvedContact } from './types';
 
-// Import all the extracted classes and types directly to avoid circular dependencies
-import { GenderOperations, Gender } from './gender';
-import { FrontmatterOperations, parseKey } from './frontmatter';
-import { VaultOperations, ResolvedContact } from './vault';
-import { MarkdownOperations } from './markdown';
-import { RelatedFieldOperations } from './relatedField';
-import { RelatedListOperations, ParsedRelationship, FrontmatterRelationship } from './relatedList';
-import { SyncOperations } from './sync';
-import { NamingOperations } from './naming';
+// Import the optimized components
+import { ContactData } from './contactData';
+import { RelationshipOperations } from './relationshipOperations';
+import { MarkdownOperations } from './markdownOperations';
+import { SyncOperations } from './syncOperations';
 
-export type Contact = {
-  data: Record<string, any>;
-  file: TFile;
-}
-
-// Re-export types that were previously exported from utility modules
-export type { Gender };
-
-export interface ParsedKey {
-  key: string;
-  index?: string;
-  type?: string;
-  subkey?: string;
-}
-
-// Re-export interfaces from the extracted modules
-export type { ParsedRelationship, ResolvedContact, FrontmatterRelationship };
+// Re-export types for backward compatibility and external use
+export type { Contact, ParsedKey, Gender, ParsedRelationship, FrontmatterRelationship, ResolvedContact };
 
 /**
- * Unified class for interacting with a contact note in Obsidian.
- * Provides methods for managing frontmatter, relationships, gender, and markdown rendering.
+ * Optimized ContactNote class that groups operations by data locality.
+ * Uses centralized ContactData for better cache performance.
  */
 export class ContactNote {
   private app: App;
   private settings: ContactsPluginSettings;
-  private file: TFile;
+  private contactData: ContactData;
   
-  // Delegate classes
-  private genderOps: GenderOperations;
-  private frontmatterOps: FrontmatterOperations;
-  private vaultOps: VaultOperations;
+  // Operation groups - each works closely with ContactData
+  private relationshipOps: RelationshipOperations;
   private markdownOps: MarkdownOperations;
-  private relatedFieldOps: RelatedFieldOperations;
-  private relatedListOps: RelatedListOperations;
   private syncOps: SyncOperations;
 
   constructor(app: App, settings: ContactsPluginSettings, file: TFile) {
     this.app = app;
     this.settings = settings;
-    this.file = file;
     
-    // Initialize delegate classes
-    this.genderOps = new GenderOperations();
-    this.frontmatterOps = new FrontmatterOperations(app, file);
-    this.vaultOps = new VaultOperations(app, settings, file);
-    this.markdownOps = new MarkdownOperations(this.genderOps);
-    this.relatedFieldOps = new RelatedFieldOperations();
-    this.relatedListOps = new RelatedListOperations(
-      app, 
-      file, 
-      this.vaultOps, 
-      this.frontmatterOps, 
-      this.genderOps,
-      this.relatedFieldOps
-    );
-    this.syncOps = new SyncOperations(
-      app,
-      settings,
-      file,
-      this.genderOps,
-      this.frontmatterOps,
-      this.vaultOps,
-      this.relatedFieldOps,
-      this.relatedListOps
-    );
+    // Initialize centralized data store
+    this.contactData = new ContactData(app, file);
+    
+    // Initialize operation groups that work with the centralized data
+    this.relationshipOps = new RelationshipOperations(this.contactData);
+    this.markdownOps = new MarkdownOperations(this.contactData);
+    this.syncOps = new SyncOperations(this.contactData, this.relationshipOps);
   }
 
-  // === Core File Operations ===
+  // === Core File Operations (directly from ContactData) ===
 
   /**
    * Get the TFile object for this contact
    */
   getFile(): TFile {
-    return this.file;
+    return this.contactData.getFile();
   }
 
   /**
    * Get the contact's UID from frontmatter
    */
   async getUID(): Promise<string | null> {
-    const frontmatter = await this.getFrontmatter();
-    return frontmatter?.UID || null;
+    return this.contactData.getUID();
   }
 
   /**
    * Get the contact's display name
    */
   getDisplayName(): string {
-    return this.file.basename;
+    return this.contactData.getDisplayName();
   }
 
   /**
-   * Get the file content, with caching
+   * Get the file content with caching
    */
   async getContent(): Promise<string> {
-    return this.vaultOps.getContent();
+    return this.contactData.getContent();
   }
 
   /**
-   * Get the frontmatter, with caching
+   * Get the frontmatter with caching
    */
   async getFrontmatter(): Promise<Record<string, any> | null> {
-    return this.frontmatterOps.getFrontmatter();
+    return this.contactData.getFrontmatter();
   }
 
   /**
    * Invalidate caches when file is modified externally
    */
   invalidateCache(): void {
-    this.frontmatterOps.invalidateCache();
-    this.vaultOps.invalidateContentCache();
+    this.contactData.invalidateAllCaches();
   }
 
-  // === Gender Operations ===
+  // === Gender Operations (directly from ContactData) ===
 
   /**
    * Parse GENDER field value from vCard
    */
   parseGender(value: string): Gender {
-    return this.genderOps.parseGender(value);
+    if (!value || value.trim() === '') {
+      return null;
+    }
+    
+    const normalized = value.trim().toUpperCase();
+    switch (normalized) {
+      case 'M':
+      case 'MALE':
+        return 'M';
+      case 'F':
+      case 'FEMALE':
+        return 'F';
+      case 'NB':
+      case 'NON-BINARY':
+      case 'NONBINARY':
+        return 'NB';
+      case 'U':
+      case 'UNSPECIFIED':
+        return 'U';
+      default:
+        return null;
+    }
   }
 
   /**
    * Get the contact's gender from frontmatter
    */
   async getGender(): Promise<Gender> {
-    const frontmatter = await this.getFrontmatter();
-    const genderValue = frontmatter?.GENDER;
-    return genderValue ? this.parseGender(genderValue) : null;
+    return this.contactData.getGender();
   }
 
   /**
    * Update the contact's gender in frontmatter
    */
   async updateGender(gender: Gender): Promise<void> {
-    if (gender) {
-      await this.updateFrontmatterValue('GENDER', gender);
-    } else {
-      await this.updateFrontmatterValue('GENDER', '');
-    }
+    return this.contactData.updateGender(gender);
   }
 
-  /**
-   * Get the display term for a relationship based on the contact's gender
-   */
-  getGenderedRelationshipTerm(relationshipType: string, contactGender: Gender): string {
-    return this.genderOps.getGenderedRelationshipTerm(relationshipType, contactGender);
-  }
-
-  /**
-   * Infer gender from a gendered relationship term
-   */
-  inferGenderFromRelationship(relationshipType: string): Gender {
-    return this.genderOps.inferGenderFromRelationship(relationshipType);
-  }
-
-  /**
-   * Convert gendered relationship term to genderless equivalent
-   */
-  convertToGenderlessType(relationshipType: string): string {
-    return this.genderOps.convertToGenderlessType(relationshipType);
-  }
-
-  // === Related Field Operations ===
-
-  /**
-   * Format a related value for vCard RELATED field
-   */
-  formatRelatedValue(targetUid: string, targetName: string): string {
-    return this.relatedFieldOps.formatRelatedValue(targetUid, targetName);
-  }
-
-  /**
-   * Parse a vCard RELATED value to extract UID or name
-   */
-  parseRelatedValue(value: string): { type: 'uuid' | 'uid' | 'name'; value: string } | null {
-    return this.relatedFieldOps.parseRelatedValue(value);
-  }
-
-  /**
-   * Extract relationship type from RELATED key format
-   */
-  extractRelationshipType(key: string): string {
-    return this.relatedFieldOps.extractRelationshipType(key);
-  }
-
-  // === Frontmatter Operations ===
+  // === Frontmatter Operations (directly from ContactData) ===
 
   /**
    * Update a single frontmatter value
    */
   async updateFrontmatterValue(key: string, value: string): Promise<void> {
-    await this.frontmatterOps.updateFrontmatterValue(key, value);
+    return this.contactData.updateFrontmatterValue(key, value);
   }
 
   /**
    * Update multiple frontmatter values in a single operation
    */
   async updateMultipleFrontmatterValues(updates: Record<string, string>): Promise<void> {
-    await this.frontmatterOps.updateMultipleFrontmatterValues(updates);
+    return this.contactData.updateMultipleFrontmatterValues(updates);
   }
 
-  // === Related List Parsing and Management ===
+  // === Relationship Operations (delegated to RelationshipOperations) ===
 
   /**
    * Parse Related section from markdown content
    */
   async parseRelatedSection(): Promise<ParsedRelationship[]> {
-    return this.relatedListOps.parseRelatedSection();
+    return this.relationshipOps.parseRelatedSection();
   }
 
   /**
    * Parse RELATED fields from frontmatter
    */
   async parseFrontmatterRelationships(): Promise<FrontmatterRelationship[]> {
-    return this.relatedListOps.parseFrontmatterRelationships();
+    return this.relationshipOps.parseFrontmatterRelationships();
   }
 
   /**
    * Update Related section in markdown content
    */
   async updateRelatedSectionInContent(relationships: { type: string; contactName: string }[]): Promise<void> {
-    await this.relatedListOps.updateRelatedSectionInContent(relationships);
+    return this.relationshipOps.updateRelatedSectionInContent(relationships);
   }
 
   /**
    * Find contact by name in the contacts folder
    */
   async findContactByName(contactName: string): Promise<TFile | null> {
-    return this.vaultOps.findContactByName(contactName);
+    return this.relationshipOps.findContactByName(contactName);
   }
 
   /**
    * Resolve contact information from contact name
    */
   async resolveContact(contactName: string): Promise<ResolvedContact | null> {
-    return this.vaultOps.resolveContact(contactName, this.genderOps);
+    return this.relationshipOps.resolveContact(contactName);
   }
 
-  // === Markdown Template Operations ===
+  /**
+   * Format a related value for vCard RELATED field
+   */
+  formatRelatedValue(targetUid: string, targetName: string): string {
+    return this.relationshipOps.formatRelatedValue(targetUid, targetName);
+  }
+
+  /**
+   * Parse a vCard RELATED value to extract UID or name
+   */
+  parseRelatedValue(value: string): { type: 'uuid' | 'uid' | 'name'; value: string } | null {
+    return this.relationshipOps.parseRelatedValue(value);
+  }
+
+  /**
+   * Extract relationship type from RELATED key format
+   */
+  extractRelationshipType(key: string): string {
+    return this.relationshipOps.extractRelationshipType(key);
+  }
+
+  /**
+   * Get the display term for a relationship based on the contact's gender
+   */
+  getGenderedRelationshipTerm(relationshipType: string, contactGender: Gender): string {
+    return this.relationshipOps.getGenderedRelationshipTerm(relationshipType, contactGender);
+  }
+
+  /**
+   * Infer gender from a gendered relationship term
+   */
+  inferGenderFromRelationship(relationshipType: string): Gender {
+    return this.relationshipOps.inferGenderFromRelationship(relationshipType);
+  }
+
+  /**
+   * Convert gendered relationship term to genderless equivalent
+   */
+  convertToGenderlessType(relationshipType: string): string {
+    return this.relationshipOps.convertToGenderlessType(relationshipType);
+  }
+
+  // === Markdown Operations (delegated to MarkdownOperations) ===
 
   /**
    * Render the contact as markdown from vCard record data
@@ -268,7 +236,21 @@ export class ContactNote {
     return this.markdownOps.mdRender(record, hashtags, genderLookup);
   }
 
-  // === Relationship Sync Operations ===
+  /**
+   * Extract specific sections from markdown content
+   */
+  async extractMarkdownSections(): Promise<Map<string, string>> {
+    return this.markdownOps.extractMarkdownSections();
+  }
+
+  /**
+   * Update a specific section in the markdown content
+   */
+  async updateMarkdownSection(sectionName: string, newContent: string): Promise<void> {
+    return this.markdownOps.updateMarkdownSection(sectionName, newContent);
+  }
+
+  // === Sync Operations (delegated to SyncOperations) ===
 
   /**
    * Sync Related list from markdown to frontmatter
@@ -278,169 +260,207 @@ export class ContactNote {
   }
 
   /**
-   * Sync frontmatter RELATED fields to Related list in markdown
+   * Sync relationships from frontmatter to markdown
    */
   async syncFrontmatterToRelatedList(): Promise<{ success: boolean; errors: string[] }> {
     return this.syncOps.syncFrontmatterToRelatedList();
   }
 
-  // --- Revision / VCF helpers ---
-
   /**
-   * Generate a REV timestamp string compatible with existing plugin format.
-   * Example: 20250928T123456Z (no separators)
+   * Perform full bidirectional sync between markdown and frontmatter
    */
-  generateRevTimestamp(): string {
-    return new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+  async performFullSync(): Promise<{ success: boolean; errors: string[] }> {
+    return this.syncOps.performFullSync();
   }
 
   /**
-   * Parse a REV timestamp string into a Date or null.
+   * Validate relationship consistency
    */
-  parseRevisionDate(value: string | null): Date | null {
-    if (!value) return null;
+  async validateRelationshipConsistency(): Promise<{ 
+    isConsistent: boolean; 
+    issues: string[]; 
+    recommendations: string[] 
+  }> {
+    return this.syncOps.validateRelationshipConsistency();
+  }
+
+  // === Debug and Utility Operations ===
+
+  /**
+   * Get cache status for debugging
+   */
+  getCacheStatus(): { [key: string]: boolean } {
+    return this.contactData.getCacheStatus();
+  }
+
+  // === Additional utility methods for backward compatibility ===
+
+  /**
+   * Generate REV timestamp for vCard compatibility
+   */
+  generateRevTimestamp(): string {
+    return new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
+  }
+
+  /**
+   * Check if contact should be updated from VCF based on REV timestamp
+   */
+  async shouldUpdateFromVCF(record: Record<string, any>): Promise<boolean> {
+    const frontmatter = await this.getFrontmatter();
+    if (!frontmatter) return true;
+
+    const contactRev = frontmatter.REV;
+    const vcfRev = record.REV;
+
+    // If either timestamp is missing, allow update
+    if (!contactRev || !vcfRev) return true;
+
+    // Compare timestamps - allow update if VCF is newer
     try {
-      let normalized = value;
-      // support YYYYMMDDTHHMMSSZ and ISO formats
-      if (/^\d{8}T\d{6}Z?$/.test(value)) {
-        // YYYYMMDDTHHMMSSZ -> YYYY-MM-DDTHH:MM:SSZ
-        normalized = `${value.substring(0,4)}-${value.substring(4,6)}-${value.substring(6,8)}T${value.substring(9,11)}:${value.substring(11,13)}:${value.substring(13,15)}Z`;
-      }
-      const d = new Date(normalized);
-      if (isNaN(d.getTime())) return null;
-      return d;
-    } catch (e) {
-      return null;
+      const contactTime = new Date(contactRev).getTime();
+      const vcfTime = new Date(vcfRev).getTime();
+      return vcfTime > contactTime;
+    } catch {
+      // If timestamp parsing fails, allow update
+      return true;
+    }
+  }
+}
+
+// === Standalone Utility Functions (for backward compatibility) ===
+
+/**
+ * Parse a frontmatter key into its components
+ */
+export function parseKey(key: string): ParsedKey {
+  const match = key.match(/^([^[]+)(?:\[([^\]]*)\])?(?:\.(.+))?$/);
+  if (!match) {
+    return { key };
+  }
+
+  const [, baseKey, indexOrType, subkey] = match;
+  
+  // Check if the bracket contains a number (index) or type
+  let index: string | undefined;
+  let type: string | undefined;
+  
+  if (indexOrType) {
+    if (indexOrType.includes(':')) {
+      [index, type] = indexOrType.split(':', 2);
+    } else if (/^\d+$/.test(indexOrType)) {
+      index = indexOrType;
+    } else {
+      type = indexOrType;
     }
   }
 
-  /**
-   * Update the frontmatter REV timestamp for this contact
-   */
-  async updateRevTimestamp(): Promise<void> {
-    const ts = this.generateRevTimestamp();
-    await this.updateFrontmatterValue('REV', ts);
-  }
-
-  /**
-   * Decide whether a contact should be updated from a VCF record based on REV timestamps.
-   */
-  async shouldUpdateFromVCF(record: Record<string, any>): Promise<boolean> {
-    const vcfRev = record['REV'] || null;
-    const currentFrontmatter = await this.getFrontmatter();
-    const currentRev = currentFrontmatter?.REV || null;
-
-    const vcfDate = this.parseRevisionDate(vcfRev);
-    const currentDate = this.parseRevisionDate(currentRev);
-
-    if (!vcfDate) return false;
-    if (!currentDate) return true;
-    return vcfDate.getTime() > currentDate.getTime();
-  }
+  return {
+    key: baseKey,
+    index,
+    type,
+    subkey
+  };
 }
 
 /**
- * Utility function to render contact markdown from vCard record data
- * This is a static utility function that uses ContactNote internally
+ * Render markdown from vCard record data (standalone function for compatibility)
  */
 export function mdRender(record: Record<string, any>, hashtags: string, genderLookup?: (contactRef: string) => Gender): string {
-  // Create a temporary ContactNote instance just for the helper methods
-  const tempContactNote = new ContactNote(getApp(), getSettings(), null as any);
-  return tempContactNote.mdRender(record, hashtags, genderLookup);
+  // Create a temporary ContactData for rendering
+  const tempApp = require('obsidian').App;
+  const tempFile = { basename: 'temp' } as TFile;
+  const tempContactData = new ContactData(tempApp, tempFile);
+  const markdownOps = new MarkdownOperations(tempContactData);
+  
+  return markdownOps.mdRender(record, hashtags, genderLookup);
 }
 
-// Name utility functions - delegated to NamingOperations
+// === Legacy Utility Functions ===
 
-/**
- * Creates a name slug from vCard records. FN is a mandatory field in the spec so we fall back to that.
- * Migrated from src/util/nameUtils.ts
- */
 export function createNameSlug(record: VCardForObsidianRecord): string {
-  return NamingOperations.createNameSlug(record);
-}
-
-/**
- * Creates a kebab-case slug from vCard records for use as identifiers
- */
-export function createContactSlug(record: VCardForObsidianRecord): string {
-  return NamingOperations.createContactSlug(record);
-}
-
-// Re-export utility functions that are now in extracted modules
-export { parseKey };
-
-/**
- * Check if record is of a specific kind
- * Migrated from src/util/nameUtils.ts
- */
-export function isKind(record: VCardForObsidianRecord, kind: VCardKind): boolean {
-  return NamingOperations.isKind(record, kind);
-}
-
-// --- UI / helper utilities ---
-
-/**
- * Produce a DOM-friendly id for a contact file.
- * Uses the file.path but replaces slashes with `--` so it is a valid id.
- */
-export function fileId(file: TFile): string {
-  if (!file) return '';
-  return `contact-${String(file.path).replace(/[\/]/g, '--')}`;
-}
-
-/**
- * Return a UI-friendly display name for a contact vCard data object.
- */
-export function getUiName(data: Record<string, any>): string {
-  if (!data) return '';
-  if (data['FN']) return String(data['FN']);
-  if (data['N.FN']) return String(data['N.FN']);
-
-  const parts = [data['N.PREFIX'], data['N.GN'], data['N.MN'], data['N.FN'], data['N.SUFFIX']]
-    .filter(Boolean)
-    .map((p) => String(p).trim())
-    .filter(Boolean);
-  if (parts.length) return parts.join(' ');
-
-  // Fallbacks
-  if (data['ORG']) return String(data['ORG']);
-  return '';
-}
-
-/**
- * Safely convert a value to a UI string or return undefined for missing values.
- */
-export function uiSafeString(value: any): string | undefined {
-  if (value === undefined || value === null) return undefined;
-  if (Array.isArray(value)) {
-    const joined = value.map((v) => (v === undefined || v === null ? '' : String(v))).join(' ');
-    return joined === '' ? undefined : joined;
+  let fileName: string | undefined = undefined;
+  
+  if (isKind(record, VCardKinds.Individual)) {
+    fileName = [
+      record["N.PREFIX"],
+      record["N.GN"],
+      record["N.MN"],
+      record["N.FN"],
+      record["N.SUFFIX"],
+    ]
+      .map((part) => part?.trim())
+      .filter((part) => part)
+      .join(" ") || undefined;
   }
-  const s = String(value).trim();
-  return s === '' ? undefined : s;
+
+  if (!fileName && record["FN"]) {
+    fileName = record["FN"];
+  }
+
+  if (!fileName) {
+    throw new Error("No name found for record");
+  }
+
+  return sanitizeFileName(fileName);
 }
 
-/**
- * Get a stable sortable name string from vCard data.
- * Uses FN or N.FN where available and lowercases for consistent sorting.
- */
-export function getSortName(data: Record<string, any>): string {
-  if (!data) return '';
-  const name = data['N.FN'] || data['FN'] || '';
-  return String(name).toLowerCase();
+export function createContactSlug(record: VCardForObsidianRecord): string {
+  return createNameSlug(record);
 }
 
-/**
- * Create a filesystem-friendly file name for a new contact record.
- * Delegates to createNameSlug and appends `.md`.
- */
-export function createFileName(record: any): string {
+export function isKind(record: VCardForObsidianRecord, kind: VCardKind): boolean {
+  return record.KIND === kind || (!record.KIND && kind === VCardKinds.Individual);
+}
+
+function sanitizeFileName(input: string): string {
+  const illegalRe = /[\/\?<>\\:\*\|"]/g;
+  const controlRe = /[\x00-\x1f\x80-\x9f]/g;
+  const reservedRe = /^\.+$/;
+  const windowsReservedRe = /^(con|prn|aux|nul|com[0-9]|lpt[0-9])(\..*)?$/i;
+  const windowsTrailingRe = /[\. ]+$/;
+  const multipleSpacesRe = /\s+/g;
+  
+  return input
+    .replace(illegalRe, ' ')
+    .replace(controlRe, ' ')
+    .replace(reservedRe, ' ')
+    .replace(windowsReservedRe, ' ')
+    .replace(windowsTrailingRe, ' ')
+    .replace(multipleSpacesRe, " ")
+    .trim();
+}
+
+// Additional utility functions for compatibility
+export function fileId(file: TFile): string {
+  return file.path.replace(/[^\w]/g, '_');
+}
+
+export function getUiName(contact: Contact): string {
+  const frontmatter = contact.data;
+  return frontmatter?.["N.GN"] + " " + frontmatter?.["N.FN"] || frontmatter?.["FN"] || contact.file.basename;
+}
+
+export function uiSafeString(input: string): string {
+  return input.replace(/[<>&"]/g, (match) => {
+    const escapeMap: Record<string, string> = {
+      '<': '&lt;',
+      '>': '&gt;',
+      '&': '&amp;',
+      '"': '&quot;'
+    };
+    return escapeMap[match];
+  });
+}
+
+export function getSortName(contact: Contact): string {
+  const frontmatter = contact.data;
+  return frontmatter?.["N.FN"] + ", " + frontmatter?.["N.GN"] || frontmatter?.["FN"] || contact.file.basename;
+}
+
+export function createFileName(record: VCardForObsidianRecord): string {
   try {
-    const slug = createNameSlug(record as VCardForObsidianRecord);
-    return `${slug}.md`;
-  } catch (e) {
-    // Fallback: a timestamp-based filename
-    const fallback = `contact-${Date.now()}`;
-    return `${fallback}.md`;
+    return createNameSlug(record) + '.md';
+  } catch {
+    return 'contact.md';
   }
 }

@@ -4,7 +4,7 @@
 
 import { stringifyYaml } from 'obsidian';
 import { ContactData } from './contactData';
-import { Gender } from './gender';
+import { Gender } from './types';
 
 /**
  * Markdown operations that work directly with ContactData
