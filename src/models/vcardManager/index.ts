@@ -10,3 +10,6 @@ export { VCardWriteQueue } from './writeQueue';
 
 // File operations specific to manager responsibilities
 export { VCardManagerFileOperations } from './fileOperations';
+
+// Interfaces
+export * from '../../interfaces/vcardManager.d';

@@ -62,3 +62,9 @@ export {
   getSortName,
   createFileName
 } from './contactNote';
+
+// ============================================================================
+// Interfaces
+// ============================================================================
+
+export * from '../../interfaces/contactNote.d';

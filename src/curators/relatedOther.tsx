@@ -3,7 +3,9 @@ import { Contact, ContactNote, FrontmatterRelationship } from "src/models";
 import { ContactManager } from "src/models/contactManager";
 import { getApp } from "src/context/sharedAppContext";
 import { getSettings } from "src/context/sharedSettingsContext";
-import { InsightProcessor, InsightQueItem, RunType } from "src/insights/insight.d";
+import { CuratorProcessor } from "src/interfaces/CuratorProcessor.d";
+import { CuratorQueItem } from "src/interfaces/CuratorQueItem.d";
+import { RunType } from "src/interfaces/RunType.d";
 
 /**
  * Get the reciprocal relationship type for a given type
@@ -48,7 +50,7 @@ function getReciprocalRelationshipType(relationshipType: string): string | null 
   return reciprocalMap[normalizedType] || null;
 }
 
-const renderGroup = (queItems: InsightQueItem[]): JSX.Element => {
+const renderGroup = (queItems: CuratorQueItem[]): JSX.Element => {
   return (
     <div className="action-card">
       <div className="action-card-content">
@@ -59,7 +61,7 @@ const renderGroup = (queItems: InsightQueItem[]): JSX.Element => {
   );
 }
 
-const render = (queItem: InsightQueItem): JSX.Element => {
+const render = (queItem: CuratorQueItem): JSX.Element => {
   return (
     <div className="action-card">
       <div className="action-card-content">
@@ -69,14 +71,14 @@ const render = (queItem: InsightQueItem): JSX.Element => {
   );
 }
 
-export const RelatedOtherProcessor: InsightProcessor = {
+export const RelatedOtherProcessor: CuratorProcessor = {
   name: "RelatedOtherProcessor",
   runType: RunType.INPROVEMENT,
   settingPropertyName: "relatedOtherProcessor",
   settingDescription: "Automatically adds missing reciprocal relationships to contact frontmatter based on other contacts' RELATED fields",
   settingDefaultValue: true,
 
-  async process(contact: Contact): Promise<InsightQueItem | undefined> {
+  async process(contact: Contact): Promise<CuratorQueItem | undefined> {
     const activeProcessor = getSettings()[`${this.settingPropertyName}`] as boolean;
     
     if (!activeProcessor) {

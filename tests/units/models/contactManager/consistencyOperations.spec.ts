@@ -11,8 +11,8 @@ vi.mock('../../../../src/context/sharedSettingsContext', () => ({
   updateSettings: vi.fn()
 }));
 
-vi.mock('../../../../src/insights/insightService', () => ({
-  insightService: {
+vi.mock('../../../../src/models/curatorManager/curatorManager', () => ({
+  curatorService: {
     process: vi.fn().mockResolvedValue(undefined)
   }
 }));
@@ -76,13 +76,13 @@ describe('ConsistencyOperations', () => {
 
   describe('ensureContactDataConsistency', () => {
     it('should process all contact files for consistency', async () => {
-      const { insightService } = await import('../../../../src/insights/insightService');
-      vi.mocked(insightService.process).mockResolvedValue(undefined);
+      const { curatorService } = await import('../../../../src/models/curatorManager/curatorManager');
+      vi.mocked(curatorService.process).mockResolvedValue(undefined);
 
       await consistencyOperations.ensureContactDataConsistency(5);
 
       expect(mockContactManagerData.getAllContactFiles).toHaveBeenCalled();
-      expect(insightService.process).toHaveBeenCalled();
+      expect(curatorService.process).toHaveBeenCalled();
     });
 
     it('should handle empty contact list', async () => {
@@ -95,21 +95,21 @@ describe('ConsistencyOperations', () => {
     });
 
     it('should limit iterations to prevent infinite loops', async () => {
-      const { insightService } = await import('../../../../src/insights/insightService');
+      const { curatorService } = await import('../../../../src/models/curatorManager/curatorManager');
       // Mock service to always return changes to test iteration limit
-      insightService.process = vi.fn().mockResolvedValue([
+      curatorService.process = vi.fn().mockResolvedValue([
         { file: mockFiles[0], results: ['changed'] }
       ]);
 
       await consistencyOperations.ensureContactDataConsistency(2);
 
       // Should not exceed max iterations (3 calls per iteration + 1 final call)
-      expect(insightService.process).toHaveBeenCalledTimes(4);
+      expect(curatorService.process).toHaveBeenCalledTimes(4);
     });
 
     it('should stop when no more changes are detected', async () => {
-      const { insightService } = await import('../../../../src/insights/insightService');
-      insightService.process = vi.fn()
+      const { curatorService } = await import('../../../../src/models/curatorManager/curatorManager');
+      curatorService.process = vi.fn()
         .mockResolvedValueOnce([
           { file: mockFiles[0], results: ['changed'] }
         ])
@@ -117,12 +117,12 @@ describe('ConsistencyOperations', () => {
 
       await consistencyOperations.ensureContactDataConsistency(5);
 
-      expect(insightService.process).toHaveBeenCalledTimes(4);
+      expect(curatorService.process).toHaveBeenCalledTimes(4);
     });
 
-    it('should handle insight service errors gracefully', async () => {
-      const { insightService } = await import('../../../../src/insights/insightService');
-      insightService.run = vi.fn().mockRejectedValue(new Error('Service error'));
+    it('should handle curator service errors gracefully', async () => {
+      const { curatorService } = await import('../../../../src/models/curatorManager/curatorManager');
+      curatorService.process = vi.fn().mockRejectedValue(new Error('Service error'));
 
       await expect(consistencyOperations.ensureContactDataConsistency())
         .resolves.not.toThrow();
@@ -190,31 +190,31 @@ describe('ConsistencyOperations', () => {
   });
 
   describe('processContactsWithInsights', () => {
-    it('should process contacts through insight service', async () => {
-      const { insightService } = await import('../../../../src/insights/insightService');
+    it('should process contacts through curator service', async () => {
+      const { curatorService } = await import('../../../../src/models/curatorManager/curatorManager');
       const mockTaskList = [
         { file: mockFiles[0], revTimestamp: 1234567890 },
         { file: mockFiles[1], revTimestamp: 1234567891 }
       ];
 
-      insightService.process = vi.fn().mockResolvedValue([]);
+      curatorService.process = vi.fn().mockResolvedValue([]);
 
       const result = await (consistencyOperations as any).processContactsWithInsights(mockTaskList);
 
-      expect(insightService.process).toHaveBeenCalledWith(
+      expect(curatorService.process).toHaveBeenCalledWith(
         expect.any(Array), // contacts array
-        expect.any(String) // RunType.CONSISTENCY
+        expect.any(String) // RunType.IMMEDIATELY
       );
       expect(result).toEqual([]);
     });
 
-    it('should handle insight service failures', async () => {
-      const { insightService } = await import('../../../../src/insights/insightService');
+    it('should handle curator service failures', async () => {
+      const { curatorService } = await import('../../../../src/models/curatorManager/curatorManager');
       const mockTaskList = [
         { file: mockFiles[0], revTimestamp: 1234567890 }
       ];
 
-      insightService.run = vi.fn().mockRejectedValue(new Error('Insight error'));
+      curatorService.process = vi.fn().mockRejectedValue(new Error('Curator error'));
 
       const result = await (consistencyOperations as any).processContactsWithInsights(mockTaskList);
 
@@ -263,9 +263,9 @@ describe('ConsistencyOperations', () => {
   describe('settings management during consistency check', () => {
     it('should temporarily disable vcardSyncPostProcessor', async () => {
       const { getSettings, updateSettings } = await import('../../../../src/context/sharedSettingsContext');
-      const { insightService } = await import('../../../../src/insights/insightService');
+      const { curatorService } = await import('../../../../src/models/curatorManager/curatorManager');
       
-      insightService.run = vi.fn().mockResolvedValue([]);
+      curatorService.process = vi.fn().mockResolvedValue([]);
 
       await consistencyOperations.ensureContactDataConsistency();
 
@@ -277,9 +277,9 @@ describe('ConsistencyOperations', () => {
 
     it('should restore settings even if processing fails', async () => {
       const { updateSettings } = await import('../../../../src/context/sharedSettingsContext');
-      const { insightService } = await import('../../../../src/insights/insightService');
+      const { curatorService } = await import('../../../../src/models/curatorManager/curatorManager');
       
-      insightService.run = vi.fn().mockRejectedValue(new Error('Processing failed'));
+      curatorService.process = vi.fn().mockRejectedValue(new Error('Processing failed'));
 
       await consistencyOperations.ensureContactDataConsistency();
 

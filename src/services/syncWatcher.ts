@@ -6,8 +6,8 @@ import { ContactManager } from "../models/contactManager";
 import { ContactsPluginSettings } from "src/settings/settings.d";
 import { onSettingsChange } from "src/context/sharedSettingsContext";
 import { setupVCFDropHandler } from 'src/ui/vcfDropHandler';
-import { insightService } from "src/insights/insightService";
-import { RunType } from "src/insights/insight.d";
+import { curatorService } from "src/models/curatorManager/curatorManager";
+import { RunType } from "src/interfaces/RunType.d";
 
 /**
  * Information about a VCard file being tracked by the watcher
@@ -15,9 +15,9 @@ import { RunType } from "src/insights/insight.d";
 export type { VCardFileInfo } from '../models/vcardManager';
 
 /**
- * Watches for VCard files and triggers insight processors when changes are detected.
+ * Watches for VCard files and triggers curator processors when changes are detected.
  * Supports both single VCF files and VCF folder monitoring.
- * Provides lightweight monitoring that delegates actual sync operations to dedicated insight processors.
+ * Provides lightweight monitoring that delegates actual sync operations to dedicated curator processors.
  * 
  * Features:
  * - Monitors VCard files/folders for changes using polling
@@ -211,7 +211,7 @@ export class SyncWatcher {
         this.settings
       );
 
-      // Trigger insight processors on all affected contacts
+      // Trigger curator processors on all affected contacts
       if (contactsToProcess.length > 0) {
         console.log(`Triggering processors on ${contactsToProcess.length} contacts from ${vcfFilePath}`);
         
@@ -219,7 +219,7 @@ export class SyncWatcher {
         const contacts = await this.contactManager.getFrontmatterFromFiles(contactsToProcess);
         
         // Trigger immediate processors (like VcfSyncPreProcessor)
-        await insightService.process(contacts, RunType.IMMEDIATELY);
+        await curatorService.process(contacts, RunType.IMMEDIATELY);
 
         // Show notification for processed contacts
         new Notice(`VCF Sync: Processed ${contactsToProcess.length} contact(s) from ${vcfFilePath}`);
@@ -265,7 +265,7 @@ export class SyncWatcher {
   }
 
   /**
-   * Processes a single VCF file for changes and triggers insight processors.
+   * Processes a single VCF file for changes and triggers curator processors.
    * 
    * This method now delegates the VCF processing logic to the appropriate
    * manager classes for better separation of concerns.
@@ -304,7 +304,7 @@ export class SyncWatcher {
         this.settings
       );
 
-      // Trigger insight processors on all affected contacts
+      // Trigger curator processors on all affected contacts
       if (contactsToProcess.length > 0) {
         console.log(`Triggering processors on ${contactsToProcess.length} contacts from ${filename}`);
         
@@ -312,7 +312,7 @@ export class SyncWatcher {
         const contacts = await this.contactManager.getFrontmatterFromFiles(contactsToProcess);
         
         // Trigger immediate processors (like VcfSyncPreProcessor)
-        await insightService.process(contacts, RunType.IMMEDIATELY);
+        await curatorService.process(contacts, RunType.IMMEDIATELY);
 
         // Show notification for processed contacts
         new Notice(`VCF Sync: Processed ${contactsToProcess.length} contact(s) from ${filename}`);

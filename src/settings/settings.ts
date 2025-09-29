@@ -1,13 +1,13 @@
 import { App, PluginSettingTab, Setting, Notice, Modal } from "obsidian";
 import { setSettings } from "src/context/sharedSettingsContext";
-import { InsighSettingProperties } from "src/insights/insight.d";
-import { insightService } from "src/insights/insightService";
+import { CuratorSettingProperties } from "src/interfaces/curatorManager.d";
+import { curatorService } from "src/models/curatorManager/curatorManager";
 import ContactsPlugin from "src/main";
 import { FolderSuggest } from "src/ui/FolderSuggest";
 import { ContactsPluginSettings } from "src/settings/settings.d"
 
-const insightsSetting = insightService.settings();
-const insightsSettingDefaults = insightsSetting.reduce((acc:Record<string, string|boolean>, setting) => {
+const curatorSetting = curatorService.settings();
+const curatorSettingDefaults = curatorSetting.reduce((acc:Record<string, string|boolean>, setting) => {
   acc[setting.settingPropertyName] = setting.settingDefaultValue;
   return acc;
 }, {} as Record<string, string>);
@@ -24,7 +24,7 @@ export const DEFAULT_SETTINGS: ContactsPluginSettings = {
   vcfCustomizeIgnoreList: false,
   vcfIgnoreFilenames: [],
   vcfIgnoreUIDs: [],
-  ...insightsSettingDefaults
+  ...curatorSettingDefaults
 }
 
 export class ContactsSettingTab extends PluginSettingTab {
@@ -91,7 +91,7 @@ export class ContactsSettingTab extends PluginSettingTab {
           setSettings(this.plugin.settings);
         }));
 
-    insightsSetting.forEach((settingProps :InsighSettingProperties) => {
+    curatorSetting.forEach((settingProps :CuratorSettingProperties) => {
       const settingKey = settingProps.settingPropertyName;
       const currentValue = this.plugin.settings[settingKey];
 

@@ -2,8 +2,8 @@ import { App, TFile, Notice, Workspace, normalizePath } from 'obsidian';
 import { VCardForObsidianRecord } from '../vcardFile';
 import { Contact } from '../contactNote';
 import { FileExistsModal } from '../../ui/modals/fileExistsModal';
-import { insightService } from '../../insights/insightService';
-import { RunType } from '../../insights/insight.d';
+import { curatorService } from '../curatorManager/curatorManager';
+import { RunType } from "src/interfaces/RunType.d";
 
 /**
  * Utility functions for contact operations that don't require instance state.
@@ -68,7 +68,7 @@ export class ContactManagerUtils {
         const createdFile = await app.vault.create(filePath, content);
         await new Promise(r => setTimeout(r, 50));
         const contact = await ContactManagerUtils.getFrontmatterFromFiles(app, [createdFile]);
-        await insightService.process(contact, RunType.IMMEDIATELY);
+        await curatorService.process(contact, RunType.IMMEDIATELY);
         ContactManagerUtils.openFile(app, createdFile);
       }
     } catch (error) {

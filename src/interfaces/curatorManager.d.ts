@@ -1,26 +1,25 @@
 import { TFile } from "obsidian";
 import { Contact } from "src";
 
-export interface InsightQueItem {
+export interface CuratorQueItem {
   name: string;
   runType: RunType
   file: TFile;
   message: string;
-  render: (queItem: InsightQueItem) => JSX.Element;
-  renderGroup: (queItems: InsightQueItem[]) => JSX.Element;
+  render: (queItem: CuratorQueItem) => JSX.Element;
+  renderGroup: (queItems: CuratorQueItem[]) => JSX.Element;
 }
 
-export interface InsightProcessor {
+export interface CuratorProcessor {
   name: string;
   runType: RunType
   settingPropertyName: string;
   settingDescription: string;
   settingDefaultValue: boolean;
-  process(contact: Contact): Promise<InsightQueItem | undefined>;
+  process(contact: Contact): Promise<CuratorQueItem | undefined>;
 }
 
-
-export interface InsighSettingProperties {
+export interface CuratorSettingProperties {
   name: string;
   runType: RunType;
   settingPropertyName: string;
