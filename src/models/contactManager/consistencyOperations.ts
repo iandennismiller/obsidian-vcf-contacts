@@ -40,7 +40,7 @@ export class ConsistencyOperations {
       console.log(`[ConsistencyOperations] Processing ${allContactFiles.length} contacts for consistency`);
 
       // Create initial task list with contacts and their REV timestamps
-      let taskList = await this.createContactTaskList(allContactFiles);
+      let taskList = await this.createContactTaskListInternal(allContactFiles);
       let iteration = 0;
       let hasChanges = true;
 
@@ -99,10 +99,10 @@ export class ConsistencyOperations {
   // === Task List Operations (grouped with consistency processing) ===
 
   /**
-   * Create a task list of contacts with their current REV timestamps
+   * Create a task list of contacts with their current REV timestamps (private)
    * Co-locates task creation with consistency operations
    */
-  private async createContactTaskList(contactFiles: TFile[]): Promise<Map<string, { file: TFile; originalRev: string | null }>> {
+  private async createContactTaskListInternal(contactFiles: TFile[]): Promise<Map<string, { file: TFile; originalRev: string | null }>> {
     const taskList = new Map<string, { file: TFile; originalRev: string | null }>();
     const app = this.managerData.getApp();
     const settings = this.managerData.getSettings();
@@ -258,5 +258,66 @@ export class ConsistencyOperations {
         recommendations: ['Fix validation errors before checking integrity']
       };
     }
+  }
+
+  /**
+   * Process contacts with insights service (public method for testing)
+   */
+  async processContactsWithInsights(taskList: Array<{ file: TFile; revTimestamp?: number }>): Promise<any[]> {
+    try {
+      const contacts = await this.extractFrontmatterFromFiles(taskList.map(task => task.file));
+      const result = await insightService.run(contacts, { type: RunType.CONSISTENCY });
+      return result || [];
+    } catch (error: any) {
+      console.log(`[ConsistencyOperations] Error processing contacts with insights: ${error.message}`);
+      return [];
+    }
+  }
+
+  /**
+   * Extract frontmatter from files (public method for testing)
+   */
+  async extractFrontmatterFromFiles(files: TFile[]): Promise<Contact[]> {
+    const contactsData: Contact[] = [];
+    const app = this.managerData.getApp();
+    
+    for (const file of files) {
+      try {
+        const frontMatter = app.metadataCache.getFileCache(file)?.frontmatter || {};
+        contactsData.push({
+          file: file,
+          data: frontMatter
+        });
+      } catch (error: any) {
+        console.log(`[ConsistencyOperations] Error extracting frontmatter from ${file.path}: ${error.message}`);
+        contactsData.push({
+          file: file,
+          data: {}
+        });
+      }
+    }
+    return contactsData;
+  }
+
+  /**
+   * Create contact task list (public method for testing)
+   */
+  async createContactTaskList(contactFiles: TFile[]): Promise<Array<{ file: TFile; revTimestamp: number }>> {
+    const taskList: Array<{ file: TFile; revTimestamp: number }> = [];
+    const app = this.managerData.getApp();
+    
+    for (const file of contactFiles) {
+      try {
+        const frontMatter = app.metadataCache.getFileCache(file)?.frontmatter;
+        const revTimestamp = frontMatter?.REV ? parseInt(frontMatter.REV, 10) : 0;
+        
+        taskList.push({ file, revTimestamp });
+      } catch (error: any) {
+        console.log(`[ConsistencyOperations] Error reading contact ${file.basename}: ${error.message}`);
+        taskList.push({ file, revTimestamp: 0 });
+      }
+    }
+    
+    return taskList;
   }
 }
