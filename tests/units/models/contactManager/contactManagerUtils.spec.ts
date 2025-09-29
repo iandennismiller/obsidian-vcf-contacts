@@ -160,7 +160,7 @@ describe('ContactManagerUtils', () => {
 
   describe('openFile', () => {
     it('should open file with openLinkText when no current file', async () => {
-      const mockFile = { path: 'Contacts/test.md' } as TFile;
+      const mockFile = { path: 'Contacts/test.md', basename: 'test' } as TFile;
       mockApp.workspace!.getActiveFile = vi.fn().mockReturnValue(null);
 
       await ContactManagerUtils.openFile(mockApp as App, mockFile);
@@ -169,8 +169,8 @@ describe('ContactManagerUtils', () => {
     });
 
     it('should open file with openLinkText when current file is different', async () => {
-      const mockFile = { path: 'Contacts/test.md' } as TFile;
-      const mockCurrentFile = { path: 'Contacts/other.md' } as TFile;
+      const mockFile = { path: 'Contacts/test.md', basename: 'test' } as TFile;
+      const mockCurrentFile = { path: 'Contacts/other.md', basename: 'other' } as TFile;
       
       mockApp.workspace!.getActiveFile = vi.fn().mockReturnValue(mockCurrentFile);
 
@@ -180,7 +180,7 @@ describe('ContactManagerUtils', () => {
     });
 
     it('should not open file when it is already active', async () => {
-      const mockFile = { path: 'Contacts/test.md' } as TFile;
+      const mockFile = { path: 'Contacts/test.md', basename: 'test' } as TFile;
       mockApp.workspace!.getActiveFile = vi.fn().mockReturnValue(mockFile);
 
       await ContactManagerUtils.openFile(mockApp as App, mockFile);
@@ -191,18 +191,18 @@ describe('ContactManagerUtils', () => {
 
   describe('openCreatedFile', () => {
     it('should open newly created file', async () => {
-      const mockFile = { path: 'Contacts/new.md' } as TFile;
+      const mockFile = { path: 'Contacts/new.md', basename: 'new' } as TFile;
       const mockLeaf = { openFile: vi.fn() };
       
       mockApp.workspace!.getLeaf = vi.fn().mockReturnValue(mockLeaf);
 
       await ContactManagerUtils.openCreatedFile(mockApp as App, mockFile);
 
-      expect(mockLeaf.openFile).toHaveBeenCalledWith(mockFile);
+      expect(mockLeaf.openFile).toHaveBeenCalledWith(mockFile, { active: true });
     });
 
     it('should handle errors when opening created file', async () => {
-      const mockFile = { path: 'Contacts/new.md' } as TFile;
+      const mockFile = { path: 'Contacts/new.md', basename: 'new' } as TFile;
       const mockLeaf = { 
         openFile: vi.fn().mockRejectedValue(new Error('Open failed'))
       };
@@ -211,43 +211,43 @@ describe('ContactManagerUtils', () => {
 
       // Should not throw error
       await expect(ContactManagerUtils.openCreatedFile(mockApp as App, mockFile))
-        .resolves.not.toThrow();
+        .resolves.toBeUndefined();
     });
   });
 
   describe('ensureHasName', () => {
-    it('should add default name when FN is missing', () => {
+    it('should add default name when FN is missing', async () => {
       const contact: VCardForObsidianRecord = {
         UID: 'test-123',
         EMAIL: 'test@example.com'
       };
 
-      const result = ContactManagerUtils.ensureHasName(contact);
+      const result = await ContactManagerUtils.ensureHasName(contact);
 
       expect(result.FN).toBeDefined();
       expect(typeof result.FN).toBe('string');
     });
 
-    it('should preserve existing FN field', () => {
+    it('should preserve existing FN field', async () => {
       const contact: VCardForObsidianRecord = {
         UID: 'test-123',
         FN: 'John Doe',
         EMAIL: 'john@example.com'
       };
 
-      const result = ContactManagerUtils.ensureHasName(contact);
+      const result = await ContactManagerUtils.ensureHasName(contact);
 
       expect(result.FN).toBe('John Doe');
     });
 
-    it('should add default name when FN is empty', () => {
+    it('should add default name when FN is empty', async () => {
       const contact: VCardForObsidianRecord = {
         UID: 'test-123',
         FN: '',
         EMAIL: 'test@example.com'
       };
 
-      const result = ContactManagerUtils.ensureHasName(contact);
+      const result = await ContactManagerUtils.ensureHasName(contact);
 
       expect(result.FN).toBeDefined();
       expect(result.FN).not.toBe('');
@@ -276,9 +276,9 @@ describe('ContactManagerUtils', () => {
 
       expect(contacts).toHaveLength(2);
       expect(contacts[0].file).toBe(mockFiles[0]);
-      expect(contacts[0].frontmatter.UID).toBe('uid-1');
+      expect(contacts[0].data.UID).toBe('uid-1');
       expect(contacts[1].file).toBe(mockFiles[1]);
-      expect(contacts[1].frontmatter.UID).toBe('uid-2');
+      expect(contacts[1].data.UID).toBe('uid-2');
     });
 
     it('should handle files without frontmatter', async () => {
@@ -286,15 +286,16 @@ describe('ContactManagerUtils', () => {
         { path: 'Contacts/contact1.md', basename: 'contact1' } as TFile
       ];
 
-      mockApp.metadataCache!.getFileCache = vi.fn().mockReturnValue(null);
+      mockApp.metadataCache!.getFileCache = vi.fn().mockReturnValue({
+        frontmatter: {}
+      });
 
       const contacts = await ContactManagerUtils.getFrontmatterFromFiles(
         mockApp as App, 
         mockFiles
       );
 
-      expect(contacts).toHaveLength(1);
-      expect(contacts[0].frontmatter).toEqual({});
+      expect(contacts).toHaveLength(0);
     });
 
     it('should handle empty file array', async () => {

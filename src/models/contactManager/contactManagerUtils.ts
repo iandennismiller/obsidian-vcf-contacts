@@ -14,28 +14,33 @@ export class ContactManagerUtils {
    * Create a contact file in the specified folder with the given content
    */
   static async createContactFile(app: App, folderPath: string, content: string, filename: string): Promise<void> {
-    const folder = app.vault.getAbstractFileByPath(folderPath !== '' ? folderPath : '/');
-    if (!folder) {
-      new Notice(`Can not find path: '${folderPath}'. Please update "Contacts" plugin settings`);
-      return;
-    }
-    const activeFile = app.workspace.getActiveFile();
-    const parentFolder = activeFile?.parent; // Get the parent folder if it's a file
+    try {
+      const folder = app.vault.getAbstractFileByPath(folderPath !== '' ? folderPath : '/');
+      if (!folder) {
+        new Notice(`Can not find path: '${folderPath}'. Please update "Contacts" plugin settings`);
+        return;
+      }
+      const activeFile = app.workspace.getActiveFile();
+      const parentFolder = activeFile?.parent; // Get the parent folder if it's a file
 
-    const fileJoin = (...parts: string[]): string => {
-      return parts
-        .filter(Boolean)
-        .join("/")
-        .replace(/\/{2,}/g, "/")
-        .replace(/\/+$/, "");
-    };
+      const fileJoin = (...parts: string[]): string => {
+        return parts
+          .filter(Boolean)
+          .join("/")
+          .replace(/\/{2,}/g, "/")
+          .replace(/\/+$/, "");
+      };
 
-    if (parentFolder?.path?.includes(folderPath)) {
-      const filePath = normalizePath(fileJoin(parentFolder.path, filename));
-      await ContactManagerUtils.handleFileCreation(app, filePath, content);
-    } else {
-      const filePath = normalizePath(fileJoin(folderPath, filename));
-      await ContactManagerUtils.handleFileCreation(app, filePath, content);
+      if (parentFolder?.path?.includes(folderPath)) {
+        const filePath = normalizePath(fileJoin(parentFolder.path, filename));
+        await ContactManagerUtils.handleFileCreation(app, filePath, content);
+      } else {
+        const filePath = normalizePath(fileJoin(folderPath, filename));
+        await ContactManagerUtils.handleFileCreation(app, filePath, content);
+      }
+    } catch (error) {
+      console.error('Error creating contact file:', error);
+      new Notice('Failed to create contact file');
     }
   }
 
@@ -43,27 +48,32 @@ export class ContactManagerUtils {
    * Handle file creation with conflict resolution
    */
   static async handleFileCreation(app: App, filePath: string, content: string): Promise<void> {
-    const fileExists = await app.vault.adapter.exists(filePath);
+    try {
+      const fileExists = await app.vault.adapter.exists(filePath);
 
-    if (fileExists) {
-      new FileExistsModal(app, filePath, async (action: "replace" | "skip") => {
-        if (action === "skip") {
-          new Notice("File creation skipped.");
-          return;
-        }
+      if (fileExists) {
+        new FileExistsModal(app, filePath, async (action: "replace" | "skip") => {
+          if (action === "skip") {
+            new Notice("File creation skipped.");
+            return;
+          }
 
-        if (action === "replace") {
-          await app.vault.adapter.write(filePath, content);
-          ContactManagerUtils.openCreatedFile(app, filePath);
-          new Notice(`File overwritten.`);
-        }
-      }).open();
-    } else {
-      const createdFile = await app.vault.create(filePath, content);
-      await new Promise(r => setTimeout(r, 50));
-      const contact = await ContactManagerUtils.getFrontmatterFromFiles(app, [createdFile]);
-      await insightService.process(contact, RunType.IMMEDIATELY);
-      ContactManagerUtils.openFile(app, createdFile);
+          if (action === "replace") {
+            await app.vault.adapter.write(filePath, content);
+            ContactManagerUtils.openCreatedFile(app, filePath);
+            new Notice(`File overwritten.`);
+          }
+        }).open();
+      } else {
+        const createdFile = await app.vault.create(filePath, content);
+        await new Promise(r => setTimeout(r, 50));
+        const contact = await ContactManagerUtils.getFrontmatterFromFiles(app, [createdFile]);
+        await insightService.process(contact, RunType.IMMEDIATELY);
+        ContactManagerUtils.openFile(app, createdFile);
+      }
+    } catch (error) {
+      console.error('Error handling file creation:', error);
+      new Notice('Failed to handle file creation');
     }
   }
 
@@ -72,17 +82,41 @@ export class ContactManagerUtils {
    */
   static async openFile(app: App, file: TFile, workspace?: Workspace): Promise<void> {
     const ws = workspace || app.workspace;
-    const leaf = ws.getLeaf();
-    await leaf.openFile(file, { active: true });
+    const currentFile = ws.getActiveFile();
+    
+    // Don't open if the file is already active
+    if (currentFile && currentFile.path === file.path) {
+      return;
+    }
+    
+    // Use openLinkText for navigation
+    const filename = file.basename + '.md';
+    const sourcePath = currentFile ? currentFile.path : '';
+    await ws.openLinkText(filename, sourcePath);
   }
 
   /**
-   * Open a created file by path
+   * Open a created file by path or TFile
    */
-  static openCreatedFile(app: App, filePath: string): void {
-    const file = app.vault.getAbstractFileByPath(filePath);
-    if (file instanceof TFile) {
-      ContactManagerUtils.openFile(app, file);
+  static async openCreatedFile(app: App, fileOrPath: string | TFile): Promise<void> {
+    try {
+      let file: TFile | null = null;
+      
+      if (typeof fileOrPath === 'string') {
+        const abstractFile = app.vault.getAbstractFileByPath(fileOrPath);
+        if (abstractFile instanceof TFile) {
+          file = abstractFile;
+        }
+      } else {
+        file = fileOrPath;
+      }
+      
+      if (file) {
+        const leaf = app.workspace.getLeaf();
+        await leaf.openFile(file, { active: true });
+      }
+    } catch (error) {
+      console.error('Error opening created file:', error);
     }
   }
 
@@ -92,35 +126,31 @@ export class ContactManagerUtils {
   static async ensureHasName(vCardObject: VCardForObsidianRecord): Promise<VCardForObsidianRecord> {
     const { createNameSlug } = await import('../contactNote');
     const { VCardKinds } = await import('../vcardFile');
-    const { ContactNameModal } = await import('../../ui/modals/contactNameModal');
-    const { getApp } = await import('../../context/sharedAppContext');
-    
-    // Import the type separately
-    type NamingPayload = import('../../ui/modals/contactNameModal').NamingPayload;
     
     try {
       // if we can create a file name then we meet the minimum requirements
       createNameSlug(vCardObject);
       return Promise.resolve(vCardObject);
     } catch (error) {
-      // Need to prompt for some form of name information.
-      const app = getApp();
-      return new Promise((resolve) => {
-        console.warn("No name found for record", vCardObject);
-        new ContactNameModal(app, (nameData: NamingPayload) => {
-          if (nameData.kind === VCardKinds.Individual) {
-            vCardObject["N.PREFIX"] ??= "";
-            vCardObject["N.GN"] = nameData.given;
-            vCardObject["N.MN"] ??= "";
-            vCardObject["N.FN"] = nameData.family;
-            vCardObject["N.SUFFIX"] ??= "";
-          } else {
-            vCardObject["FN"] ??= nameData.fn;
-          }
-          vCardObject["KIND"] ??= nameData.kind;
-          resolve(vCardObject);
-        }).open();
-      });
+      // Add a default name if none exists
+      if (!vCardObject.FN && !vCardObject["N.GN"] && !vCardObject["N.FN"]) {
+        vCardObject.FN = "Unnamed Contact";
+      }
+      
+      // If we have name components but no FN, construct it
+      if (!vCardObject.FN && (vCardObject["N.GN"] || vCardObject["N.FN"])) {
+        const nameParts = [
+          vCardObject["N.PREFIX"],
+          vCardObject["N.GN"],
+          vCardObject["N.MN"], 
+          vCardObject["N.FN"],
+          vCardObject["N.SUFFIX"]
+        ].filter(part => part && part.trim()).join(" ");
+        
+        vCardObject.FN = nameParts || "Unnamed Contact";
+      }
+      
+      return Promise.resolve(vCardObject);
     }
   }
 
