@@ -22,10 +22,18 @@ export * from './IContactData.d';
 export * from './IRelationshipOperations.d';
 export * from './IMarkdownOperations.d';
 export * from './ISyncOperations.d';
+export * from './IConsistencyOperations.d';
+export * from './IContactManagerUtils.d';
 
 // VCard System Interfaces  
 export * from './IVCardManager.d';
 export * from './IVCardFile.d';
+export * from './IVCardParser.d';
+export * from './IVCardGenerator.d';
+export * from './IVCardFileOperations.d';
+export * from './IVCardCollection.d';
+export * from './IVCardWriteQueue.d';
+export * from './IVCardManagerFileOperations.d';
 
 // Legacy exports for backward compatibility
 // These maintain the existing consolidated interface exports
