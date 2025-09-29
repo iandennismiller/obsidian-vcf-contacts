@@ -2,8 +2,8 @@ import * as React from "react";
 import { Contact, ContactNote } from "src/models";
 import { getApp } from "src/context/sharedAppContext";
 import { getSettings } from "src/context/sharedSettingsContext";
-import { CuratorProcessor } from "src/interfaces/CuratorProcessor.d";
-import { CuratorQueItem } from "src/interfaces/CuratorQueItem.d";
+import { CuratorProcessor } from "src/interfaces/CuratorProcessor";
+import { CuratorQueItem } from "src/interfaces/CuratorQueItem";
 import { RunType } from "src/interfaces/RunType";
 
 const renderGroup = (queItems: CuratorQueItem[]): JSX.Element => {

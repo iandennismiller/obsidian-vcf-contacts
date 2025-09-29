@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useEffect, useRef, useState } from "react";
 import { Contact } from "../../../models";
-import { CuratorQueItem } from "../../../interfaces/CuratorQueItem.d";
+import { CuratorQueItem } from "../../../interfaces/CuratorQueItem";
 import { RunType } from "../../../interfaces/RunType.d";
 import { curatorService } from "../../../models/curatorManager/curatorManager";
 
