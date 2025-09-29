@@ -2,6 +2,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { VCardGenerator } from '../../../../src/models/vcardFile/generation';
 import { TFile, App } from 'obsidian';
 
+// Mock ContactManagerUtils at the module level
+vi.mock('../../../../src/models/contactManager/contactManagerUtils', () => ({
+  ContactManagerUtils: {
+    ensureHasName: vi.fn()
+  }
+}));
+
 describe('VCardGenerator', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -65,21 +72,16 @@ describe('VCardGenerator', () => {
 
   describe('createEmpty', () => {
     it('should create an empty VCard template', async () => {
-      // Mock the ContactManagerUtils.ensureHasName method directly
-      const mockEnsureHasName = vi.fn().mockResolvedValue({
-        FN: 'New Contact',
-        UID: 'new-contact-uid'
-      });
+      // Get the mocked function
+      const { ContactManagerUtils } = await import('../../../../src/models/contactManager/contactManagerUtils');
+      const mockEnsureHasName = vi.mocked(ContactManagerUtils.ensureHasName);
       
-      // Override the import
-      vi.doMock('../../../../src/models/contactManager/contactManagerUtils', () => ({
-        ContactManagerUtils: {
-          ensureHasName: mockEnsureHasName
-        }
-      }));
-
-      // Re-import after mocking
-      const { VCardGenerator } = await import('../../../../src/models/vcardFile/generation');
+      // Set up the mock return value
+      mockEnsureHasName.mockResolvedValue({
+        FN: 'New Contact',
+        UID: 'new-contact-uid',
+        VERSION: '4.0'
+      });
       
       const result = await VCardGenerator.createEmpty();
       
@@ -125,8 +127,17 @@ describe('VCardGenerator', () => {
 
       const result = VCardGenerator.objectToVcf(vCardObject);
 
-      expect(result).toContain('N:Doe;John;William;Dr.;Jr.');
-      expect(result).toContain('ADR:;;;123 Main St;Anytown;CA;12345;USA');
+      // Updated to match the structured field format
+      expect(result).toContain('N.FN:Doe');
+      expect(result).toContain('N.GN:John');
+      expect(result).toContain('N.MN:William');
+      expect(result).toContain('N.PREFIX:Dr.');
+      expect(result).toContain('N.SUFFIX:Jr.');
+      expect(result).toContain('ADR.STREET:123 Main St');
+      expect(result).toContain('ADR.LOCALITY:Anytown');
+      expect(result).toContain('ADR.REGION:CA');
+      expect(result).toContain('ADR.POSTAL:12345');
+      expect(result).toContain('ADR.COUNTRY:USA');
     });
 
     it('should handle empty or minimal objects', () => {

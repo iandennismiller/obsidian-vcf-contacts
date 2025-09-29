@@ -58,6 +58,8 @@ describe('CuratorManager', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    // Clear processors between tests
+    (curatorService as any)._clearProcessors();
     curatorManager = new CuratorManager(mockApp, mockSettings, mockContactManager);
   });
 
@@ -109,13 +111,8 @@ describe('CuratorManager', () => {
       file: { path: 'test.md' }
     };
 
-    beforeEach(() => {
-      // Clear processors and register fresh ones for each test
-      curatorService.register(mockProcessor);
-      curatorService.register(mockProcessorWithResult);
-    });
-
     it('should process single contact', async () => {
+      curatorManager.register(mockProcessorWithResult);
       const results = await curatorManager.process(mockContact, RunType.INPROVEMENT);
       
       expect(results).toBeInstanceOf(Array);
@@ -123,6 +120,7 @@ describe('CuratorManager', () => {
     });
 
     it('should process array of contacts', async () => {
+      curatorManager.register(mockProcessorWithResult);
       const contacts = [mockContact, { ...mockContact, data: { FN: 'Contact 2' } }];
       const results = await curatorManager.process(contacts, RunType.INPROVEMENT);
       
@@ -131,6 +129,7 @@ describe('CuratorManager', () => {
     });
 
     it('should filter out undefined results', async () => {
+      curatorManager.register(mockProcessor); // This returns undefined
       const results = await curatorManager.process(mockContact, RunType.IMMEDIATELY);
       
       // mockProcessor returns undefined, so results should be empty
@@ -138,6 +137,7 @@ describe('CuratorManager', () => {
     });
 
     it('should return actual results when processors produce them', async () => {
+      curatorManager.register(mockProcessorWithResult);
       const results = await curatorManager.process(mockContact, RunType.INPROVEMENT);
       
       expect(results.length).toBe(1);
@@ -146,6 +146,9 @@ describe('CuratorManager', () => {
     });
 
     it('should only run processors matching the specified run type', async () => {
+      curatorManager.register(mockProcessor); // IMMEDIATELY
+      curatorManager.register(mockProcessorWithResult); // INPROVEMENT
+      
       await curatorManager.process(mockContact, RunType.IMMEDIATELY);
       
       // Only mockProcessor (IMMEDIATELY) should be called

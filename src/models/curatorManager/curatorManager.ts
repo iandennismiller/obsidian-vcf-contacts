@@ -23,7 +23,7 @@ const processSingleContact = async (contact: Contact, runType: RunType) => {
 export class CuratorManager {
   constructor(
     private app: App,
-    private settings: ContactsPluginSettings,
+    private pluginSettings: ContactsPluginSettings,
     private contactManager: ContactManager
   ) {}
 
@@ -90,7 +90,7 @@ export class CuratorManager {
     }
 
     // Check if the file is in the contacts folder
-    if (!activeFile.path.startsWith(this.settings.contactsFolder)) {
+    if (!activeFile.path.startsWith(this.pluginSettings.contactsFolder)) {
       new Notice('Active file is not in the contacts folder');
       return;
     }
@@ -169,5 +169,10 @@ export const curatorService = {
       settingDescription: processor.settingDescription,
       settingDefaultValue: processor.settingDefaultValue,
     }));
+  },
+
+  // Test utility method to clear processors
+  _clearProcessors() {
+    processors.clear();
   }
 };
