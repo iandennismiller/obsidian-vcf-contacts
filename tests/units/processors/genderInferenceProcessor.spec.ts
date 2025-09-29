@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { GenderInferenceProcessor } from '../src/insights/processors/genderInference';
-import { RunType } from '../src/insights/insight.d';
+import { GenderInferenceProcessor } from '../../../src/insights/processors/genderInference';
+import { RunType } from '../../../src/insights/insight.d';
 
 describe('GenderInferenceProcessor', () => {
   it('should have correct processor properties', () => {

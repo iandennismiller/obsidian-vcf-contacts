@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { RelatedOtherProcessor } from '../src/insights/processors/relatedOther';
-import { RunType } from '../src/insights/insight.d';
+import { RelatedOtherProcessor } from '../../../src/insights/processors/relatedOther';
+import { RunType } from '../../../src/insights/insight.d';
 
 describe('RelatedOtherProcessor', () => {
   it('should have correct processor properties', () => {
