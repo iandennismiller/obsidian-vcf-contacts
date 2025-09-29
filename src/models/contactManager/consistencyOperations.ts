@@ -5,7 +5,7 @@
 import { TFile } from 'obsidian';
 import { ContactNote, Contact } from '../contactNote';
 import { ContactManagerData } from './contactManagerData';
-import { getSettings } from '../../context/sharedSettingsContext';
+import { getSettings, updateSettings } from '../../context/sharedSettingsContext';
 import { RunType } from '../../insights/insight.d';
 import { insightService } from '../../insights/insightService';
 
@@ -49,8 +49,7 @@ export class ConsistencyOperations {
       
       try {
         // Disable vcardSyncPostProcessor during consistency checks
-        const currentSettings = getSettings();
-        currentSettings.vcardSyncPostProcessor = false;
+        updateSettings({ vcardSyncPostProcessor: false });
 
         // Iteratively process contacts until no changes or max iterations
         while (hasChanges && iteration < maxIterations) {
@@ -65,7 +64,7 @@ export class ConsistencyOperations {
           } else {
             console.log(`[ConsistencyOperations] ${changedContacts.length} contacts changed in iteration ${iteration}`);
             // Create new task list with only changed contacts
-            taskList = await this.createContactTaskList(changedContacts);
+            taskList = await this.createContactTaskListInternal(changedContacts);
           }
         }
 
@@ -76,8 +75,7 @@ export class ConsistencyOperations {
 
       } finally {
         // Restore original vcardSyncPostProcessor state
-        const currentSettings = getSettings();
-        currentSettings.vcardSyncPostProcessor = originalVcardSyncPostProcessorState;
+        updateSettings({ vcardSyncPostProcessor: originalVcardSyncPostProcessorState });
       }
 
       // Finally, process all contacts one more time with just vcardSyncPostProcessor
@@ -92,7 +90,8 @@ export class ConsistencyOperations {
 
     } catch (error: any) {
       console.log(`[ConsistencyOperations] Error during consistency check: ${error.message}`);
-      throw error;
+      // Don't throw - handle gracefully for error resilience
+      return;
     }
   }
 
@@ -266,7 +265,7 @@ export class ConsistencyOperations {
   async processContactsWithInsights(taskList: Array<{ file: TFile; revTimestamp?: number }>): Promise<any[]> {
     try {
       const contacts = await this.extractFrontmatterFromFiles(taskList.map(task => task.file));
-      const result = await insightService.run(contacts, { type: RunType.CONSISTENCY });
+      const result = await insightService.process(contacts, RunType.CONSISTENCY);
       return result || [];
     } catch (error: any) {
       console.log(`[ConsistencyOperations] Error processing contacts with insights: ${error.message}`);
@@ -309,7 +308,12 @@ export class ConsistencyOperations {
     for (const file of contactFiles) {
       try {
         const frontMatter = app.metadataCache.getFileCache(file)?.frontmatter;
-        const revTimestamp = frontMatter?.REV ? parseInt(frontMatter.REV, 10) : 0;
+        let revTimestamp = 0;
+        
+        if (frontMatter?.REV) {
+          const parsed = parseInt(frontMatter.REV, 10);
+          revTimestamp = isNaN(parsed) ? 0 : parsed;
+        }
         
         taskList.push({ file, revTimestamp });
       } catch (error: any) {

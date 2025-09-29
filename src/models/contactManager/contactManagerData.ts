@@ -349,6 +349,11 @@ export class ContactManagerData {
    */
   getAllContactFiles(isContactFileCallback?: (file: TFile) => boolean): TFile[] {
     try {
+      // If we have cached contact files from setContactFile calls, return those first
+      if (this.contactFiles.size > 0 && this._contactFilesCache === null && !isContactFileCallback) {
+        return Array.from(this.contactFiles.values());
+      }
+
       if (this._contactFilesCache !== null) {
         return this._contactFilesCache;
       }
@@ -375,7 +380,8 @@ export class ContactManagerData {
       return this._contactFilesCache;
     } catch (error) {
       console.error('Error getting all contact files:', error);
-      return [];
+      // Return cached files as fallback
+      return Array.from(this.contactFiles.values());
     }
   }
 
