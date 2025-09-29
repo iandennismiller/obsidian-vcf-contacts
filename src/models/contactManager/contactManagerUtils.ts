@@ -3,7 +3,7 @@ import { VCardForObsidianRecord } from '../vcardFile';
 import { Contact } from '../contactNote';
 import { FileExistsModal } from '../../ui/modals/fileExistsModal';
 import { curatorService } from '../curatorManager/curatorManager';
-import { RunType } from '../../interfaces/curatorManager.d';
+import { RunType } from "src/interfaces/RunType.d";
 
 /**
  * Utility functions for contact operations that don't require instance state.
