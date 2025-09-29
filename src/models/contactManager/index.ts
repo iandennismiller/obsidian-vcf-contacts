@@ -1,30 +1,66 @@
 /**
- * Index file for ContactManager module components
- * Exports the optimized data-locality structure and maintains backward compatibility
+ * @fileoverview ContactManager module exports
+ * 
+ * This file provides a unified export interface for the contact management system.
+ * It exports all classes, types, interfaces, and utilities needed for managing
+ * contact notes in the Obsidian vault.
+ * 
+ * The implementation uses data locality principles for optimal performance and
+ * provides comprehensive contact file detection, UID management, and caching.
+ * 
+ * @module ContactManager
  */
 
-// Export the optimized ContactManager class and interface
-export { ContactManager } from './optimizedContactManager';
-export type { IContactManager } from './optimizedContactManager';
+// ============================================================================
+// Core Classes
+// ============================================================================
 
-// Export optimized component classes for advanced usage
-export { ContactManagerData } from './contactManagerData';
-export { ConsistencyOperations } from './consistencyOperations';
+export { 
+  /** Optimized contact manager with improved data locality and caching */
+  ContactManager 
+} from './contactManager';
 
-// Export utility functions
-export { ContactManagerUtils } from './contactManagerUtils';
+export type { 
+  /** Interface defining the contract for contact management operations */
+  IContactManager 
+} from './contactManager';
 
-// Re-export commonly used utility functions for backward compatibility
+export { 
+  /** Centralized contact manager data with optimized caching */
+  ContactManagerData 
+} from './contactManagerData';
+
+export { 
+  /** Data consistency operations for maintaining contact integrity */
+  ConsistencyOperations 
+} from './consistencyOperations';
+
+// ============================================================================
+// Utility Functions
+// ============================================================================
+
+export { 
+  /** Utility functions for contact management operations */
+  ContactManagerUtils 
+} from './contactManagerUtils';
+
+// Re-export commonly used utility functions for convenience
 import { ContactManagerUtils } from './contactManagerUtils';
-export const createContactFile = ContactManagerUtils.createContactFile;
-export const handleFileCreation = ContactManagerUtils.handleFileCreation;
-export const openFile = ContactManagerUtils.openFile;
-export const openCreatedFile = ContactManagerUtils.openCreatedFile;
-export const ensureHasName = ContactManagerUtils.ensureHasName;
-export const getFrontmatterFromFiles = ContactManagerUtils.getFrontmatterFromFiles;
 
-// Re-export legacy component classes for backward compatibility (deprecated)
-export { ContactCache } from './contactCache';
-export { ContactFileOperations } from './contactFileOperations';
-export { ContactEventHandlers } from './contactEventHandlers';
-export { ContactDataConsistency } from './contactDataConsistency';
+/** Create a new contact file with the given data */
+export const createContactFile = ContactManagerUtils.createContactFile;
+
+/** Handle file creation operations */
+export const handleFileCreation = ContactManagerUtils.handleFileCreation;
+
+/** Open a file in the Obsidian editor */
+export const openFile = ContactManagerUtils.openFile;
+
+/** Open a newly created contact file */
+export const openCreatedFile = ContactManagerUtils.openCreatedFile;
+
+/** Ensure a contact has a proper name field */
+export const ensureHasName = ContactManagerUtils.ensureHasName;
+
+/** Extract frontmatter from contact files */
+export const getFrontmatterFromFiles = ContactManagerUtils.getFrontmatterFromFiles;

@@ -5,28 +5,10 @@
 
 import { TFile } from 'obsidian';
 import { ContactData } from './contactData';
-import { Gender } from './gender';
+import { Gender, ParsedRelationship, FrontmatterRelationship, ResolvedContact } from './types';
 
-export interface ParsedRelationship {
-  type: string;
-  contactName: string;
-  contactFile?: TFile;
-  gender?: Gender;
-}
-
-export interface FrontmatterRelationship {
-  key: string;
-  type: string;
-  value: string;
-  parsedValue?: { type: 'uuid' | 'uid' | 'name'; value: string };
-}
-
-export interface ResolvedContact {
-  name: string;
-  uid: string;
-  file: TFile;
-  gender: Gender;
-}
+// Re-export types for external consumption
+export type { ParsedRelationship, FrontmatterRelationship, ResolvedContact };
 
 /**
  * Relationship operations that work directly with ContactData

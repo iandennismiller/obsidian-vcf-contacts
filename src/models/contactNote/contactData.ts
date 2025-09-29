@@ -4,7 +4,7 @@
  */
 
 import { TFile, App, parseYaml } from 'obsidian';
-import { Gender } from './gender';
+import { Gender } from './types';
 
 /**
  * Centralized contact data storage that keeps related data together

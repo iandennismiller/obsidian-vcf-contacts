@@ -1,19 +1,52 @@
-// Core VCard file class and operations
-export { VcardFile } from './vcardFile';
+/**
+ * @fileoverview VCard File module exports
+ * 
+ * This file provides a unified export interface for the VCard file processing system.
+ * It exports all classes, types, interfaces, and utilities needed for working with
+ * individual VCard files.
+ * 
+ * The module follows data locality principles by focusing on single-file operations
+ * rather than collection management (which is handled by VcardManager).
+ * 
+ * @module VCardFile
+ */
 
-// Types and enums
+// ============================================================================
+// Core Classes
+// ============================================================================
+
+export { 
+  /** Main class for individual VCard file operations */
+  VcardFile 
+} from './vcardFile';
+
+export { 
+  /** VCard parsing operations and utilities */
+  VCardParser 
+} from './parsing';
+
+export { 
+  /** VCard generation from various sources */
+  VCardGenerator 
+} from './generation';
+
+export { 
+  /** Static file operations for VCards */
+  VCardFileOperations 
+} from './fileOperations';
+
+// ============================================================================
+// Types and Interfaces
+// ============================================================================
+
 export * from './types';
+export * from './interfaces';
 
-// Parsing operations
-export { VCardParser } from './parsing';
+// ============================================================================
+// Backward Compatibility Exports
+// ============================================================================
 
-// Generation operations  
-export { VCardGenerator } from './generation';
-
-// File operations (static utilities)
-export { VCardFileOperations } from './fileOperations';
-
-// Backward compatibility - re-export static methods from VCardFileOperations as top-level
 export {
-  VCardFileOperations as VcardFileOps  // Alternative export name
+  /** Alternative export name for file operations */
+  VCardFileOperations as VcardFileOps  
 } from './fileOperations';
