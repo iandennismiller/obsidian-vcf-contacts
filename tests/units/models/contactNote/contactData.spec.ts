@@ -239,7 +239,7 @@ Updated notes.
 
       for (const content of testCases) {
         mockApp.vault!.read = vi.fn().mockResolvedValue(content);
-        contactData.clearCache();
+        contactData.invalidateAllCaches();
         
         const result = await contactData.getContent();
         expect(result).toBe(content);

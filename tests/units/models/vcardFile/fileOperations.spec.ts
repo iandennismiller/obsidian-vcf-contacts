@@ -21,11 +21,13 @@ describe('VCardFileOperations', () => {
 
   describe('listVCFFiles', () => {
     it('should list VCF files in a directory', async () => {
-      const mockFiles = ['contact1.vcf', 'contact2.vcf', 'readme.txt'];
-      const mockStats = { isFile: () => true };
+      const mockEntries = [
+        { name: 'contact1.vcf', isFile: () => true },
+        { name: 'contact2.vcf', isFile: () => true },
+        { name: 'readme.txt', isFile: () => true }
+      ];
 
-      mockedFs.readdir.mockResolvedValue(mockFiles as any);
-      mockedFs.stat.mockResolvedValue(mockStats as any);
+      mockedFs.readdir.mockResolvedValue(mockEntries as any);
 
       const result = await VCardFileOperations.listVCFFiles('/test/folder');
 
@@ -45,12 +47,12 @@ describe('VCardFileOperations', () => {
     });
 
     it('should filter out directories', async () => {
-      const mockFiles = ['contact1.vcf', 'subfolder', 'contact2.vcf'];
-      mockedFs.readdir.mockResolvedValue(mockFiles as any);
-      mockedFs.stat
-        .mockResolvedValueOnce({ isFile: () => true } as any)   // contact1.vcf
-        .mockResolvedValueOnce({ isFile: () => false } as any)  // subfolder
-        .mockResolvedValueOnce({ isFile: () => true } as any);  // contact2.vcf
+      const mockEntries = [
+        { name: 'contact1.vcf', isFile: () => true },
+        { name: 'subfolder', isFile: () => false },
+        { name: 'contact2.vcf', isFile: () => true }
+      ];
+      mockedFs.readdir.mockResolvedValue(mockEntries as any);
 
       const result = await VCardFileOperations.listVCFFiles('/test/folder');
 
@@ -125,7 +127,9 @@ describe('VCardFileOperations', () => {
   describe('getFileStats', () => {
     it('should get file stats successfully', async () => {
       const mockStats = { 
-        mtimeMs: 1640995200000
+        mtimeMs: 1640995200000,
+        isFile: () => true,
+        isDirectory: () => false
       };
       mockedFs.stat.mockResolvedValue(mockStats as any);
 

@@ -4,6 +4,19 @@ import { ContactData } from '../../../../src/models/contactNote/contactData';
 import { App, TFile } from 'obsidian';
 import { ContactsPluginSettings } from '../../../../src/settings/settings.d';
 
+// Mock TFile properly for instanceof checks
+vi.mock('obsidian', () => ({
+  TFile: class MockTFile {
+    constructor(public basename: string, public path: string) {
+      this.name = path.split('/').pop() || basename;
+    }
+    basename: string;
+    path: string;
+    name: string;
+  },
+  App: class MockApp {}
+}));
+
 describe('RelationshipOperations', () => {
   let mockContactData: Partial<ContactData>;
   let mockFile: TFile;
@@ -12,11 +25,7 @@ describe('RelationshipOperations', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    mockFile = {
-      basename: 'john-doe',
-      path: 'Contacts/john-doe.md',
-      name: 'john-doe.md'
-    } as TFile;
+    mockFile = new (TFile as any)('john-doe', 'Contacts/john-doe.md');
 
     mockContactData = {
       getContent: vi.fn(),

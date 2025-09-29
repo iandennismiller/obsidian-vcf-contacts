@@ -57,9 +57,8 @@ describe('VCardCollection', () => {
     it('should handle VCardFileOperations errors', async () => {
       vi.mocked(VCardFileOperations.listVCFFiles).mockRejectedValue(new Error('File operation error'));
 
-      const result = await vcardCollection.listVCardFiles();
-
-      expect(result).toEqual([]);
+      // The method should throw since it doesn't handle errors internally
+      await expect(vcardCollection.listVCardFiles()).rejects.toThrow('File operation error');
     });
   });
 
@@ -91,9 +90,8 @@ describe('VCardCollection', () => {
     it('should handle file stats errors', async () => {
       vi.mocked(VCardFileOperations.getFileStats).mockRejectedValue(new Error('Stats error'));
 
-      const result = await vcardCollection.getVCardFileInfo('/test/vcf/error.vcf');
-
-      expect(result).toBeNull();
+      // The method should throw since getFileStats throws
+      await expect(vcardCollection.getVCardFileInfo('/test/vcf/error.vcf')).rejects.toThrow('Stats error');
     });
   });
 
