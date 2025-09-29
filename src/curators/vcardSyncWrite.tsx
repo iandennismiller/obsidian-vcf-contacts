@@ -4,9 +4,9 @@ import { VcardManager } from "src/models/vcardManager";
 import { VcardFile } from "src/models/vcardFile";
 import { getApp } from "src/context/sharedAppContext";
 import { getSettings } from "src/context/sharedSettingsContext";
-import { InsightProcessor, InsightQueItem, RunType } from "src/insights/insight.d";
+import { CuratorProcessor, CuratorQueItem, RunType } from "src/models/curatorManager.d";
 
-const renderGroup = (queItems: InsightQueItem[]): JSX.Element => {
+const renderGroup = (queItems: CuratorQueItem[]): JSX.Element => {
   return (
     <div className="action-card">
       <div className="action-card-content">
@@ -17,7 +17,7 @@ const renderGroup = (queItems: InsightQueItem[]): JSX.Element => {
   );
 }
 
-const render = (queItem: InsightQueItem): JSX.Element => {
+const render = (queItem: CuratorQueItem): JSX.Element => {
   return (
     <div className="action-card">
       <div className="action-card-content">
@@ -27,14 +27,14 @@ const render = (queItem: InsightQueItem): JSX.Element => {
   );
 }
 
-export const VcardSyncPostProcessor: InsightProcessor = {
+export const VcardSyncPostProcessor: CuratorProcessor = {
   name: "VCard Sync Post Processor",
   runType: RunType.INPROVEMENT,
   settingPropertyName: "vcardSyncPostProcessor",
   settingDescription: "VCard Write Back: Automatically writes contact data back to VCard files when Obsidian contact has newer revision data. Requires both VCard Folder Watching and VCard Write Back to be enabled.",
   settingDefaultValue: true,
 
-  async process(contact: Contact): Promise<InsightQueItem | undefined> {
+  async process(contact: Contact): Promise<CuratorQueItem | undefined> {
     const settings = getSettings();
     const activeProcessor = settings[`${this.settingPropertyName}`] as boolean;
     const vcfWatchEnabled = settings.vcfWatchEnabled;

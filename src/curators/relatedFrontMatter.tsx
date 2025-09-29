@@ -2,9 +2,9 @@ import * as React from "react";
 import { Contact, ContactNote } from "src/models";
 import { getApp } from "src/context/sharedAppContext";
 import { getSettings } from "src/context/sharedSettingsContext";
-import { InsightProcessor, InsightQueItem, RunType } from "src/insights/insight.d";
+import { CuratorProcessor, CuratorQueItem, RunType } from "src/models/curatorManager.d";
 
-const renderGroup = (queItems: InsightQueItem[]): JSX.Element => {
+const renderGroup = (queItems: CuratorQueItem[]): JSX.Element => {
   return (
     <div className="action-card">
       <div className="action-card-content">
@@ -15,7 +15,7 @@ const renderGroup = (queItems: InsightQueItem[]): JSX.Element => {
   );
 }
 
-const render = (queItem: InsightQueItem): JSX.Element => {
+const render = (queItem: CuratorQueItem): JSX.Element => {
   return (
     <div className="action-card">
       <div className="action-card-content">
@@ -25,14 +25,14 @@ const render = (queItem: InsightQueItem): JSX.Element => {
   );
 }
 
-export const RelatedFrontMatterProcessor: InsightProcessor = {
+export const RelatedFrontMatterProcessor: CuratorProcessor = {
   name: "RelatedFrontMatterProcessor",
   runType: RunType.INPROVEMENT,
   settingPropertyName: "relatedFrontMatterProcessor",
   settingDescription: "Automatically syncs RELATED frontmatter fields to the Related markdown section, adding missing relationships",
   settingDefaultValue: true,
 
-  async process(contact: Contact): Promise<InsightQueItem | undefined> {
+  async process(contact: Contact): Promise<CuratorQueItem | undefined> {
     const activeProcessor = getSettings()[`${this.settingPropertyName}`] as boolean;
     
     if (!activeProcessor) {

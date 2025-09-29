@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { GenderInferenceProcessor } from '../../../src/insights/processors/genderInference';
-import { RunType } from '../../../src/insights/insight.d';
+import { GenderInferenceProcessor } from "../../../src/curators/genderInference";
+import { RunType } from "../../../src/models/curatorManager.d";
 
 describe('GenderInferenceProcessor', () => {
   describe('processor properties', () => {

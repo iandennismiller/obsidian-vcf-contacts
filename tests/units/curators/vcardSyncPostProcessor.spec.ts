@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { VcardSyncPostProcessor } from '../../../src/insights/processors/vcardSyncWrite';
-import { RunType } from '../../../src/insights/insight.d';
+import { VcardSyncPostProcessor } from "../../../src/curators/vcardSyncWrite";
+import { RunType } from "../../../src/models/curatorManager.d";
 
 describe('VcardSyncPostProcessor', () => {
   describe('processor properties', () => {

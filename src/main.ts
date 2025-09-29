@@ -1,5 +1,3 @@
-import "src/insights/insightLoading";
-
 import { Plugin, Notice } from 'obsidian';
 import { ContactsView } from "src/ui/sidebar/sidebarView";
 import { VcardFile } from "./models/vcardFile";
@@ -7,7 +5,18 @@ import myScrollTo from "src/ui/myScrollTo";
 import { SyncWatcher } from "src/services/syncWatcher";
 import { setupVCFDropHandler } from 'src/ui/vcfDropHandler';
 import { setApp, clearApp } from "src/context/sharedAppContext";
-import { InsightCommands } from "src/insights/insightCommands";
+import { CuratorManager, curatorService } from "./models/curatorManager/curatorManager";
+
+// Curator processor imports
+import { UidProcessor } from 'src/curators/uidValidate';
+import { VcardSyncPreProcessor } from 'src/curators/vcardSyncRead';
+import { RelatedOtherProcessor } from 'src/curators/relatedOther';
+import { RelatedFrontMatterProcessor } from 'src/curators/relatedFrontMatter';
+import { RelatedListProcessor } from 'src/curators/relatedList';
+import { GenderInferenceProcessor } from 'src/curators/genderInference';
+import { GenderRenderProcessor } from 'src/curators/genderRender';
+import { RelatedNamespaceUpgradeProcessor } from 'src/curators/namespaceUpgrade';
+import { VcardSyncPostProcessor } from 'src/curators/vcardSyncWrite';
 
 import { ContactNote } from "./models/contactNote";
 import { ContactManager } from "./models/contactManager";
@@ -20,20 +29,31 @@ export default class ContactsPlugin extends Plugin {
 	private syncWatcher: SyncWatcher | null = null;
 	private vcfDropCleanup: (() => void) | null = null;
 	private contactManager: ContactManager | null = null;
-	private insightCommands: InsightCommands | null = null;
+	private curatorManager: CuratorManager | null = null;
 
 	async onload() {
 		await this.loadSettings();
 		// Set up app context for shared utilities
 		setApp(this.app);
 
+		// Register curator processors
+		curatorService.register(UidProcessor);
+		curatorService.register(VcardSyncPreProcessor);
+		curatorService.register(RelatedOtherProcessor);
+		curatorService.register(RelatedFrontMatterProcessor);
+		curatorService.register(RelatedListProcessor);
+		curatorService.register(RelatedNamespaceUpgradeProcessor);
+		curatorService.register(GenderInferenceProcessor);
+		curatorService.register(GenderRenderProcessor);
+		curatorService.register(VcardSyncPostProcessor);
+
 		// Initialize ContactManager for automatic syncing
 		this.contactManager = new ContactManager(this.app, this.settings);
 		await this.contactManager.initializeCache();
 		this.contactManager.setupEventListeners();
 
-		// Initialize InsightCommands
-		this.insightCommands = new InsightCommands(this.app, this.settings, this.contactManager);
+		// Initialize CuratorManager
+		this.curatorManager = new CuratorManager(this.app, this.settings, this.contactManager);
 
 		// Ensure contact data consistency during initialization
 		try {
@@ -78,8 +98,8 @@ export default class ContactsPlugin extends Plugin {
 			},
 		});
 
-		// Register insight processor commands
-		this.insightCommands.registerCommands(this);
+		// Register curator processor commands
+		this.curatorManager.registerCommands(this);
 	}
 
 	onunload() {
@@ -89,8 +109,8 @@ export default class ContactsPlugin extends Plugin {
 			this.contactManager = null;
 		}
 
-		// Clean up InsightCommands
-		this.insightCommands = null;
+		// Clean up CuratorManager
+		this.curatorManager = null;
 
 		// Clean up app context
 		clearApp();

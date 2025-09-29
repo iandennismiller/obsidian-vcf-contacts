@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { RelatedOtherProcessor } from '../../../src/insights/processors/relatedOther';
-import { RunType } from '../../../src/insights/insight.d';
+import { RelatedOtherProcessor } from "../../../src/curators/relatedOther";
+import { RunType } from "../../../src/models/curatorManager.d";
 
 describe('RelatedOtherProcessor', () => {
   describe('processor properties', () => {

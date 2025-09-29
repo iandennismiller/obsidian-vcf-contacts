@@ -88,10 +88,6 @@ describe('VCardGenerator', () => {
       expect(mockEnsureHasName).toHaveBeenCalled();
     }, 10000); // Increase timeout
   });
-      expect(result).toContain('TEL[CELL]:');
-      expect(result).toContain('EMAIL[HOME]:');
-    });
-  });
 
   describe('objectToVcf', () => {
     it('should convert object to VCF format', () => {

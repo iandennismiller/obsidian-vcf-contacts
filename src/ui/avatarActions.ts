@@ -3,8 +3,8 @@ import { Contact, ContactNote } from "src/models";
 import { getApp } from "src/context/sharedAppContext";
 import { getSettings } from "src/context/sharedSettingsContext";
 import { openFilePicker } from "src/ui/fileOperations";
-import { RunType } from "src/insights/insight.d";
-import { insightService } from "src/insights/insightService";
+import { RunType } from "src/models/curatorManager.d";
+import { curatorService } from "src/models/curatorManager/curatorManager";
 
 const resizeAndCropImage = (img: HTMLImageElement, outputSize: number): HTMLCanvasElement => {
 	const canvas = document.createElement('canvas');
@@ -53,7 +53,7 @@ function isHttpUrl(str: string): boolean {
 export const processAvatar = async (contact: Contact) => {
 	try {
 		let rawImg :HTMLImageElement;
-    await insightService.process(contact, RunType.IMMEDIATELY)
+    await curatorService.process(contact, RunType.IMMEDIATELY)
 		if (isHttpUrl(contact.data['PHOTO'])) {
 			new Notice("Detected online photo url: Scaling and pulling into your local vault.");
 			rawImg = await getImage(contact.data['PHOTO']);

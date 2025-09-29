@@ -11,7 +11,7 @@ import { createFileName } from "src/models/contactNote";
 import { openFilePicker, saveVcardFilePicker, isFileInFolder } from "src/ui/fileOperations";
 import { ContactsListView } from "src/ui/sidebar/components/ContactsListView";
 import { HeaderView } from "src/ui/sidebar/components/HeaderView";
-import { InsightsView } from "src/ui/sidebar/components/InsightsView";
+import { CuratorView } from "src/ui/sidebar/components/CuratorView";
 import { processAvatar } from "src/ui/avatarActions";
 
 import myScrollTo from "src/ui/myScrollTo";
@@ -50,7 +50,7 @@ export const SidebarRootView = (props: SidebarRootViewProps) => {
 	const app = getApp();
   const { vault, workspace } = app;
   const [contacts, setContacts] = React.useState<Contact[]>([]);
-  const [displayInsightsView, setDisplayInsightsView] = React.useState<boolean>(false);
+  const [displayCuratorView, setDisplayCuratorView] = React.useState<boolean>(false);
 	const [sort, setSort] = React.useState<typeof VcardFile.Sort[keyof typeof VcardFile.Sort]>(VcardFile.Sort.NAME);
 	let settings = getSettings();
 
@@ -136,9 +136,9 @@ export const SidebarRootView = (props: SidebarRootViewProps) => {
 
 	return (
 		<div className="contacts-sidebar">
-      { displayInsightsView ?
-        <InsightsView
-          setDisplayInsightsView={setDisplayInsightsView}
+      { displayCuratorView ?
+        <CuratorView
+          setDisplayCuratorView={setDisplayCuratorView}
           processContacts={contacts}
         />
       :
@@ -161,7 +161,7 @@ export const SidebarRootView = (props: SidebarRootViewProps) => {
                   saveVcardFilePicker(vcards)
                 }}
                 onCreateContact={createNewContact}
-                setDisplayInsightsView={setDisplayInsightsView}
+                setDisplayCuratorView={setDisplayCuratorView}
                 sort={sort}
               />
             <div className="nav-actionable-container">

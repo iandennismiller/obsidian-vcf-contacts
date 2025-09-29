@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { insightService } from '../../../src/insights/insightService';
-import { RunType } from '../../../src/insights/insight.d';
+import { curatorService } from '../../../src/models/curatorManager/curatorManager';
+import { RunType } from "../../../src/models/curatorManager.d";
 
 // Mock processor for testing
 const mockProcessor = {
@@ -12,7 +12,7 @@ const mockProcessor = {
   process: vi.fn().mockResolvedValue(undefined)
 };
 
-describe('InsightService', () => {
+describe('CuratorManager', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -20,12 +20,12 @@ describe('InsightService', () => {
   describe('processor registration', () => {
     it('should register processors correctly', () => {
       // Test that we can register a processor
-      expect(() => insightService.register(mockProcessor)).not.toThrow();
+      expect(() => curatorService.register(mockProcessor)).not.toThrow();
     });
 
     it('should provide settings for registered processors', () => {
-      insightService.register(mockProcessor);
-      const settings = insightService.settings();
+      curatorService.register(mockProcessor);
+      const settings = curatorService.settings();
       
       expect(settings).toBeInstanceOf(Array);
       const testProcessorSetting = settings.find(s => s.name === 'TestProcessor');
@@ -63,10 +63,10 @@ describe('InsightService', () => {
 
       // Test that we can register multiple processors
       testProcessors.forEach(processor => {
-        expect(() => insightService.register(processor)).not.toThrow();
+        expect(() => curatorService.register(processor)).not.toThrow();
       });
 
-      const settings = insightService.settings();
+      const settings = curatorService.settings();
       expect(settings.length).toBeGreaterThanOrEqual(testProcessors.length);
     });
 
@@ -84,10 +84,10 @@ describe('InsightService', () => {
         runType: RunType.INPROVEMENT
       };
 
-      insightService.register(immediateProcessor);
-      insightService.register(improvementProcessor);
+      curatorService.register(immediateProcessor);
+      curatorService.register(improvementProcessor);
       
-      const settings = insightService.settings();
+      const settings = curatorService.settings();
       expect(settings.some(s => s.runType === RunType.IMMEDIATELY)).toBe(true);
       expect(settings.some(s => s.runType === RunType.INPROVEMENT)).toBe(true);
     });
@@ -95,13 +95,13 @@ describe('InsightService', () => {
 
   describe('service functionality', () => {
     it('should have required service methods', () => {
-      expect(typeof insightService.register).toBe('function');
-      expect(typeof insightService.process).toBe('function');
-      expect(typeof insightService.settings).toBe('function');
+      expect(typeof curatorService.register).toBe('function');
+      expect(typeof curatorService.process).toBe('function');
+      expect(typeof curatorService.settings).toBe('function');
     });
 
     it('should return settings as an array', () => {
-      const settings = insightService.settings();
+      const settings = curatorService.settings();
       expect(Array.isArray(settings)).toBe(true);
     });
   });

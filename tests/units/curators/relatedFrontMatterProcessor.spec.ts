@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { RelatedFrontMatterProcessor } from '../../../src/insights/processors/relatedFrontMatter';
-import { RunType } from '../../../src/insights/insight.d';
+import { RelatedFrontMatterProcessor } from "../../../src/curators/relatedFrontMatter";
+import { RunType } from "../../../src/models/curatorManager.d";
 
 describe('RelatedFrontMatterProcessor', () => {
   describe('processor properties', () => {

@@ -10,7 +10,7 @@ type HeaderProps = {
   onCreateContact: () => void;
   importVCF: () => void;
   exportAllVCF: () => void;
-  setDisplayInsightsView: Dispatch<SetStateAction<boolean>>;
+  setDisplayCuratorView: Dispatch<SetStateAction<boolean>>;
 }
 
 export const HeaderView = (props: HeaderProps) => {
@@ -74,12 +74,12 @@ export const HeaderView = (props: HeaderProps) => {
       <div className="menu-vert"></div>
 
       <div
-        id="insights-btn"
+        id="curator-btn"
         data-icon="lightbulb"
         className="clickable-icon nav-action-button"
-        aria-label="Contact insights"
+        aria-label="Contact curator"
         ref={(element) => (buttons.current[8] = element)}
-        onClick={() => props.setDisplayInsightsView(true)}/>
+        onClick={() => props.setDisplayCuratorView(true)}/>
 
     </div>
 	);

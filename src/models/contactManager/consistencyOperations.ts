@@ -6,8 +6,8 @@ import { TFile } from 'obsidian';
 import { ContactNote, Contact } from '../contactNote';
 import { ContactManagerData } from './contactManagerData';
 import { getSettings, updateSettings } from '../../context/sharedSettingsContext';
-import { RunType } from '../../insights/insight.d';
-import { insightService } from '../../insights/insightService';
+import { RunType } from '../curatorManager.d';
+import { curatorService } from '../curatorManager/curatorManager';
 
 /**
  * Data consistency operations that work directly with ContactManagerData
@@ -23,7 +23,7 @@ export class ConsistencyOperations {
   // === Data Consistency Operations (co-located with data access) ===
 
   /**
-   * Ensure consistency of contact data by processing through insight processors
+   * Ensure consistency of contact data by processing through curator processors
    * Groups consistency logic with data access for better cache locality
    */
   async ensureContactDataConsistency(maxIterations: number = 10): Promise<void> {
@@ -82,7 +82,7 @@ export class ConsistencyOperations {
       if (originalVcardSyncPostProcessorState) {
         console.log('[ConsistencyOperations] Running final vcardSyncPostProcessor pass...');
         const allContacts = await this.getFrontmatterFromFiles(allContactFiles);
-        await insightService.process(allContacts, RunType.INPROVEMENT);
+        await curatorService.process(allContacts, RunType.INPROVEMENT);
         console.log('[ConsistencyOperations] Final vcardSyncPostProcessor pass completed');
       }
 
@@ -138,11 +138,11 @@ export class ConsistencyOperations {
       // Get contact data for processing
       const contacts = await this.getFrontmatterFromFiles(contactFiles);
       
-      // Process with all insight processors except vcardSyncPostProcessor
+      // Process with all curator processors except vcardSyncPostProcessor
       // Note: vcardSyncPostProcessor is already disabled by the caller
-      await insightService.process(contacts, RunType.IMMEDIATELY);
-      await insightService.process(contacts, RunType.INPROVEMENT);
-      await insightService.process(contacts, RunType.UPCOMMING);
+      await curatorService.process(contacts, RunType.IMMEDIATELY);
+      await curatorService.process(contacts, RunType.INPROVEMENT);
+      await curatorService.process(contacts, RunType.UPCOMMING);
       
       // Check which contacts had their REV timestamp updated
       for (const [uid, taskItem] of taskList) {
@@ -260,15 +260,15 @@ export class ConsistencyOperations {
   }
 
   /**
-   * Process contacts with insights service (public method for testing)
+   * Process contacts with curator service (public method for testing)
    */
   async processContactsWithInsights(taskList: Array<{ file: TFile; revTimestamp?: number }>): Promise<any[]> {
     try {
       const contacts = await this.extractFrontmatterFromFiles(taskList.map(task => task.file));
-      const result = await insightService.process(contacts, RunType.IMMEDIATELY);
+      const result = await curatorService.process(contacts, RunType.IMMEDIATELY);
       return result || [];
     } catch (error: any) {
-      console.log(`[ConsistencyOperations] Error processing contacts with insights: ${error.message}`);
+      console.log(`[ConsistencyOperations] Error processing contacts with curator: ${error.message}`);
       return [];
     }
   }

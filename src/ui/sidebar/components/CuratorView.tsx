@@ -1,16 +1,16 @@
 import * as React from "react";
 import { useEffect, useRef, useState } from "react";
 import { Contact } from "../../../models";
-import { InsightQueItem, RunType } from "../../../insights/insight.d";
-import { insightService } from "../../../insights/insightService";
+import { CuratorQueItem, RunType } from "../../../models/curatorManager.d";
+import { curatorService } from "../../../models/curatorManager/curatorManager";
 
 type ActionProps = {
-  setDisplayInsightsView: (displayActionView: boolean) => void;
+  setDisplayCuratorView: (displayActionView: boolean) => void;
   processContacts: Contact[];
 };
 
-function groupByProcessorNameMap(items: InsightQueItem[]): Map<string, InsightQueItem[]> {
-  const grouped = new Map<string, InsightQueItem[]>();
+function groupByProcessorNameMap(items: CuratorQueItem[]): Map<string, CuratorQueItem[]> {
+  const grouped = new Map<string, CuratorQueItem[]>();
 
   for (const item of items) {
     const list = grouped.get(item.name) ?? [];
@@ -22,12 +22,12 @@ function groupByProcessorNameMap(items: InsightQueItem[]): Map<string, InsightQu
 }
 
 
-export const InsightsView = (props: ActionProps) => {
+export const CuratorView = (props: ActionProps) => {
   const [loading, setLoading] = useState(true);
   const [writing, setWriting] = useState(false);
   const writeTimerRef = useRef<number | null>(null);
   const [contacts] = useState(() => props.processContacts);
-  const [immediateResults, setImmediateResults] = useState<Map<string, InsightQueItem[]>>(new Map());
+  const [immediateResults, setImmediateResults] = useState<Map<string, CuratorQueItem[]>>(new Map());
 
   useEffect(() => {
     if(loading) {
@@ -49,14 +49,14 @@ export const InsightsView = (props: ActionProps) => {
     }
 
     // if the detect user is manipulating files manually then we go back to the main view.
-    props.setDisplayInsightsView(false);
+    props.setDisplayCuratorView(false);
   }, [props.processContacts]);
 
   useEffect(() => {
     async function load() {
       try {
         setWriting(true);
-        const immediateResults = await insightService.process(contacts, RunType.IMMEDIATELY);
+        const immediateResults = await curatorService.process(contacts, RunType.IMMEDIATELY);
 
         if (immediateResults.length === 0) {
           setWriting(false);
@@ -67,7 +67,7 @@ export const InsightsView = (props: ActionProps) => {
         setImmediateResults(groupByProcessorNameMap(immediateResults))
 
       } catch (e) {
-        console.error('error loading insights', e);
+        console.error('error loading curators', e);
       }
     }
     load();
@@ -87,7 +87,7 @@ export const InsightsView = (props: ActionProps) => {
         </div>
       ) : (
         <div className="contacts-view-close" >
-          <div className="modal-close-button" onClick={() => props.setDisplayInsightsView(false)}></div>
+          <div className="modal-close-button" onClick={() => props.setDisplayCuratorView(false)}></div>
         </div>
       )}
 
@@ -97,19 +97,19 @@ export const InsightsView = (props: ActionProps) => {
     Array.from(immediateResults.entries()).length === 0 ? (
             <div className="action-card">
               <div className="action-card-content action-card-content--no-height">
-                <p>No insights available.</p>
+                <p>No curators available.</p>
               </div>
             </div>
         ) : (
-          Array.from(immediateResults.entries()).map(([key, insights]) => (
-            insights[0].renderGroup(insights)
+          Array.from(immediateResults.entries()).map(([key, curators]) => (
+            curators[0].renderGroup(curators)
           ))
         )
       ) : null}
 
       {/*<div className="action-card">*/}
       {/*  <div className="action-card-content action-card-content--no-height">*/}
-      {/*    <p>No insights available.</p>*/}
+      {/*    <p>No curators available.</p>*/}
       {/*  </div>*/}
       {/*  <div className="modal-close-button"></div>*/}
       {/*</div>*/}
