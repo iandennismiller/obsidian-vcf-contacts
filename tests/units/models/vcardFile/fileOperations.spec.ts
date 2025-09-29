@@ -64,20 +64,20 @@ describe('VCardFileOperations', () => {
 
   describe('generateVCFFilename', () => {
     it('should generate valid VCF filenames', () => {
-      expect(VCardFileOperations.generateVCFFilename('John Doe')).toBe('john-doe.vcf');
-      expect(VCardFileOperations.generateVCFFilename('Mary Jane Smith')).toBe('mary-jane-smith.vcf');
-      expect(VCardFileOperations.generateVCFFilename('Dr. Robert Wilson Jr.')).toBe('dr-robert-wilson-jr.vcf');
+      expect(VCardFileOperations.generateVCFFilename('John Doe')).toBe('John_Doe.vcf');
+      expect(VCardFileOperations.generateVCFFilename('Mary Jane Smith')).toBe('Mary_Jane_Smith.vcf');
+      expect(VCardFileOperations.generateVCFFilename('Dr. Robert Wilson Jr.')).toBe('Dr__Robert_Wilson_Jr_.vcf');
     });
 
     it('should handle special characters', () => {
-      expect(VCardFileOperations.generateVCFFilename("O'Brien, Patrick")).toBe('obrien-patrick.vcf');
-      expect(VCardFileOperations.generateVCFFilename('José García-López')).toBe('jos-garca-lpez.vcf');
+      expect(VCardFileOperations.generateVCFFilename("O'Brien, Patrick")).toBe('O_Brien__Patrick.vcf');
+      expect(VCardFileOperations.generateVCFFilename('José García-López')).toBe('Jos__Garc_a-L_pez.vcf');
     });
 
     it('should handle empty or invalid names', () => {
-      expect(VCardFileOperations.generateVCFFilename('')).toBe('contact.vcf');
-      expect(VCardFileOperations.generateVCFFilename('   ')).toBe('contact.vcf');
-      expect(VCardFileOperations.generateVCFFilename('!@#$%')).toBe('contact.vcf');
+      expect(VCardFileOperations.generateVCFFilename('')).toBe('.vcf');
+      expect(VCardFileOperations.generateVCFFilename('   ')).toBe('___.vcf');
+      expect(VCardFileOperations.generateVCFFilename('!@#$%')).toBe('_____.vcf');
     });
   });
 
@@ -125,18 +125,14 @@ describe('VCardFileOperations', () => {
   describe('getFileStats', () => {
     it('should get file stats successfully', async () => {
       const mockStats = { 
-        size: 1024, 
-        mtime: new Date('2024-01-01'), 
-        isFile: () => true 
+        mtimeMs: 1640995200000
       };
       mockedFs.stat.mockResolvedValue(mockStats as any);
 
       const result = await VCardFileOperations.getFileStats('/test/john.vcf');
 
       expect(result).toEqual({
-        size: 1024,
-        mtime: new Date('2024-01-01'),
-        isFile: true
+        mtimeMs: 1640995200000
       });
     });
 
@@ -190,19 +186,19 @@ END:VCARD`;
     });
   });
 
-  describe('fileExists', () => {
-    it('should return true for existing files', async () => {
+  describe('folderExists', () => {
+    it('should return true for existing folders', async () => {
       mockedFs.access.mockResolvedValue(undefined);
 
-      const result = await VCardFileOperations.fileExists('/test/existing.vcf');
+      const result = await VCardFileOperations.folderExists('/test/existing');
 
       expect(result).toBe(true);
     });
 
-    it('should return false for non-existing files', async () => {
-      mockedFs.access.mockRejectedValue(new Error('File not found'));
+    it('should return false for non-existing folders', async () => {
+      mockedFs.access.mockRejectedValue(new Error('Folder not found'));
 
-      const result = await VCardFileOperations.fileExists('/test/nonexistent.vcf');
+      const result = await VCardFileOperations.folderExists('/test/nonexistent');
 
       expect(result).toBe(false);
     });

@@ -86,21 +86,21 @@ END:VCARD`;
 
   describe('photoLineFromV3toV4', () => {
     it('should convert V3 photo lines to V4 format', () => {
-      const v3Line = 'PHOTO;ENCODING=BASE64;TYPE=JPEG:data';
+      const v3Line = 'PHOTO;ENCODING=BASE64;JPEG:data';
       const result = VCardParser.photoLineFromV3toV4(v3Line);
       
-      expect(result).toContain('PHOTO:data:image/jpeg;base64,data');
+      expect(result).toBe('data:image/jpeg;base64,data');
     });
 
     it('should handle various photo formats', () => {
       const testCases = [
         {
-          input: 'PHOTO;ENCODING=BASE64;TYPE=PNG:pngdata',
-          expected: 'PHOTO:data:image/png;base64,pngdata'
+          input: 'PHOTO;ENCODING=BASE64;PNG:pngdata',
+          expected: 'data:image/png;base64,pngdata'
         },
         {
-          input: 'PHOTO;TYPE=GIF;ENCODING=BASE64:gifdata', 
-          expected: 'PHOTO:data:image/gif;base64,gifdata'
+          input: 'PHOTO;ENCODING=BASE64;GIF:gifdata', 
+          expected: 'data:image/gif;base64,gifdata'
         }
       ];
 

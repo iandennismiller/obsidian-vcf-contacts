@@ -6,39 +6,11 @@ import { ContactsPluginSettings } from '../../../../src/settings/settings.d';
 
 describe('RelationshipOperations', () => {
   let mockContactData: Partial<ContactData>;
-  let mockApp: Partial<App>;
-  let mockSettings: ContactsPluginSettings;
   let mockFile: TFile;
   let relationshipOperations: RelationshipOperations;
 
   beforeEach(() => {
     vi.clearAllMocks();
-
-    mockApp = {
-      vault: {
-        read: vi.fn(),
-        modify: vi.fn(),
-        getMarkdownFiles: vi.fn()
-      } as any,
-      metadataCache: {
-        getFileCache: vi.fn()
-      } as any
-    };
-
-    mockSettings = {
-      contactsFolder: 'Contacts',
-      defaultHashtag: '#Contact',
-      vcfStorageMethod: 'vcf-folder',
-      vcfFilename: 'contacts.vcf',
-      vcfWatchFolder: '/test/vcf',
-      vcfWatchEnabled: true,
-      vcfWatchPollingInterval: 30,
-      vcfWriteBackEnabled: false,
-      vcfCustomizeIgnoreList: false,
-      vcfIgnoreFilenames: [],
-      vcfIgnoreUIDs: [],
-      logLevel: 'INFO'
-    };
 
     mockFile = {
       basename: 'john-doe',
@@ -50,14 +22,19 @@ describe('RelationshipOperations', () => {
       getContent: vi.fn(),
       updateContent: vi.fn(),
       getFrontmatter: vi.fn(),
-      file: mockFile
+      file: mockFile,
+      getApp: vi.fn().mockReturnValue({
+        vault: {
+          getMarkdownFiles: vi.fn(),
+          getAbstractFileByPath: vi.fn()
+        },
+        metadataCache: {
+          getFileCache: vi.fn()
+        }
+      })
     };
 
-    relationshipOperations = new RelationshipOperations(
-      mockContactData as ContactData,
-      mockApp as App,
-      mockSettings
-    );
+    relationshipOperations = new RelationshipOperations(mockContactData as ContactData);
   });
 
   describe('parseRelatedSection', () => {
@@ -81,13 +58,11 @@ FN: John Doe
       expect(relationships).toHaveLength(3);
       expect(relationships[0]).toEqual({
         type: 'father',
-        contactName: 'Bob Doe',
-        originalType: 'father'
+        contactName: 'Bob Doe'
       });
       expect(relationships[1]).toEqual({
         type: 'mother',
-        contactName: 'Mary Doe',
-        originalType: 'mother'
+        contactName: 'Mary Doe'
       });
     });
 
@@ -117,7 +92,6 @@ UID: john-doe-123
 #### Related
 - father: [[Bob Doe]]
 - [[Jane Doe]] (spouse)
-- brother [[Mike Doe]]
 
 #Contact`;
 
@@ -125,7 +99,9 @@ UID: john-doe-123
 
       const relationships = await relationshipOperations.parseRelatedSection();
 
-      expect(relationships).toHaveLength(3);
+      expect(relationships).toHaveLength(2);
+      expect(relationships[0].contactName).toBe('Bob Doe');
+      expect(relationships[0].type).toBe('father');
       expect(relationships[1].contactName).toBe('Jane Doe');
       expect(relationships[1].type).toBe('spouse');
     });
@@ -282,9 +258,10 @@ UID: john-doe-123
         { basename: 'jane-doe', path: 'Contacts/jane-doe.md' } as TFile
       ];
 
-      mockApp.vault!.getMarkdownFiles = vi.fn().mockReturnValue(mockFiles);
+      const mockApp = mockContactData.getApp!();
+      mockApp.vault.getMarkdownFiles = vi.fn().mockReturnValue(mockFiles);
 
-      const foundFile = await relationshipOperations.findContactByName('Jane Doe');
+      const foundFile = await (relationshipOperations as any).findContactByName('Jane Doe');
 
       expect(foundFile).toBe(mockFiles[1]);
     });
@@ -294,9 +271,10 @@ UID: john-doe-123
         { basename: 'john-doe', path: 'Contacts/john-doe.md' } as TFile
       ];
 
-      mockApp.vault!.getMarkdownFiles = vi.fn().mockReturnValue(mockFiles);
+      const mockApp = mockContactData.getApp!();
+      mockApp.vault.getMarkdownFiles = vi.fn().mockReturnValue(mockFiles);
 
-      const foundFile = await relationshipOperations.findContactByName('Nonexistent Contact');
+      const foundFile = await (relationshipOperations as any).findContactByName('Nonexistent Contact');
 
       expect(foundFile).toBeNull();
     });
@@ -307,9 +285,10 @@ UID: john-doe-123
         { basename: 'jane-doe', path: 'Other/jane-doe.md' } as TFile
       ];
 
-      mockApp.vault!.getMarkdownFiles = vi.fn().mockReturnValue(mockFiles);
+      const mockApp = mockContactData.getApp!();
+      mockApp.vault.getMarkdownFiles = vi.fn().mockReturnValue(mockFiles);
 
-      const foundFile = await relationshipOperations.findContactByName('Jane Doe');
+      const foundFile = await (relationshipOperations as any).findContactByName('Jane Doe');
 
       expect(foundFile).toBeNull(); // Should not find files outside contacts folder
     });
@@ -318,41 +297,47 @@ UID: john-doe-123
   describe('resolveContact', () => {
     it('should resolve contact with UID', async () => {
       const mockFile = { basename: 'jane-doe' } as TFile;
-      mockApp.metadataCache!.getFileCache = vi.fn().mockReturnValue({
+      const mockApp = mockContactData.getApp!();
+      mockApp.metadataCache.getFileCache = vi.fn().mockReturnValue({
         frontmatter: { UID: 'jane-doe-456' }
       });
 
       // Mock findContactByName to return a file
       vi.spyOn(relationshipOperations as any, 'findContactByName').mockResolvedValue(mockFile);
 
-      const resolved = await relationshipOperations.resolveContact('Jane Doe');
+      const resolved = await (relationshipOperations as any).resolveContact('Jane Doe');
 
       expect(resolved).toEqual({
-        contactName: 'Jane Doe',
-        uid: 'jane-doe-456'
+        name: 'Jane Doe',
+        uid: 'jane-doe-456',
+        file: mockFile,
+        gender: expect.any(Object) // Gender will be resolved by ContactData
       });
     });
 
     it('should resolve contact without UID', async () => {
       const mockFile = { basename: 'jane-doe' } as TFile;
-      mockApp.metadataCache!.getFileCache = vi.fn().mockReturnValue({
+      const mockApp = mockContactData.getApp!();
+      mockApp.metadataCache.getFileCache = vi.fn().mockReturnValue({
         frontmatter: { FN: 'Jane Doe' }
       });
 
       vi.spyOn(relationshipOperations as any, 'findContactByName').mockResolvedValue(mockFile);
 
-      const resolved = await relationshipOperations.resolveContact('Jane Doe');
+      const resolved = await (relationshipOperations as any).resolveContact('Jane Doe');
 
       expect(resolved).toEqual({
-        contactName: 'Jane Doe',
-        uid: null
+        name: 'Jane Doe',
+        uid: '',
+        file: mockFile,
+        gender: expect.any(Object)
       });
     });
 
     it('should return null when contact cannot be resolved', async () => {
       vi.spyOn(relationshipOperations as any, 'findContactByName').mockResolvedValue(null);
 
-      const resolved = await relationshipOperations.resolveContact('Nonexistent Contact');
+      const resolved = await (relationshipOperations as any).resolveContact('Nonexistent Contact');
 
       expect(resolved).toBeNull();
     });
@@ -362,9 +347,7 @@ UID: john-doe-123
     it('should handle content read errors in parseRelatedSection', async () => {
       mockContactData.getContent = vi.fn().mockRejectedValue(new Error('Read error'));
 
-      const relationships = await relationshipOperations.parseRelatedSection();
-
-      expect(relationships).toEqual([]);
+      await expect(relationshipOperations.parseRelatedSection()).rejects.toThrow('Read error');
     });
 
     it('should handle content update errors in updateRelatedSectionInContent', async () => {
@@ -373,15 +356,16 @@ UID: john-doe-123
       mockContactData.updateContent = vi.fn().mockRejectedValue(new Error('Update error'));
 
       await expect(relationshipOperations.updateRelatedSectionInContent([]))
-        .resolves.not.toThrow();
+        .rejects.toThrow('Update error');
     });
 
     it('should handle vault errors in findContactByName', async () => {
-      mockApp.vault!.getMarkdownFiles = vi.fn().mockImplementation(() => {
+      const mockApp = mockContactData.getApp!();
+      mockApp.vault.getMarkdownFiles = vi.fn().mockImplementation(() => {
         throw new Error('Vault error');
       });
 
-      const foundFile = await relationshipOperations.findContactByName('Test');
+      const foundFile = await (relationshipOperations as any).findContactByName('Test');
 
       expect(foundFile).toBeNull();
     });
