@@ -49,7 +49,7 @@ describe('Individual VCF Files in Folder Sync Story', () => {
       access: vi.fn().mockResolvedValue(undefined)
     }));
 
-    const vcfFiles = await vcfManager.listVCFFiles();
+    const vcfFiles = await vcfManager.listVCardFiles();
     // In a real scenario, this would return the full paths to VCF files
     expect(Array.isArray(vcfFiles)).toBe(true);
   });

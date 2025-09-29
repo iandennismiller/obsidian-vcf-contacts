@@ -1,0 +1,125 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { VCardGenerator } from '../../../../src/models/vcardFile/generation';
+import { TFile, App } from 'obsidian';
+
+describe('VCardGenerator', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  describe('fromObsidianFiles', () => {
+    it('should generate VCard from Obsidian contact files', async () => {
+      const mockApp = {
+        metadataCache: {
+          getFileCache: vi.fn().mockReturnValue({
+            frontmatter: {
+              UID: 'john-doe-123',
+              FN: 'John Doe',
+              EMAIL: 'john@example.com'
+            }
+          })
+        }
+      } as any;
+
+      const mockFiles = [
+        { basename: 'john-doe', path: 'Contacts/john-doe.md' } as TFile
+      ];
+
+      const result = await VCardGenerator.fromObsidianFiles(mockFiles, mockApp);
+
+      expect(result.vcards).toContain('BEGIN:VCARD');
+      expect(result.vcards).toContain('UID:john-doe-123');
+      expect(result.vcards).toContain('FN:John Doe');
+      expect(result.vcards).toContain('EMAIL:john@example.com');
+      expect(result.vcards).toContain('END:VCARD');
+      expect(result.errors).toEqual([]);
+    });
+
+    it('should handle empty contact file array', async () => {
+      const result = await VCardGenerator.fromObsidianFiles([]);
+      
+      expect(result.vcards).toBe('');
+      expect(result.errors).toEqual([]);
+    });
+
+    it('should collect errors for problematic files', async () => {
+      const mockApp = {
+        metadataCache: {
+          getFileCache: vi.fn().mockImplementation(() => {
+            throw new Error('Metadata error');
+          })
+        }
+      } as any;
+
+      const mockFiles = [
+        { basename: 'problem-file', path: 'Contacts/problem-file.md' } as TFile
+      ];
+
+      const result = await VCardGenerator.fromObsidianFiles(mockFiles, mockApp);
+
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].status).toBe('error');
+      expect(result.errors[0].file).toBe('problem-file');
+    });
+  });
+
+  describe('createEmpty', () => {
+    it('should create an empty VCard template', async () => {
+      const result = await VCardGenerator.createEmpty();
+
+      expect(result).toContain('BEGIN:VCARD');
+      expect(result).toContain('VERSION:4.0');
+      expect(result).toContain('END:VCARD');
+      // Should contain template fields
+      expect(result).toContain('N:;;;;');
+      expect(result).toContain('TEL[CELL]:');
+      expect(result).toContain('EMAIL[HOME]:');
+    });
+  });
+
+  describe('objectToVcf', () => {
+    it('should convert object to VCF format', () => {
+      const vCardObject = {
+        UID: 'test-123',
+        FN: 'Test Contact',
+        EMAIL: 'test@example.com',
+        'RELATED[spouse]': 'name:Spouse Name'
+      };
+
+      const result = VCardGenerator.objectToVcf(vCardObject);
+
+      expect(result).toContain('BEGIN:VCARD');
+      expect(result).toContain('VERSION:4.0');
+      expect(result).toContain('UID:test-123');
+      expect(result).toContain('FN:Test Contact');
+      expect(result).toContain('EMAIL:test@example.com');
+      expect(result).toContain('RELATED;TYPE=spouse:name:Spouse Name');
+      expect(result).toContain('END:VCARD');
+    });
+
+    it('should handle structured fields correctly', () => {
+      const vCardObject = {
+        UID: 'structured-123',
+        N: 'Doe;John;William;Dr.;Jr.',
+        ADR: ';;123 Main St;Anytown;CA;12345;USA'
+      };
+
+      const result = VCardGenerator.objectToVcf(vCardObject);
+
+      expect(result).toContain('N:Doe;John;William;Dr.;Jr.');
+      expect(result).toContain('ADR:;;123 Main St;Anytown;CA;12345;USA');
+    });
+
+    it('should handle empty or minimal objects', () => {
+      const minimalObject = {
+        UID: 'minimal-123'
+      };
+
+      const result = VCardGenerator.objectToVcf(minimalObject);
+
+      expect(result).toContain('BEGIN:VCARD');
+      expect(result).toContain('UID:minimal-123');
+      expect(result).toContain('END:VCARD');
+    });
+  });
+});

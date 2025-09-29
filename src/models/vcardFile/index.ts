@@ -41,12 +41,3 @@ export {
 
 export * from './types';
 export * from './interfaces';
-
-// ============================================================================
-// Backward Compatibility Exports
-// ============================================================================
-
-export {
-  /** Alternative export name for file operations */
-  VCardFileOperations as VcardFileOps  
-} from './fileOperations';
