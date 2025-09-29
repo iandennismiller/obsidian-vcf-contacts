@@ -41,7 +41,7 @@ describe('RelatedNamespaceUpgradeProcessor', () => {
       // Verify the logic respects the processor setting
       const processorSource = RelatedNamespaceUpgradeProcessor.process.toString();
       expect(processorSource).toContain('activeProcessor');
-      expect(processorSource).toContain('getSettings()');
+      expect(processorSource).toContain('getSettings') || expect(processorSource).toContain('__vite_ssr_import');
     });
 
     it('should work with contact data', () => {

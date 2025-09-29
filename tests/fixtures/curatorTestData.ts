@@ -197,8 +197,8 @@ export const expectedOutcomes = {
     UID: 'charlie-brown-101',
     EMAIL: 'charlie@example.com',
     'RELATED[SPOUSE]': 'Lucy Brown',
-    'RELATED[CHILD]': 'Rerun Brown',
-    'RELATED[CHILD]': 'Sally Brown',  
+    'RELATED[CHILD,1]': 'Rerun Brown',
+    'RELATED[CHILD,2]': 'Sally Brown',  
     REV: expect.stringMatching(/^\d{8}T\d{6}Z$/)
   },
 
