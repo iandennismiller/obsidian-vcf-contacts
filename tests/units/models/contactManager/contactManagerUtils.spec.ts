@@ -11,15 +11,17 @@ vi.mock('obsidian', () => ({
 }));
 
 vi.mock('../../../../src/ui/modals/fileExistsModal', () => ({
-  FileExistsModal: vi.fn().mockImplementation((app, filePath, callback) => {
-    // Auto-resolve with "skip" action for testing
-    setTimeout(() => callback("skip"), 0);
-  })
+  FileExistsModal: vi.fn().mockImplementation((app, filePath, callback) => ({
+    open: vi.fn().mockImplementation(() => {
+      // Auto-resolve with "skip" action for testing
+      setTimeout(() => callback("skip"), 0);
+    })
+  }))
 }));
 
 vi.mock('../../../../src/insights/insightService', () => ({
   insightService: {
-    run: vi.fn()
+    process: vi.fn().mockResolvedValue(undefined)
   }
 }));
 

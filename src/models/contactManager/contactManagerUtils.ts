@@ -30,7 +30,7 @@ export class ContactManagerUtils {
         .replace(/\/+$/, "");
     };
 
-    if (parentFolder?.path?.contains(folderPath)) {
+    if (parentFolder?.path?.includes(folderPath)) {
       const filePath = normalizePath(fileJoin(parentFolder.path, filename));
       await ContactManagerUtils.handleFileCreation(app, filePath, content);
     } else {

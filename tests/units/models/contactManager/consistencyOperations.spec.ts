@@ -13,7 +13,7 @@ vi.mock('../../../../src/context/sharedSettingsContext', () => ({
 
 vi.mock('../../../../src/insights/insightService', () => ({
   insightService: {
-    run: vi.fn()
+    process: vi.fn().mockResolvedValue(undefined)
   }
 }));
 
@@ -48,6 +48,7 @@ describe('ConsistencyOperations', () => {
 
     mockContactManagerData = {
       getAllContactFiles: vi.fn().mockReturnValue(mockFiles),
+      extractUIDFromFile: vi.fn().mockResolvedValue('test-uid-123'),
       getApp: vi.fn().mockReturnValue({
         metadataCache: {
           getFileCache: vi.fn().mockReturnValue({
@@ -76,7 +77,7 @@ describe('ConsistencyOperations', () => {
   describe('ensureContactDataConsistency', () => {
     it('should process all contact files for consistency', async () => {
       const { insightService } = await import('../../../../src/insights/insightService');
-      insightService.run = vi.fn().mockResolvedValue([]);
+      vi.mocked(insightService.process).mockResolvedValue(undefined);
 
       await consistencyOperations.ensureContactDataConsistency(5);
 

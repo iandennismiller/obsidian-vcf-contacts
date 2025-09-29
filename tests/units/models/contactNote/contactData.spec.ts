@@ -43,7 +43,7 @@ describe('ContactData', () => {
       name: 'john-doe.md'
     } as TFile;
 
-    contactData = new ContactData(mockApp as App, mockSettings, mockFile);
+    contactData = new ContactData(mockApp as App, mockFile);
   });
 
   describe('getContent', () => {
@@ -122,7 +122,7 @@ Updated notes.
   });
 
   describe('getFrontmatter', () => {
-    it('should extract frontmatter from metadata cache', () => {
+    it('should extract frontmatter from metadata cache', async () => {
       const mockFrontmatter = {
         UID: 'john-doe-123',
         FN: 'John Doe',
@@ -134,24 +134,26 @@ Updated notes.
         frontmatter: mockFrontmatter
       });
 
-      const result = contactData.getFrontmatter();
+      const result = await contactData.getFrontmatter();
 
       expect(result).toEqual(mockFrontmatter);
       expect(mockApp.metadataCache!.getFileCache).toHaveBeenCalledWith(mockFile);
     });
 
-    it('should return empty object when no frontmatter', () => {
+    it('should return empty object when no frontmatter', async () => {
       mockApp.metadataCache!.getFileCache = vi.fn().mockReturnValue({});
+      mockApp.vault!.read = vi.fn().mockResolvedValue('no frontmatter content');
 
-      const result = contactData.getFrontmatter();
+      const result = await contactData.getFrontmatter();
 
       expect(result).toEqual({});
     });
 
-    it('should return empty object when no file cache', () => {
+    it('should return empty object when no file cache', async () => {
       mockApp.metadataCache!.getFileCache = vi.fn().mockReturnValue(null);
+      mockApp.vault!.read = vi.fn().mockResolvedValue('no frontmatter content');
 
-      const result = contactData.getFrontmatter();
+      const result = await contactData.getFrontmatter();
 
       expect(result).toEqual({});
     });
@@ -184,7 +186,7 @@ Updated notes.
       expect(first).toBe(originalContent);
 
       // Clear cache
-      contactData.clearCache();
+      contactData.invalidateAllCaches();
 
       // Next read should fetch fresh content
       const second = await contactData.getContent();
@@ -195,20 +197,21 @@ Updated notes.
 
   describe('file properties', () => {
     it('should expose file properties', () => {
-      expect(contactData.file).toBe(mockFile);
-      expect(contactData.basename).toBe('john-doe');
-      expect(contactData.path).toBe('Contacts/john-doe.md');
+      expect(contactData.getFile()).toBe(mockFile);
+      expect(contactData.getFile().basename).toBe('john-doe');
+      expect(contactData.getFile().path).toBe('Contacts/john-doe.md');
     });
   });
 
   describe('error resilience', () => {
-    it('should handle corrupt file cache gracefully', () => {
+    it('should handle corrupt file cache gracefully', async () => {
       // Simulate corrupted cache that throws when accessed
       mockApp.metadataCache!.getFileCache = vi.fn().mockImplementation(() => {
         throw new Error('Cache corruption');
       });
+      mockApp.vault!.read = vi.fn().mockResolvedValue('no frontmatter content');
 
-      const result = contactData.getFrontmatter();
+      const result = await contactData.getFrontmatter();
 
       expect(result).toEqual({});
     });
