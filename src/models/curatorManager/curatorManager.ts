@@ -1,11 +1,11 @@
 import { Notice, App } from 'obsidian';
-import { ContactsPluginSettings } from '../../settings/settings.d';
+import { ContactsPluginSettings } from '../../settings/settings';
 import { ContactManager } from '../contactManager';
 import { Contact } from '../index';
-import { CuratorSettingProperties } from '../../interfaces/CuratorSettingProperties.d';
-import { CuratorProcessor } from '../../interfaces/CuratorProcessor.d';
-import { CuratorQueItem } from '../../interfaces/CuratorQueItem.d';
-import { RunType } from '../../interfaces/RunType.d';
+import { CuratorSettingProperties } from '../../interfaces/CuratorSettingProperties';
+import { CuratorProcessor } from '../../interfaces/CuratorProcessor';
+import { CuratorQueItem } from '../../interfaces/CuratorQueItem';
+import { RunType } from '../../interfaces/RunType';
 
 const processors = new Map<string, CuratorProcessor>();
 

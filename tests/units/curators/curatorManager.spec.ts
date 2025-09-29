@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { CuratorManager, curatorService } from '../../../src/models/curatorManager/curatorManager';
-import { RunType } from "../../../src/interfaces/curatorManager.d";
+import { RunType } from "../../../src/interfaces";
 
 // Mock dependencies
 const mockApp = {

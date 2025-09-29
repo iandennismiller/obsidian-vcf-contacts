@@ -4,7 +4,7 @@ import { getApp } from "src/context/sharedAppContext";
 import { getSettings } from "src/context/sharedSettingsContext";
 import { CuratorProcessor } from "src/interfaces/CuratorProcessor.d";
 import { CuratorQueItem } from "src/interfaces/CuratorQueItem.d";
-import { RunType } from "src/interfaces/RunType.d";
+import { RunType } from "src/interfaces/RunType";
 
 // Zero dependency uuid generator as its not used for millions of records
 const generateUUID = (): string => {

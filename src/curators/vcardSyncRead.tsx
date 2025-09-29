@@ -6,7 +6,7 @@ import { getApp } from "src/context/sharedAppContext";
 import { getSettings } from "src/context/sharedSettingsContext";
 import { CuratorProcessor } from "src/interfaces/CuratorProcessor.d";
 import { CuratorQueItem } from "src/interfaces/CuratorQueItem.d";
-import { RunType } from "src/interfaces/RunType.d";
+import { RunType } from "src/interfaces/RunType";
 
 const renderGroup = (queItems: CuratorQueItem[]):JSX.Element => {
   return (

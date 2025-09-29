@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { RelatedNamespaceUpgradeProcessor } from "../../../src/curators/namespaceUpgrade";
-import { RunType } from "../../../src/interfaces/curatorManager.d";
+import { RunType } from "../../../src/interfaces";
 
 describe('RelatedNamespaceUpgradeProcessor', () => {
   describe('processor properties', () => {

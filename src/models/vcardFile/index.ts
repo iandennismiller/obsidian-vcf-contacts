@@ -40,4 +40,8 @@ export {
 // ============================================================================
 
 export * from './types';
-export * from '../../interfaces/vcardFile.d';
+// Export individual interfaces
+export * from '../../interfaces/IVCardFile';
+export * from '../../interfaces/IVCardParser';
+export * from '../../interfaces/IVCardGenerator';
+export * from '../../interfaces/IVCardFileOperations';

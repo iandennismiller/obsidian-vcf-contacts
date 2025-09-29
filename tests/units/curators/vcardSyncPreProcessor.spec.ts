@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { VcardSyncPreProcessor } from "../../../src/curators/vcardSyncRead";
-import { RunType } from "../../../src/interfaces/curatorManager.d";
+import { RunType } from "../../../src/interfaces";
 
 describe('VcardSyncPreProcessor', () => {
   describe('processor properties', () => {
