@@ -302,4 +302,90 @@ export class ContactManager implements IContactManager {
   invalidateAllCaches(): void {
     this.managerData.invalidateAllCaches();
   }
+
+  // ============================================================================
+  // VCF Processing and Contact Creation Methods
+  // ============================================================================
+
+  /**
+   * Processes VCF contact records and creates/updates contacts as needed.
+   * 
+   * This method handles the contact creation and processing logic that was
+   * previously duplicated in syncWatcher. It takes parsed VCF records and
+   * either finds existing contacts or creates new ones.
+   * 
+   * @param vcfEntries - Array of [slug, record] tuples from VCF parsing
+   * @param app - Obsidian App instance for file operations
+   * @param settings - Plugin settings for contact creation
+   * @returns Promise resolving to array of TFile objects that need processing
+   */
+  async processVCFContacts(
+    vcfEntries: Array<[string, any]>, 
+    app: import('obsidian').App, 
+    settings: ContactsPluginSettings
+  ): Promise<import('obsidian').TFile[]> {
+    const contactsToProcess: import('obsidian').TFile[] = [];
+
+    for (const [slug, record] of vcfEntries) {
+      if (slug && record.UID) {
+        const existingFile = await this.findContactFileByUID(record.UID);
+        
+        if (existingFile) {
+          // Contact exists - add to processing list
+          contactsToProcess.push(existingFile);
+        } else {
+          // New contact - create it and add to processing list
+          const newFile = await this.createContactFromVCF(slug, record, app, settings);
+          if (newFile) {
+            contactsToProcess.push(newFile);
+          }
+        }
+      }
+    }
+
+    return contactsToProcess;
+  }
+
+  /**
+   * Creates a new contact file from VCF record data.
+   * 
+   * This method encapsulates the contact creation logic that was previously
+   * duplicated in syncWatcher. It handles markdown generation and file creation.
+   * 
+   * @param slug - URL-friendly identifier for the contact
+   * @param record - VCF record data
+   * @param app - Obsidian App instance for file operations  
+   * @param settings - Plugin settings for contact creation
+   * @returns Promise resolving to created TFile or null if creation failed
+   */
+  async createContactFromVCF(
+    slug: string, 
+    record: any, 
+    app: import('obsidian').App, 
+    settings: ContactsPluginSettings
+  ): Promise<import('obsidian').TFile | null> {
+    try {
+      // Import ContactNote here to avoid circular dependencies
+      const { ContactNote } = await import('../contactNote');
+      const { ContactManagerUtils } = await import('./contactManagerUtils');
+      
+      const contactNote = new ContactNote(app, settings, null as any);
+      const mdContent = contactNote.mdRender(record, settings.defaultHashtag);
+      const filename = slug + '.md';
+      
+      await ContactManagerUtils.createContactFile(app, settings.contactsFolder, mdContent, filename);
+      
+      // Find the newly created file
+      const newFile = await this.findContactFileByUID(record.UID);
+      if (newFile) {
+        console.log(`[ContactManager] Created new contact: ${newFile.basename}`);
+        return newFile;
+      }
+      
+      return null;
+    } catch (error) {
+      console.log(`[ContactManager] Failed to create contact ${slug}: ${error.message}`);
+      return null;
+    }
+  }
 }

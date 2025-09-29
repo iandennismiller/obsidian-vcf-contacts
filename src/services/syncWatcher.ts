@@ -1,12 +1,8 @@
 import * as fs from 'fs/promises';
 import { App, Notice, TFile } from 'obsidian';
 import * as path from 'path';
-import { ContactNote } from "../models/contactNote";
-import { VcardFile } from "../models/vcardFile";
-import { VCardForObsidianRecord } from "../models/vcardFile";
 import { VcardManager, VCardFileInfo } from "../models/vcardManager";
 import { ContactManager } from "../models/contactManager";
-import { ContactManagerUtils } from "../models/contactManager/contactManagerUtils";
 import { ContactsPluginSettings } from "src/settings/settings.d";
 import { onSettingsChange } from "src/context/sharedSettingsContext";
 import { setupVCFDropHandler } from 'src/ui/vcfDropHandler';
@@ -172,10 +168,8 @@ export class SyncWatcher {
   /**
    * Scans a single VCF file for changes and processes any modified contacts.
    * 
-   * This method:
-   * 1. Verifies the VCF file exists
-   * 2. Checks if the file has been modified since last scan
-   * 3. Processes all contacts in the single VCF file
+   * This method now delegates the VCF processing logic to the appropriate
+   * manager classes for better separation of concerns.
    * 
    * @returns Promise that resolves when the scan is complete
    */
@@ -201,44 +195,21 @@ export class SyncWatcher {
 
       console.log(`Processing single VCF file: ${vcfFilePath}`);
 
-      // Read and parse VCF content using VCFManager
+      // Use VcardManager to process VCF contents (no UID filtering for single VCF)
       const parsedEntries = await this.vcardManager.readAndParseVCF(vcfFilePath);
       if (!parsedEntries) {
         return;
       }
 
-      // Track contacts that need processor triggers
-      const contactsToProcess: TFile[] = [];
+      // Filter to only valid entries (those with slug and UID)
+      const vcfEntries = parsedEntries.filter(([slug, record]) => slug && record.UID);
 
-      // Process each parsed entry to find existing contacts
-      for (const [slug, record] of parsedEntries) {
-        if (slug && record.UID) {
-          const existingFile = await this.contactManager.findContactFileByUID(record.UID);
-          
-          if (existingFile) {
-            // Contact exists - add to processing list
-            contactsToProcess.push(existingFile);
-          } else {
-            // New contact - create it and add to processing list
-            try {
-              const contactNote = new ContactNote(this.app, this.settings, null as any);
-              const mdContent = contactNote.mdRender(record, this.settings.defaultHashtag);
-              const filename = slug + '.md';
-              
-              await ContactManagerUtils.createContactFile(this.app, this.settings.contactsFolder, mdContent, filename);
-              
-              // Find the newly created file and add to processing
-              const newFile = await this.contactManager.findContactFileByUID(record.UID);
-              if (newFile) {
-                contactsToProcess.push(newFile);
-                console.log(`Created new contact: ${newFile.basename}`);
-              }
-            } catch (error) {
-              console.log(`Failed to create contact ${slug} from ${vcfFilePath}: ${error.message}`);
-            }
-          }
-        }
-      }
+      // Use ContactManager to process contact records and create/update contacts
+      const contactsToProcess = await this.contactManager.processVCFContacts(
+        vcfEntries, 
+        this.app, 
+        this.settings
+      );
 
       // Trigger insight processors on all affected contacts
       if (contactsToProcess.length > 0) {
@@ -269,33 +240,22 @@ export class SyncWatcher {
   /**
    * Scans the configured VCF folder for changes and processes any modified files.
    * 
-   * This method:
-   * 1. Verifies the VCF folder exists
-   * 2. Lists all VCF files in the folder
-   * 3. Processes each file for new or updated contacts
+   * This method now delegates the scanning logic to VcardManager for better
+   * separation of concerns and code reuse.
    * 
    * @returns Promise that resolves when the scan is complete
    */
   private async scanVCFFolder(): Promise<void> {
     try {
-      // Check if folder exists using VCFManager
-      const folderExists = await this.vcardManager.watchFolderExists();
-      if (!folderExists) {
+      // Use VcardManager to scan folder and get files that need processing
+      const filesToProcess = await this.vcardManager.scanVCFFolder(this.knownFiles);
+      
+      if (filesToProcess.length === 0) {
         return;
       }
 
-      // Get list of files in the folder using VCFManager
-      const files = await this.vcardManager.listVCFFiles();
-      
-      if (files.length === 0) {
-        const watchFolder = this.vcardManager.getWatchFolder();
-        // No VCF files found
-        return;
-      }
-
-      // Scanning VCF files
-      
-      for (const filePath of files) {
+      // Process each file that needs updating
+      for (const filePath of filesToProcess) {
         await this.processVCFFile(filePath);
       }
 
@@ -307,24 +267,15 @@ export class SyncWatcher {
   /**
    * Processes a single VCF file for changes and triggers insight processors.
    * 
-   * This method:
-   * 1. Checks if the file should be ignored
-   * 2. Verifies the file has been modified since last scan
-   * 3. Parses VCF content and finds associated contacts
-   * 4. Triggers insight processors on affected contacts
-   * 5. Updates tracking data and shows notifications
+   * This method now delegates the VCF processing logic to the appropriate
+   * manager classes for better separation of concerns.
    * 
    * @param filePath - Full path to the VCF file to process
    * @returns Promise that resolves when file processing is complete
    */
   private async processVCFFile(filePath: string): Promise<void> {
     try {
-      // Check if this filename should be ignored using VCFManager
-      if (this.vcardManager.shouldIgnoreFile(filePath)) {
-        return;
-      }
-
-      // Get file stats using VCFManager
+      // Get file stats using VcardManager
       const fileInfo = await this.vcardManager.getVCFFileInfo(filePath);
       if (!fileInfo) {
         return;
@@ -340,49 +291,18 @@ export class SyncWatcher {
       const filename = path.basename(filePath);
       console.log(`Processing VCF file: ${filename}`);
 
-      // Read and parse VCF content using VCFManager
-      const parsedEntries = await this.vcardManager.readAndParseVCF(filePath);
-      if (!parsedEntries) {
+      // Use VcardManager to process VCF contents
+      const vcfEntries = await this.vcardManager.processVCFContents(filePath);
+      if (vcfEntries.length === 0) {
         return;
       }
 
-      // Track contacts that need processor triggers
-      const contactsToProcess: TFile[] = [];
-
-      // Process each parsed entry to find existing contacts
-      for (const [slug, record] of parsedEntries) {
-        if (slug && record.UID) {
-          // Check if this UID should be ignored using VCFManager
-          if (this.vcardManager.shouldIgnoreUID(record.UID)) {
-            continue;
-          }
-
-          const existingFile = await this.contactManager.findContactFileByUID(record.UID);
-          
-          if (existingFile) {
-            // Contact exists - add to processing list
-            contactsToProcess.push(existingFile);
-          } else {
-            // New contact - create it and add to processing list
-            try {
-              const contactNote = new ContactNote(this.app, this.settings, null as any);
-              const mdContent = contactNote.mdRender(record, this.settings.defaultHashtag);
-              const filename = slug + '.md';
-              
-              await ContactManagerUtils.createContactFile(this.app, this.settings.contactsFolder, mdContent, filename);
-              
-              // Find the newly created file and add to processing
-              const newFile = await this.contactManager.findContactFileByUID(record.UID);
-              if (newFile) {
-                contactsToProcess.push(newFile);
-                console.log(`Created new contact: ${newFile.basename}`);
-              }
-            } catch (error) {
-              console.log(`Failed to create contact ${slug} from ${filename}: ${error.message}`);
-            }
-          }
-        }
-      }
+      // Use ContactManager to process contact records and create/update contacts
+      const contactsToProcess = await this.contactManager.processVCFContacts(
+        vcfEntries, 
+        this.app, 
+        this.settings
+      );
 
       // Trigger insight processors on all affected contacts
       if (contactsToProcess.length > 0) {
