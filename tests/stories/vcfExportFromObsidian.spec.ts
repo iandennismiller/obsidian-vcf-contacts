@@ -207,7 +207,7 @@ describe('VCF Export from Obsidian Story', () => {
     
     // Should still complete but with errors recorded
     expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toContain('error-contact.md');
+    expect(result.errors[0].file).toContain('error-contact.md');
   });
 
   it('should skip contacts with missing required fields', async () => {
@@ -240,7 +240,7 @@ describe('VCF Export from Obsidian Story', () => {
     
     // Should have one error for the invalid contact
     expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toContain('invalid-contact.md');
+    expect(result.errors[0].file).toContain('invalid-contact.md');
   });
 
   it('should preserve REV field during export', async () => {

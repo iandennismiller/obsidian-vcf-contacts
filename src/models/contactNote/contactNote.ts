@@ -284,6 +284,400 @@ export class ContactNote {
     return this.syncOps.validateRelationshipConsistency();
   }
 
+  // === Advanced Relationship Operations ===
+
+  /**
+   * Get relationships with enhanced UID/name linking information
+   */
+  async getRelationships(): Promise<Array<{
+    type: string;
+    contactName: string;
+    targetUID?: string;
+    linkType: 'uid' | 'name';
+    originalType: string;
+  }>> {
+    const relationships = await this.parseRelatedSection();
+    const frontmatterRelationships = await this.parseFrontmatterRelationships();
+    
+    const result = [];
+    
+    // Process markdown relationships
+    for (const rel of relationships) {
+      const resolved = await this.resolveContact(rel.contactName);
+      result.push({
+        type: rel.type,
+        contactName: rel.contactName,
+        targetUID: resolved?.uid,
+        linkType: resolved?.uid ? 'uid' : 'name',
+        originalType: rel.originalType
+      });
+    }
+    
+    // Process frontmatter relationships that may have UIDs
+    for (const fmRel of frontmatterRelationships) {
+      if (fmRel.parsedValue.type === 'uid') {
+        const contactName = await this.resolveContactNameByUID(fmRel.parsedValue.value);
+        if (contactName) {
+          result.push({
+            type: fmRel.genderlessType,
+            contactName,
+            targetUID: fmRel.parsedValue.value,
+            linkType: 'uid',
+            originalType: fmRel.genderlessType
+          });
+        }
+      }
+    }
+    
+    return result;
+  }
+
+  /**
+   * Resolve a contact by UID
+   */
+  async resolveContactByUID(uid: string): Promise<TFile | null> {
+    const allFiles = this.app.vault.getMarkdownFiles();
+    
+    for (const file of allFiles) {
+      if (!file.path.startsWith(this.settings.contactsFolder)) continue;
+      
+      const cache = this.app.metadataCache.getFileCache(file);
+      if (cache?.frontmatter?.UID === uid) {
+        return file;
+      }
+    }
+    
+    return null;
+  }
+
+  /**
+   * Resolve contact name by UID
+   */
+  async resolveContactNameByUID(uid: string): Promise<string | null> {
+    const file = await this.resolveContactByUID(uid);
+    if (!file) return null;
+    
+    const cache = this.app.metadataCache.getFileCache(file);
+    return cache?.frontmatter?.FN || file.basename;
+  }
+
+  /**
+   * Resolve relationship target (by UID or name)
+   */
+  async resolveRelationshipTarget(identifier: string): Promise<{
+    file: TFile | null;
+    type: 'uid' | 'name';
+    contactName: string;
+  } | null> {
+    // Check if it's a UID format
+    if (identifier.startsWith('urn:uuid:') || ContactNote.isValidUID(identifier)) {
+      const file = await this.resolveContactByUID(identifier);
+      if (file) {
+        const cache = this.app.metadataCache.getFileCache(file);
+        const contactName = cache?.frontmatter?.FN || file.basename;
+        return { file, type: 'uid', contactName };
+      }
+    }
+    
+    // Fall back to name resolution
+    const file = await this.findContactByName(identifier);
+    if (file) {
+      return { file, type: 'name', contactName: identifier };
+    }
+    
+    return null;
+  }
+
+  /**
+   * Process reverse relationships for automatic bidirectional linking
+   */
+  async processReverseRelationships(): Promise<{
+    success: boolean;
+    processedRelationships: Array<{
+      targetContact: string;
+      reverseType: string;
+      added: boolean;
+      error?: string;
+    }>;
+    errors: string[];
+  }> {
+    const result = {
+      success: true,
+      processedRelationships: [],
+      errors: []
+    };
+
+    try {
+      const relationships = await this.parseRelatedSection();
+      const sourceContactName = this.getDisplayName();
+      
+      for (const relationship of relationships) {
+        const reverseType = this.getReciprocalRelationshipType(relationship.type);
+        if (!reverseType) continue;
+        
+        const targetFile = await this.findContactByName(relationship.contactName);
+        if (!targetFile) {
+          result.processedRelationships.push({
+            targetContact: relationship.contactName,
+            reverseType,
+            added: false,
+            error: 'Target contact not found'
+          });
+          continue;
+        }
+
+        // Check if reverse relationship already exists
+        const targetContact = new ContactNote(this.app, this.settings, targetFile);
+        const targetRelationships = await targetContact.parseRelatedSection();
+        
+        const reverseExists = targetRelationships.some(rel => 
+          rel.contactName === sourceContactName && 
+          this.areRelationshipTypesEquivalent(rel.type, reverseType)
+        );
+
+        if (!reverseExists) {
+          // Add reverse relationship
+          const newRelationships = [...targetRelationships, {
+            type: reverseType,
+            contactName: sourceContactName,
+            originalType: reverseType
+          }];
+          
+          await targetContact.updateRelatedSectionInContent(newRelationships);
+          
+          result.processedRelationships.push({
+            targetContact: relationship.contactName,
+            reverseType,
+            added: true
+          });
+        } else {
+          result.processedRelationships.push({
+            targetContact: relationship.contactName,
+            reverseType,
+            added: false
+          });
+        }
+      }
+    } catch (error) {
+      result.success = false;
+      result.errors.push(`Error processing reverse relationships: ${error.message}`);
+    }
+
+    return result;
+  }
+
+  /**
+   * Upgrade name-based relationships to UID-based when possible
+   */
+  async upgradeNameBasedRelationshipsToUID(): Promise<{
+    success: boolean;
+    upgraded: number;
+    errors: string[];
+  }> {
+    const result = { success: true, upgraded: 0, errors: [] };
+
+    try {
+      const frontmatter = await this.getFrontmatter();
+      if (!frontmatter) return result;
+
+      const updates: Record<string, string> = {};
+      
+      for (const [key, value] of Object.entries(frontmatter)) {
+        if (key.startsWith('RELATED[') && typeof value === 'string') {
+          // Check if it's currently name-based
+          if (!value.startsWith('urn:uuid:') && !ContactNote.isValidUID(value)) {
+            const targetFile = await this.findContactByName(value);
+            if (targetFile) {
+              const targetCache = this.app.metadataCache.getFileCache(targetFile);
+              const targetUID = targetCache?.frontmatter?.UID;
+              
+              if (targetUID) {
+                updates[key] = targetUID;
+                result.upgraded++;
+              }
+            }
+          }
+        }
+      }
+
+      if (Object.keys(updates).length > 0) {
+        await this.updateMultipleFrontmatterValues(updates);
+      }
+    } catch (error) {
+      result.success = false;
+      result.errors.push(`Error upgrading relationships: ${error.message}`);
+    }
+
+    return result;
+  }
+
+  /**
+   * Detect UID conflicts within the contact system
+   */
+  async detectUIDConflicts(): Promise<{
+    hasConflicts: boolean;
+    conflicts: Array<{
+      uid: string;
+      files: string[];
+    }>;
+  }> {
+    const result = { hasConflicts: false, conflicts: [] };
+    const uidMap = new Map<string, string[]>();
+    
+    const allFiles = this.app.vault.getMarkdownFiles();
+    
+    for (const file of allFiles) {
+      if (!file.path.startsWith(this.settings.contactsFolder)) continue;
+      
+      const cache = this.app.metadataCache.getFileCache(file);
+      const uid = cache?.frontmatter?.UID;
+      
+      if (uid) {
+        if (!uidMap.has(uid)) {
+          uidMap.set(uid, []);
+        }
+        uidMap.get(uid)!.push(file.path);
+      }
+    }
+    
+    for (const [uid, files] of uidMap.entries()) {
+      if (files.length > 1) {
+        result.hasConflicts = true;
+        result.conflicts.push({ uid, files });
+      }
+    }
+    
+    return result;
+  }
+
+  /**
+   * Update a specific relationship's UID
+   */
+  async updateRelationshipUID(oldUID: string, newUID: string): Promise<boolean> {
+    try {
+      const frontmatter = await this.getFrontmatter();
+      if (!frontmatter) return false;
+
+      const updates: Record<string, string> = {};
+      let hasUpdates = false;
+
+      for (const [key, value] of Object.entries(frontmatter)) {
+        if (key.startsWith('RELATED[') && value === oldUID) {
+          updates[key] = newUID;
+          hasUpdates = true;
+        }
+      }
+
+      if (hasUpdates) {
+        await this.updateMultipleFrontmatterValues(updates);
+        return true;
+      }
+    } catch (error) {
+      console.error(`Error updating relationship UID: ${error.message}`);
+    }
+    
+    return false;
+  }
+
+  /**
+   * Bulk update relationship UIDs
+   */
+  async bulkUpdateRelationshipUIDs(uidMappings: Record<string, string>): Promise<{
+    success: boolean;
+    updated: number;
+    errors: string[];
+  }> {
+    const result = { success: true, updated: 0, errors: [] };
+    
+    try {
+      const frontmatter = await this.getFrontmatter();
+      if (!frontmatter) return result;
+
+      const updates: Record<string, string> = {};
+
+      for (const [key, value] of Object.entries(frontmatter)) {
+        if (key.startsWith('RELATED[') && typeof value === 'string') {
+          const newUID = uidMappings[value];
+          if (newUID && newUID !== value) {
+            updates[key] = newUID;
+            result.updated++;
+          }
+        }
+      }
+
+      if (Object.keys(updates).length > 0) {
+        await this.updateMultipleFrontmatterValues(updates);
+      }
+    } catch (error) {
+      result.success = false;
+      result.errors.push(`Error in bulk update: ${error.message}`);
+    }
+
+    return result;
+  }
+
+  // === Helper Methods for Relationship Operations ===
+
+  /**
+   * Get reciprocal relationship type
+   */
+  private getReciprocalRelationshipType(relationshipType: string): string | null {
+    const reciprocalMap: Record<string, string> = {
+      'father': 'child',
+      'mother': 'child', 
+      'parent': 'child',
+      'son': 'parent',
+      'daughter': 'parent',
+      'child': 'parent',
+      'brother': 'sibling',
+      'sister': 'sibling',
+      'sibling': 'sibling',
+      'spouse': 'spouse',
+      'husband': 'wife',
+      'wife': 'husband',
+      'friend': 'friend',
+      'colleague': 'colleague',
+      'manager': 'employee',
+      'employee': 'manager',
+      'mentor': 'mentee',
+      'mentee': 'mentor'
+    };
+    
+    return reciprocalMap[relationshipType.toLowerCase()] || null;
+  }
+
+  /**
+   * Check if two relationship types are equivalent
+   */
+  private areRelationshipTypesEquivalent(type1: string, type2: string): boolean {
+    const genderless1 = this.convertToGenderlessType(type1);
+    const genderless2 = this.convertToGenderlessType(type2);
+    return genderless1 === genderless2;
+  }
+
+  // === Static Utility Methods ===
+
+  /**
+   * Validate UID format
+   */
+  static isValidUID(uid: string): boolean {
+    if (!uid || typeof uid !== 'string') return false;
+    
+    // Check for urn:uuid: format
+    if (uid.startsWith('urn:uuid:')) {
+      const uuidPart = uid.slice(9);
+      return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uuidPart);
+    }
+    
+    // Check for direct UUID format
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uid)) {
+      return true;
+    }
+    
+    // Allow other valid UID formats (alphanumeric with dashes, at least 3 chars)
+    return /^[a-zA-Z0-9\-_.]{3,}$/.test(uid);
+  }
+
   // === Debug and Utility Operations ===
 
   /**
