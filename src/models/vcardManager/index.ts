@@ -1,0 +1,16 @@
+// Core VCard manager class
+export { VcardManager } from './vcardManager';
+
+// Collection operations for managing multiple VCard files
+export { VCardCollection } from './vcardCollection';
+export type { VCardFileInfo } from './vcardCollection';
+
+// Write queue for controlled VCard updates
+export { VCardWriteQueue } from './writeQueue';
+
+// File operations specific to manager responsibilities
+export { VCardManagerFileOperations } from './fileOperations';
+
+// Backward compatibility - re-export main class with original name
+export { VcardManager as VCFManager } from './vcardManager';
+export type { VCardFileInfo as VCFFileInfo } from './vcardCollection';
