@@ -10,7 +10,3 @@ export { VCardWriteQueue } from './writeQueue';
 
 // File operations specific to manager responsibilities
 export { VCardManagerFileOperations } from './fileOperations';
-
-// Backward compatibility - re-export main class with original name
-export { VcardManager as VCFManager } from './vcardManager';
-export type { VCardFileInfo as VCFFileInfo } from './vcardCollection';

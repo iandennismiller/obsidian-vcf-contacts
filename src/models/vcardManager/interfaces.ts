@@ -46,48 +46,48 @@ export interface IVCardManager {
   shouldIgnoreUID(uid: string): boolean;
 
   /**
-   * Lists all VCF files in the watch folder.
+   * Lists all VCard files in the watch folder.
    * @returns Promise resolving to array of file paths
    */
-  listVCFFiles(): Promise<string[]>;
+  listVCardFiles(): Promise<string[]>;
 
   /**
-   * Gets file information for a VCF file.
-   * @param filePath - Full path to the VCF file
+   * Gets file information for a VCard file.
+   * @param filePath - Full path to the VCard file
    * @returns Promise resolving to file info or null if error
    */
-  getVCFFileInfo(filePath: string): Promise<VCardFileInfo | null>;
+  getVCardFileInfo(filePath: string): Promise<VCardFileInfo | null>;
 
   /**
-   * Reads and parses a VCF file.
-   * @param filePath - Full path to the VCF file
+   * Reads and parses a VCard file.
+   * @param filePath - Full path to the VCard file
    * @returns Promise resolving to parsed content or null if error
    */
-  readAndParseVCF(filePath: string): Promise<Array<[string, VCardForObsidianRecord]> | null>;
+  readAndParseVCard(filePath: string): Promise<Array<[string, VCardForObsidianRecord]> | null>;
 
   /**
-   * Finds a VCF file by UID.
+   * Finds a VCard file by UID.
    * @param uid - The UID to search for
    * @returns Promise resolving to file path or null if not found
    */
-  findVCFFileByUID(uid: string): Promise<string | null>;
+  findVCardFileByUID(uid: string): Promise<string | null>;
 
   /**
-   * Gets all VCF files with their information.
+   * Gets all VCard files with their information.
    * @returns Promise resolving to array of file information
    */
-  getAllVCFFiles(): Promise<VCardFileInfo[]>;
+  getAllVCardFiles(): Promise<VCardFileInfo[]>;
 
   /**
-   * Writes VCF content to a file in the watch folder.
-   * @param filename - Name of the VCF file
-   * @param content - VCF content to write
+   * Writes VCard content to a file in the watch folder.
+   * @param filename - Name of the VCard file
+   * @param content - VCard content to write
    * @returns Promise resolving to full path if successful
    */
-  writeVCFFile(filename: string, content: string): Promise<string | null>;
+  writeVCardFile(filename: string, content: string): Promise<string | null>;
 
   /**
-   * Checks if the VCF watch folder exists.
+   * Checks if the VCard watch folder exists.
    * @returns Promise resolving to true if folder exists
    */
   watchFolderExists(): Promise<boolean>;
@@ -120,44 +120,44 @@ export interface IVCardManager {
  */
 export interface IVCardCollection {
   /**
-   * Lists all VCF files in the watch folder.
+   * Lists all VCard files in the watch folder.
    * @returns Promise resolving to array of file paths
    */
-  listVCFFiles(): Promise<string[]>;
+  listVCardFiles(): Promise<string[]>;
 
   /**
-   * Gets file information for a VCF file.
-   * @param filePath - Full path to the VCF file
+   * Gets file information for a VCard file.
+   * @param filePath - Full path to the VCard file
    * @returns Promise resolving to file info or null if error
    */
-  getVCFFileInfo(filePath: string): Promise<VCardFileInfo | null>;
+  getVCardFileInfo(filePath: string): Promise<VCardFileInfo | null>;
 
   /**
-   * Gets all VCF files with their information.
+   * Gets all VCard files with their information.
    * @returns Promise resolving to array of file information
    */
-  getAllVCFFiles(): Promise<VCardFileInfo[]>;
+  getAllVCardFiles(): Promise<VCardFileInfo[]>;
 
   /**
-   * Filters VCF files based on ignore settings.
+   * Filters VCard files based on ignore settings.
    * @param filePaths - Array of file paths to filter
    * @returns Array of file paths that should not be ignored
    */
   filterIgnoredFiles(filePaths: string[]): string[];
 
   /**
-   * Finds a VCF file by UID.
+   * Finds a VCard file by UID.
    * @param uid - The UID to search for
    * @returns Promise resolving to file path or null if not found
    */
-  findVCFFileByUID(uid: string): Promise<string | null>;
+  findVCardFileByUID(uid: string): Promise<string | null>;
 
   /**
-   * Reads and parses a VCF file.
-   * @param filePath - Full path to the VCF file
+   * Reads and parses a VCard file.
+   * @param filePath - Full path to the VCard file
    * @returns Promise resolving to parsed content or null if error
    */
-  readAndParseVCF(filePath: string): Promise<Array<[string, VCardForObsidianRecord]> | null>;
+  readAndParseVCard(filePath: string): Promise<Array<[string, VCardForObsidianRecord]> | null>;
 }
 
 /**
@@ -195,23 +195,23 @@ export interface IVCardWriteQueue {
  */
 export interface IVCardManagerFileOperations {
   /**
-   * Writes VCF content to a file in the watch folder.
-   * @param filename - Name of the VCF file
-   * @param content - VCF content to write
+   * Writes VCard content to a file in the watch folder.
+   * @param filename - Name of the VCard file
+   * @param content - VCard content to write
    * @returns Promise resolving to full path if successful
    */
-  writeVCFFile(filename: string, content: string): Promise<string | null>;
+  writeVCardFile(filename: string, content: string): Promise<string | null>;
 
   /**
-   * Checks if the VCF watch folder exists.
+   * Checks if the VCard watch folder exists.
    * @returns Promise resolving to true if folder exists
    */
   watchFolderExists(): Promise<boolean>;
 
   /**
-   * Generates a VCF filename for a contact.
+   * Generates a VCard filename for a contact.
    * @param contactName - The contact name
-   * @returns Sanitized VCF filename
+   * @returns Sanitized VCard filename
    */
-  generateVCFFilename(contactName: string): string;
+  generateVCardFilename(contactName: string): string;
 }

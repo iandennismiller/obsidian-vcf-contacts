@@ -181,7 +181,7 @@ export class SyncWatcher {
       }
 
       // Get file info for the single VCF file
-      const fileInfo = await this.vcardManager.getVCFFileInfo(vcfFilePath);
+      const fileInfo = await this.vcardManager.getVCardFileInfo(vcfFilePath);
       if (!fileInfo) {
         return;
       }
@@ -276,7 +276,7 @@ export class SyncWatcher {
   private async processVCFFile(filePath: string): Promise<void> {
     try {
       // Get file stats using VcardManager
-      const fileInfo = await this.vcardManager.getVCFFileInfo(filePath);
+      const fileInfo = await this.vcardManager.getVCardFileInfo(filePath);
       if (!fileInfo) {
         return;
       }

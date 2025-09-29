@@ -13,16 +13,16 @@ export class VCardManagerFileOperations {
   ) {}
 
   /**
-   * Writes VCF content to a file in the watch folder
+   * Writes VCard content to a file in the watch folder
    * 
-   * @param filename - Name of the VCF file (with .vcf extension)
-   * @param content - VCF content to write
+   * @param filename - Name of the VCard file (with .vcf extension)
+   * @param content - VCard content to write
    * @returns Promise resolving to the full path if successful, null otherwise
    */
-  async writeVCFFile(filename: string, content: string): Promise<string | null> {
+  async writeVCardFile(filename: string, content: string): Promise<string | null> {
     const watchFolder = this.getWatchFolder();
     if (!watchFolder) {
-      console.log(`[VCardManagerFileOperations] No watch folder configured for writing VCF file`);
+      console.log(`[VCardManagerFileOperations] No watch folder configured for writing VCard file`);
       return null;
     }
 
@@ -33,7 +33,7 @@ export class VCardManagerFileOperations {
   }
 
   /**
-   * Checks if the VCF watch folder exists
+   * Checks if the VCard watch folder exists
    * 
    * @returns Promise resolving to true if folder exists, false otherwise
    */
@@ -52,12 +52,12 @@ export class VCardManagerFileOperations {
   }
 
   /**
-   * Generates a VCF filename for a contact
+   * Generates a VCard filename for a contact
    * 
    * @param contactName - The contact name
-   * @returns Sanitized VCF filename
+   * @returns Sanitized VCard filename
    */
-  generateVCFFilename(contactName: string): string {
+  generateVCardFilename(contactName: string): string {
     return VCardFileOperations.generateVCFFilename(contactName);
   }
 }

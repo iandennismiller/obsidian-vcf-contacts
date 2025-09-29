@@ -25,11 +25,11 @@ export class VCardCollection {
   ) {}
 
   /**
-   * Lists all VCF files in the watch folder
+   * Lists all VCard files in the watch folder
    * 
-   * @returns Promise resolving to array of full file paths to VCF files
+   * @returns Promise resolving to array of full file paths to VCard files
    */
-  async listVCFFiles(): Promise<string[]> {
+  async listVCardFiles(): Promise<string[]> {
     const watchFolder = this.getWatchFolder();
     if (!watchFolder) {
       return [];
@@ -39,12 +39,12 @@ export class VCardCollection {
   }
 
   /**
-   * Gets file information for a VCF file
+   * Gets file information for a VCard file
    * 
-   * @param filePath - Full path to the VCF file
-   * @returns Promise resolving to VCF file info or null if error
+   * @param filePath - Full path to the VCard file
+   * @returns Promise resolving to VCard file info or null if error
    */
-  async getVCFFileInfo(filePath: string): Promise<VCardFileInfo | null> {
+  async getVCardFileInfo(filePath: string): Promise<VCardFileInfo | null> {
     const stats = await VCardFileOperations.getFileStats(filePath);
     if (!stats) {
       return null;
@@ -58,16 +58,16 @@ export class VCardCollection {
   }
 
   /**
-   * Gets all VCF files with their information
+   * Gets all VCard files with their information
    * 
-   * @returns Promise resolving to array of VCF file information
+   * @returns Promise resolving to array of VCard file information
    */
-  async getAllVCFFiles(): Promise<VCardFileInfo[]> {
-    const filePaths = await this.listVCFFiles();
+  async getAllVCardFiles(): Promise<VCardFileInfo[]> {
+    const filePaths = await this.listVCardFiles();
     const fileInfos: VCardFileInfo[] = [];
 
     for (const filePath of filePaths) {
-      const fileInfo = await this.getVCFFileInfo(filePath);
+      const fileInfo = await this.getVCardFileInfo(filePath);
       if (fileInfo) {
         fileInfos.push(fileInfo);
       }
@@ -77,9 +77,9 @@ export class VCardCollection {
   }
 
   /**
-   * Filters VCF files based on ignore settings
+   * Filters VCard files based on ignore settings
    * 
-   * @param filePaths - Array of VCF file paths to filter
+   * @param filePaths - Array of VCard file paths to filter
    * @returns Array of file paths that should not be ignored
    */
   filterIgnoredFiles(filePaths: string[]): string[] {
@@ -87,13 +87,13 @@ export class VCardCollection {
   }
 
   /**
-   * Finds a VCF file in the watch folder that contains the specified UID
+   * Finds a VCard file in the watch folder that contains the specified UID
    * 
-   * @param uid - The UID to search for in VCF files
+   * @param uid - The UID to search for in VCard files
    * @returns Promise resolving to the file path or null if not found
    */
-  async findVCFFileByUID(uid: string): Promise<string | null> {
-    const vcfFiles = await this.listVCFFiles();
+  async findVCardFileByUID(uid: string): Promise<string | null> {
+    const vcfFiles = await this.listVCardFiles();
     
     for (const filePath of vcfFiles) {
       try {
@@ -110,12 +110,12 @@ export class VCardCollection {
   }
 
   /**
-   * Reads and parses a VCF file
+   * Reads and parses a VCard file
    * 
-   * @param filePath - Full path to the VCF file
-   * @returns Promise resolving to parsed VCF content or null if error
+   * @param filePath - Full path to the VCard file
+   * @returns Promise resolving to parsed VCard content or null if error
    */
-  async readAndParseVCF(filePath: string): Promise<Array<[string, VCardForObsidianRecord]> | null> {
+  async readAndParseVCard(filePath: string): Promise<Array<[string, VCardForObsidianRecord]> | null> {
     const content = await VCardFileOperations.readVCFFile(filePath);
     if (!content) {
       return null;

@@ -34,8 +34,8 @@ export class VcardManager {
     
     this.writeQueue = new VCardWriteQueue(
       () => this.getWatchFolder(),
-      (uid) => this.collection.findVCFFileByUID(uid),
-      (filename, content) => this.fileOps.writeVCFFile(filename, content)
+      (uid) => this.collection.findVCardFileByUID(uid),
+      (filename, content) => this.fileOps.writeVCardFile(filename, content)
     );
   }
 
@@ -89,42 +89,42 @@ export class VcardManager {
   // Delegate collection operations
   
   /**
-   * Lists all VCF files in the watch folder
+   * Lists all VCard files in the watch folder
    */
-  async listVCFFiles(): Promise<string[]> {
-    return this.collection.listVCFFiles();
+  async listVCardFiles(): Promise<string[]> {
+    return this.collection.listVCardFiles();
   }
 
   /**
-   * Gets file information for a VCF file
+   * Gets file information for a VCard file
    */
-  async getVCFFileInfo(filePath: string): Promise<VCardFileInfo | null> {
-    return this.collection.getVCFFileInfo(filePath);
+  async getVCardFileInfo(filePath: string): Promise<VCardFileInfo | null> {
+    return this.collection.getVCardFileInfo(filePath);
   }
 
   /**
-   * Reads and parses a VCF file
+   * Reads and parses a VCard file
    */
-  async readAndParseVCF(filePath: string): Promise<Array<[string, VCardForObsidianRecord]> | null> {
-    return this.collection.readAndParseVCF(filePath);
+  async readAndParseVCard(filePath: string): Promise<Array<[string, VCardForObsidianRecord]> | null> {
+    return this.collection.readAndParseVCard(filePath);
   }
 
   /**
-   * Finds a VCF file in the watch folder that contains the specified UID
+   * Finds a VCard file in the watch folder that contains the specified UID
    */
-  async findVCFFileByUID(uid: string): Promise<string | null> {
-    return this.collection.findVCFFileByUID(uid);
+  async findVCardFileByUID(uid: string): Promise<string | null> {
+    return this.collection.findVCardFileByUID(uid);
   }
 
   /**
-   * Gets all VCF files with their information
+   * Gets all VCard files with their information
    */
-  async getAllVCFFiles(): Promise<VCardFileInfo[]> {
-    return this.collection.getAllVCFFiles();
+  async getAllVCardFiles(): Promise<VCardFileInfo[]> {
+    return this.collection.getAllVCardFiles();
   }
 
   /**
-   * Filters VCF files based on ignore settings
+   * Filters VCard files based on ignore settings
    */
   filterIgnoredFiles(filePaths: string[]): string[] {
     return this.collection.filterIgnoredFiles(filePaths);
@@ -133,24 +133,24 @@ export class VcardManager {
   // Delegate file operations
 
   /**
-   * Writes VCF content to a file in the watch folder
+   * Writes VCard content to a file in the watch folder
    */
-  async writeVCFFile(filename: string, content: string): Promise<string | null> {
-    return this.fileOps.writeVCFFile(filename, content);
+  async writeVCardFile(filename: string, content: string): Promise<string | null> {
+    return this.fileOps.writeVCardFile(filename, content);
   }
 
   /**
-   * Checks if the VCF watch folder exists
+   * Checks if the VCard watch folder exists
    */
   async watchFolderExists(): Promise<boolean> {
     return this.fileOps.watchFolderExists();
   }
 
   /**
-   * Generates a VCF filename for a contact
+   * Generates a VCard filename for a contact
    */
-  generateVCFFilename(contactName: string): string {
-    return this.fileOps.generateVCFFilename(contactName);
+  generateVCardFilename(contactName: string): string {
+    return this.fileOps.generateVCardFilename(contactName);
   }
 
   // Delegate write queue operations
@@ -215,7 +215,7 @@ export class VcardManager {
         }
 
         // Get file stats
-        const fileInfo = await this.getVCFFileInfo(filePath);
+        const fileInfo = await this.getVCardFileInfo(filePath);
         if (!fileInfo) {
           continue;
         }
