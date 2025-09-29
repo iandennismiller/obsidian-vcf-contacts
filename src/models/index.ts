@@ -1,6 +1,6 @@
 // Re-export main classes and types for convenience
 export * from './contactNote';
-export * from './contactManager';
+export * from './contactManager'; // This will be the new modular structure
 export * from './vcardManager';
 export * from './vcardFile';
 

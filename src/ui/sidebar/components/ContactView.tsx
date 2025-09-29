@@ -3,7 +3,7 @@ import * as React from "react";
 import { Contact, parseKey } from "src/models";
 import { getApp } from "src/context/sharedAppContext";
 import { fileId } from "src/models/contactNote";
-import { ContactManager } from "src/models/contactManager";
+import { ContactManagerUtils } from "src/models/contactManager/contactManagerUtils";
 import Avatar from "src/ui/sidebar/components/Avatar";
 import { CopyableItem } from "src/ui/sidebar/components/CopyableItem";
 import { getUiName, uiSafeString } from "src/models/contactNote";
@@ -163,7 +163,7 @@ export const ContactView = (props: ContactProps) => {
 	return (
 		<div
 			className="contact-card"
-			onClick={() => ContactManager.openFileStatic(getApp(), contact.file, workspace)}
+			onClick={() => ContactManagerUtils.openFile(getApp(), contact.file, workspace)}
 			id={fileId(contact.file)}
 		>
 			<div className="content">

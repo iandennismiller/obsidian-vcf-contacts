@@ -3,8 +3,7 @@ import { ContactNote, createNameSlug, createContactSlug, parseKey } from "./cont
 
 import { getApp } from "../context/sharedAppContext";
 
-
-import { ContactManager } from "./contactManager";
+import { ContactManagerUtils } from "./contactManager/contactManagerUtils";
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
@@ -151,7 +150,7 @@ export class VcardFile {
       "VERSION": "4.0"
     };
     
-    const namedObject = await ContactManager.ensureHasNameStatic(vCardObject);
+    const namedObject = await ContactManagerUtils.ensureHasName(vCardObject);
     // Convert the object back to VCF format
     const vcfContent = VcardFile.objectToVcf(namedObject);
     return new VcardFile(vcfContent);

@@ -3,7 +3,7 @@ import { App, Notice, TFile } from 'obsidian';
 import * as path from 'path';
 import { ContactNote } from 'src/models/contactNote';
 import { VcardFile } from 'src/models/vcardFile';
-import { ContactManager } from 'src/models/contactManager';
+import { ContactManagerUtils } from 'src/models/contactManager/contactManagerUtils';
 import { ContactsPluginSettings } from 'src/settings/settings.d';
 
 /**
@@ -86,7 +86,7 @@ export function setupVCFDropHandler(app: App, settings: ContactsPluginSettings):
           // Create new contact file
           try {
             const filename = (slug || 'contact') + '.md';
-            await ContactManager.createContactFileStatic(app, settings.contactsFolder, mdContent, filename);
+            await ContactManagerUtils.createContactFile(app, settings.contactsFolder, mdContent, filename);
             // Contact imported from dropped VCF
           } catch (err) {
             console.log(`Failed to create contact from dropped VCF UID ${record.UID}: ${err.message}`);
