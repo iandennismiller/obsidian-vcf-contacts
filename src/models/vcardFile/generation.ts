@@ -23,7 +23,7 @@ export class VCardGenerator {
           vCards.push(singleVcard);
         }
       } catch (err) {
-        vCardsErrors.push({"status": "error", "file": file.basename + ".md", "message": err.message});
+        vCardsErrors.push({"status": "error", "file": file.basename, "message": err.message});
       }
     });
 

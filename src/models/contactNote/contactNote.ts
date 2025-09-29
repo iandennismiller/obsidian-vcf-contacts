@@ -321,6 +321,84 @@ export class ContactNote {
     return this.syncOps.validateRelationshipConsistency();
   }
 
+  // === Validation Methods ===
+
+  /**
+   * Validate contact has required fields
+   */
+  async validateRequiredFields(): Promise<{
+    isValid: boolean;
+    issues: string[];
+  }> {
+    const frontmatter = await this.getFrontmatter();
+    const issues: string[] = [];
+    
+    if (!frontmatter) {
+      issues.push('no-frontmatter');
+      return { isValid: false, issues };
+    }
+    
+    const hasUID = frontmatter.UID && frontmatter.UID.trim() !== '';
+    const hasFN = frontmatter.FN && frontmatter.FN.trim() !== '';
+    
+    if (!frontmatter.UID) {
+      issues.push('missing-uid');
+    } else if (frontmatter.UID.trim() === '') {
+      issues.push('empty-uid');
+    }
+    
+    if (!frontmatter.FN) {
+      issues.push('missing-name');
+    }
+    
+    const isValid = hasUID && hasFN;
+    return { isValid, issues };
+  }
+
+  /**
+   * Validate email format
+   */
+  validateEmail(email: string): boolean {
+    if (!email || typeof email !== 'string') return true; // Empty is valid
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  }
+
+  /**
+   * Validate phone number format
+   */
+  validatePhoneNumber(phone: string): boolean {
+    if (!phone || typeof phone !== 'string') return true; // Empty is valid
+    // Allow various phone formats but reject obviously invalid ones
+    const phoneRegex = /^[\+]?[\s\-\(\)0-9]{7,}$/;
+    return phoneRegex.test(phone.replace(/\s/g, ''));
+  }
+
+  /**
+   * Validate date format
+   */
+  validateDate(dateStr: string): boolean {
+    if (!dateStr || typeof dateStr !== 'string') return true; // Empty is valid
+    
+    // Try various date formats
+    const date = new Date(dateStr);
+    return !isNaN(date.getTime());
+  }
+
+  /**
+   * Sanitize user input to prevent XSS
+   */
+  sanitizeInput(input: string): string {
+    if (!input || typeof input !== 'string') return '';
+    
+    // Basic XSS prevention - remove script tags and dangerous content
+    return input
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+      .replace(/javascript:/gi, 'removed:')
+      .replace(/on\w+\s*=/gi, 'removed=')
+      .replace(/alert\s*\(/gi, 'removed(');
+  }
+
   // === Advanced Relationship Operations ===
 
   /**
@@ -337,32 +415,47 @@ export class ContactNote {
     const frontmatterRelationships = await this.parseFrontmatterRelationships();
     
     const result = [];
+    const processedTargets = new Set<string>(); // Track processed targets to avoid duplicates
     
-    // Process markdown relationships
-    for (const rel of relationships) {
-      const resolved = await this.resolveContact(rel.contactName);
-      result.push({
-        type: rel.type,
-        contactName: rel.contactName,
-        targetUID: resolved?.uid,
-        linkType: resolved?.uid ? 'uid' : 'name',
-        originalType: rel.originalType
-      });
-    }
-    
-    // Process frontmatter relationships that may have UIDs
+    // Process frontmatter relationships first (higher priority)
     for (const fmRel of frontmatterRelationships) {
-      if (fmRel.parsedValue.type === 'uid') {
+      if (fmRel.parsedValue && (fmRel.parsedValue.type === 'uuid' || fmRel.parsedValue.type === 'uid')) {
         const contactName = await this.resolveContactNameByUID(fmRel.parsedValue.value);
         if (contactName) {
           result.push({
-            type: fmRel.genderlessType,
+            type: fmRel.type,
             contactName,
             targetUID: fmRel.parsedValue.value,
             linkType: 'uid',
-            originalType: fmRel.genderlessType
+            originalType: fmRel.type
           });
+          processedTargets.add(contactName.toLowerCase());
         }
+      } else if (fmRel.parsedValue && fmRel.parsedValue.type === 'name') {
+        // Handle name-based frontmatter relationships
+        const resolved = await this.resolveContact(fmRel.parsedValue.value);
+        result.push({
+          type: fmRel.type,
+          contactName: fmRel.parsedValue.value,
+          targetUID: resolved?.uid,
+          linkType: resolved?.uid ? 'uid' : 'name',
+          originalType: fmRel.type
+        });
+        processedTargets.add(fmRel.parsedValue.value.toLowerCase());
+      }
+    }
+    
+    // Process markdown relationships (only if not already processed)
+    for (const rel of relationships) {
+      if (!processedTargets.has(rel.contactName.toLowerCase())) {
+        const resolved = await this.resolveContact(rel.contactName);
+        result.push({
+          type: rel.type,
+          contactName: rel.contactName,
+          targetUID: resolved?.uid,
+          linkType: resolved?.uid ? 'uid' : 'name',
+          originalType: rel.originalType
+        });
       }
     }
     
