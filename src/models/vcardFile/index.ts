@@ -40,4 +40,4 @@ export {
 // ============================================================================
 
 export * from './types';
-export * from '../vcardFile.d';
+export * from '../../interfaces/vcardFile.d';

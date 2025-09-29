@@ -67,4 +67,4 @@ export {
 // Interfaces
 // ============================================================================
 
-export * from '../contactNote.d';
+export * from '../../interfaces/contactNote.d';

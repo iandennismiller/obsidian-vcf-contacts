@@ -12,4 +12,4 @@ export { VCardWriteQueue } from './writeQueue';
 export { VCardManagerFileOperations } from './fileOperations';
 
 // Interfaces
-export * from '../vcardManager.d';
+export * from '../../interfaces/vcardManager.d';

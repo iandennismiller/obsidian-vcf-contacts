@@ -7,7 +7,7 @@ import { ContactsPluginSettings } from "src/settings/settings.d";
 import { onSettingsChange } from "src/context/sharedSettingsContext";
 import { setupVCFDropHandler } from 'src/ui/vcfDropHandler';
 import { curatorService } from "src/models/curatorManager/curatorManager";
-import { RunType } from "src/models/curatorManager.d";
+import { RunType } from "src/interfaces/curatorManager.d";
 
 /**
  * Information about a VCard file being tracked by the watcher

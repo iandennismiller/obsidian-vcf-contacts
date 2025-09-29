@@ -2,7 +2,7 @@ import { Notice, App } from 'obsidian';
 import { ContactsPluginSettings } from '../../settings/settings.d';
 import { ContactManager } from '../contactManager';
 import { Contact } from '../index';
-import { CuratorSettingProperties, CuratorProcessor, CuratorQueItem, RunType } from '../curatorManager.d';
+import { CuratorSettingProperties, CuratorProcessor, CuratorQueItem, RunType } from '../../interfaces/curatorManager.d';
 
 const processors = new Map<string, CuratorProcessor>();
 

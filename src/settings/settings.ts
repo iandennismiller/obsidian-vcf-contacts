@@ -1,6 +1,6 @@
 import { App, PluginSettingTab, Setting, Notice, Modal } from "obsidian";
 import { setSettings } from "src/context/sharedSettingsContext";
-import { CuratorSettingProperties } from "src/models/curatorManager.d";
+import { CuratorSettingProperties } from "src/interfaces/curatorManager.d";
 import { curatorService } from "src/models/curatorManager/curatorManager";
 import ContactsPlugin from "src/main";
 import { FolderSuggest } from "src/ui/FolderSuggest";
