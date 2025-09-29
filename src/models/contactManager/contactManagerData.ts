@@ -494,13 +494,6 @@ export class ContactManagerData {
   }
 
   /**
-   * Get current active file
-   */
-  getCurrentActiveFile(): TFile | null {
-    return this.currentActiveFile;
-  }
-
-  /**
    * Set event reference for cleanup
    */
   setEventRef(ref: EventRef | null): void {

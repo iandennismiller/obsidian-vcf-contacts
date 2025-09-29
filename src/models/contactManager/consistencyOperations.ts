@@ -265,7 +265,7 @@ export class ConsistencyOperations {
   async processContactsWithInsights(taskList: Array<{ file: TFile; revTimestamp?: number }>): Promise<any[]> {
     try {
       const contacts = await this.extractFrontmatterFromFiles(taskList.map(task => task.file));
-      const result = await insightService.process(contacts, RunType.CONSISTENCY);
+      const result = await insightService.process(contacts, RunType.IMMEDIATELY);
       return result || [];
     } catch (error: any) {
       console.log(`[ConsistencyOperations] Error processing contacts with insights: ${error.message}`);

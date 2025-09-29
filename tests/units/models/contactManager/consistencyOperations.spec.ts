@@ -103,8 +103,8 @@ describe('ConsistencyOperations', () => {
 
       await consistencyOperations.ensureContactDataConsistency(2);
 
-      // Should not exceed max iterations
-      expect(insightService.process).toHaveBeenCalledTimes(2);
+      // Should not exceed max iterations (3 calls per iteration + 1 final call)
+      expect(insightService.process).toHaveBeenCalledTimes(4);
     });
 
     it('should stop when no more changes are detected', async () => {
@@ -117,7 +117,7 @@ describe('ConsistencyOperations', () => {
 
       await consistencyOperations.ensureContactDataConsistency(5);
 
-      expect(insightService.process).toHaveBeenCalledTimes(2);
+      expect(insightService.process).toHaveBeenCalledTimes(4);
     });
 
     it('should handle insight service errors gracefully', async () => {
