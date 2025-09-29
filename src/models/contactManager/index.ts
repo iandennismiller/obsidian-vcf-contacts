@@ -69,4 +69,8 @@ export const getFrontmatterFromFiles = ContactManagerUtils.getFrontmatterFromFil
 // Interfaces
 // ============================================================================
 
-export * from '../../interfaces/contactManager.d';
+// Export individual interfaces
+export * from '../../interfaces/IContactManager';
+export * from '../../interfaces/IContactManagerData';
+export * from '../../interfaces/IConsistencyOperations';
+export * from '../../interfaces/IContactManagerUtils';

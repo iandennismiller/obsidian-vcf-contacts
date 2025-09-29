@@ -67,4 +67,9 @@ export {
 // Interfaces
 // ============================================================================
 
-export * from '../../interfaces/contactNote.d';
+// Export individual interfaces
+export * from '../../interfaces/IContactNote';
+export * from '../../interfaces/IContactData';
+export * from '../../interfaces/IRelationshipOperations';
+export * from '../../interfaces/IMarkdownOperations';
+export * from '../../interfaces/ISyncOperations';

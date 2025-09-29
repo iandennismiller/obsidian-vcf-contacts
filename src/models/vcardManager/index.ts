@@ -12,4 +12,8 @@ export { VCardWriteQueue } from './writeQueue';
 export { VCardManagerFileOperations } from './fileOperations';
 
 // Interfaces
-export * from '../../interfaces/vcardManager.d';
+// Export individual interfaces
+export * from '../../interfaces/IVCardManager';
+export * from '../../interfaces/IVCardCollection';
+export * from '../../interfaces/IVCardWriteQueue';
+export * from '../../interfaces/IVCardManagerFileOperations';
