@@ -18,6 +18,10 @@ export * from './CuratorSettingProperties.d';
 export * from './IContactManager.d';
 export * from './IContactManagerData.d';
 export * from './IContactNote.d';
+export * from './IContactData.d';
+export * from './IRelationshipOperations.d';
+export * from './IMarkdownOperations.d';
+export * from './ISyncOperations.d';
 
 // VCard System Interfaces  
 export * from './IVCardManager.d';

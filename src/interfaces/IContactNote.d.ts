@@ -1,16 +1,21 @@
 /**
  * @fileoverview Interface definition for ContactNote class
  * 
- * Defines the contract for classes that handle individual contact note operations.
+ * This module provides the TypeScript interface that defines the contract
+ * for the ContactNote class, which handles individual contact note operations.
  * 
  * @module IContactNote
  */
 
-import { TFile, App } from 'obsidian';
-import { ContactsPluginSettings } from '../settings/settings.d';
-import { VCardForObsidianRecord } from '../models/vcardFile';
-import { Gender, Contact, ParsedKey, ParsedRelationship, FrontmatterRelationship, ResolvedContact } from './types';
+import { TFile } from 'obsidian';
+import { Gender, ParsedRelationship, FrontmatterRelationship, ResolvedContact } from '../models/contactNote/types';
 
+/**
+ * Interface for ContactNote operations.
+ * Defines the contract for classes that handle individual contact note operations.
+ * 
+ * @interface IContactNote
+ */
 export interface IContactNote {
   // === Core File Operations ===
   
@@ -39,137 +44,168 @@ export interface IContactNote {
   getContent(): Promise<string>;
 
   /**
-   * Update the file content.
+   * Get the parsed frontmatter data.
+   * @returns Promise resolving to frontmatter object or null
+   */
+  getFrontmatter(): Promise<Record<string, any> | null>;
+
+  /**
+   * Invalidate all internal caches.
+   */
+  invalidateCache(): void;
+
+  // === Gender Operations ===
+
+  /**
+   * Parse a gender value from string to standardized Gender type.
+   * @param value - Raw gender value to parse
+   * @returns Standardized Gender type
+   */
+  parseGender(value: string): Gender;
+
+  /**
+   * Get the gender for this contact.
+   * @returns Promise resolving to Gender type
+   */
+  getGender(): Promise<Gender>;
+
+  /**
+   * Update the gender for this contact.
+   * @param gender - New gender value
+   * @returns Promise that resolves when gender is updated
+   */
+  updateGender(gender: Gender): Promise<void>;
+
+  // === Frontmatter Operations ===
+
+  /**
+   * Update a single frontmatter value.
+   * @param key - Frontmatter key to update
+   * @param value - New value for the key
+   * @returns Promise that resolves when value is updated
+   */
+  updateFrontmatterValue(key: string, value: string): Promise<void>;
+
+  /**
+   * Update multiple frontmatter values at once.
+   * @param updates - Object containing key-value pairs to update
+   * @returns Promise that resolves when all values are updated
+   */
+  updateMultipleFrontmatterValues(updates: Record<string, string>): Promise<void>;
+
+  // === Relationship Operations ===
+
+  /**
+   * Parse relationships from the Related markdown section.
+   * @returns Promise resolving to array of parsed relationships
+   */
+  parseRelatedSection(): Promise<ParsedRelationship[]>;
+
+  /**
+   * Parse relationships from frontmatter RELATED fields.
+   * @returns Promise resolving to array of frontmatter relationships
+   */
+  parseFrontmatterRelationships(): Promise<FrontmatterRelationship[]>;
+
+  /**
+   * Update the Related section in the markdown content.
+   * @param relationships - Array of relationships to write
+   * @returns Promise that resolves when content is updated
+   */
+  updateRelatedSectionInContent(relationships: { type: string; contactName: string }[]): Promise<void>;
+
+  /**
+   * Find a contact file by name.
+   * @param contactName - Name of the contact to find
+   * @returns Promise resolving to TFile or null if not found
+   */
+  findContactByName(contactName: string): Promise<TFile | null>;
+
+  /**
+   * Resolve a contact reference to complete contact information.
+   * @param contactName - Name or reference of the contact to resolve
+   * @returns Promise resolving to ResolvedContact or null if not found
+   */
+  resolveContact(contactName: string): Promise<ResolvedContact | null>;
+
+  /**
+   * Format a relationship value for frontmatter storage.
+   * @param targetUid - UID of the target contact
+   * @param targetName - Name of the target contact
+   * @returns Formatted relationship value string
+   */
+  formatRelatedValue(targetUid: string, targetName: string): string;
+
+  /**
+   * Infer gender from a relationship type.
+   * @param relationshipType - Type of relationship (spouse, parent, etc.)
+   * @returns Inferred Gender or null if not determinable
+   */
+  inferGenderFromRelationship(relationshipType: string): Gender | null;
+
+  // === Markdown Operations ===
+
+  /**
+   * Render contact data as markdown content.
+   * @param record - Contact data record
+   * @param hashtags - Hashtags to include
+   * @param genderLookup - Optional function to look up gender for contacts
+   * @returns Rendered markdown string
+   */
+  mdRender(record: Record<string, any>, hashtags: string, genderLookup?: (contactRef: string) => Gender): string;
+
+  /**
+   * Update the contact file with new content.
    * @param content - New content for the file
    * @returns Promise that resolves when content is updated
    */
   updateContent(content: string): Promise<void>;
 
-  /**
-   * Get the frontmatter data.
-   * @returns Object containing frontmatter key-value pairs
-   */
-  getFrontmatter(): Record<string, any>;
+  // === Synchronization Operations ===
 
   /**
-   * Update a specific frontmatter value.
-   * @param key - Frontmatter key to update
-   * @param value - New value for the key
-   * @returns Promise that resolves when update is complete
+   * Synchronize frontmatter to the Related list section.
+   * @returns Promise resolving to sync result with success status and errors
    */
-  updateFrontmatterValue(key: string, value: any): Promise<void>;
+  syncFrontmatterToRelatedList(): Promise<{ success: boolean; errors: string[] }>;
 
   /**
-   * Remove a frontmatter key.
-   * @param key - Key to remove from frontmatter
-   * @returns Promise that resolves when removal is complete
+   * Synchronize Related list section to frontmatter.
+   * @returns Promise resolving to sync result with success status and errors
    */
-  removeFrontmatterKey(key: string): Promise<void>;
-
-  // === Gender Operations ===
-  
-  /**
-   * Get the inferred gender for this contact.
-   * @returns Promise resolving to Gender or null
-   */
-  getGender(): Promise<Gender | null>;
+  syncRelatedListToFrontmatter(): Promise<{ success: boolean; errors: string[] }>;
 
   /**
-   * Set the gender for this contact.
-   * @param gender - Gender to set
-   * @returns Promise that resolves when gender is set
+   * Synchronize contact data from VCard record.
+   * @param vcardData - VCard data to sync from
+   * @returns Promise resolving to sync result with success status and changes
    */
-  setGender(gender: Gender): Promise<void>;
-
-  // === Relationship Operations ===
-  
-  /**
-   * Get all relationships for this contact.
-   * @returns Promise resolving to array of relationships
-   */
-  getRelationships(): Promise<FrontmatterRelationship[]>;
+  syncFromVcardData(vcardData: Record<string, any>): Promise<{ success: boolean; changes: string[] }>;
 
   /**
-   * Add a relationship to this contact.
-   * @param relationship - Relationship to add
-   * @returns Promise that resolves when relationship is added
+   * Generate VCard data from contact.
+   * @returns VCard data object
    */
-  addRelationship(relationship: FrontmatterRelationship): Promise<void>;
-
-  /**
-   * Remove a relationship from this contact.
-   * @param relationship - Relationship to remove
-   * @returns Promise that resolves when relationship is removed
-   */
-  removeRelationship(relationship: FrontmatterRelationship): Promise<void>;
-
-  /**
-   * Update relationships list.
-   * @param relationships - New relationships array
-   * @returns Promise that resolves when relationships are updated
-   */
-  updateRelationships(relationships: FrontmatterRelationship[]): Promise<void>;
-
-  // === VCard Integration ===
-  
-  /**
-   * Get VCard data for this contact.
-   * @returns Promise resolving to VCard data object
-   */
-  getVCardData(): Promise<VCardForObsidianRecord>;
-
-  /**
-   * Update contact from VCard data.
-   * @param vcardData - VCard data to import
-   * @returns Promise that resolves when import is complete
-   */
-  updateFromVCard(vcardData: VCardForObsidianRecord): Promise<void>;
-
-  /**
-   * Export contact to VCard format.
-   * @returns Promise resolving to VCard string
-   */
-  exportToVCard(): Promise<string>;
+  generateVcardData(): Record<string, any>;
 
   // === Utility Operations ===
-  
-  /**
-   * Get the last modified date of the contact file.
-   * @returns Promise resolving to Date object
-   */
-  getLastModified(): Promise<Date>;
 
   /**
-   * Check if the contact has been modified since last sync.
-   * @returns Promise resolving to boolean
+   * Get cache status information.
+   * @returns Object with cache status for different data types
    */
-  hasBeenModified(): Promise<boolean>;
+  getCacheStatus(): { [key: string]: boolean };
 
   /**
-   * Mark the contact as synced.
-   * @returns Promise that resolves when sync mark is set
+   * Generate a revision timestamp.
+   * @returns ISO timestamp string formatted for VCard REV field
    */
-  markAsSynced(): Promise<void>;
+  generateRevTimestamp(): string;
 
   /**
-   * Validate the contact data integrity.
-   * @returns Promise resolving to validation results
+   * Check if contact should be updated from VCF data based on revision timestamps.
+   * @param record - VCard record to compare against
+   * @returns Promise resolving to true if update should proceed
    */
-  validate(): Promise<{
-    valid: boolean;
-    errors: string[];
-    warnings: string[];
-  }>;
-
-  /**
-   * Get contact statistics.
-   * @returns Object containing contact statistics
-   */
-  getStats(): {
-    hasUID: boolean;
-    hasGender: boolean;
-    relationshipCount: number;
-    frontmatterKeys: string[];
-    contentLength: number;
-  };
+  shouldUpdateFromVCF(record: Record<string, any>): Promise<boolean>;
 }
