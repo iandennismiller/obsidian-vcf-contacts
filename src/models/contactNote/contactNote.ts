@@ -1094,6 +1094,42 @@ export class ContactNote {
   }
 
   /**
+   * Parse a VCard REV date string into a Date object
+   * Handles VCard format: YYYYMMDDTHHMMSSZ
+   */
+  parseRevDate(revString: string): Date | null {
+    if (!revString) {
+      return null;
+    }
+
+    try {
+      // Only handle VCard format: YYYYMMDDTHHMMSSZ - be strict about format
+      if (/^\d{8}T\d{6}Z$/.test(revString)) {
+        const year = parseInt(revString.substr(0, 4), 10);
+        const month = parseInt(revString.substr(4, 2), 10);
+        const day = parseInt(revString.substr(6, 2), 10);
+        const hour = parseInt(revString.substr(9, 2), 10);
+        const minute = parseInt(revString.substr(11, 2), 10);
+        const second = parseInt(revString.substr(13, 2), 10);
+
+        // Validate ranges
+        if (month < 1 || month > 12 || day < 1 || day > 31 || 
+            hour < 0 || hour > 23 || minute < 0 || minute > 59 || second < 0 || second > 59) {
+          return null;
+        }
+
+        const date = new Date(Date.UTC(year, month - 1, day, hour, minute, second));
+        return isNaN(date.getTime()) ? null : date;
+      }
+
+      // Don't parse ISO format or other formats - return null for non-VCard formats
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
    * Check if contact should be updated from VCF based on REV timestamp
    */
   async shouldUpdateFromVCF(record: Record<string, any>): Promise<boolean> {
@@ -1103,18 +1139,18 @@ export class ContactNote {
     const contactRev = frontmatter.REV;
     const vcfRev = record.REV;
 
-    // If either timestamp is missing, allow update
-    if (!contactRev || !vcfRev) return true;
+    // If either timestamp is missing, don't update (conservative approach)
+    if (!contactRev || !vcfRev) return false;
+
+    // Parse both timestamps using VCard format parser
+    const contactDate = this.parseRevDate(contactRev);
+    const vcfDate = this.parseRevDate(vcfRev);
+
+    // If we can't parse either date, don't update
+    if (!contactDate || !vcfDate) return false;
 
     // Compare timestamps - allow update if VCF is newer
-    try {
-      const contactTime = new Date(contactRev).getTime();
-      const vcfTime = new Date(vcfRev).getTime();
-      return vcfTime > contactTime;
-    } catch {
-      // If timestamp parsing fails, allow update
-      return true;
-    }
+    return vcfDate.getTime() > contactDate.getTime();
   }
 }
 
