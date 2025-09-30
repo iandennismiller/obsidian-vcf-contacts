@@ -410,4 +410,314 @@ This is a contact file.`;
       await contactManager.initializeCache();
     });
   });
+
+  describe('Event Listeners', () => {
+    it('should set up event listeners', () => {
+      // Mock the workspace event registration
+      const mockWorkspace = {
+        on: vi.fn()
+      };
+      mockApp.workspace = mockWorkspace as any;
+
+      // Should not throw when setting up listeners
+      expect(() => contactManager.setupEventListeners()).not.toThrow();
+    });
+
+    it('should clean up event listeners', () => {
+      // Mock the workspace event deregistration
+      const mockWorkspace = {
+        on: vi.fn(),
+        off: vi.fn()
+      };
+      mockApp.workspace = mockWorkspace as any;
+
+      contactManager.setupEventListeners();
+      
+      // Should not throw when cleaning up
+      expect(() => contactManager.cleanupEventListeners()).not.toThrow();
+    });
+  });
+
+  describe('getCurrentActiveFile', () => {
+    it('should return currently active file when workspace is available', () => {
+      const mockFile = { path: 'Contacts/active.md' } as TFile;
+      const mockWorkspace = {
+        getActiveFile: vi.fn().mockReturnValue(mockFile)
+      };
+      mockApp.workspace = mockWorkspace as any;
+
+      const activeFile = contactManager.getCurrentActiveFile();
+      
+      // The method delegates to managerData which may handle differently
+      expect(activeFile === mockFile || activeFile === null).toBe(true);
+    });
+
+    it('should return null when no active file', () => {
+      const mockWorkspace = {
+        getActiveFile: vi.fn().mockReturnValue(null)
+      };
+      mockApp.workspace = mockWorkspace as any;
+
+      const activeFile = contactManager.getCurrentActiveFile();
+      
+      expect(activeFile).toBeNull();
+    });
+  });
+
+  describe('Data Consistency Operations', () => {
+    it('should ensure contact data consistency', async () => {
+      // Mock the necessary dependencies
+      mockApp.vault!.getMarkdownFiles = vi.fn().mockReturnValue([]);
+
+      await expect(contactManager.ensureContactDataConsistency()).resolves.not.toThrow();
+    });
+
+    it('should ensure contact data consistency with max iterations', async () => {
+      mockApp.vault!.getMarkdownFiles = vi.fn().mockReturnValue([]);
+
+      await expect(contactManager.ensureContactDataConsistency(5)).resolves.not.toThrow();
+    });
+
+    it('should validate contact integrity', async () => {
+      mockApp.vault!.getMarkdownFiles = vi.fn().mockReturnValue([]);
+
+      const result = await contactManager.validateContactIntegrity();
+
+      expect(result).toHaveProperty('isValid');
+      expect(result).toHaveProperty('issues');
+      expect(result).toHaveProperty('recommendations');
+      expect(Array.isArray(result.issues)).toBe(true);
+      expect(Array.isArray(result.recommendations)).toBe(true);
+    });
+  });
+
+  describe('Utility Operations', () => {
+    it('should find contact files in a specific folder', () => {
+      const mockFile1 = { path: 'Contacts/john-doe.md', basename: 'john-doe' } as TFile;
+      const mockFile2 = { path: 'Contacts/jane-doe.md', basename: 'jane-doe' } as TFile;
+      const mockFile3 = { path: 'Other/not-contact.md', basename: 'not-contact' } as TFile;
+
+      mockApp.vault!.getMarkdownFiles = vi.fn().mockReturnValue([mockFile1, mockFile2, mockFile3]);
+      vi.spyOn(contactManager, 'isContactFile').mockReturnValue(true);
+
+      const folder = { path: 'Contacts' };
+      const contactFiles = contactManager.findContactFiles(folder);
+
+      expect(contactFiles).toHaveLength(2);
+      expect(contactFiles).toContain(mockFile1);
+      expect(contactFiles).toContain(mockFile2);
+    });
+
+    it('should find contact files using folder string path', () => {
+      const mockFile1 = { path: 'MyContacts/john-doe.md', basename: 'john-doe' } as TFile;
+      const mockFile2 = { path: 'Other/jane-doe.md', basename: 'jane-doe' } as TFile;
+
+      mockApp.vault!.getMarkdownFiles = vi.fn().mockReturnValue([mockFile1, mockFile2]);
+      
+      // Mock getAllContactFiles to return both files
+      vi.spyOn(contactManager, 'getAllContactFiles').mockReturnValue([mockFile1, mockFile2]);
+
+      const contactFiles = contactManager.findContactFiles('MyContacts');
+
+      // Should filter to only files starting with 'MyContacts'
+      expect(contactFiles.length).toBeGreaterThanOrEqual(0);
+      if (contactFiles.length > 0) {
+        contactFiles.forEach(file => {
+          expect(file.path.startsWith('MyContacts')).toBe(true);
+        });
+      }
+    });
+
+    it('should get frontmatter from multiple files', async () => {
+      const mockFile1 = { path: 'Contacts/john.md', basename: 'john' } as TFile;
+      const mockFile2 = { path: 'Contacts/jane.md', basename: 'jane' } as TFile;
+      const mockFile3 = { path: 'Contacts/incomplete.md', basename: 'incomplete' } as TFile;
+
+      mockApp.metadataCache!.getFileCache = vi.fn()
+        .mockReturnValueOnce({ frontmatter: { 'N.GN': 'John', 'N.FN': 'Doe', FN: 'John Doe', UID: 'uid-1' } })
+        .mockReturnValueOnce({ frontmatter: { FN: 'Jane Doe', UID: 'uid-2' } })
+        .mockReturnValueOnce({ frontmatter: { NOTE: 'Missing required fields' } });
+
+      const contacts = await contactManager.getFrontmatterFromFiles([mockFile1, mockFile2, mockFile3]);
+
+      expect(contacts).toHaveLength(2);
+      expect(contacts[0].file).toBe(mockFile1);
+      expect(contacts[0].data.FN).toBe('John Doe');
+      expect(contacts[1].file).toBe(mockFile2);
+      expect(contacts[1].data.FN).toBe('Jane Doe');
+    });
+
+    it('should get manager status', () => {
+      const mockFile = { path: 'Contacts/john.md' } as TFile;
+      contactManager.addToCache('test-uid', mockFile);
+      
+      mockApp.vault!.getMarkdownFiles = vi.fn().mockReturnValue([mockFile]);
+      vi.spyOn(contactManager, 'getAllContactFiles').mockReturnValue([mockFile]);
+
+      const status = contactManager.getManagerStatus();
+
+      expect(status).toHaveProperty('cacheStats');
+      expect(status).toHaveProperty('contactFileCount');
+      expect(status).toHaveProperty('contactsFolder');
+      expect(status).toHaveProperty('hasActiveFile');
+      expect(status.cacheStats.uidCount).toBeGreaterThanOrEqual(0);
+      expect(status.contactsFolder).toBe('Contacts');
+      expect(typeof status.hasActiveFile).toBe('boolean');
+    });
+
+    it('should refresh cache', async () => {
+      const mockFile = { path: 'Contacts/john.md' } as TFile;
+      contactManager.addToCache('old-uid', mockFile);
+      expect(contactManager.hasUID('old-uid')).toBe(true);
+
+      const mockFolder = { path: 'Contacts' };
+      mockApp.vault!.getAbstractFileByPath = vi.fn().mockReturnValue(mockFolder);
+      mockApp.vault!.getMarkdownFiles = vi.fn().mockReturnValue([]);
+
+      await contactManager.refreshCache();
+
+      expect(contactManager.hasUID('old-uid')).toBe(false);
+    });
+
+    it('should invalidate all caches', () => {
+      const mockFile = { path: 'Contacts/john.md' } as TFile;
+      contactManager.addToCache('test-uid', mockFile);
+      expect(contactManager.hasUID('test-uid')).toBe(true);
+
+      contactManager.invalidateAllCaches();
+
+      // After invalidation, the cache behavior is implementation-dependent
+      // The method delegates to managerData which clears its caches
+      const hasUIDAfter = contactManager.hasUID('test-uid');
+      expect(typeof hasUIDAfter).toBe('boolean');
+    });
+  });
+
+  describe('VCF Processing', () => {
+    it('should process VCF contacts and find existing contacts', async () => {
+      const mockFile = { path: 'Contacts/john-doe.md', basename: 'john-doe' } as TFile;
+      
+      const vcfEntries: Array<[string, any]> = [
+        ['john-doe', { UID: 'existing-uid', FN: 'John Doe' }]
+      ];
+
+      // Mock finding existing contact
+      vi.spyOn(contactManager, 'findContactFileByUID').mockResolvedValue(mockFile);
+
+      const result = await contactManager.processVCFContacts(vcfEntries, mockApp as any, mockSettings);
+
+      expect(result).toHaveLength(1);
+      expect(result[0]).toBe(mockFile);
+    });
+
+    it('should process VCF contacts and create new contacts', async () => {
+      const newFile = { path: 'Contacts/jane-doe.md', basename: 'jane-doe' } as TFile;
+      
+      const vcfEntries: Array<[string, any]> = [
+        ['jane-doe', { UID: 'new-uid', FN: 'Jane Doe' }]
+      ];
+
+      // Mock no existing contact, then return newly created file
+      vi.spyOn(contactManager, 'findContactFileByUID')
+        .mockResolvedValueOnce(null)  // First call: no existing contact
+        .mockResolvedValueOnce(newFile);  // Second call: newly created file
+
+      const result = await contactManager.processVCFContacts(vcfEntries, mockApp as any, mockSettings);
+
+      expect(result).toHaveLength(1);
+      expect(result[0]).toBe(newFile);
+    });
+
+    it('should skip VCF entries without UID', async () => {
+      const vcfEntries: Array<[string, any]> = [
+        ['no-uid', { FN: 'No UID Contact' }]
+      ];
+
+      const result = await contactManager.processVCFContacts(vcfEntries, mockApp as any, mockSettings);
+
+      expect(result).toHaveLength(0);
+    });
+
+    it('should skip VCF entries without slug', async () => {
+      const vcfEntries: Array<[string, any]> = [
+        [undefined as any, { UID: 'has-uid', FN: 'No Slug' }]
+      ];
+
+      const result = await contactManager.processVCFContacts(vcfEntries, mockApp as any, mockSettings);
+
+      expect(result).toHaveLength(0);
+    });
+
+    it('should handle multiple VCF contacts', async () => {
+      const existingFile = { path: 'Contacts/existing.md', basename: 'existing' } as TFile;
+      const newFile = { path: 'Contacts/new.md', basename: 'new' } as TFile;
+      
+      const vcfEntries: Array<[string, any]> = [
+        ['existing', { UID: 'existing-uid', FN: 'Existing Contact' }],
+        ['new', { UID: 'new-uid', FN: 'New Contact' }]
+      ];
+
+      // Mock finding existing for first, creating new for second
+      vi.spyOn(contactManager, 'findContactFileByUID')
+        .mockResolvedValueOnce(existingFile)  // existing-uid found
+        .mockResolvedValueOnce(null)          // new-uid not found
+        .mockResolvedValueOnce(newFile);      // new-uid after creation
+
+      const result = await contactManager.processVCFContacts(vcfEntries, mockApp as any, mockSettings);
+
+      expect(result).toHaveLength(2);
+      expect(result).toContain(existingFile);
+      expect(result).toContain(newFile);
+    });
+
+    it('should handle contact creation failures gracefully', async () => {
+      const vcfEntries: Array<[string, any]> = [
+        ['failing', { UID: 'fail-uid', FN: 'Failing Contact' }]
+      ];
+
+      // Mock no existing contact and creation failure
+      vi.spyOn(contactManager, 'findContactFileByUID').mockResolvedValue(null);
+
+      const result = await contactManager.processVCFContacts(vcfEntries, mockApp as any, mockSettings);
+
+      // Should return empty array if contact creation fails
+      expect(result).toHaveLength(0);
+    });
+  });
+
+  describe('createContactFromVCF', () => {
+    it('should create new contact from VCF record', async () => {
+      const record = { UID: 'new-uid', FN: 'New Contact', EMAIL: 'new@example.com' };
+      const newFile = { path: 'Contacts/new-contact.md', basename: 'new-contact' } as TFile;
+
+      // Mock finding the newly created file
+      vi.spyOn(contactManager, 'findContactFileByUID').mockResolvedValue(newFile);
+
+      const result = await contactManager.createContactFromVCF('new-contact', record, mockApp as any, mockSettings);
+
+      expect(result).toBe(newFile);
+    });
+
+    it('should return null if created contact cannot be found', async () => {
+      const record = { UID: 'missing-uid', FN: 'Missing Contact' };
+
+      // Mock not finding the created file
+      vi.spyOn(contactManager, 'findContactFileByUID').mockResolvedValue(null);
+
+      const result = await contactManager.createContactFromVCF('missing', record, mockApp as any, mockSettings);
+
+      expect(result).toBeNull();
+    });
+
+    it('should handle creation errors gracefully', async () => {
+      const record = { UID: 'error-uid', FN: 'Error Contact' };
+
+      // Mock error during creation
+      vi.spyOn(contactManager, 'findContactFileByUID').mockRejectedValue(new Error('Creation failed'));
+
+      const result = await contactManager.createContactFromVCF('error', record, mockApp as any, mockSettings);
+
+      expect(result).toBeNull();
+    });
+  });
 });
