@@ -6,7 +6,7 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   resolve: {
     alias: {
-      obsidian: path.resolve(__dirname, 'tests/setup/emptyObsidianMock.ts'),
+      obsidian: path.resolve(__dirname, 'tests/fixtures/emptyObsidianMock.ts'),
     },
   },
   test: {

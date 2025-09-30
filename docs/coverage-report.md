@@ -74,8 +74,8 @@ tests/
 │   ├── services/       # Service layer tests
 │   └── context.spec.ts # Context provider tests
 ├── stories/            # Integration tests (user stories)
-├── fixtures/           # Shared test data
-└── setup/              # Test configuration
+└── fixtures/           # Shared test data and configuration
+    └── data/           # Test VCF files
 ```
 
 ## Recent Improvements

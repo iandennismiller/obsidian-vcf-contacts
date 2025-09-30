@@ -107,9 +107,8 @@ Tests are organized in `tests/` directory:
   
 - **`tests/demo-data/`**: Data validation tests for demo files
   
-- **`tests/fixtures/`**: Test fixtures and mock data
-  
-- **`tests/setup/`**: Test setup and Obsidian mocks
+- **`tests/fixtures/`**: Test fixtures, mock data, and test setup
+  - `data/`: Test VCF files
 
 ### Running Tests
 
@@ -127,7 +126,7 @@ npm run test:coverage
 ### Test Configuration
 
 - Testing framework: Vitest (configured in `vitest.config.ts`)
-- Obsidian API is mocked in `tests/setup/emptyObsidianMock.ts`
+- Obsidian API is mocked in `tests/fixtures/emptyObsidianMock.ts`
 - Coverage reports are generated in `./coverage` directory
 - Coverage includes all `src/**/*.ts` files except `.tsx` and `.d.ts` files
 
