@@ -1,0 +1,46 @@
+{
+  "source": {
+    "include": ["src"],
+    "includePattern": ".+\\.ts(doc|x)?$",
+    "excludePattern": "(node_modules|docs|tests)"
+  },
+  "plugins": [
+    "plugins/markdown",
+    "node_modules/better-docs/category"
+  ],
+  "opts": {
+    "template": "node_modules/better-docs",
+    "encoding": "utf8",
+    "destination": "./docs/api/",
+    "recurse": true,
+    "verbose": true,
+    "tutorials": "./docs",
+    "readme": "./README.md"
+  },
+  "templates": {
+    "cleverLinks": true,
+    "monospaceLinks": false,
+    "default": {
+      "outputSourceFiles": true,
+      "includeDate": false
+    },
+    "better-docs": {
+      "name": "VCF Contacts Plugin",
+      "title": "VCF Contacts Plugin API Documentation",
+      "navLinks": [
+        {
+          "label": "GitHub",
+          "href": "https://github.com/iandennismiller/obsidian-vcf-contacts"
+        }
+      ],
+      "trackingCode": ""
+    }
+  },
+  "markdown": {
+    "hardwrap": false,
+    "idInHeadings": true
+  },
+  "typescript": {
+    "moduleRoot": "src"
+  }
+}

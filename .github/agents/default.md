@@ -79,6 +79,7 @@ The plugin uses a model-based architecture with clear separation of concerns. Co
 5. **CuratorManager** (`src/models/curatorManager/`)
    - Processor-based system for contact operations
    - Coordinates processor execution and dependencies
+   - Contains curator type definitions (CuratorProcessor, CuratorQueItem, RunType, etc.)
 
 ### Curator Processors
 
@@ -185,7 +186,7 @@ Comprehensive documentation is available in the `docs/` directory:
 ### Adding a New Curator Processor
 
 1. Create processor file in `src/curators/`
-2. Implement the processor interface from `src/interfaces/CuratorProcessor.ts`
+2. Implement the processor interface from `src/models/curatorManager/CuratorProcessor.ts`
 3. Register processor in `src/models/curatorManager/curatorManager.ts`
 4. Add tests in `tests/units/curators/`
 
@@ -202,6 +203,21 @@ Comprehensive documentation is available in the `docs/` directory:
 2. Modify generation in `src/models/vcardFile/generation.ts`
 3. Update tests in `tests/units/models/vcardFile/`
 4. Test with demo VCF files in `docs/demo-data/vcf/`
+
+## Type Definitions
+
+### Location of Type Definitions
+
+Type definitions are organized by their domain:
+
+- **Plugin Settings**: `src/plugin/settings.ts` exports `ContactsPluginSettings` interface
+- **Curator Types**: `src/models/curatorManager/` contains:
+  - `CuratorProcessor.ts` - Processor interface
+  - `CuratorQueItem.ts` - Queue item type
+  - `CuratorSettingProperties.ts` - Curator settings
+  - `RunType.ts` - Enum for processor run types (IMMEDIATELY, UPCOMING, IMPROVEMENT)
+  - `index.ts` - Exports all curator types
+- **Model Types**: Each model exports its own types from its module (e.g., `ContactNote` exports `Contact`, `Gender`, etc.)
 
 ## Important Notes
 
@@ -228,9 +244,10 @@ Comprehensive documentation is available in the `docs/` directory:
 
 - **Entry point**: `src/main.ts`
 - **Plugin class**: Main Obsidian plugin implementation
-- **Settings**: `src/plugin/settings.ts` and `src/interfaces/ContactsPluginSettings.ts`
+- **Settings**: `src/plugin/settings.ts` exports `ContactsPluginSettings` interface and `DEFAULT_SETTINGS`
 - **UI Components**: `src/plugin/ui/`
 - **Services**: `src/plugin/services/`
+- **Type Definitions**: Located with their respective modules (no separate `/src/interfaces/` directory)
 
 ## Need Help?
 

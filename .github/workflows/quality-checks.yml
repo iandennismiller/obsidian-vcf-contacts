@@ -1,0 +1,39 @@
+name: Quality Checks
+
+on:
+  push:
+    branches:
+      - main
+      - '**'
+      - '!copilot/**'
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  quality-checks:
+    name: Run Quality Checks
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run TypeScript compilation
+        run: npm run compile
+      
+      - name: Run production build
+        run: npm run production
+      
+      - name: Run tests
+        if: github.ref == 'refs/heads/main' || github.event_name == 'pull_request'
+        run: npm run test
