@@ -1,6 +1,8 @@
 import { Notice, Platform, TFile } from "obsidian";
 import { getSettings } from "src/plugin/context/sharedSettingsContext";
 
+/* istanbul ignore next */
+// File picker UI operations depend on browser DOM APIs and user interaction
 /**
  * Opens a file picker for selecting files
  * Moved from src/file/file.ts

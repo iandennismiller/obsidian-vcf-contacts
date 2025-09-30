@@ -27,6 +27,8 @@ export const DEFAULT_SETTINGS: ContactsPluginSettings = {
   ...curatorSettingDefaults
 }
 
+/* istanbul ignore next */
+// Settings tab UI integrates with Obsidian's settings API and requires DOM/UI context
 export class ContactsSettingTab extends PluginSettingTab {
   plugin: ContactsPlugin;
 

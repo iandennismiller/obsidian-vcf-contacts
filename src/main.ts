@@ -22,6 +22,8 @@ import { ContactManager } from "./models/contactManager";
 import { ContactsSettingTab, DEFAULT_SETTINGS } from './plugin/settings';
 import { ContactsPluginSettings } from  './interfaces/ContactsPluginSettings';
 
+/* istanbul ignore next */
+// Plugin lifecycle methods integrate with Obsidian API and require full app context
 export default class ContactsPlugin extends Plugin {
 	settings: ContactsPluginSettings;
 	private syncWatcher: SyncWatcher | null = null;
