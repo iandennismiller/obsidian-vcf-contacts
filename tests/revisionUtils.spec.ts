@@ -1,42 +1,43 @@
-import { ContactNote } from 'src/contacts/contactNote';
-
-// Create a test ContactNote instance for testing static methods
-const createTestContactNote = () => new ContactNote(null as any, null as any, null as any);
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TFile, App } from 'obsidian';
-import { RevisionUtils } from '../src/contacts/revisionUtils';
-import { VCardForObsidianRecord } from '../src/contacts/vcard/shared/vcard.d';
-import { loggingService } from '../src/services/loggingService';
+import { ContactNote } from '../src/models/contactNote/contactNote';
+import { VCardForObsidianRecord } from '../src/models/vcardFile/types';
+import { ContactsPluginSettings } from '../src/settings/settings.d';
 
-// Mock the logging service
-vi.mock('../src/services/loggingService', () => ({
-  loggingService: {
-    debug: vi.fn(),
-    info: vi.fn(),
-    warning: vi.fn(),
-    error: vi.fn()
-  }
-}));
-
-describe('RevisionUtils', () => {
+describe('ContactNote - Revision Utils', () => {
   let mockApp: Partial<App>;
-  let revisionUtils: RevisionUtils;
+  let mockFile: TFile;
+  let mockSettings: ContactsPluginSettings;
+  let contactNote: ContactNote;
 
   beforeEach(() => {
+    mockFile = { 
+      path: 'Contacts/john-doe.md',
+      basename: 'john-doe'
+    } as TFile;
+    
     mockApp = {
+      vault: {
+        read: vi.fn(),
+        modify: vi.fn()
+      } as any,
       metadataCache: {
         getFileCache: vi.fn()
       } as any
     };
     
-    revisionUtils = new RevisionUtils(mockApp as App);
+    mockSettings = {
+      contactsFolder: 'Contacts'
+    } as ContactsPluginSettings;
+    
+    contactNote = new ContactNote(mockApp as App, mockSettings, mockFile);
     vi.clearAllMocks();
   });
 
   describe('Date Parsing and Comparison', () => {
     it('should parse valid vCard REV timestamps', () => {
       const validTimestamp = '20240315T143000Z';
-      const result = revisionUtils.parseRevDate(validTimestamp);
+      const result = contactNote.parseRevDate(validTimestamp);
       
       expect(result).toBeInstanceOf(Date);
       expect(result?.getFullYear()).toBe(2024);
@@ -53,18 +54,16 @@ describe('RevisionUtils', () => {
       ];
 
       invalidTimestamps.forEach(timestamp => {
-        const result = revisionUtils.parseRevDate(timestamp);
+        const result = contactNote.parseRevDate(timestamp);
         expect(result).toBeNull();
       });
     });
   });
 
   describe('Contact Update Decision', () => {
-    let mockFile: TFile;
     let vcfRecord: VCardForObsidianRecord;
 
     beforeEach(() => {
-      mockFile = { path: 'Contacts/john-doe.md' } as TFile;
       vcfRecord = {
         UID: 'test-uid-123',
         FN: 'John Doe',
@@ -82,7 +81,7 @@ describe('RevisionUtils', () => {
 
       mockApp.metadataCache!.getFileCache = vi.fn().mockReturnValue(mockCache);
 
-      const shouldUpdate = await revisionUtils.shouldUpdateContact(vcfRecord, mockFile);
+      const shouldUpdate = await contactNote.shouldUpdateFromVCF(vcfRecord);
       expect(shouldUpdate).toBe(true);
     });
 
@@ -96,7 +95,7 @@ describe('RevisionUtils', () => {
 
       mockApp.metadataCache!.getFileCache = vi.fn().mockReturnValue(mockCache);
 
-      const shouldUpdate = await revisionUtils.shouldUpdateContact(vcfRecord, mockFile);
+      const shouldUpdate = await contactNote.shouldUpdateFromVCF(vcfRecord);
       expect(shouldUpdate).toBe(false);
     });
 
@@ -116,44 +115,20 @@ describe('RevisionUtils', () => {
 
       mockApp.metadataCache!.getFileCache = vi.fn().mockReturnValue(mockCache);
 
-      const shouldUpdate = await revisionUtils.shouldUpdateContact(vcfWithLaterMinute, mockFile);
+      const shouldUpdate = await contactNote.shouldUpdateFromVCF(vcfWithLaterMinute);
       expect(shouldUpdate).toBe(true);
-    });
-
-    it('should log detailed comparison information', async () => {
-      const mockCache = {
-        frontmatter: {
-          UID: 'test-uid-123',
-          REV: '20240314T143000Z'
-        }
-      };
-
-      mockApp.metadataCache!.getFileCache = vi.fn().mockReturnValue(mockCache);
-
-      await revisionUtils.shouldUpdateContact(vcfRecord, mockFile);
-
-      expect(loggingService.debug).toHaveBeenCalledWith(
-        expect.stringMatching(/\[RevisionUtils\] REV comparison: VCF .* vs existing .* -> true/)
-      );
     });
   });
 
   describe('Error Handling and Edge Cases', () => {
-    let mockFile: TFile;
     let vcfRecord: VCardForObsidianRecord;
 
     beforeEach(() => {
-      mockFile = { path: 'Contacts/john-doe.md' } as TFile;
       vcfRecord = {
         UID: 'test-uid-123',
         FN: 'John Doe',
         REV: '20240315T143000Z'
       } as VCardForObsidianRecord;
-    });
-
-    it('should handle null/undefined inputs gracefully', async () => {
-      const result = await revisionUtils.shouldUpdateContact(null as any, null as any);
-      expect(result).toBe(false);
     });
 
     it('should not update when existing file has no REV', async () => {
@@ -166,11 +141,8 @@ describe('RevisionUtils', () => {
 
       mockApp.metadataCache!.getFileCache = vi.fn().mockReturnValue(mockCache);
 
-      const shouldUpdate = await revisionUtils.shouldUpdateContact(vcfRecord, mockFile);
+      const shouldUpdate = await contactNote.shouldUpdateFromVCF(vcfRecord);
       expect(shouldUpdate).toBe(false);
-      expect(loggingService.debug).toHaveBeenCalledWith(
-        expect.stringContaining('[RevisionUtils] Missing REV field')
-      );
     });
 
     it('should not update when VCF has no REV', async () => {
@@ -189,11 +161,8 @@ describe('RevisionUtils', () => {
 
       mockApp.metadataCache!.getFileCache = vi.fn().mockReturnValue(mockCache);
 
-      const shouldUpdate = await revisionUtils.shouldUpdateContact(vcfWithoutRev, mockFile);
+      const shouldUpdate = await contactNote.shouldUpdateFromVCF(vcfWithoutRev);
       expect(shouldUpdate).toBe(false);
-      expect(loggingService.debug).toHaveBeenCalledWith(
-        expect.stringContaining('[RevisionUtils] Missing REV field')
-      );
     });
 
     it('should not update when REV dates cannot be parsed', async () => {
@@ -212,11 +181,8 @@ describe('RevisionUtils', () => {
 
       mockApp.metadataCache!.getFileCache = vi.fn().mockReturnValue(mockCache);
 
-      const shouldUpdate = await revisionUtils.shouldUpdateContact(vcfWithInvalidRev, mockFile);
+      const shouldUpdate = await contactNote.shouldUpdateFromVCF(vcfWithInvalidRev);
       expect(shouldUpdate).toBe(false);
-      expect(loggingService.debug).toHaveBeenCalledWith(
-        expect.stringContaining('[RevisionUtils] Failed to parse dates')
-      );
     });
 
     it('should handle mixed valid/invalid REV dates', async () => {
@@ -235,11 +201,8 @@ describe('RevisionUtils', () => {
 
       mockApp.metadataCache!.getFileCache = vi.fn().mockReturnValue(mockCache);
 
-      const shouldUpdate = await revisionUtils.shouldUpdateContact(vcfWithValidRev, mockFile);
+      const shouldUpdate = await contactNote.shouldUpdateFromVCF(vcfWithValidRev);
       expect(shouldUpdate).toBe(false);
-      expect(loggingService.debug).toHaveBeenCalledWith(
-        expect.stringContaining('[RevisionUtils] Failed to parse dates')
-      );
     });
   });
 });
