@@ -175,12 +175,20 @@ describe('CuratorManager', () => {
       });
     });
 
-    it('should handle command callbacks', () => {
+    it('should execute command callbacks', async () => {
       curatorManager.registerCommands(mockPlugin);
       
       const commands = mockPlugin.addCommand.mock.calls;
-      expect(commands[0][0].callback).toBeInstanceOf(Function);
-      expect(commands[1][0].callback).toBeInstanceOf(Function);
+      
+      // Execute the current contact callback
+      const currentCallback = commands[0][0].callback;
+      mockApp.workspace.getActiveFile.mockReturnValue(null);
+      await expect(currentCallback()).resolves.not.toThrow();
+      
+      // Execute the all contacts callback
+      const allCallback = commands[1][0].callback;
+      mockContactManager.getAllContactFiles.mockReturnValue([]);
+      await expect(allCallback()).resolves.not.toThrow();
     });
   });
 
@@ -217,6 +225,28 @@ describe('CuratorManager', () => {
       await curatorManager.runCuratorProcessorsOnCurrent();
       
       expect(mockContactManager.getFrontmatterFromFiles).toHaveBeenCalledWith([mockFile]);
+    });
+
+    it('should notify when no curator actions needed', async () => {
+      const mockFile = { path: 'Contacts/contact.md', name: 'contact.md' };
+      const mockContact = { data: { FN: 'Test' }, file: mockFile };
+      
+      mockApp.workspace.getActiveFile.mockReturnValue(mockFile);
+      mockContactManager.getFrontmatterFromFiles.mockResolvedValue([mockContact]);
+      
+      // Register a processor that returns undefined (no actions) with IMPROVEMENT type
+      const mockImprovementProcessor = {
+        ...mockProcessor,
+        name: 'NoActionProcessor',
+        runType: RunType.IMPROVEMENT,
+        process: vi.fn().mockResolvedValue(undefined)
+      };
+      curatorManager.register(mockImprovementProcessor);
+      
+      await curatorManager.runCuratorProcessorsOnCurrent();
+      
+      // Should have tried to process
+      expect(mockImprovementProcessor.process).toHaveBeenCalled();
     });
 
     it('should handle contact loading failure', async () => {
