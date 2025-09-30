@@ -67,11 +67,13 @@ FN: John Doe
       expect(relationships).toHaveLength(3);
       expect(relationships[0]).toEqual({
         type: 'father',
-        contactName: 'Bob Doe'
+        contactName: 'Bob Doe',
+        linkType: 'name'
       });
       expect(relationships[1]).toEqual({
         type: 'mother',
-        contactName: 'Mary Doe'
+        contactName: 'Mary Doe',
+        linkType: 'name'
       });
     });
 

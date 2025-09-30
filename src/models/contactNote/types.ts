@@ -131,6 +131,8 @@ export interface ParsedRelationship {
   contactName: string;
   /** Type of relationship (spouse, parent, child, etc.) */
   type: string;
+  /** Link type (uid or name) */
+  linkType?: 'uid' | 'name';
   /** Optional file reference to the related contact */
   contactFile?: import('obsidian').TFile;
   /** Optional gender of the related contact */

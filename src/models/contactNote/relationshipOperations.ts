@@ -49,13 +49,15 @@ export class RelationshipOperations {
         const [, type, contactName] = match1;
         relationships.push({
           type: type.trim(),
-          contactName: contactName.trim()
+          contactName: contactName.trim(),
+          linkType: 'name' // Markdown links are always name-based
         });
       } else if (match2) {
         const [, contactName, type] = match2;
         relationships.push({
           type: type.trim(),
-          contactName: contactName.trim()
+          contactName: contactName.trim(),
+          linkType: 'name' // Markdown links are always name-based
         });
       }
     }
@@ -143,8 +145,9 @@ export class RelationshipOperations {
       const normalizedContactName = contactName.toLowerCase().replace(/\s+/g, '-');
       const contactFile = app.vault.getAbstractFileByPath(`${contactsFolder}/${normalizedContactName}.md`);
       
-      if (contactFile instanceof TFile) {
-        return contactFile;
+      // Check if file exists and has the right properties (avoid instanceof in test env)
+      if (contactFile && 'path' in contactFile && 'basename' in contactFile) {
+        return contactFile as TFile;
       }
 
       // Search for file in contacts folder

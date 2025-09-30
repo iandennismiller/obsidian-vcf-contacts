@@ -299,7 +299,11 @@ export class ContactNote {
   /**
    * Sync relationships from frontmatter to markdown
    */
-  async syncFrontmatterToRelatedList(): Promise<{ success: boolean; errors: string[] }> {
+  async syncFrontmatterToRelatedList(): Promise<{ 
+    success: boolean; 
+    errors: string[];
+    updatedRelationships?: Array<{ newName: string; uid: string; oldName?: string }>;
+  }> {
     return this.syncOps.syncFrontmatterToRelatedList();
   }
 
@@ -454,7 +458,7 @@ export class ContactNote {
           contactName: rel.contactName,
           targetUID: resolved?.uid,
           linkType: resolved?.uid ? 'uid' : 'name',
-          originalType: rel.originalType
+          originalType: rel.type
         });
       }
     }
@@ -499,26 +503,67 @@ export class ContactNote {
   }
 
   /**
-   * Resolve relationship target (by UID or name)
+   * Resolve relationship target by relationship type or identifier
    */
-  async resolveRelationshipTarget(identifier: string): Promise<{
+  async resolveRelationshipTarget(identifierOrType: string): Promise<{
     file: TFile | null;
+    frontmatter?: any;
     type: 'uid' | 'name';
     contactName: string;
   } | null> {
+    // First, check if identifier is a relationship type in frontmatter
+    const frontmatter = await this.getFrontmatter();
+    if (frontmatter) {
+      // Look for RELATED[identifierOrType] or RELATED[N:identifierOrType] fields
+      for (const [key, value] of Object.entries(frontmatter)) {
+        if (key.startsWith('RELATED[') && typeof value === 'string') {
+          const typeMatch = key.match(/RELATED\[(?:\d+:)?([^\]]+)\]/);
+          const relType = typeMatch ? typeMatch[1] : '';
+          
+          if (relType.toLowerCase() === identifierOrType.toLowerCase()) {
+            // Found matching relationship in frontmatter, resolve by its value
+            const parsedValue = this.parseRelatedValue(value);
+            if (parsedValue && (parsedValue.type === 'uuid' || parsedValue.type === 'uid')) {
+              const result = await this.resolveContactByUID(parsedValue.value);
+              if (result) {
+                const contactName = result.frontmatter?.FN || result.file.basename;
+                return { 
+                  file: result.file, 
+                  frontmatter: result.frontmatter,
+                  type: 'uid', 
+                  contactName 
+                };
+              }
+            }
+          }
+        }
+      }
+    }
+    
     // Check if it's a UID format
-    if (identifier.startsWith('urn:uuid:') || ContactNote.isValidUID(identifier)) {
-      const result = await this.resolveContactByUID(identifier);
+    if (identifierOrType.startsWith('urn:uuid:') || ContactNote.isValidUID(identifierOrType)) {
+      const result = await this.resolveContactByUID(identifierOrType);
       if (result) {
         const contactName = result.frontmatter?.FN || result.file.basename;
-        return { file: result.file, type: 'uid', contactName };
+        return { 
+          file: result.file, 
+          frontmatter: result.frontmatter,
+          type: 'uid', 
+          contactName 
+        };
       }
     }
     
     // Fall back to name resolution
-    const file = await this.findContactByName(identifier);
+    const file = await this.findContactByName(identifierOrType);
     if (file) {
-      return { file, type: 'name', contactName: identifier };
+      const cache = this.app.metadataCache.getFileCache(file);
+      return { 
+        file, 
+        frontmatter: cache?.frontmatter,
+        type: 'name', 
+        contactName: identifierOrType 
+      };
     }
     
     return null;
@@ -533,6 +578,7 @@ export class ContactNote {
       targetContact: string;
       reverseType: string;
       added: boolean;
+      reason?: string;
       error?: string;
     }>;
     errors: string[];
@@ -556,21 +602,23 @@ export class ContactNote {
             targetContact: relationship.contactName,
             reverseType: '',
             added: false,
+            reason: 'target contact not found',
             error: 'Target contact not found'
           });
           continue;
         }
 
         // Get target gender for gender-aware reciprocal relationship
+        // We use sourceGender because the reciprocal will point back to the source
         const targetContact = new ContactNote(this.app, this.settings, targetFile);
-        const targetGender = await targetContact.getGender();
-        const reverseType = this.getReciprocalRelationshipType(relationship.type, targetGender);
+        const reverseType = this.getReciprocalRelationshipType(relationship.type, sourceGender);
         
         if (!reverseType) {
           result.processedRelationships.push({
             targetContact: relationship.contactName,
             reverseType: '',
             added: false,
+            reason: 'no reciprocal relationship type available',
             error: 'No reciprocal relationship type available'
           });
           continue;
@@ -579,17 +627,19 @@ export class ContactNote {
         // Check if reverse relationship already exists
         const targetRelationships = await targetContact.parseRelatedSection();
         
-        const reverseExists = targetRelationships.some(rel => 
-          rel.contactName === sourceContactName && 
-          this.areRelationshipTypesEquivalent(rel.type, reverseType)
-        );
+        const reverseExists = targetRelationships.some(rel => {
+          // Normalize contact names for comparison (case-insensitive, space/dash equivalence)
+          const normalizedRelName = rel.contactName.toLowerCase().replace(/[\s\-]/g, '');
+          const normalizedSourceName = sourceContactName.toLowerCase().replace(/[\s\-]/g, '');
+          return normalizedRelName === normalizedSourceName && 
+            this.areRelationshipTypesEquivalent(rel.type, reverseType);
+        });
 
         if (!reverseExists) {
           // Add reverse relationship
           const newRelationships = [...targetRelationships, {
             type: reverseType,
-            contactName: sourceContactName,
-            originalType: reverseType
+            contactName: sourceContactName
           }];
           
           await targetContact.updateRelatedSectionInContent(newRelationships);
@@ -603,7 +653,8 @@ export class ContactNote {
           result.processedRelationships.push({
             targetContact: relationship.contactName,
             reverseType,
-            added: false
+            added: false,
+            reason: 'relationship already exists'
           });
         }
       }
@@ -630,29 +681,69 @@ export class ContactNote {
     const result = { success: true, upgradedRelationships: [], errors: [] };
 
     try {
+      // First check frontmatter relationships
       const frontmatter = await this.getFrontmatter();
-      if (!frontmatter) return result;
-
       const updates: Record<string, string> = {};
       
-      for (const [key, value] of Object.entries(frontmatter)) {
-        if (key.startsWith('RELATED[') && typeof value === 'string') {
-          // Check if it's currently name-based
-          if (!value.startsWith('urn:uuid:') && !ContactNote.isValidUID(value)) {
-            const targetFile = await this.findContactByName(value);
-            if (targetFile) {
-              const targetCache = this.app.metadataCache.getFileCache(targetFile);
-              const targetUID = targetCache?.frontmatter?.UID;
-              
-              if (targetUID) {
-                updates[key] = targetUID;
-                const keyObj = parseKey(key);
-                result.upgradedRelationships.push({
-                  targetUID,
-                  type: keyObj.type || key,
-                  key
-                });
+      if (frontmatter) {
+        for (const [key, value] of Object.entries(frontmatter)) {
+          if (key.startsWith('RELATED[') && typeof value === 'string') {
+            const parsedValue = this.parseRelatedValue(value);
+            // Check if it's currently name-based
+            if (parsedValue && parsedValue.type === 'name') {
+              const targetFile = await this.findContactByName(parsedValue.value);
+              if (targetFile) {
+                const targetCache = this.app.metadataCache.getFileCache(targetFile);
+                const targetUID = targetCache?.frontmatter?.UID;
+                
+                if (targetUID) {
+                  updates[key] = this.formatRelatedValue(targetUID, parsedValue.value);
+                  const typeMatch = key.match(/RELATED\[(?:\d+:)?([^\]]+)\]/);
+                  const relType = typeMatch ? typeMatch[1] : 'related';
+                  result.upgradedRelationships.push({
+                    targetUID,
+                    type: relType,
+                    key
+                  });
+                }
               }
+            }
+          }
+        }
+      }
+
+      // Also check markdown relationships without frontmatter entries
+      const markdownRelationships = await this.parseRelatedSection();
+      let relationshipIndex = 0;
+      
+      for (const relationship of markdownRelationships) {
+        // Check if this relationship already has a frontmatter entry
+        const hasFrontmatterEntry = frontmatter && Object.keys(frontmatter).some(key => {
+          if (!key.startsWith('RELATED[')) return false;
+          const typeMatch = key.match(/RELATED\[(?:\d+:)?([^\]]+)\]/);
+          const relType = typeMatch ? typeMatch[1] : '';
+          return relType.toLowerCase() === relationship.type.toLowerCase();
+        });
+        
+        if (!hasFrontmatterEntry) {
+          // Try to resolve and upgrade this relationship
+          const targetFile = await this.findContactByName(relationship.contactName);
+          if (targetFile) {
+            const targetCache = this.app.metadataCache.getFileCache(targetFile);
+            const targetUID = targetCache?.frontmatter?.UID;
+            
+            if (targetUID) {
+              const key = relationshipIndex === 0 && !hasFrontmatterEntry
+                ? `RELATED[${relationship.type}]`
+                : `RELATED[${relationshipIndex}:${relationship.type}]`;
+              
+              updates[key] = this.formatRelatedValue(targetUID, relationship.contactName);
+              result.upgradedRelationships.push({
+                targetUID,
+                type: relationship.type,
+                key
+              });
+              relationshipIndex++;
             }
           }
         }
@@ -734,13 +825,27 @@ export class ContactNote {
       const updates: Record<string, string> = {};
       
       for (const [key, value] of Object.entries(frontmatter)) {
-        if (key.startsWith('RELATED[') && value === oldUID) {
-          updates[key] = newUID;
-          result.updatedRelationships.push({
-            oldUID,
-            newUID,
-            key
-          });
+        if (key.startsWith('RELATED[') && typeof value === 'string') {
+          const parsedValue = this.parseRelatedValue(value);
+          if (parsedValue && (parsedValue.type === 'uuid' || parsedValue.type === 'uid')) {
+            if (parsedValue.value === oldUID) {
+              // Format with the same prefix style (urn:uuid: or uid:)
+              updates[key] = this.formatRelatedValue(newUID, '');
+              result.updatedRelationships.push({
+                oldUID,
+                newUID,
+                key
+              });
+            }
+          } else if (value === oldUID) {
+            // Direct match without prefix
+            updates[key] = this.formatRelatedValue(newUID, '');
+            result.updatedRelationships.push({
+              oldUID,
+              newUID,
+              key
+            });
+          }
         }
       }
 
@@ -758,7 +863,9 @@ export class ContactNote {
   /**
    * Bulk update relationship UIDs
    */
-  async bulkUpdateRelationshipUIDs(uidMappings: Record<string, string>): Promise<{
+  async bulkUpdateRelationshipUIDs(
+    uidMappings: Record<string, string> | Array<{ name: string; uid: string }>
+  ): Promise<{
     success: boolean;
     updatedCount: number;
     failedCount: number;
@@ -771,12 +878,34 @@ export class ContactNote {
       if (!frontmatter) return result;
 
       const updates: Record<string, string> = {};
+      
+      // Convert array format to map if needed
+      const mappingMap = Array.isArray(uidMappings)
+        ? uidMappings.reduce((acc, { name, uid }) => {
+            acc[`name:${name}`] = uid;
+            return acc;
+          }, {} as Record<string, string>)
+        : uidMappings;
 
       for (const [key, value] of Object.entries(frontmatter)) {
         if (key.startsWith('RELATED[') && typeof value === 'string') {
-          const newUID = uidMappings[value];
-          if (newUID && newUID !== value) {
-            updates[key] = newUID;
+          // Try to match the value directly or parse it
+          let matchedUID = mappingMap[value];
+          
+          if (!matchedUID) {
+            // Try parsing the value
+            const parsedValue = this.parseRelatedValue(value);
+            if (parsedValue) {
+              if (parsedValue.type === 'name') {
+                matchedUID = mappingMap[`name:${parsedValue.value}`] || mappingMap[parsedValue.value];
+              } else {
+                matchedUID = mappingMap[parsedValue.value];
+              }
+            }
+          }
+          
+          if (matchedUID && matchedUID !== value) {
+            updates[key] = this.formatRelatedValue(matchedUID, '');
             result.updatedCount++;
           }
         }
@@ -805,6 +934,7 @@ export class ContactNote {
       'father': {
         'M': 'son',
         'F': 'daughter',
+        'NB': 'child',
         'O': 'child',
         'N': 'child',
         'U': 'child',
@@ -812,7 +942,8 @@ export class ContactNote {
       },
       'mother': {
         'M': 'son',
-        'F': 'daughter', 
+        'F': 'daughter',
+        'NB': 'child',
         'O': 'child',
         'N': 'child',
         'U': 'child',
@@ -821,6 +952,7 @@ export class ContactNote {
       'parent': {
         'M': 'son',
         'F': 'daughter',
+        'NB': 'child',
         'O': 'child', 
         'N': 'child',
         'U': 'child',
@@ -832,6 +964,7 @@ export class ContactNote {
       'brother': {
         'M': 'brother',
         'F': 'sister',
+        'NB': 'sibling',
         'O': 'sibling',
         'N': 'sibling', 
         'U': 'sibling',
@@ -840,6 +973,7 @@ export class ContactNote {
       'sister': {
         'M': 'brother',
         'F': 'sister',
+        'NB': 'sibling',
         'O': 'sibling',
         'N': 'sibling',
         'U': 'sibling', 
@@ -853,11 +987,13 @@ export class ContactNote {
       'colleague': 'colleague',
       'manager': 'employee',
       'employee': 'manager',
+      'boss': 'employee',
       'mentor': 'mentee',
       'mentee': 'mentor',
       'uncle': {
         'M': 'nephew',
         'F': 'niece',
+        'NB': 'nephew',
         'O': 'nephew',
         'N': 'nephew',
         'U': 'nephew',
@@ -866,6 +1002,7 @@ export class ContactNote {
       'aunt': {
         'M': 'nephew',
         'F': 'niece',
+        'NB': 'nephew',
         'O': 'nephew',
         'N': 'nephew',
         'U': 'nephew',
@@ -874,6 +1011,7 @@ export class ContactNote {
       'nephew': {
         'M': 'uncle',
         'F': 'aunt',
+        'NB': 'uncle',
         'O': 'uncle',
         'N': 'uncle',
         'U': 'uncle',
@@ -882,6 +1020,7 @@ export class ContactNote {
       'niece': {
         'M': 'uncle',
         'F': 'aunt',
+        'NB': 'aunt',
         'O': 'uncle',
         'N': 'uncle',
         'U': 'uncle',
