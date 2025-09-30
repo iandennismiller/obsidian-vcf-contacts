@@ -1,5 +1,5 @@
 import { AbstractInputSuggest, App, TFolder } from 'obsidian';
-import { setSettings } from "src/context/sharedSettingsContext";
+import { setSettings } from "src/plugin/context/sharedSettingsContext";
 import ContactsPlugin from "src/main";
 
 export class FolderSuggest extends AbstractInputSuggest<string> {

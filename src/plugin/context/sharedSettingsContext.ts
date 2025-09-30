@@ -1,4 +1,4 @@
-import { ContactsPluginSettings } from "src/settings/settings.d";
+import { ContactsPluginSettings } from 'src/interfaces/ContactsPluginSettings';
 type SettingsListener = (settings: ContactsPluginSettings) => void;
 
 let _settings: ContactsPluginSettings | undefined

@@ -1,8 +1,8 @@
 import { Notice } from "obsidian";
 import { Contact, ContactNote } from "src/models";
-import { getApp } from "src/context/sharedAppContext";
-import { getSettings } from "src/context/sharedSettingsContext";
-import { openFilePicker } from "src/ui/fileOperations";
+import { getApp } from "src/plugin/context/sharedAppContext";
+import { getSettings } from "src/plugin/context/sharedSettingsContext";
+import { openFilePicker } from "src/plugin/ui/fileOperations";
 import { RunType } from "src/interfaces/RunType.d";
 import { curatorService } from "src/models/curatorManager/curatorManager";
 

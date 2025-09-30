@@ -1,5 +1,5 @@
 import { Notice, Platform, TFile } from "obsidian";
-import { getSettings } from "src/context/sharedSettingsContext";
+import { getSettings } from "src/plugin/context/sharedSettingsContext";
 
 /**
  * Opens a file picker for selecting files

@@ -27,7 +27,7 @@ vi.mock('obsidian', () => ({
 }));
 
 // Mock shared app context
-vi.mock('src/context/sharedAppContext', () => ({
+vi.mock('src/plugin/context/sharedAppContext', () => ({
   getApp: vi.fn(() => mockApp)
 }));
 

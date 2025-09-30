@@ -4,7 +4,7 @@ import { ContactManagerData } from '../../../../src/models/contactManager/contac
 import { TFile } from 'obsidian';
 
 // Mock dependencies
-vi.mock('../../../../src/context/sharedSettingsContext', () => ({
+vi.mock('../../../../src/plugin/context/sharedSettingsContext', () => ({
   getSettings: vi.fn(() => ({
     vcardSyncPostProcessor: true
   })),
@@ -262,7 +262,7 @@ describe('ConsistencyOperations', () => {
 
   describe('settings management during consistency check', () => {
     it('should temporarily disable vcardSyncPostProcessor', async () => {
-      const { getSettings, updateSettings } = await import('../../../../src/context/sharedSettingsContext');
+      const { getSettings, updateSettings } = await import('../../../../src/plugin/context/sharedSettingsContext');
       const { curatorService } = await import('../../../../src/models/curatorManager/curatorManager');
       
       curatorService.process = vi.fn().mockResolvedValue([]);
@@ -276,7 +276,7 @@ describe('ConsistencyOperations', () => {
     });
 
     it('should restore settings even if processing fails', async () => {
-      const { updateSettings } = await import('../../../../src/context/sharedSettingsContext');
+      const { updateSettings } = await import('../../../../src/plugin/context/sharedSettingsContext');
       const { curatorService } = await import('../../../../src/models/curatorManager/curatorManager');
       
       curatorService.process = vi.fn().mockRejectedValue(new Error('Processing failed'));

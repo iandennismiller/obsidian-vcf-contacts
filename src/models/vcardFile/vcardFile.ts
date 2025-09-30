@@ -202,22 +202,6 @@ export class VcardFile {
   // ============================================================================
 
   /**
-   * Configuration for the Obsidian contacts view.
-   * Used by the UI components to register and display the contacts view.
-   * 
-   * @static
-   * @readonly
-   */
-  static readonly CONTACTS_VIEW_CONFIG = {
-    /** Unique identifier for the view type */
-    type: "contacts-view",
-    /** Display name for the view */
-    name: "Contacts",
-    /** Obsidian icon identifier */
-    icon: "contact",
-  };
-
-  /**
    * Sort field constants for contact list ordering.
    * Used by UI components to determine sort order.
    * 
