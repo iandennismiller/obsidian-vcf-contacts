@@ -5,6 +5,7 @@ import {
   getSettings,
   onSettingsChange,
   setSettings,
+  updateSettings,
 } from '../../src/plugin/context/sharedSettingsContext';
 import type { ContactsPluginSettings } from 'src/plugin/settings';
 import { afterEach,describe, expect, it, vi } from 'vitest';
@@ -83,5 +84,22 @@ describe('sharedSettingsContext', () => {
     expect(() => getSettings()).toThrow();
     setSettings(mockSettings);
     expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  it('updates partial settings and notifies listeners', () => {
+    setSettings(mockSettings);
+    const listener = vi.fn();
+    onSettingsChange(listener);
+
+    updateSettings({ vcfWatchFolder: '/new/path' });
+
+    const updated = getSettings();
+    expect(updated.vcfWatchFolder).toBe('/new/path');
+    expect(updated.contactsFolder).toBe('Contacts'); // Other fields should be preserved
+    expect(listener).toHaveBeenCalledWith(updated);
+  });
+
+  it('throws when updating settings that are not set', () => {
+    expect(() => updateSettings({ vcfWatchFolder: '/path' })).toThrow('Plugin context has not been set.');
   });
 });
