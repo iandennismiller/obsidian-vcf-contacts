@@ -71,7 +71,8 @@ describe('Contact History and Versioning Story', () => {
     const minute = parseInt(revTimestamp.substring(11, 13));
     const second = parseInt(revTimestamp.substring(13, 15));
     
-    const parsedTime = new Date(year, month, day, hour, minute, second);
+    // Parse as UTC since the timestamp ends with 'Z'
+    const parsedTime = new Date(Date.UTC(year, month, day, hour, minute, second));
     
     expect(parsedTime.getTime()).toBeGreaterThanOrEqual(beforeTime.getTime() - 1000);
     expect(parsedTime.getTime()).toBeLessThanOrEqual(afterTime.getTime() + 1000);
