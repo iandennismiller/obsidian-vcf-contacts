@@ -100,11 +100,17 @@ export class SyncOperations {
    * Sync relationships from frontmatter to markdown
    * Co-locates frontmatter access with sync logic
    */
-  async syncFrontmatterToRelatedList(): Promise<{ success: boolean; errors: string[] }> {
+  async syncFrontmatterToRelatedList(): Promise<{ 
+    success: boolean; 
+    errors: string[];
+    updatedRelationships?: Array<{ newName: string; uid: string; oldName?: string }>;
+  }> {
     const errors: string[] = [];
+    const updatedRelationships: Array<{ newName: string; uid: string; oldName?: string }> = [];
     
     try {
       const frontmatterRelationships = await this.relationshipOps.parseFrontmatterRelationships();
+      const existingMarkdownRelationships = await this.relationshipOps.parseRelatedSection();
       const markdownRelationships: { type: string; contactName: string }[] = [];
 
       for (const fmRel of frontmatterRelationships) {
@@ -120,6 +126,18 @@ export class SyncOperations {
               const resolvedContact = await this.findContactByUid(fmRel.parsedValue.value);
               if (resolvedContact) {
                 contactName = resolvedContact.name;
+                
+                // Check if this is an update (name changed for same UID)
+                const existingRel = existingMarkdownRelationships.find(rel => 
+                  rel.type === fmRel.type
+                );
+                if (existingRel && existingRel.contactName !== contactName) {
+                  updatedRelationships.push({
+                    newName: contactName,
+                    uid: fmRel.parsedValue.value,
+                    oldName: existingRel.contactName
+                  });
+                }
               } else {
                 contactName = fmRel.parsedValue.value; // Fallback to raw value
                 errors.push(`Could not resolve UID/UUID: ${fmRel.parsedValue.value}`);
@@ -141,7 +159,7 @@ export class SyncOperations {
       // Update the Related section in markdown
       await this.relationshipOps.updateRelatedSectionInContent(markdownRelationships);
 
-      return { success: true, errors };
+      return { success: true, errors, updatedRelationships };
     } catch (error) {
       errors.push(`Frontmatter to markdown sync failed: ${error.message}`);
       return { success: false, errors };
@@ -197,8 +215,12 @@ export class SyncOperations {
         const fileUid = await tempContactData.getUID();
         
         if (fileUid === uid) {
+          // Get FN from frontmatter, fallback to basename
+          const frontmatter = await tempContactData.getFrontmatter();
+          const contactName = frontmatter?.FN || file.basename;
+          
           return {
-            name: file.basename,
+            name: contactName,
             file: file
           };
         }

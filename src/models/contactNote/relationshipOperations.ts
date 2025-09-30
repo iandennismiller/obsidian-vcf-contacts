@@ -49,13 +49,15 @@ export class RelationshipOperations {
         const [, type, contactName] = match1;
         relationships.push({
           type: type.trim(),
-          contactName: contactName.trim()
+          contactName: contactName.trim(),
+          linkType: 'name' // Markdown links are always name-based
         });
       } else if (match2) {
         const [, contactName, type] = match2;
         relationships.push({
           type: type.trim(),
-          contactName: contactName.trim()
+          contactName: contactName.trim(),
+          linkType: 'name' // Markdown links are always name-based
         });
       }
     }
