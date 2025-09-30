@@ -10,7 +10,7 @@ vi.mock('obsidian', () => ({
   TFile: vi.fn()
 }));
 
-vi.mock('../../../../src/ui/modals/fileExistsModal', () => ({
+vi.mock('../../../../src/plugin/ui/modals/fileExistsModal', () => ({
   FileExistsModal: vi.fn().mockImplementation((app, filePath, callback) => ({
     open: vi.fn().mockImplementation(() => {
       // Auto-resolve with "skip" action for testing
@@ -149,7 +149,7 @@ describe('ContactManagerUtils', () => {
       );
 
       // FileExistsModal should be created
-      const { FileExistsModal } = await import('../../../../src/ui/modals/fileExistsModal');
+      const { FileExistsModal } = await import('../../../../src/plugin/ui/modals/fileExistsModal');
       expect(FileExistsModal).toHaveBeenCalledWith(
         mockApp,
         'Contacts/existing.md',
