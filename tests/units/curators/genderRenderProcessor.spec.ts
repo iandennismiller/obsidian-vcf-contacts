@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { GenderRenderProcessor } from "../../../src/curators/genderRender";
-import { RunType } from "../../../src/interfaces";
+import { RunType } from "../../../src/models/curatorManager";
 
 describe('GenderRenderProcessor', () => {
   describe('processor properties', () => {
     it('should have correct processor properties', () => {
       expect(GenderRenderProcessor.name).toBe('GenderRenderProcessor');
-      expect(GenderRenderProcessor.runType).toBe(RunType.INPROVEMENT);
+      expect(GenderRenderProcessor.runType).toBe(RunType.IMPROVEMENT);
       expect(GenderRenderProcessor.settingPropertyName).toBe('genderRenderProcessor');
       expect(GenderRenderProcessor.settingDescription).toContain('gendered');
       expect(GenderRenderProcessor.settingDefaultValue).toBe(true);
@@ -27,7 +27,7 @@ describe('GenderRenderProcessor', () => {
 
     it('should be an improvement type processor', () => {
       // Gender rendering is an improvement to the UI/display
-      expect(GenderRenderProcessor.runType).toBe(RunType.INPROVEMENT);
+      expect(GenderRenderProcessor.runType).toBe(RunType.IMPROVEMENT);
     });
 
     it('should be enabled by default', () => {

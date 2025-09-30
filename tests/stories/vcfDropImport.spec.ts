@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { App, TFile } from 'obsidian';
 import { setupVCFDropHandler } from '../../src/plugin/services/dropHandler';
-import { ContactsPluginSettings } from 'src/definitions/ContactsPluginSettings';
+import { ContactsPluginSettings } from 'src/plugin/settings';
 
 /**
  * User Story 3: VCF File Drop Import

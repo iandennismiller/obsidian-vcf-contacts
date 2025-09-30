@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { RelatedListProcessor } from "../../../src/curators/relatedList";
-import { RunType } from "../../../src/interfaces";
+import { RunType } from "../../../src/models/curatorManager";
 
 describe('RelatedListProcessor', () => {
   describe('processor properties', () => {
     it('should have correct processor properties', () => {
       expect(RelatedListProcessor.name).toBe('RelatedListProcessor');
-      expect(RelatedListProcessor.runType).toBe(RunType.INPROVEMENT);
+      expect(RelatedListProcessor.runType).toBe(RunType.IMPROVEMENT);
       expect(RelatedListProcessor.settingPropertyName).toBe('relatedListProcessor');
       expect(RelatedListProcessor.settingDescription).toContain('syncs Related markdown');
       expect(RelatedListProcessor.settingDefaultValue).toBe(true);
@@ -21,7 +21,7 @@ describe('RelatedListProcessor', () => {
   describe('processor behavior verification', () => {
     it('should be an IMPROVEMENT processor type', () => {
       // Related list processing is an improvement to data consistency
-      expect(RelatedListProcessor.runType).toBe(RunType.INPROVEMENT);
+      expect(RelatedListProcessor.runType).toBe(RunType.IMPROVEMENT);
     });
 
     it('should be enabled by default', () => {

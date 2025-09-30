@@ -4,7 +4,7 @@ import * as path from 'path';
 import { ContactNote } from 'src/models/contactNote';
 import { VcardFile } from 'src/models/vcardFile';
 import { ContactManagerUtils } from 'src/models/contactManager/contactManagerUtils';
-import { ContactsPluginSettings } from 'src/definitions/ContactsPluginSettings';
+import { ContactsPluginSettings } from 'src/plugin/settings';
 
 /**
  * Sets up a vault 'create' listener that handles .vcf files dropped into the vault.

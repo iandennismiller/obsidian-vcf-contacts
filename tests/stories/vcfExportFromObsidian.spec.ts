@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { App, TFile } from 'obsidian';
 import { VcardFile } from '../../src/models/vcardFile';
-import { ContactsPluginSettings } from 'src/definitions/ContactsPluginSettings';
+import { ContactsPluginSettings } from 'src/plugin/settings';
 
 /**
  * User Story 5: VCF Export from Obsidian

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { App, TFile } from 'obsidian';
 import { ContactNote } from '../../src/models/contactNote';
-import { ContactsPluginSettings } from 'src/definitions/ContactsPluginSettings';
+import { ContactsPluginSettings } from 'src/plugin/settings';
 
 /**
  * User Story 7: Automatic Reverse Relationships

@@ -1,5 +1,5 @@
 import * as path from 'path';
-import { ContactsPluginSettings } from 'src/definitions/ContactsPluginSettings';
+import { ContactsPluginSettings } from 'src/plugin/settings';
 import { VCardWriteQueue } from './writeQueue';
 import { VCardCollection, VCardFileInfo } from './vcardCollection';
 import { VCardManagerFileOperations } from './fileOperations';

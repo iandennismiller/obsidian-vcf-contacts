@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { VcardSyncPostProcessor } from "../../../src/curators/vcardSyncWrite";
-import { RunType } from "../../../src/interfaces";
+import { RunType } from "../../../src/models/curatorManager";
 
 describe('VcardSyncPostProcessor', () => {
   describe('processor properties', () => {
     it('should have correct processor properties', () => {
       expect(VcardSyncPostProcessor.name).toBe('VCard Sync Post Processor');
-      expect(VcardSyncPostProcessor.runType).toBe(RunType.INPROVEMENT);
+      expect(VcardSyncPostProcessor.runType).toBe(RunType.IMPROVEMENT);
       expect(VcardSyncPostProcessor.settingPropertyName).toBe('vcardSyncPostProcessor');
       expect(VcardSyncPostProcessor.settingDescription).toContain('VCard Write Back');
       expect(VcardSyncPostProcessor.settingDefaultValue).toBe(true);
@@ -21,7 +21,7 @@ describe('VcardSyncPostProcessor', () => {
   describe('processor behavior verification', () => {
     it('should be an IMPROVEMENT processor type', () => {
       // VCard sync should be an improvement processor
-      expect(VcardSyncPostProcessor.runType).toBe(RunType.INPROVEMENT);
+      expect(VcardSyncPostProcessor.runType).toBe(RunType.IMPROVEMENT);
     });
 
     it('should have proper setting property name for configuration', () => {
@@ -78,7 +78,7 @@ describe('VcardSyncPostProcessor', () => {
     it('should be designed for post-processing workflow', () => {
       // As a post-processor, it should run after other operations
       expect(VcardSyncPostProcessor.name).toContain('Post Processor');
-      expect(VcardSyncPostProcessor.runType).toBe(RunType.INPROVEMENT);
+      expect(VcardSyncPostProcessor.runType).toBe(RunType.IMPROVEMENT);
     });
   });
 

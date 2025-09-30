@@ -3,9 +3,9 @@ import { Contact, ContactNote, FrontmatterRelationship } from "src/models";
 import { ContactManager } from "src/models/contactManager";
 import { getApp } from "src/plugin/context/sharedAppContext";
 import { getSettings } from "src/plugin/context/sharedSettingsContext";
-import { CuratorProcessor } from "src/definitions/CuratorProcessor";
-import { CuratorQueItem } from "src/definitions/CuratorQueItem";
-import { RunType } from "src/definitions/RunType";
+import { CuratorProcessor } from "src/models/curatorManager/CuratorProcessor";
+import { CuratorQueItem } from "src/models/curatorManager/CuratorQueItem";
+import { RunType } from "src/models/curatorManager/RunType";
 
 /**
  * Get the reciprocal relationship type for a given type
@@ -73,7 +73,7 @@ const render = (queItem: CuratorQueItem): JSX.Element => {
 
 export const RelatedOtherProcessor: CuratorProcessor = {
   name: "RelatedOtherProcessor",
-  runType: RunType.INPROVEMENT,
+  runType: RunType.IMPROVEMENT,
   settingPropertyName: "relatedOtherProcessor",
   settingDescription: "Automatically adds missing reciprocal relationships to contact frontmatter based on other contacts' RELATED fields",
   settingDefaultValue: true,

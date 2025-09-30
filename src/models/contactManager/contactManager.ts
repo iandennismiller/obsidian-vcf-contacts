@@ -4,7 +4,7 @@
  */
 
 import { App, TFile } from 'obsidian';
-import { ContactsPluginSettings } from 'src/definitions/ContactsPluginSettings';
+import { ContactsPluginSettings } from 'src/plugin/settings';
 import { Contact } from '../contactNote';
 
 // Import the optimized components

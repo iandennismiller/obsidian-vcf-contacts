@@ -1,11 +1,11 @@
 import { Notice, App } from 'obsidian';
-import { ContactsPluginSettings } from '../../definitions/ContactsPluginSettings';
+import { ContactsPluginSettings } from 'src/plugin/settings';
 import { ContactManager } from '../contactManager';
 import { Contact } from '../index';
-import { CuratorSettingProperties } from '../../definitions/CuratorSettingProperties';
-import { CuratorProcessor } from '../../definitions/CuratorProcessor';
-import { CuratorQueItem } from '../../definitions/CuratorQueItem';
-import { RunType } from '../../definitions/RunType';
+import { CuratorSettingProperties } from './CuratorSettingProperties';
+import { CuratorProcessor } from './CuratorProcessor';
+import { CuratorQueItem } from './CuratorQueItem';
+import { RunType } from './RunType';
 
 const processors = new Map<string, CuratorProcessor>();
 
@@ -108,7 +108,7 @@ export class CuratorManager {
       }
 
       // Run curator processors
-      const results = await this.process(contact, RunType.INPROVEMENT);
+      const results = await this.process(contact, RunType.IMPROVEMENT);
       
       if (results.length === 0) {
         new Notice('No curator actions needed for this contact');
@@ -136,7 +136,7 @@ export class CuratorManager {
           const contacts = await this.contactManager.getFrontmatterFromFiles([file]);
           const contact = contacts[0];
           if (contact) {
-            const results = await this.process(contact, RunType.INPROVEMENT);
+            const results = await this.process(contact, RunType.IMPROVEMENT);
             totalActions += results.length;
           }
         } catch (error: any) {

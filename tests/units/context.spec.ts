@@ -6,7 +6,7 @@ import {
   onSettingsChange,
   setSettings,
 } from '../../src/plugin/context/sharedSettingsContext';
-import type { ContactsPluginSettings } from 'src/definitions/ContactsPluginSettings';
+import type { ContactsPluginSettings } from 'src/plugin/settings';
 import { afterEach,describe, expect, it, vi } from 'vitest';
 
 const mockSettings: ContactsPluginSettings = {

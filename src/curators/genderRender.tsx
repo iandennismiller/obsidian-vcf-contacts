@@ -2,9 +2,9 @@ import * as React from "react";
 import { Contact, ContactNote } from "src/models";
 import { getApp } from "src/plugin/context/sharedAppContext";
 import { getSettings } from "src/plugin/context/sharedSettingsContext";
-import { CuratorProcessor } from "src/definitions/CuratorProcessor";
-import { CuratorQueItem } from "src/definitions/CuratorQueItem";
-import { RunType } from "src/definitions/RunType";
+import { CuratorProcessor } from "src/models/curatorManager/CuratorProcessor";
+import { CuratorQueItem } from "src/models/curatorManager/CuratorQueItem";
+import { RunType } from "src/models/curatorManager/RunType";
 
 const renderGroup = (queItems: CuratorQueItem[]): JSX.Element => {
   return (
@@ -29,7 +29,7 @@ const render = (queItem: CuratorQueItem): JSX.Element => {
 
 export const GenderRenderProcessor: CuratorProcessor = {
   name: "GenderRenderProcessor",
-  runType: RunType.INPROVEMENT,
+  runType: RunType.IMPROVEMENT,
   settingPropertyName: "genderRenderProcessor",
   settingDescription: "Automatically replaces ungendered relationship terms in Related section with gendered equivalents when contact gender is known",
   settingDefaultValue: true,

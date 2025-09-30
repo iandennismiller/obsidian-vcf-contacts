@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { RelationshipOperations } from '../../../../src/models/contactNote/relationshipOperations';
 import { ContactData } from '../../../../src/models/contactNote/contactData';
 import { App, TFile } from 'obsidian';
-import { ContactsPluginSettings } from 'src/definitions/ContactsPluginSettings';
+import { ContactsPluginSettings } from 'src/plugin/settings';
 
 // Mock TFile properly for instanceof checks
 vi.mock('obsidian', () => ({

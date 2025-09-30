@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { App, TFile } from 'obsidian';
 import { VcardFile } from '../../src/models/vcardFile/vcardFile';
 import { ContactNote } from '../../src/models/contactNote';
-import { ContactsPluginSettings } from 'src/definitions/ContactsPluginSettings';
+import { ContactsPluginSettings } from 'src/plugin/settings';
 
 /**
  * User Story 21: Error Handling and Recovery

@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { RelatedOtherProcessor } from "../../../src/curators/relatedOther";
-import { RunType } from "../../../src/interfaces";
+import { RunType } from "../../../src/models/curatorManager";
 
 describe('RelatedOtherProcessor', () => {
   describe('processor properties', () => {
     it('should have correct processor properties', () => {
       expect(RelatedOtherProcessor.name).toBe('RelatedOtherProcessor');
-      expect(RelatedOtherProcessor.runType).toBe(RunType.INPROVEMENT);
+      expect(RelatedOtherProcessor.runType).toBe(RunType.IMPROVEMENT);
       expect(RelatedOtherProcessor.settingPropertyName).toBe('relatedOtherProcessor');
       expect(RelatedOtherProcessor.settingDescription).toContain('reciprocal relationships');
       expect(RelatedOtherProcessor.settingDefaultValue).toBe(true);
@@ -28,7 +28,7 @@ describe('RelatedOtherProcessor', () => {
     it('should complement other relationship processors', () => {
       // This processor works alongside other relationship processors
       // to provide complete relationship synchronization
-      expect(RelatedOtherProcessor.runType).toBe(RunType.INPROVEMENT);
+      expect(RelatedOtherProcessor.runType).toBe(RunType.IMPROVEMENT);
     });
 
     it('should be enabled by default', () => {
