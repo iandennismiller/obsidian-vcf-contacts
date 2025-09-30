@@ -1,0 +1,239 @@
+# GitHub Copilot Agent Instructions for obsidian-vcf-contacts
+
+## Project Overview
+
+This is an Obsidian plugin that manages contacts using the vCard 4.0 standard format. The plugin enables contact management within Obsidian, including relationship tracking, VCF import/export, and bidirectional synchronization with external contact systems.
+
+**Repository**: https://github.com/iandennismiller/obsidian-vcf-contacts
+
+## Technology Stack
+
+- **Language**: TypeScript 4.7.4
+- **Runtime**: Node.js (v16 or later)
+- **Build Tool**: esbuild
+- **Testing Framework**: Vitest
+- **Linter**: ESLint with TypeScript rules
+- **UI Framework**: React 18.2.0 (for plugin components)
+- **Target Platform**: Obsidian plugin API
+
+## Setup Instructions
+
+### Initial Setup
+
+```bash
+# Install dependencies
+npm install
+
+# Build the plugin
+npm run build
+
+# Run tests
+npm test
+
+# Run tests once (CI mode)
+npm run test:run
+
+# Run tests with coverage
+npm run test:coverage
+
+# Development build (watch mode)
+npm run dev
+
+# Type check only (no emit)
+npm run compile
+```
+
+### Known Issues
+
+- There are existing TypeScript compilation errors in the codebase (166 errors across 37 files). These are not blocking and tests still pass. Do not attempt to fix these unless they are directly related to your task.
+- The build process uses `tsc -noEmit -skipLibCheck` which allows the build to proceed despite these errors.
+
+## Architecture
+
+### Model-Based Organization
+
+The plugin uses a model-based architecture with clear separation of concerns. Core models are located in `src/models/`:
+
+1. **ContactManager** (`src/models/contactManager/`)
+   - Manages collection of contact notes in the vault
+   - Handles contact file detection, scanning, and caching
+   - Implements UID-based contact lookup
+   - Manages bidirectional relationship synchronization
+
+2. **ContactNote** (`src/models/contactNote/`)
+   - Manages individual contact note operations
+   - Handles relationship parsing and management
+   - Gender-aware relationship term processing
+   - Frontmatter and markdown synchronization
+
+3. **VcardFile** (`src/models/vcardFile/`)
+   - VCF file parsing (vCard 4.0 format)
+   - VCF file generation and validation
+   - Conversion between Obsidian frontmatter and vCard format
+
+4. **VcardManager** (`src/models/vcardManager/`)
+   - VCF collection management
+   - Write queue system for controlled file operations
+   - Batch processing of VCF files
+
+5. **CuratorManager** (`src/models/curatorManager/`)
+   - Processor-based system for contact operations
+   - Coordinates processor execution and dependencies
+
+### Curator Processors
+
+Data operations are implemented as processors in `src/curators/`:
+- `genderInferenceProcessor`: Infers gender from relationship terms
+- `genderRenderProcessor`: Renders gender-aware relationship terms
+- `relatedFrontMatterProcessor`: Syncs relationships to frontmatter
+- `relatedListProcessor`: Syncs relationships to Related section
+- `relatedNamespaceUpgradeProcessor`: Migrates old relationship formats
+- `uidProcessor`: Manages contact UIDs
+- `vcardSyncPreProcessor` & `vcardSyncPostProcessor`: VCF sync operations
+
+## Testing
+
+### Test Organization
+
+Tests are organized in `tests/` directory:
+
+- **`tests/units/`**: Unit tests for individual components
+  - `curators/`: Tests for curator processors
+  - `models/`: Tests for model classes
+  
+- **`tests/stories/`**: Integration tests for user stories
+  - End-to-end scenarios like relationship management, VCF sync, etc.
+  
+- **`tests/demo-data/`**: Data validation tests for demo files
+  
+- **`tests/fixtures/`**: Test fixtures and mock data
+  
+- **`tests/setup/`**: Test setup and Obsidian mocks
+
+### Running Tests
+
+```bash
+# Run all tests in watch mode
+npm test
+
+# Run tests once (CI mode)
+npm run test:run
+
+# Run with coverage report
+npm run test:coverage
+```
+
+### Test Configuration
+
+- Testing framework: Vitest (configured in `vitest.config.ts`)
+- Obsidian API is mocked in `tests/setup/emptyObsidianMock.ts`
+- Coverage reports are generated in `./coverage` directory
+- Coverage includes all `src/**/*.ts` files except `.tsx` and `.d.ts` files
+
+## Coding Standards
+
+### TypeScript Guidelines
+
+- Use **strict TypeScript** with proper typing
+- Follow configured **ESLint rules**
+- Add **JSDoc comments** for public methods
+- Keep related functionality within appropriate models
+
+### Architecture Guidelines
+
+1. **Model-Based Organization**: Place functionality in appropriate domain models
+2. **Processor Pattern**: Implement data operations as processors when possible
+3. **Separation of Concerns**: Keep parsing, business logic, and UI separate
+4. **Dependency Injection**: Use dependency injection for testability
+5. **Error Handling**: Implement proper error handling and logging
+
+### File Organization
+
+- Source code: `src/`
+- Tests: `tests/`
+- Documentation: `docs/`
+- Build output: `main.js` (generated by esbuild)
+- Styles: `styles.css`
+
+## Development Workflow
+
+1. **Make changes** following the coding standards
+2. **Test changes**: `npm test`
+3. **Type check**: `npm run compile` (note: existing errors are expected)
+4. **Build**: `npm run build`
+5. **Commit** with clear messages
+
+### When Making Changes
+
+- Keep functionality within the appropriate model
+- Add or update tests for new functionality
+- Update documentation if adding new features
+- Ensure existing tests still pass
+
+## Documentation
+
+Comprehensive documentation is available in the `docs/` directory:
+
+- **`docs/development.md`**: Detailed development guide (start here)
+- **`docs/getting-started.md`**: User guide for getting started
+- **`docs/features.md`**: Feature overview
+- **`docs/vcard-format.md`**: VCard format guide
+- **`docs/user-stories.md`**: Usage scenarios
+
+## Common Tasks
+
+### Adding a New Curator Processor
+
+1. Create processor file in `src/curators/`
+2. Implement the processor interface from `src/interfaces/CuratorProcessor.ts`
+3. Register processor in `src/models/curatorManager/curatorManager.ts`
+4. Add tests in `tests/units/curators/`
+
+### Modifying Contact Operations
+
+1. Locate the appropriate model (ContactNote, ContactManager, etc.)
+2. Add functionality to the relevant operation file
+3. Update types if needed
+4. Add or update tests in `tests/units/models/`
+
+### Working with VCF Files
+
+1. Modify parsing in `src/models/vcardFile/parsing.ts`
+2. Modify generation in `src/models/vcardFile/generation.ts`
+3. Update tests in `tests/units/models/vcardFile/`
+4. Test with demo VCF files in `docs/demo-data/vcf/`
+
+## Important Notes
+
+- The plugin targets the Obsidian API - be mindful of platform constraints
+- Contact relationships are UID-based, not name-based
+- Gender-aware processing is a key feature - test relationship terms carefully
+- The write queue system prevents file conflicts - respect it when modifying file operations
+- Demo data is available in `docs/demo-data/` for testing
+
+## Build Configuration
+
+- **esbuild**: Configured in `esbuild.config.mjs`
+  - Entry point: `src/main.ts`
+  - Output: `main.js`
+  - External modules: Obsidian API and Codemirror packages
+  - Target: ES2022
+
+- **TypeScript**: Configured in `tsconfig.json`
+  - Strict mode enabled
+  - Target: ES2022
+  - Module: ESNext
+
+## Plugin Structure
+
+- **Entry point**: `src/main.ts`
+- **Plugin class**: Main Obsidian plugin implementation
+- **Settings**: `src/plugin/settings.ts` and `src/interfaces/ContactsPluginSettings.ts`
+- **UI Components**: `src/plugin/ui/`
+- **Services**: `src/plugin/services/`
+
+## Need Help?
+
+- Review the [Development Documentation](docs/development.md) for comprehensive guidance
+- Check [GitHub Issues](https://github.com/iandennismiller/obsidian-vcf-contacts/issues) for known issues
+- See [User Stories](docs/user-stories.md) for usage scenarios and examples
