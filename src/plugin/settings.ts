@@ -4,7 +4,21 @@ import { CuratorSettingProperties } from "src/models/curatorManager/CuratorSetti
 import { curatorService } from "src/models/curatorManager/curatorManager";
 import ContactsPlugin from "src/main";
 import { FolderSuggest } from "src/plugin/ui/FolderSuggest";
-import { ContactsPluginSettings } from 'src/plugin/settings'
+
+export interface ContactsPluginSettings {
+  contactsFolder: string;
+  defaultHashtag: string;
+  vcfStorageMethod: 'single-vcf' | 'vcf-folder';
+  vcfFilename: string;
+  vcfWatchFolder: string;
+  vcfWatchEnabled: boolean;
+  vcfWatchPollingInterval: number;
+  vcfWriteBackEnabled: boolean;
+  vcfCustomizeIgnoreList: boolean;
+  vcfIgnoreFilenames: string[];
+  vcfIgnoreUIDs: string[];
+  [key: string]: string|boolean|number|string[];
+}
 
 const curatorSetting = curatorService.settings();
 const curatorSettingDefaults = curatorSetting.reduce((acc:Record<string, string|boolean>, setting) => {

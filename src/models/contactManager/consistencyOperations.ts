@@ -142,7 +142,7 @@ export class ConsistencyOperations {
       // Note: vcardSyncPostProcessor is already disabled by the caller
       await curatorService.process(contacts, RunType.IMMEDIATELY);
       await curatorService.process(contacts, RunType.IMPROVEMENT);
-      await curatorService.process(contacts, RunType.UPCOMMING);
+      await curatorService.process(contacts, RunType.UPCOMING);
       
       // Check which contacts had their REV timestamp updated
       for (const [uid, taskItem] of taskList) {
