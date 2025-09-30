@@ -87,17 +87,20 @@ export function createMockSettings(overrides: Partial<ContactsPluginSettings> = 
   const defaultSettings: ContactsPluginSettings = {
     contactsFolder: 'Contacts',
     defaultHashtag: '',
+    vcfStorageMethod: 'single-vcf',
+    vcfFilename: 'contacts.vcf',
     vcfWatchFolder: '',
     vcfWatchEnabled: false,
     vcfWatchPollingInterval: 30,
     vcfWriteBackEnabled: false,
+    vcfCustomizeIgnoreList: false,
     vcfIgnoreFilenames: [],
     vcfIgnoreUIDs: [],
     enableSync: true,
     logLevel: 'INFO',
   };
 
-  return { ...defaultSettings, ...overrides };
+  return { ...defaultSettings, ...overrides } as ContactsPluginSettings;
 }
 
 /**
@@ -123,7 +126,7 @@ export function createMockContactNote() {
         contactName: 'Jane Doe',
         originalType: 'spouse'
       }
-    ] as ParsedRelationship[]),
+    ] as any as ParsedRelationship[]),
     parseFrontmatterRelationships: vi.fn().mockResolvedValue([
       {
         key: 'spouse',

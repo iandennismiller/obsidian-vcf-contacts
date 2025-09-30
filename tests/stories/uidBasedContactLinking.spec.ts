@@ -193,8 +193,9 @@ RELATED[friend]: urn:uuid:target-456
 
     expect(syncResult.success).toBe(true);
     expect(syncResult.updatedRelationships).toHaveLength(1);
-    expect(syncResult.updatedRelationships[0].newName).toBe('New Target Name');
-    expect(syncResult.updatedRelationships[0].uid).toBe('target-456');
+    const firstRel = syncResult.updatedRelationships![0];
+    expect(firstRel.newName).toBe('New Target Name');
+    expect(firstRel.uid).toBe('target-456');
   });
 
   it('should prefer UID-based linking over name-based when both exist', async () => {
@@ -469,7 +470,7 @@ RELATED[mentor]: urn:uuid:old-target-456
     });
 
     invalidUIDs.forEach(uid => {
-      expect(ContactNote.isValidUID(uid)).toBe(false);
+      expect(ContactNote.isValidUID(uid as any)).toBe(false);
     });
   });
 

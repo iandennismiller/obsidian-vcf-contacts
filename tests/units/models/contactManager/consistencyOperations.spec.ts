@@ -77,7 +77,7 @@ describe('ConsistencyOperations', () => {
   describe('ensureContactDataConsistency', () => {
     it('should process all contact files for consistency', async () => {
       const { curatorService } = await import('../../../../src/models/curatorManager/curatorManager');
-      vi.mocked(curatorService.process).mockResolvedValue(undefined);
+      vi.mocked(curatorService.process).mockResolvedValue([]);
 
       await consistencyOperations.ensureContactDataConsistency(5);
 

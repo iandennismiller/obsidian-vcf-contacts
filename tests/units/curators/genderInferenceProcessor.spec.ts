@@ -41,24 +41,30 @@ describe('GenderInferenceProcessor', () => {
       // Verify the logic respects the processor setting
       const processorSource = GenderInferenceProcessor.process.toString();
       expect(processorSource).toContain('activeProcessor');
-      expect(processorSource).toContain('getSettings') || expect(processorSource).toContain('__vite_ssr_import');
+      expect(
+        processorSource.includes('getSettings') || processorSource.includes('__vite_ssr_import')
+      ).toBe(true);
     });
 
     it('should work with relationship data', () => {
       // Should process relationship data for gender inference
       const processorSource = GenderInferenceProcessor.process.toString();
-      expect(processorSource).toContain('contact') && 
-        (expect(processorSource).toContain('relationship') ||
-         expect(processorSource).toContain('Related') ||
-         expect(processorSource).toContain('parseRelatedSection'));
+      expect(
+        processorSource.includes('contact') && 
+        (processorSource.includes('relationship') ||
+         processorSource.includes('Related') ||
+         processorSource.includes('parseRelatedSection'))
+      ).toBe(true);
     });
 
     it('should handle gender inference logic', () => {
       // Should contain logic for inferring gender from relationships
       const processorSource = GenderInferenceProcessor.process.toString();
-      expect(processorSource).toContain('inferGenderFromRelationship') ||
-        expect(processorSource).toContain('gender') ||
-        expect(processorSource).toContain('updateGender');
+      expect(
+        processorSource.includes('inferGenderFromRelationship') ||
+        processorSource.includes('gender') ||
+        processorSource.includes('updateGender')
+      ).toBe(true);
     });
   });
 
@@ -66,17 +72,21 @@ describe('GenderInferenceProcessor', () => {
     it('should analyze Related section relationships', () => {
       // Should parse and analyze Related section for gender clues
       const processorSource = GenderInferenceProcessor.process.toString();
-      expect(processorSource).toContain('parseRelatedSection') ||
-        expect(processorSource).toContain('Related') ||
-        expect(processorSource).toContain('relationship');
+      expect(
+        processorSource.includes('parseRelatedSection') ||
+        processorSource.includes('Related') ||
+        processorSource.includes('relationship')
+      ).toBe(true);
     });
 
     it('should infer gender from relationship types', () => {
       // Should use relationship types to infer gender of related contacts
       const processorSource = GenderInferenceProcessor.process.toString();
-      expect(processorSource).toContain('inferGenderFromRelationship') ||
-        expect(processorSource).toContain('gender') ||
-        expect(processorSource).toContain('type');
+      expect(
+        processorSource.includes('inferGenderFromRelationship') ||
+        processorSource.includes('gender') ||
+        processorSource.includes('type')
+      ).toBe(true);
     });
   });
 
@@ -84,8 +94,10 @@ describe('GenderInferenceProcessor', () => {
     it('should use ContactNote for operations', () => {
       // Should use ContactNote abstraction
       const processorSource = GenderInferenceProcessor.process.toString();
-      expect(processorSource).toContain('ContactNote') ||
-        expect(processorSource).toContain('contact');
+      expect(
+        processorSource.includes('ContactNote') ||
+        processorSource.includes('contact')
+      ).toBe(true);
     });
 
     it('should return proper promise structure', () => {
@@ -97,9 +109,11 @@ describe('GenderInferenceProcessor', () => {
     it('should handle contact resolution', () => {
       // Should resolve related contacts for gender updates
       const processorSource = GenderInferenceProcessor.process.toString();
-      expect(processorSource).toContain('resolveContact') ||
-        expect(processorSource).toContain('resolve') ||
-        expect(processorSource).toContain('related');
+      expect(
+        processorSource.includes('resolveContact') ||
+        processorSource.includes('resolve') ||
+        processorSource.includes('related')
+      ).toBe(true);
     });
   });
 
@@ -107,26 +121,32 @@ describe('GenderInferenceProcessor', () => {
     it('should provide meaningful success messages', () => {
       // Should inform users about gender inferences made
       const processorSource = GenderInferenceProcessor.process.toString();
-      expect(processorSource).toContain('message') ||
-        expect(processorSource).toContain('Inferred') ||
-        expect(processorSource).toContain('gender');
+      expect(
+        processorSource.includes('message') ||
+        processorSource.includes('Inferred') ||
+        processorSource.includes('gender')
+      ).toBe(true);
     });
 
     it('should return CuratorQueItem when inferences are made', () => {
       // Should return proper result structure when gender is inferred
       const processorSource = GenderInferenceProcessor.process.toString();
-      expect(processorSource).toContain('name') ||
-        expect(processorSource).toContain('runType') ||
-        expect(processorSource).toContain('file') ||
-        expect(processorSource).toContain('this.name');
+      expect(
+        processorSource.includes('name') ||
+        processorSource.includes('runType') ||
+        processorSource.includes('file') ||
+        processorSource.includes('this.name')
+      ).toBe(true);
     });
 
     it('should handle inference counting', () => {
       // Should track and report the number of inferences made
       const processorSource = GenderInferenceProcessor.process.toString();
-      expect(processorSource).toContain('inferenceCount') ||
-        expect(processorSource).toContain('count') ||
-        expect(processorSource).toContain('contact');
+      expect(
+        processorSource.includes('inferenceCount') ||
+        processorSource.includes('count') ||
+        processorSource.includes('contact')
+      ).toBe(true);
     });
   });
 

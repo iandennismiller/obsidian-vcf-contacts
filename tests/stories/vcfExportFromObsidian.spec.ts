@@ -29,7 +29,7 @@ describe('VCF Export from Obsidian Story', () => {
     mockSettings = {
       contactsFolder: 'Contacts',
       defaultHashtag: '#Contact',
-      vcfStorageMethod: 'single-file',
+      vcfStorageMethod: 'single-vcf',
       vcfFilename: 'exported-contacts.vcf',
       vcfWatchFolder: '/test/vcf',
       vcfWatchEnabled: false,

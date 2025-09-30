@@ -92,13 +92,13 @@ describe('Demo Markdown Data Validation', () => {
       ];
 
       for (const testCase of testCases) {
-        const slug = createNameSlug(testCase.expectedFields);
+        const slug = createNameSlug(testCase.expectedFields as any);
         expect(slug).toBeDefined();
         expect(typeof slug).toBe('string');
         expect(slug.length).toBeGreaterThan(0);
         
         // Test filename generation
-        const filename = createFileName(testCase.expectedFields);
+        const filename = createFileName(testCase.expectedFields as any);
         expect(filename).toBe(slug + '.md');
       }
     });
@@ -120,8 +120,8 @@ describe('Demo Markdown Data Validation', () => {
       ];
 
       specialCharCases.forEach(({ records, description }) => {
-        expect(() => createNameSlug(records)).not.toThrow();
-        const slug = createNameSlug(records);
+        expect(() => createNameSlug(records as any)).not.toThrow();
+        const slug = createNameSlug(records as any);
         expect(slug).toBeDefined();
         expect(slug.length).toBeGreaterThan(0);
       });

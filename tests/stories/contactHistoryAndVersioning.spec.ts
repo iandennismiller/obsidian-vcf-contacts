@@ -166,8 +166,8 @@ Original notes
       expect(contactWithRev.FN).toBe('Has REV Contact');
     } else if (hasRevField(contactWithoutRev) && !hasRevField(contactWithRev)) {
       // Contact without REV should get REV field added
-      contactWithoutRev.REV = generateRevTimestamp();
-      expect(contactWithoutRev.REV).toBeDefined();
+      (contactWithoutRev as any).REV = generateRevTimestamp();
+      expect((contactWithoutRev as any).REV).toBeDefined();
     }
   });
 
@@ -268,12 +268,12 @@ END:VCARD`;
     ];
 
     // Simulate version history analysis
-    const versionHistory = [];
+    const versionHistory: Array<{ fromVersion: number; toVersion: number; timestamp: string; changes: any[] }> = [];
     for (let i = 1; i < contactVersions.length; i++) {
       const prev = contactVersions[i - 1];
       const curr = contactVersions[i];
       
-      const changes = [];
+      const changes: Array<{ field: string; from: any; to: any }> = [];
       Object.keys({ ...prev, ...curr }).forEach(key => {
         if (key === 'version') return;
         

@@ -15,7 +15,8 @@ const mockSettings = {
 
 const mockContactManager = {
   getContactByFile: vi.fn(),
-  getAllContactFiles: vi.fn()
+  getAllContactFiles: vi.fn(),
+  getFrontmatterFromFiles: vi.fn()
 } as any;
 
 const mockPlugin = {
@@ -109,7 +110,7 @@ describe('CuratorManager', () => {
     const mockContact = {
       data: { FN: 'Test Contact' },
       file: { path: 'test.md' }
-    };
+    } as any;
 
     it('should process single contact', async () => {
       curatorManager.register(mockProcessorWithResult);
@@ -208,24 +209,24 @@ describe('CuratorManager', () => {
       const mockContact = { data: { FN: 'Test' }, file: mockFile };
       
       mockApp.workspace.getActiveFile.mockReturnValue(mockFile);
-      mockContactManager.getContactByFile.mockResolvedValue(mockContact);
+      mockContactManager.getFrontmatterFromFiles.mockResolvedValue([mockContact]);
       
       // Register a processor that returns results
       curatorManager.register(mockProcessorWithResult);
       
       await curatorManager.runCuratorProcessorsOnCurrent();
       
-      expect(mockContactManager.getContactByFile).toHaveBeenCalledWith(mockFile);
+      expect(mockContactManager.getFrontmatterFromFiles).toHaveBeenCalledWith([mockFile]);
     });
 
     it('should handle contact loading failure', async () => {
       const mockFile = { path: 'Contacts/contact.md' };
       mockApp.workspace.getActiveFile.mockReturnValue(mockFile);
-      mockContactManager.getContactByFile.mockResolvedValue(null);
+      mockContactManager.getFrontmatterFromFiles.mockResolvedValue([]);
       
       await curatorManager.runCuratorProcessorsOnCurrent();
       
-      expect(mockContactManager.getContactByFile).toHaveBeenCalledWith(mockFile);
+      expect(mockContactManager.getFrontmatterFromFiles).toHaveBeenCalledWith([mockFile]);
     });
 
     it('should handle processing errors gracefully', async () => {
@@ -233,7 +234,7 @@ describe('CuratorManager', () => {
       const mockContact = { data: { FN: 'Test' }, file: mockFile };
       
       mockApp.workspace.getActiveFile.mockReturnValue(mockFile);
-      mockContactManager.getContactByFile.mockRejectedValue(new Error('Test error'));
+      mockContactManager.getFrontmatterFromFiles.mockRejectedValue(new Error('Test error'));
       
       // Should not throw
       await expect(curatorManager.runCuratorProcessorsOnCurrent()).resolves.not.toThrow();
@@ -252,16 +253,16 @@ describe('CuratorManager', () => {
       ];
       
       mockContactManager.getAllContactFiles.mockReturnValue(mockFiles);
-      mockContactManager.getContactByFile
-        .mockResolvedValueOnce(mockContacts[0])
-        .mockResolvedValueOnce(mockContacts[1]);
+      mockContactManager.getFrontmatterFromFiles
+        .mockResolvedValueOnce([mockContacts[0]])
+        .mockResolvedValueOnce([mockContacts[1]]);
       
       curatorManager.register(mockProcessorWithResult);
       
       await curatorManager.runCuratorProcessorsOnAll();
       
       expect(mockContactManager.getAllContactFiles).toHaveBeenCalled();
-      expect(mockContactManager.getContactByFile).toHaveBeenCalledTimes(2);
+      expect(mockContactManager.getFrontmatterFromFiles).toHaveBeenCalledTimes(2);
     });
 
     it('should handle individual contact processing errors', async () => {
@@ -271,13 +272,13 @@ describe('CuratorManager', () => {
       ];
       
       mockContactManager.getAllContactFiles.mockReturnValue(mockFiles);
-      mockContactManager.getContactByFile
+      mockContactManager.getFrontmatterFromFiles
         .mockRejectedValueOnce(new Error('Error on contact 1'))
-        .mockResolvedValueOnce({ data: { FN: 'Contact 2' }, file: mockFiles[1] });
+        .mockResolvedValueOnce([{ data: { FN: 'Contact 2' }, file: mockFiles[1] }]);
       
       // Should not throw and continue processing
       await expect(curatorManager.runCuratorProcessorsOnAll()).resolves.not.toThrow();
-      expect(mockContactManager.getContactByFile).toHaveBeenCalledTimes(2);
+      expect(mockContactManager.getFrontmatterFromFiles).toHaveBeenCalledTimes(2);
     });
 
     it('should handle overall processing errors gracefully', async () => {
@@ -293,13 +294,13 @@ describe('CuratorManager', () => {
       const mockFiles = [{ path: 'Contacts/contact1.md', name: 'contact1.md' }];
       
       mockContactManager.getAllContactFiles.mockReturnValue(mockFiles);
-      mockContactManager.getContactByFile.mockResolvedValue(null);
+      mockContactManager.getFrontmatterFromFiles.mockResolvedValue([]);
       
       curatorManager.register(mockProcessorWithResult);
       
       await curatorManager.runCuratorProcessorsOnAll();
       
-      expect(mockContactManager.getContactByFile).toHaveBeenCalledWith(mockFiles[0]);
+      expect(mockContactManager.getFrontmatterFromFiles).toHaveBeenCalledWith([mockFiles[0]]);
       // Processing should continue even with null contact
     });
   });
@@ -319,7 +320,7 @@ describe('CuratorManager', () => {
     });
 
     it('should process contacts via service', async () => {
-      const mockContact = { data: { FN: 'Test' }, file: { path: 'test.md' } };
+      const mockContact = { data: { FN: 'Test' }, file: { path: 'test.md' } } as any;
       
       curatorService.register(mockProcessorWithResult);
       const results = await curatorService.process(mockContact, RunType.INPROVEMENT);
@@ -341,7 +342,7 @@ describe('CuratorManager', () => {
       
       // Should handle error gracefully
       await expect(curatorManager.process(
-        { data: { FN: 'Test' }, file: { path: 'test.md' } }, 
+        { data: { FN: 'Test' }, file: { path: 'test.md' } } as any, 
         RunType.IMMEDIATELY
       )).rejects.toThrow('Processing failed');
     });
