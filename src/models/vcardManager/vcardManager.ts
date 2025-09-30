@@ -104,6 +104,8 @@ export class VcardManager {
 
   /**
    * Reads and parses a VCard file
+   * @param {string} filePath - Path to the VCard file
+   * @returns {Promise<Array|null>} Promise resolving to an array of [slug, vCardObject] tuples or null if parsing fails
    */
   async readAndParseVCard(filePath: string): Promise<Array<[string, VCardForObsidianRecord]> | null> {
     return this.collection.readAndParseVCard(filePath);
@@ -243,8 +245,8 @@ export class VcardManager {
    * duplicated in syncWatcher. It reads, parses, and filters VCF content
    * based on ignore settings.
    * 
-   * @param filePath - Path to the VCF file to process
-   * @returns Promise resolving to array of [slug, record] tuples for valid contacts
+   * @param {string} filePath - Path to the VCF file to process
+   * @returns {Promise<Array>} Promise resolving to array of [slug, record] tuples for valid contacts
    */
   async processVCFContents(filePath: string): Promise<Array<[string, VCardForObsidianRecord]>> {
     try {
