@@ -137,15 +137,15 @@ export class ContactNote {
   /**
    * Update a single frontmatter value
    */
-  async updateFrontmatterValue(key: string, value: string): Promise<void> {
-    return this.contactData.updateFrontmatterValue(key, value);
+  async updateFrontmatterValue(key: string, value: string, skipRevUpdate = false): Promise<void> {
+    return this.contactData.updateFrontmatterValue(key, value, skipRevUpdate);
   }
 
   /**
    * Update multiple frontmatter values in a single operation
    */
-  async updateMultipleFrontmatterValues(updates: Record<string, string>): Promise<void> {
-    return this.contactData.updateMultipleFrontmatterValues(updates);
+  async updateMultipleFrontmatterValues(updates: Record<string, string>, skipRevUpdate = false): Promise<void> {
+    return this.contactData.updateMultipleFrontmatterValues(updates, skipRevUpdate);
   }
 
   // === Relationship Operations (delegated to RelationshipOperations) ===
@@ -945,7 +945,7 @@ export class ContactNote {
    * Generate REV timestamp for vCard compatibility
    */
   generateRevTimestamp(): string {
-    return new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
+    return new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
   }
 
   /**
