@@ -65,8 +65,8 @@ export const RelatedNamespaceUpgradeProcessor: CuratorProcessor = {
       for (const relationship of frontmatterRelationships) {
         try {
           // Only process name-based relationships
-          if (relationship.parsedValue.type !== 'name') {
-            // Already UID-based, skip
+          if (!relationship.parsedValue || relationship.parsedValue.type !== 'name') {
+            // Already UID-based or no parsed value, skip
             continue;
           }
           
@@ -144,7 +144,7 @@ export const RelatedNamespaceUpgradeProcessor: CuratorProcessor = {
             `[RelatedNamespaceUpgradeProcessor] Upgraded relationship in ${contact.file.basename}: ${relationship.type} from name:${contactName} to ${upgradedValue}`
           );
           
-        } catch (error) {
+        } catch (error: any) {
           console.error(
             `[RelatedNamespaceUpgradeProcessor] Error processing relationship ${relationship.type} -> ${relationship.value}: ${error.message}`
           );
@@ -171,7 +171,7 @@ export const RelatedNamespaceUpgradeProcessor: CuratorProcessor = {
       
       return Promise.resolve(undefined);
       
-    } catch (error) {
+    } catch (error: any) {
       console.error(`[RelatedNamespaceUpgradeProcessor] Error processing contact ${contact.file.name}: ${error.message}`);
       return Promise.resolve(undefined);
     }

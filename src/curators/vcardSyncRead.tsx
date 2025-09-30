@@ -55,7 +55,7 @@ export const VcardSyncPreProcessor: CuratorProcessor = {
       }
 
       // Find VCF file matching this contact's UID
-      const vcfFilePath = await vcardManager.findVCFFileByUID(contact.data["UID"]);
+      const vcfFilePath = await vcardManager.findVCardFileByUID(contact.data["UID"]);
       if (!vcfFilePath) {
         return Promise.resolve(undefined);
       }
@@ -66,13 +66,13 @@ export const VcardSyncPreProcessor: CuratorProcessor = {
       }
 
       // Read and parse the VCF file
-      const parsedEntries = await vcardManager.readAndParseVCF(vcfFilePath);
+      const parsedEntries = await vcardManager.readAndParseVCard(vcfFilePath);
       if (!parsedEntries || parsedEntries.length === 0) {
         return Promise.resolve(undefined);
       }
 
       // Find the matching entry (should be the first one since we found by UID)
-      const vcfRecord = parsedEntries.find(([slug, record]) => record.UID === contact.data["UID"]);
+      const vcfRecord = parsedEntries.find(([slug, record]: [string, any]) => record.UID === contact.data["UID"]);
       if (!vcfRecord) {
         return Promise.resolve(undefined);
       }
@@ -98,7 +98,7 @@ export const VcardSyncPreProcessor: CuratorProcessor = {
       let vcfFrontmatter: Record<string, any>;
       try {
         vcfFrontmatter = parseYaml(frontmatterMatch[1]) || {};
-      } catch (error) {
+      } catch (error: any) {
         console.error(`[VcfSyncPreProcessor] Error parsing VCF frontmatter: ${error.message}`);
         return Promise.resolve(undefined);
       }
@@ -131,7 +131,7 @@ export const VcardSyncPreProcessor: CuratorProcessor = {
 
       return Promise.resolve(undefined);
 
-    } catch (error) {
+    } catch (error: any) {
       console.error(`[VcfSyncPreProcessor] Error processing contact ${contact.file.name}: ${error.message}`);
       return Promise.resolve(undefined);
     }

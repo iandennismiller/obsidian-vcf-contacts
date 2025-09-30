@@ -81,7 +81,7 @@ export class VcardFile {
         return null;
       }
       return new VcardFile(content);
-    } catch (error) {
+    } catch (error: any) {
       console.log(`[VcardFile] Error reading VCF file ${filePath}: ${error.message}`);
       return null;
     }
@@ -191,7 +191,7 @@ export class VcardFile {
     try {
       await fs.writeFile(filePath, this.data, 'utf-8');
       return true;
-    } catch (error) {
+    } catch (error: any) {
       console.log(`[VcardFile] Error writing VCF file ${filePath}: ${error.message}`);
       return false;
     }

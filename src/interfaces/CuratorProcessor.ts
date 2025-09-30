@@ -6,7 +6,7 @@
  * @module CuratorProcessor
  */
 
-import { Contact } from "src";
+import { Contact } from "../models/contactNote/types";
 import { RunType } from "./RunType";
 import { CuratorQueItem } from "./CuratorQueItem";
 

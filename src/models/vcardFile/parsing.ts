@@ -27,7 +27,7 @@ export class VCardParser {
       try {
         const slug = createContactSlug(vCardObject);
         yield [slug, vCardObject];
-      } catch (error) {
+      } catch (error: any) {
         yield [undefined, vCardObject];
       }
     }

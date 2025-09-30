@@ -56,7 +56,7 @@ export default class ContactsPlugin extends Plugin {
 		// Ensure contact data consistency during initialization
 		try {
 			await this.contactManager.ensureContactDataConsistency();
-		} catch (error) {
+		} catch (error: any) {
 			console.log(`Error during contact data consistency check: ${error.message}`);
 		}
 

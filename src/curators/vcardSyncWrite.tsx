@@ -59,7 +59,7 @@ export const VcardSyncPostProcessor: CuratorProcessor = {
           vcfResult.errors.forEach(error => console.warn(`  ${error.message}`));
         }
         return vcfResult.vcards || null;
-      } catch (error) {
+      } catch (error: any) {
         console.error(`[VcardSyncPostProcessor] Error generating VCF for ${file.basename}: ${error.message}`);
         return null;
       }
@@ -82,7 +82,7 @@ export const VcardSyncPostProcessor: CuratorProcessor = {
       }
 
       // Check if VCF file exists for this UID
-      const existingVCFPath = await vcardManager.findVCFFileByUID(contactUID);
+      const existingVCFPath = await vcardManager.findVCardFileByUID(contactUID);
       
       let shouldWriteVCF = false;
       let action = '';
@@ -96,10 +96,10 @@ export const VcardSyncPostProcessor: CuratorProcessor = {
         // VCF exists - check REV timestamps
         try {
           const vcfContent = await VcardFile.readVCFFile(existingVCFPath);
-          const parsedEntries = await vcardManager.readAndParseVCF(existingVCFPath);
+          const parsedEntries = await vcardManager.readAndParseVCard(existingVCFPath);
           
           if (parsedEntries && parsedEntries.length > 0) {
-            const vcfRecord = parsedEntries.find(([slug, record]) => record.UID === contactUID);
+            const vcfRecord = parsedEntries.find(([slug, record]: [string, any]) => record.UID === contactUID);
             if (vcfRecord) {
               const [slug, record] = vcfRecord;
               const vcfREV = record.REV;
@@ -119,7 +119,7 @@ export const VcardSyncPostProcessor: CuratorProcessor = {
               }
             }
           }
-        } catch (error) {
+        } catch (error: any) {
           console.error(`[VcardSyncPostProcessor] Error reading existing VCF ${existingVCFPath}: ${error.message}`);
           // If we can't read the VCF, assume we should recreate it
           shouldWriteVCF = true;
@@ -158,7 +158,7 @@ export const VcardSyncPostProcessor: CuratorProcessor = {
         renderGroup
       });
       
-    } catch (error) {
+    } catch (error: any) {
       console.error(`[VcardSyncPostProcessor] Error processing contact ${contact.file.name}: ${error.message}`);
       return Promise.resolve(undefined);
     }

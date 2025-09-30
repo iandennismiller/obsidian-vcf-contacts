@@ -38,7 +38,7 @@ export class ContactManagerUtils {
         const filePath = normalizePath(fileJoin(folderPath, filename));
         await ContactManagerUtils.handleFileCreation(app, filePath, content);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating contact file:', error);
       new Notice('Failed to create contact file');
     }
@@ -71,7 +71,7 @@ export class ContactManagerUtils {
         await curatorService.process(contact, RunType.IMMEDIATELY);
         ContactManagerUtils.openFile(app, createdFile);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error handling file creation:', error);
       new Notice('Failed to handle file creation');
     }
@@ -115,7 +115,7 @@ export class ContactManagerUtils {
         const leaf = app.workspace.getLeaf();
         await leaf.openFile(file, { active: true });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error opening created file:', error);
     }
   }
@@ -131,7 +131,7 @@ export class ContactManagerUtils {
       // if we can create a file name then we meet the minimum requirements
       createNameSlug(vCardObject);
       return Promise.resolve(vCardObject);
-    } catch (error) {
+    } catch (error: any) {
       // Add a default name if none exists
       if (!vCardObject.FN && !vCardObject["N.GN"] && !vCardObject["N.FN"]) {
         vCardObject.FN = "Unnamed Contact";

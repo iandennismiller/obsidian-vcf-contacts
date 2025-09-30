@@ -3,7 +3,7 @@ import { Contact, ContactNote } from "src/models";
 import { getApp } from "src/plugin/context/sharedAppContext";
 import { getSettings } from "src/plugin/context/sharedSettingsContext";
 import { openFilePicker } from "src/plugin/ui/fileOperations";
-import { RunType } from "src/interfaces/RunType.d";
+import { RunType } from "src/interfaces/RunType";
 import { curatorService } from "src/models/curatorManager/curatorManager";
 
 const resizeAndCropImage = (img: HTMLImageElement, outputSize: number): HTMLCanvasElement => {

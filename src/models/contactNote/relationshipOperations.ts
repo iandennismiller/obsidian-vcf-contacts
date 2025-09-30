@@ -159,7 +159,7 @@ export class RelationshipOperations {
       });
 
       return matchingFiles.length > 0 ? matchingFiles[0] : null;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error finding contact by name:', error);
       return null;
     }
@@ -188,7 +188,7 @@ export class RelationshipOperations {
         file: file,
         gender: gender
       };
-    } catch (error) {
+    } catch (error: any) {
       console.log(`[RelationshipOperations] Error resolving contact ${contactName}: ${error.message}`);
       return null;
     }

@@ -65,7 +65,7 @@ export const RelatedListProcessor: CuratorProcessor = {
       for (const relRel of relatedSectionRelationships) {
         // Check if this relationship is missing from frontmatter
         const relationshipExists = currentFrontmatterRelationships.some(fmRel => 
-          fmRel.parsedValue.type === 'name' &&
+          fmRel.parsedValue && fmRel.parsedValue.type === 'name' &&
           fmRel.parsedValue.value === relRel.contactName && 
           fmRel.type.toLowerCase() === relRel.type.toLowerCase()
         );
@@ -119,7 +119,7 @@ export const RelatedListProcessor: CuratorProcessor = {
         renderGroup
       });
       
-    } catch (error) {
+    } catch (error: any) {
       console.error(`[RelatedListProcessor] Error processing contact ${contact.file.name}: ${error.message}`);
       return Promise.resolve(undefined);
     }

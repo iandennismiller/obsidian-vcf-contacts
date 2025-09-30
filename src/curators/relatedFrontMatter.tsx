@@ -63,9 +63,9 @@ export const RelatedFrontMatterProcessor: CuratorProcessor = {
       for (const fmRel of frontmatterRelationships) {
         let contactName = '';
         
-        if (fmRel.parsedValue.type === 'name') {
+        if (fmRel.parsedValue && fmRel.parsedValue.type === 'name') {
           contactName = fmRel.parsedValue.value;
-        } else if (fmRel.parsedValue.type === 'uid') {
+        } else if (fmRel.parsedValue && fmRel.parsedValue.type === 'uid') {
           // Try to resolve UID to name
           const resolvedContact = await contactNote.resolveContact(fmRel.parsedValue.value);
           contactName = resolvedContact?.name || fmRel.parsedValue.value;
@@ -121,7 +121,7 @@ export const RelatedFrontMatterProcessor: CuratorProcessor = {
         renderGroup
       });
       
-    } catch (error) {
+    } catch (error: any) {
       console.error(`[RelatedFrontMatterProcessor] Error processing contact ${contact.file.name}: ${error.message}`);
       return Promise.resolve(undefined);
     }

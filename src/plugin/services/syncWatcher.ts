@@ -195,13 +195,13 @@ export class SyncWatcher {
       console.log(`Processing single VCF file: ${vcfFilePath}`);
 
       // Use VcardManager to process VCF contents (no UID filtering for single VCF)
-      const parsedEntries = await this.vcardManager.readAndParseVCF(vcfFilePath);
+      const parsedEntries = await this.vcardManager.readAndParseVCard(vcfFilePath);
       if (!parsedEntries) {
         return;
       }
 
       // Filter to only valid entries (those with slug and UID)
-      const vcfEntries = parsedEntries.filter(([slug, record]) => slug && record.UID);
+      const vcfEntries = parsedEntries.filter(([slug, record]: [string, any]) => slug && record.UID);
 
       // Use ContactManager to process contact records and create/update contacts
       const contactsToProcess = await this.contactManager.processVCFContacts(
@@ -231,7 +231,7 @@ export class SyncWatcher {
         uid: "" // Single VCF files contain multiple UIDs
       });
 
-    } catch (error) {
+    } catch (error: any) {
       console.log(`Error scanning single VCF file: ${error.message}`);
     }
   }
@@ -258,7 +258,7 @@ export class SyncWatcher {
         await this.processVCFFile(filePath);
       }
 
-    } catch (error) {
+    } catch (error: any) {
       console.log(`Error scanning VCF folder: ${error.message}`);
     }
   }
@@ -324,7 +324,7 @@ export class SyncWatcher {
         uid: "" // VCF files can contain multiple UIDs
       });
 
-    } catch (error) {
+    } catch (error: any) {
       console.log(`Error processing VCF file ${filePath}: ${error.message}`);
     }
   }
