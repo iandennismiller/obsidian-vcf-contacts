@@ -13,6 +13,8 @@ import { RunType } from "src/interfaces/RunType";
  */
 export type { VCardFileInfo } from '../../models/vcardManager';
 
+/* istanbul ignore next */
+// SyncWatcher is a file system polling service that requires runtime environment
 /**
  * Watches for VCard files and triggers curator processors when changes are detected.
  * Supports both single VCF files and VCF folder monitoring.

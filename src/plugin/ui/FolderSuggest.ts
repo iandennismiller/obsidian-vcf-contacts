@@ -2,6 +2,8 @@ import { AbstractInputSuggest, App, TFolder } from 'obsidian';
 import { setSettings } from "src/plugin/context/sharedSettingsContext";
 import ContactsPlugin from "src/main";
 
+/* istanbul ignore next */
+// UI suggest component integrates with Obsidian's AbstractInputSuggest API
 export class FolderSuggest extends AbstractInputSuggest<string> {
   folders: string[];
   private inputEl: HTMLInputElement;

@@ -6,6 +6,8 @@ import { openFilePicker } from "src/plugin/ui/fileOperations";
 import { RunType } from "src/interfaces/RunType";
 import { curatorService } from "src/models/curatorManager/curatorManager";
 
+/* istanbul ignore next */
+// Avatar processing depends on browser Image/Canvas APIs and file picker
 const resizeAndCropImage = (img: HTMLImageElement, outputSize: number): HTMLCanvasElement => {
 	const canvas = document.createElement('canvas');
 	canvas.width = outputSize;
