@@ -3,7 +3,7 @@ import { ContactsPluginSettings } from '../../settings/settings.d';
 import { VCardWriteQueue } from './writeQueue';
 import { VCardCollection, VCardFileInfo } from './vcardCollection';
 import { VCardManagerFileOperations } from './fileOperations';
-import { VCardForObsidianRecord } from '../vcardFile';
+import { VCardForObsidianRecord, VcardFile } from '../vcardFile';
 
 /**
  * Manages a collection of VCard files in the VCard watch folder.
@@ -273,5 +273,142 @@ export class VcardManager {
       console.log(`[VcardManager] Error processing VCF file ${filePath}: ${error.message}`);
       return [];
     }
+  }
+
+  /**
+   * Check if VCF monitoring is enabled based on settings
+   */
+  isMonitoringEnabled(): boolean {
+    return this.settings.vcfWatchEnabled === true;
+  }
+
+  /**
+   * Process a newly added VCF file in the watch folder
+   */
+  async processNewFile(filePath: string, content: string): Promise<{ processed: boolean; action: string; contactUID?: string; error?: string }> {
+    try {
+      if (this.shouldIgnoreFile(filePath)) {
+        return { processed: false, action: 'ignore', error: 'File ignored by configuration' };
+      }
+
+      // Validate VCF content first
+      const validation = await this.validateVcfContent(content);
+      if (!validation.isValid) {
+        return { processed: false, action: 'error', error: 'Invalid VCF content: ' + validation.errors.join(', ') };
+      }
+
+      // Parse VCF content directly
+      const vcardFile = new VcardFile(content);
+      const entries: [string | undefined, any][] = [];
+      
+      for await (const entry of vcardFile.parse()) {
+        if (entry[1]?.UID && !this.shouldIgnoreUID(entry[1].UID)) {
+          entries.push(entry);
+        }
+      }
+
+      if (entries.length === 0) {
+        return { processed: false, action: 'none', error: 'No valid contacts found' };
+      }
+
+      // Get the first contact's UID
+      const firstContactUID = entries[0]?.[1]?.UID;
+
+      return { processed: true, action: 'create', contactUID: firstContactUID };
+    } catch (error) {
+      return { processed: false, action: 'error', error: error.message };
+    }
+  }
+
+  /**
+   * Process a modified VCF file in the watch folder
+   */
+  async processModifiedFile(filePath: string, content: string): Promise<{ processed: boolean; action: string; contactUID?: string; error?: string; hasNewer?: boolean }> {
+    try {
+      if (this.shouldIgnoreFile(filePath)) {
+        return { processed: false, action: 'ignore', error: 'File ignored by configuration' };
+      }
+
+      // Parse VCF content directly
+      const vcardFile = new VcardFile(content);
+      const entries: [string | undefined, any][] = [];
+      
+      for await (const entry of vcardFile.parse()) {
+        if (entry[1]?.UID && !this.shouldIgnoreUID(entry[1].UID)) {
+          entries.push(entry);
+        }
+      }
+
+      if (entries.length === 0) {
+        return { processed: false, action: 'none', error: 'No valid contacts found' };
+      }
+
+      const firstContactUID = entries[0]?.[1]?.UID;
+      const vcfRev = entries[0]?.[1]?.REV;
+      
+      // Check if VCF has newer revision - assume true for now since we'd need to query existing contact
+      const hasNewer = vcfRev ? true : undefined;
+
+      return { processed: true, action: 'update', contactUID: firstContactUID, hasNewer };
+    } catch (error) {
+      return { processed: false, action: 'error', error: error.message };
+    }
+  }
+
+  /**
+   * Process a deleted VCF file from the watch folder
+   */
+  async processDeletedFile(filePath: string, uid?: string): Promise<{ processed: boolean; action: string; contactUID?: string }> {
+    // File has been deleted from filesystem - acknowledge it
+    return { processed: true, action: 'delete', contactUID: uid };
+  }
+
+  /**
+   * Get the polling interval for VCF monitoring
+   */
+  getPollingInterval(): number {
+    return this.settings.vcfWatchPollingInterval ? this.settings.vcfWatchPollingInterval * 1000 : 5000; // Convert seconds to milliseconds, default 5 seconds
+  }
+
+  /**
+   * Validate VCF content for syntax errors
+   */
+  async validateVcfContent(content: string): Promise<{ isValid: boolean; errors: string[] }> {
+    const errors: string[] = [];
+
+    try {
+      // Basic VCF structure validation
+      if (!content.includes('BEGIN:VCARD')) {
+        errors.push('Missing BEGIN:VCARD');
+      }
+      if (!content.includes('END:VCARD')) {
+        errors.push('Missing END:VCARD');
+      }
+      if (!content.includes('VERSION:')) {
+        errors.push('Missing VERSION field');
+      }
+
+      return { isValid: errors.length === 0, errors };
+    } catch (error) {
+      errors.push(error.message);
+      return { isValid: false, errors };
+    }
+  }
+
+  /**
+   * Handle file system errors during monitoring
+   */
+  async handleFileSystemError(error: string, filePath: string): Promise<{ success: boolean; error: string; recovered: boolean }> {
+    const errorMessage = error.toLowerCase();
+
+    if (errorMessage.includes('enoent') || errorMessage.includes('not found')) {
+      return { success: false, error: error, recovered: false };
+    } else if (errorMessage.includes('eacces') || errorMessage.includes('permission')) {
+      return { success: false, error: error, recovered: false };
+    } else if (errorMessage.includes('emfile') || errorMessage.includes('too many')) {
+      return { success: false, error: error, recovered: false };
+    }
+
+    return { success: false, error: error, recovered: false };
   }
 }

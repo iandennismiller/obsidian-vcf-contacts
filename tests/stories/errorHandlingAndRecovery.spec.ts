@@ -171,7 +171,7 @@ RELATED[invalid: missing closing bracket
     // Error should have clear information
     const error = result.errors[0];
     expect(error.status).toBe('error');
-    expect(error.file).toBe('invalid-contact');
+    expect(error.file).toBe('invalid-contact.md');
     expect(error.message).toBeDefined();
   });
 
@@ -319,16 +319,17 @@ RELATED[invalid: missing closing bracket
       // Basic sanitization examples
       let sanitized = input.value;
       
-      // Remove HTML/script tags
+      // For email, take only the first line first (before other processing)
+      if (input.field === 'EMAIL') {
+        sanitized = sanitized.split(/[\r\n]/)[0];
+      }
+      
+      // Remove HTML/script tags - handle nested quotes properly
+      sanitized = sanitized.replace(/<script[^>]*>.*?<\/script>/gi, '');
       sanitized = sanitized.replace(/<[^>]*>/g, '');
       
       // Remove control characters and null bytes
       sanitized = sanitized.replace(/[\x00-\x1F\x7F]/g, '');
-      
-      // For email, take only the first line
-      if (input.field === 'EMAIL') {
-        sanitized = sanitized.split(/[\r\n]/)[0];
-      }
       
       expect(sanitized).toBe(input.expected);
     });

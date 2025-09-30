@@ -120,13 +120,22 @@ export class VCardParser {
 
   private static parseVCardLine(line: string): VCardForObsidianRecord {
     const [keyPart, ...valueParts] = line.split(':');
-    if (!keyPart || valueParts.length === 0) return {};
+    if (!keyPart || valueParts.length === 0) {
+      // Throw error for lines without proper key:value format
+      if (line.trim() && !line.startsWith('BEGIN:') && !line.startsWith('END:') && !line.startsWith('VERSION:')) {
+        throw new Error(`VCard parse error: Invalid line format: ${line}`);
+      }
+      return {};
+    }
 
     const value = valueParts.join(':').trim();
     if (!value) return {};
 
     const keyMatch = keyPart.match(/^([A-Z]+)(.*)/);
-    if (!keyMatch) return {};
+    if (!keyMatch) {
+      // Throw error for invalid key format
+      throw new Error(`VCard parse error: Invalid property key: ${keyPart}`);
+    }
 
     const [, baseKey, paramsPart] = keyMatch;
     let typeValues = '';

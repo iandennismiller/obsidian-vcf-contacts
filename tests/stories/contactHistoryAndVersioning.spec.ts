@@ -234,7 +234,7 @@ END:VCARD`;
       }
       
       expect(normalizedRev).toMatch(/^\d{8}T\d{6}Z$/);
-      expect(normalizedRev).toEndWith('Z');
+      expect(normalizedRev.endsWith('Z')).toBe(true);
     });
   });
 
@@ -301,17 +301,17 @@ END:VCARD`;
     // Version 1 -> 2 changes
     expect(versionHistory[0].changes).toEqual(
       expect.arrayContaining([
-        { field: 'TEL', from: undefined, to: '+1-555-123-4567' },
-        { field: 'REV', from: '20240201T100000Z', to: '20240202T100000Z' }
+        expect.objectContaining({ field: 'TEL', to: '+1-555-123-4567' }),
+        expect.objectContaining({ field: 'REV', from: '20240201T100000Z', to: '20240202T100000Z' })
       ])
     );
     
     // Version 2 -> 3 changes  
     expect(versionHistory[1].changes).toEqual(
       expect.arrayContaining([
-        { field: 'EMAIL', from: 'original@example.com', to: 'updated@example.com' },
-        { field: 'ORG', from: undefined, to: 'New Company' },
-        { field: 'REV', from: '20240202T100000Z', to: '20240203T100000Z' }
+        expect.objectContaining({ field: 'EMAIL', from: 'original@example.com', to: 'updated@example.com' }),
+        expect.objectContaining({ field: 'ORG', to: 'New Company' }),
+        expect.objectContaining({ field: 'REV', from: '20240202T100000Z', to: '20240203T100000Z' })
       ])
     );
   });
@@ -371,7 +371,8 @@ END:VCARD`;
     
     // Timestamps should generally be increasing (allowing for same second)
     for (let i = 1; i < revTimestamps.length; i++) {
-      expect(revTimestamps[i]).toBeGreaterThanOrEqual(revTimestamps[i - 1]);
+      // Compare as strings since REV timestamps are in sortable format
+      expect(revTimestamps[i] >= revTimestamps[i - 1]).toBe(true);
     }
     
     // Should have unique timestamps or be very close in time

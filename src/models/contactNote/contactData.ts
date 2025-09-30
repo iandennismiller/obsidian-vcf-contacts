@@ -90,7 +90,8 @@ export class ContactData {
             this._frontmatter = parseYaml(match[1]) || {};
           } catch (error) {
             console.log(`[ContactData] Error parsing frontmatter for ${this.file.path}: ${error.message}`);
-            this._frontmatter = {};
+            this._frontmatter = null; // Return null for malformed YAML
+            return null;
           }
         } else {
           this._frontmatter = {};
@@ -106,23 +107,69 @@ export class ContactData {
   /**
    * Update a single frontmatter value - operation grouped with data
    */
-  async updateFrontmatterValue(key: string, value: string): Promise<void> {
+  async updateFrontmatterValue(key: string, value: string, skipRevUpdate = false): Promise<void> {
     const frontmatter = await this.getFrontmatter();
-    if (frontmatter) {
-      frontmatter[key] = value;
-      await this.saveFrontmatter(frontmatter);
+    if (!frontmatter) {
+      return;
     }
+
+    // Check if the value has actually changed
+    if (frontmatter[key] === value) {
+      return; // No change needed
+    }
+
+    // Update the value
+    if (value === '') {
+      delete frontmatter[key];
+    } else {
+      frontmatter[key] = value;
+    }
+
+    // Update REV timestamp unless we're updating REV itself or skipRevUpdate is true
+    if (!skipRevUpdate && key !== 'REV') {
+      frontmatter['REV'] = this.generateRevTimestamp();
+    }
+
+    await this.saveFrontmatter(frontmatter);
   }
 
   /**
    * Update multiple frontmatter values in one operation
    */
-  async updateMultipleFrontmatterValues(updates: Record<string, string>): Promise<void> {
+  async updateMultipleFrontmatterValues(updates: Record<string, string>, skipRevUpdate = false): Promise<void> {
     const frontmatter = await this.getFrontmatter();
-    if (frontmatter) {
-      Object.assign(frontmatter, updates);
-      await this.saveFrontmatter(frontmatter);
+    if (!frontmatter) {
+      return;
     }
+
+    // Check if any values have actually changed
+    let hasChanges = false;
+    for (const [key, value] of Object.entries(updates)) {
+      if (frontmatter[key] !== value) {
+        hasChanges = true;
+        break;
+      }
+    }
+
+    if (!hasChanges) {
+      return; // No changes needed
+    }
+
+    // Apply all updates
+    for (const [key, value] of Object.entries(updates)) {
+      if (value === '') {
+        delete frontmatter[key];
+      } else {
+        frontmatter[key] = value;
+      }
+    }
+
+    // Update REV timestamp unless skipRevUpdate is true
+    if (!skipRevUpdate) {
+      frontmatter['REV'] = this.generateRevTimestamp();
+    }
+
+    await this.saveFrontmatter(frontmatter);
   }
 
   private async saveFrontmatter(frontmatter: Record<string, any>): Promise<void> {
@@ -147,6 +194,13 @@ export class ContactData {
     
     await this.updateContent(newContent);
     this._frontmatter = frontmatter;
+  }
+
+  /**
+   * Generate a revision timestamp in VCF format
+   */
+  private generateRevTimestamp(): string {
+    return new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
   }
 
   // === Identity Operations (grouped with identity data) ===
