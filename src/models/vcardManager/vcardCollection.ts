@@ -101,7 +101,7 @@ export class VCardCollection {
         if (content && VCardFileOperations.containsUID(content, uid)) {
           return filePath;
         }
-      } catch (error) {
+      } catch (error: any) {
         // Continue searching other files
       }
     }
@@ -131,7 +131,7 @@ export class VCardCollection {
         }
       }
       return parsedEntries;
-    } catch (error) {
+    } catch (error: any) {
       console.log(`[VCardCollection] Error parsing VCF file ${filePath}: ${error.message}`);
       return null;
     }

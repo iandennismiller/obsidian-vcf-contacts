@@ -127,7 +127,7 @@ export function setupVCFDropHandler(app: App, settings: ContactsPluginSettings):
         console.log(`Failed to remove dropped VCF from vault: ${err.message}`);
       }
 
-    } catch (error) {
+    } catch (error: any) {
       console.log(`Error handling dropped VCF file ${file?.path}: ${error.message}`);
     }
   };

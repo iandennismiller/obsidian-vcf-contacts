@@ -231,7 +231,7 @@ export class SyncWatcher {
         uid: "" // Single VCF files contain multiple UIDs
       });
 
-    } catch (error) {
+    } catch (error: any) {
       console.log(`Error scanning single VCF file: ${error.message}`);
     }
   }
@@ -258,7 +258,7 @@ export class SyncWatcher {
         await this.processVCFFile(filePath);
       }
 
-    } catch (error) {
+    } catch (error: any) {
       console.log(`Error scanning VCF folder: ${error.message}`);
     }
   }
@@ -324,7 +324,7 @@ export class SyncWatcher {
         uid: "" // VCF files can contain multiple UIDs
       });
 
-    } catch (error) {
+    } catch (error: any) {
       console.log(`Error processing VCF file ${filePath}: ${error.message}`);
     }
   }

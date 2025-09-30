@@ -230,7 +230,7 @@ export class VcardManager {
 
       return filesToProcess;
 
-    } catch (error) {
+    } catch (error: any) {
       console.log(`[VcardManager] Error scanning VCF folder: ${error.message}`);
       return [];
     }
@@ -269,7 +269,7 @@ export class VcardManager {
 
       return validEntries;
 
-    } catch (error) {
+    } catch (error: any) {
       console.log(`[VcardManager] Error processing VCF file ${filePath}: ${error.message}`);
       return [];
     }
@@ -315,7 +315,7 @@ export class VcardManager {
       const firstContactUID = entries[0]?.[1]?.UID;
 
       return { processed: true, action: 'create', contactUID: firstContactUID };
-    } catch (error) {
+    } catch (error: any) {
       return { processed: false, action: 'error', error: error.message };
     }
   }
@@ -350,7 +350,7 @@ export class VcardManager {
       const hasNewer = vcfRev ? true : undefined;
 
       return { processed: true, action: 'update', contactUID: firstContactUID, hasNewer };
-    } catch (error) {
+    } catch (error: any) {
       return { processed: false, action: 'error', error: error.message };
     }
   }
@@ -389,7 +389,7 @@ export class VcardManager {
       }
 
       return { isValid: errors.length === 0, errors };
-    } catch (error) {
+    } catch (error: any) {
       errors.push(error.message);
       return { isValid: false, errors };
     }

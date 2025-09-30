@@ -95,7 +95,7 @@ export const RelatedOtherProcessor: CuratorProcessor = {
       relationship: FrontmatterRelationship,
       thisContactName: string
     ): boolean => {
-      if (relationship.parsedValue.type === 'name') {
+      if (relationship.parsedValue && relationship.parsedValue.type === 'name') {
         return relationship.parsedValue.value === thisContactName;
       }
       
@@ -118,7 +118,7 @@ export const RelatedOtherProcessor: CuratorProcessor = {
         const genderless2 = tempContactNote.convertToGenderlessType(expectedReciprocalType.toLowerCase());
         const typesMatch = genderless1 === genderless2;
         
-        const contactMatches = rel.parsedValue.type === 'name' && 
+        const contactMatches = rel.parsedValue && rel.parsedValue.type === 'name' && 
                               rel.parsedValue.value === otherContactName;
         return typesMatch && contactMatches;
       });
@@ -204,7 +204,7 @@ export const RelatedOtherProcessor: CuratorProcessor = {
             }
           }
           
-        } catch (error) {
+        } catch (error: any) {
           console.error(
             `[RelatedOtherProcessor] Error processing other contact ${otherContactFile.basename}: ${error.message}`
           );
@@ -230,7 +230,7 @@ export const RelatedOtherProcessor: CuratorProcessor = {
       
       return Promise.resolve(undefined);
       
-    } catch (error) {
+    } catch (error: any) {
       console.error(`[RelatedOtherProcessor] Error processing contact ${contact.file.name}: ${error.message}`);
       return Promise.resolve(undefined);
     }

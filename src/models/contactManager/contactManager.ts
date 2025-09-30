@@ -383,7 +383,7 @@ export class ContactManager implements IContactManager {
       }
       
       return null;
-    } catch (error) {
+    } catch (error: any) {
       console.log(`[ContactManager] Failed to create contact ${slug}: ${error.message}`);
       return null;
     }

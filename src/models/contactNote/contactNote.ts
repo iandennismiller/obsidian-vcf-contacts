@@ -181,7 +181,7 @@ export class ContactNote {
     try {
       // First try the delegated method
       return this.relationshipOps.findContactByName(contactName);
-    } catch (error) {
+    } catch (error: any) {
       // Fallback implementation for test environment
       const contactsFolder = this.settings.contactsFolder || 'Contacts';
       
@@ -658,7 +658,7 @@ export class ContactNote {
           });
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       result.success = false;
       result.errors.push(`Error processing reverse relationships: ${error.message}`);
     }
@@ -752,7 +752,7 @@ export class ContactNote {
       if (Object.keys(updates).length > 0) {
         await this.updateMultipleFrontmatterValues(updates);
       }
-    } catch (error) {
+    } catch (error: any) {
       result.success = false;
       result.errors.push(`Error upgrading relationships: ${error.message}`);
     }
@@ -852,7 +852,7 @@ export class ContactNote {
       if (Object.keys(updates).length > 0) {
         await this.updateMultipleFrontmatterValues(updates);
       }
-    } catch (error) {
+    } catch (error: any) {
       result.success = false;
       console.error(`Error updating relationship UID: ${error.message}`);
     }
@@ -914,7 +914,7 @@ export class ContactNote {
       if (Object.keys(updates).length > 0) {
         await this.updateMultipleFrontmatterValues(updates);
       }
-    } catch (error) {
+    } catch (error: any) {
       result.success = false;
       result.failedCount = result.updatedCount;
       result.updatedCount = 0;

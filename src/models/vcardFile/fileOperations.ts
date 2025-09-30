@@ -18,7 +18,7 @@ export class VCardFileOperations {
       return entries
         .filter(entry => entry.isFile() && entry.name.toLowerCase().endsWith('.vcf'))
         .map(entry => path.join(folderPath, entry.name));
-    } catch (error) {
+    } catch (error: any) {
       console.log(`[VCardFileOperations] Error listing VCF files: ${error.message}`);
       return [];
     }
@@ -31,7 +31,7 @@ export class VCardFileOperations {
     try {
       const stat = await fs.stat(filePath);
       return stat ? { mtimeMs: stat.mtimeMs } : null;
-    } catch (error) {
+    } catch (error: any) {
       return null;
     }
   }
@@ -47,7 +47,7 @@ export class VCardFileOperations {
     try {
       await fs.access(folderPath);
       return true;
-    } catch (error) {
+    } catch (error: any) {
       return false;
     }
   }
@@ -78,7 +78,7 @@ export class VCardFileOperations {
         return null;
       }
       return content;
-    } catch (error) {
+    } catch (error: any) {
       console.log(`[VCardFileOperations] Error reading VCF file ${filePath}: ${error.message}`);
       return null;
     }
@@ -91,7 +91,7 @@ export class VCardFileOperations {
     try {
       await fs.writeFile(filePath, content, 'utf-8');
       return true;
-    } catch (error) {
+    } catch (error: any) {
       console.log(`[VCardFileOperations] Error writing VCF file ${filePath}: ${error.message}`);
       return false;
     }

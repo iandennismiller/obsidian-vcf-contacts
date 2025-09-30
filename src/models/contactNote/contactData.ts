@@ -77,7 +77,7 @@ export class ContactData {
           this._frontmatter = cache.frontmatter;
           return this._frontmatter;
         }
-      } catch (error) {
+      } catch (error: any) {
         console.log(`[ContactData] Error accessing metadata cache for ${this.file.path}: ${error.message}`);
       }
 
@@ -88,7 +88,7 @@ export class ContactData {
         if (match) {
           try {
             this._frontmatter = parseYaml(match[1]) || {};
-          } catch (error) {
+          } catch (error: any) {
             console.log(`[ContactData] Error parsing frontmatter for ${this.file.path}: ${error.message}`);
             this._frontmatter = null; // Return null for malformed YAML
             return null;
@@ -96,7 +96,7 @@ export class ContactData {
         } else {
           this._frontmatter = {};
         }
-      } catch (error) {
+      } catch (error: any) {
         console.log(`[ContactData] Error reading content for ${this.file.path}: ${error.message}`);
         this._frontmatter = {};
       }

@@ -71,7 +71,7 @@ export class SyncOperations {
             
             errors.push(`Could not resolve contact: ${relationship.contactName}`);
           }
-        } catch (error) {
+        } catch (error: any) {
           errors.push(`Error processing relationship ${relationship.contactName}: ${error.message}`);
         }
       }
@@ -90,7 +90,7 @@ export class SyncOperations {
       }
 
       return { success: true, errors };
-    } catch (error) {
+    } catch (error: any) {
       errors.push(`Sync operation failed: ${error.message}`);
       return { success: false, errors };
     }
@@ -151,7 +151,7 @@ export class SyncOperations {
           } else {
             errors.push(`Could not parse RELATED value: ${fmRel.value}`);
           }
-        } catch (error) {
+        } catch (error: any) {
           errors.push(`Error processing frontmatter relationship ${fmRel.key}: ${error.message}`);
         }
       }
@@ -160,7 +160,7 @@ export class SyncOperations {
       await this.relationshipOps.updateRelatedSectionInContent(markdownRelationships);
 
       return { success: true, errors, updatedRelationships };
-    } catch (error) {
+    } catch (error: any) {
       errors.push(`Frontmatter to markdown sync failed: ${error.message}`);
       return { success: false, errors };
     }
@@ -192,7 +192,7 @@ export class SyncOperations {
       allErrors.push(...fmToMarkdown.errors);
 
       return { success: overallSuccess, errors: allErrors };
-    } catch (error) {
+    } catch (error: any) {
       allErrors.push(`Full sync operation failed: ${error.message}`);
       return { success: false, errors: allErrors };
     }
@@ -224,7 +224,7 @@ export class SyncOperations {
             file: file
           };
         }
-      } catch (error) {
+      } catch (error: any) {
         // Skip files that can't be processed
         continue;
       }
@@ -280,7 +280,7 @@ export class SyncOperations {
         issues,
         recommendations
       };
-    } catch (error) {
+    } catch (error: any) {
       issues.push(`Validation failed: ${error.message}`);
       return {
         isConsistent: false,

@@ -102,7 +102,7 @@ export const GenderRenderProcessor: CuratorProcessor = {
             });
           }
           
-        } catch (error) {
+        } catch (error: any) {
           console.error(
             `[GenderRenderProcessor] Error processing relationship ${relationship.type} -> ${relationship.contactName}: ${error.message}`
           );
@@ -135,7 +135,7 @@ export const GenderRenderProcessor: CuratorProcessor = {
       
       return Promise.resolve(undefined);
       
-    } catch (error) {
+    } catch (error: any) {
       console.error(`[GenderRenderProcessor] Error processing contact ${contact.file.name}: ${error.message}`);
       return Promise.resolve(undefined);
     }

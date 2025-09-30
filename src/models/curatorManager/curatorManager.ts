@@ -114,7 +114,7 @@ export class CuratorManager {
       } else {
         new Notice(`Applied ${results.length} curator improvements to contact`);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error running curator processors on current contact:', error);
       new Notice('Error running curator processors');
     }
@@ -137,13 +137,13 @@ export class CuratorManager {
             const results = await this.process(contact, RunType.INPROVEMENT);
             totalActions += results.length;
           }
-        } catch (error) {
+        } catch (error: any) {
           console.error(`Error processing contact ${file.name}:`, error);
         }
       }
 
       new Notice(`Curator processing complete: ${totalActions} improvements applied to ${contactFiles.length} contacts`);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error running curator processors on all contacts:', error);
       new Notice('Error running curator processors on all contacts');
     }

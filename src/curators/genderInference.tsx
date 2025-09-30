@@ -101,7 +101,7 @@ export const GenderInferenceProcessor: CuratorProcessor = {
             `[GenderInferenceProcessor] Inferred gender ${inferredGender} for ${relationship.contactName} based on relationship "${relationship.type}" from ${contact.file.basename}`
           );
           
-        } catch (error) {
+        } catch (error: any) {
           console.error(
             `[GenderInferenceProcessor] Error processing relationship ${relationship.type} -> ${relationship.contactName}: ${error.message}`
           );
@@ -122,7 +122,7 @@ export const GenderInferenceProcessor: CuratorProcessor = {
       
       return Promise.resolve(undefined);
       
-    } catch (error) {
+    } catch (error: any) {
       console.error(`[GenderInferenceProcessor] Error processing contact ${contact.file.name}: ${error.message}`);
       return Promise.resolve(undefined);
     }

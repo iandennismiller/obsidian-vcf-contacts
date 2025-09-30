@@ -378,7 +378,7 @@ export class ContactManagerData {
       }
 
       return this._contactFilesCache;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error getting all contact files:', error);
       // Return cached files as fallback
       return Array.from(this.contactFiles.values());
@@ -480,7 +480,7 @@ export class ContactManagerData {
         }
       }
       return this._contactFilesCache;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error getting contact files from vault:', error);
       return [];
     }

@@ -82,13 +82,13 @@ export class VCardWriteQueue {
             console.log(`[VCardWriteQueue] Failed to write VCard for UID: ${uid}`);
           }
           
-        } catch (error) {
+        } catch (error: any) {
           console.log(`[VCardWriteQueue] Error writing VCard for UID ${uid}: ${error.message}`);
           this.writeQueue.delete(uid); // Remove failed items
         }
       }
       
-    } catch (error) {
+    } catch (error: any) {
       console.log(`[VCardWriteQueue] Error processing write queue: ${error.message}`);
     } finally {
       this.processingQueue = false;
