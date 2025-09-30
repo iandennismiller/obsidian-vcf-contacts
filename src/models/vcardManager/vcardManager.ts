@@ -199,7 +199,7 @@ export class VcardManager {
       }
 
       // Get list of files in the folder
-      const files = await this.listVCFFiles();
+      const files = await this.listVCardFiles();
       
       if (files.length === 0) {
         return [];
@@ -249,7 +249,7 @@ export class VcardManager {
   async processVCFContents(filePath: string): Promise<Array<[string, VCardForObsidianRecord]>> {
     try {
       // Read and parse VCF content
-      const parsedEntries = await this.readAndParseVCF(filePath);
+      const parsedEntries = await this.readAndParseVCard(filePath);
       if (!parsedEntries) {
         return [];
       }

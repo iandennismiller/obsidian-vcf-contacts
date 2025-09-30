@@ -100,7 +100,8 @@ export class CuratorManager {
 
     try {
       // Get contact data
-      const contact = await this.contactManager.getContactByFile(activeFile);
+      const contacts = await this.contactManager.getFrontmatterFromFiles([activeFile]);
+      const contact = contacts[0];
       if (!contact) {
         new Notice('Could not load contact data');
         return;
@@ -132,7 +133,8 @@ export class CuratorManager {
 
       for (const file of contactFiles) {
         try {
-          const contact = await this.contactManager.getContactByFile(file);
+          const contacts = await this.contactManager.getFrontmatterFromFiles([file]);
+          const contact = contacts[0];
           if (contact) {
             const results = await this.process(contact, RunType.INPROVEMENT);
             totalActions += results.length;

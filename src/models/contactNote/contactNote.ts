@@ -418,7 +418,13 @@ export class ContactNote {
     const relationships = await this.parseRelatedSection();
     const frontmatterRelationships = await this.parseFrontmatterRelationships();
     
-    const result = [];
+    const result: Array<{
+      type: string;
+      contactName: string;
+      targetUID?: string;
+      linkType: 'uid' | 'name';
+      originalType: string;
+    }> = [];
     const processedTargets = new Set<string>(); // Track processed targets to avoid duplicates
     
     // Process frontmatter relationships first (higher priority)
@@ -438,13 +444,22 @@ export class ContactNote {
       } else if (fmRel.parsedValue && fmRel.parsedValue.type === 'name') {
         // Handle name-based frontmatter relationships
         const resolved = await this.resolveContact(fmRel.parsedValue.value);
-        result.push({
+        const obj: {
+          type: string;
+          contactName: string;
+          targetUID?: string;
+          linkType: 'uid' | 'name';
+          originalType: string;
+        } = {
           type: fmRel.type,
           contactName: fmRel.parsedValue.value,
-          targetUID: resolved?.uid,
           linkType: resolved?.uid ? 'uid' : 'name',
           originalType: fmRel.type
-        });
+        };
+        if (resolved?.uid) {
+          obj.targetUID = resolved.uid;
+        }
+        result.push(obj);
         processedTargets.add(fmRel.parsedValue.value.toLowerCase());
       }
     }
@@ -453,13 +468,22 @@ export class ContactNote {
     for (const rel of relationships) {
       if (!processedTargets.has(rel.contactName.toLowerCase())) {
         const resolved = await this.resolveContact(rel.contactName);
-        result.push({
+        const obj: {
+          type: string;
+          contactName: string;
+          targetUID?: string;
+          linkType: 'uid' | 'name';
+          originalType: string;
+        } = {
           type: rel.type,
           contactName: rel.contactName,
-          targetUID: resolved?.uid,
           linkType: resolved?.uid ? 'uid' : 'name',
           originalType: rel.type
-        });
+        };
+        if (resolved?.uid) {
+          obj.targetUID = resolved.uid;
+        }
+        result.push(obj);
       }
     }
     
@@ -583,7 +607,17 @@ export class ContactNote {
     }>;
     errors: string[];
   }> {
-    const result = {
+    const result: {
+      success: boolean;
+      processedRelationships: Array<{
+        targetContact: string;
+        reverseType: string;
+        added: boolean;
+        reason?: string;
+        error?: string;
+      }>;
+      errors: string[];
+    } = {
       success: true,
       processedRelationships: [],
       errors: []
@@ -678,7 +712,15 @@ export class ContactNote {
     }>;
     errors: string[];
   }> {
-    const result = { success: true, upgradedRelationships: [], errors: [] };
+    const result: {
+      success: boolean;
+      upgradedRelationships: Array<{
+        targetUID: string;
+        type: string;
+        key: string;
+      }>;
+      errors: string[];
+    } = { success: true, upgradedRelationships: [], errors: [] };
 
     try {
       // First check frontmatter relationships
@@ -770,7 +812,13 @@ export class ContactNote {
       files: string[];
     }>;
   }> {
-    const result = { hasConflicts: false, conflicts: [] };
+    const result: {
+      hasConflicts: boolean;
+      conflicts: Array<{
+        uid: string;
+        files: string[];
+      }>;
+    } = { hasConflicts: false, conflicts: [] };
     const uidMap = new Map<string, string[]>();
     
     const allFiles = this.app.vault.getMarkdownFiles();
@@ -810,7 +858,14 @@ export class ContactNote {
       key: string;
     }>;
   }> {
-    const result = {
+    const result: {
+      success: boolean;
+      updatedRelationships: Array<{
+        oldUID: string;
+        newUID: string;
+        key: string;
+      }>;
+    } = {
       success: true,
       updatedRelationships: []
     };
@@ -871,7 +926,12 @@ export class ContactNote {
     failedCount: number;
     errors: string[];
   }> {
-    const result = { success: true, updatedCount: 0, failedCount: 0, errors: [] };
+    const result: {
+      success: boolean;
+      updatedCount: number;
+      failedCount: number;
+      errors: string[];
+    } = { success: true, updatedCount: 0, failedCount: 0, errors: [] };
     
     try {
       const frontmatter = await this.getFrontmatter();

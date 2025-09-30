@@ -20,7 +20,7 @@ export function updateSettings(partialSettings: Partial<ContactsPluginSettings>)
   if (!_settings) {
     throw new Error('Plugin context has not been set.')
   }
-  _settings = { ..._settings, ...partialSettings };
+  _settings = { ..._settings, ...partialSettings } as ContactsPluginSettings;
   _listeners.forEach((listener) => listener(_settings!));
 }
 

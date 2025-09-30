@@ -11,7 +11,7 @@
 
 import { TFile, App } from 'obsidian';
 import { ContactsPluginSettings } from './ContactsPluginSettings';
-import { Contact } from './types';
+import { Contact } from '../models/contactNote/types';
 
 /**
  * Interface for managing contact notes in the Obsidian vault.
