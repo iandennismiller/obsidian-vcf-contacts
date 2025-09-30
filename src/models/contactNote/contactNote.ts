@@ -4,7 +4,7 @@
  */
 
 import { TFile, App } from 'obsidian';
-import { ContactsPluginSettings } from '../../settings/settings.d';
+import { ContactsPluginSettings } from 'src/interfaces/ContactsPluginSettings';
 import { VCardForObsidianRecord, VCardKind, VCardKinds } from '../vcardFile';
 import { Gender, Contact, ParsedKey, ParsedRelationship, FrontmatterRelationship, ResolvedContact } from './types';
 

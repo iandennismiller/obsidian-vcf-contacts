@@ -1,6 +1,6 @@
 import { TFile, App } from "obsidian";
 import { VCardToStringError, VCardToStringReply, StructuredFields } from './types';
-import { getApp } from "../../context/sharedAppContext";
+import { getApp } from "../../plugin/context/sharedAppContext";
 import { ContactManagerUtils } from "../contactManager/contactManagerUtils";
 import { parseKey } from "../contactNote";
 

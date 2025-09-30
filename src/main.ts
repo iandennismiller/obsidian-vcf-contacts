@@ -69,15 +69,6 @@ export default class ContactsPlugin extends Plugin {
 
 		this.addSettingTab(new ContactsSettingTab(this.app, this));
 
-		this.addCommand({
-			id: 'contacts-create',
-			name: "Create Contact",
-			callback: async () => {
-				const leaf = await this.activateSidebarView();
-				leaf?.createNewContact();
-			},
-		});
-
 		// Register curator processor commands
 		this.curatorManager.registerCommands(this);
 	}

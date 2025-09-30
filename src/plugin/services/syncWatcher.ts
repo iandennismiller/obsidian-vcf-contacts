@@ -1,18 +1,17 @@
 import * as fs from 'fs/promises';
 import { App, Notice, TFile } from 'obsidian';
 import * as path from 'path';
-import { VcardManager, VCardFileInfo } from "../models/vcardManager";
-import { ContactManager } from "../models/contactManager";
-import { ContactsPluginSettings } from "src/settings/settings.d";
-import { onSettingsChange } from "src/context/sharedSettingsContext";
-import { setupVCFDropHandler } from 'src/ui/vcfDropHandler';
+import { VcardManager, VCardFileInfo } from "../../models/vcardManager";
+import { ContactManager } from "../../models/contactManager";
+import { ContactsPluginSettings } from 'src/interfaces/ContactsPluginSettings';
+import { onSettingsChange } from "src/plugin/context/sharedSettingsContext";
 import { curatorService } from "src/models/curatorManager/curatorManager";
-import { RunType } from "src/interfaces/RunType.d";
+import { RunType } from "src/interfaces/RunType";
 
 /**
  * Information about a VCard file being tracked by the watcher
  */
-export type { VCardFileInfo } from '../models/vcardManager';
+export type { VCardFileInfo } from '../../models/vcardManager';
 
 /**
  * Watches for VCard files and triggers curator processors when changes are detected.

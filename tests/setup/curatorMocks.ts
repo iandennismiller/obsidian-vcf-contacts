@@ -10,7 +10,7 @@
 import { vi } from 'vitest';
 import type { App, TFile } from 'obsidian';
 import type { Contact, ParsedRelationship, FrontmatterRelationship, ResolvedContact } from '../../src/models/contactNote/types';
-import type { ContactsPluginSettings } from '../../src/settings/settings.d';
+import type { ContactsPluginSettings } from 'src/interfaces/ContactsPluginSettings';
 
 /**
  * Creates a mock Contact object for testing

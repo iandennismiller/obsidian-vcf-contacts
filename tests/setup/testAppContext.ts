@@ -1,6 +1,6 @@
 import { vi } from 'vitest';
-import { setApp, clearApp } from 'src/context/sharedAppContext';
-import { setSettings } from 'src/context/sharedSettingsContext';
+import { setApp, clearApp } from 'src/plugin/context/sharedAppContext';
+import { setSettings } from 'src/plugin/context/sharedSettingsContext';
 
 // Create a minimal mock app for tests
 export function setupTestAppContext() {

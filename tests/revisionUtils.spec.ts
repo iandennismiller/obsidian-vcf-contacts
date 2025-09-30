@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TFile, App } from 'obsidian';
 import { ContactNote } from '../src/models/contactNote/contactNote';
 import { VCardForObsidianRecord } from '../src/models/vcardFile/types';
-import { ContactsPluginSettings } from '../src/settings/settings.d';
+import { ContactsPluginSettings } from 'src/interfaces/ContactsPluginSettings';
 
 describe('ContactNote - Revision Utils', () => {
   let mockApp: Partial<App>;

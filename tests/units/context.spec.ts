@@ -1,12 +1,12 @@
 import { App } from "obsidian";
-import { clearApp,getApp, setApp } from '../../src/context/sharedAppContext'
+import { clearApp,getApp, setApp } from '../../src/plugin/context/sharedAppContext'
 import {
   clearSettings,
   getSettings,
   onSettingsChange,
   setSettings,
-} from '../../src/context/sharedSettingsContext';
-import type { ContactsPluginSettings } from '../../src/settings/settings.d';
+} from '../../src/plugin/context/sharedSettingsContext';
+import type { ContactsPluginSettings } from 'src/interfaces/ContactsPluginSettings';
 import { afterEach,describe, expect, it, vi } from 'vitest';
 
 const mockSettings: ContactsPluginSettings = {

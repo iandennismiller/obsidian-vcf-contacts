@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { setupVCFDropHandler } from '../../../src/ui/vcfDropHandler';
-import type { ContactsPluginSettings } from '../../../src/settings/settings.d';
+import { setupVCFDropHandler } from '../../../src/plugin/services/dropHandler';
+import type { ContactsPluginSettings } from 'src/interfaces/ContactsPluginSettings';
 import type { App, TFile } from 'obsidian';
 
 // Minimal mock vault implementation

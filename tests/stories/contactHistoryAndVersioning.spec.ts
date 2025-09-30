@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { App, TFile } from 'obsidian';
 import { ContactNote } from '../../src/models/contactNote';
 import { VcardFile } from '../../src/models/vcardFile/vcardFile';
-import { ContactsPluginSettings } from '../../src/settings/settings.d';
+import { ContactsPluginSettings } from 'src/interfaces/ContactsPluginSettings';
 
 /**
  * User Story 19: Contact History and Versioning
@@ -71,7 +71,8 @@ describe('Contact History and Versioning Story', () => {
     const minute = parseInt(revTimestamp.substring(11, 13));
     const second = parseInt(revTimestamp.substring(13, 15));
     
-    const parsedTime = new Date(year, month, day, hour, minute, second);
+    // Parse as UTC since the timestamp ends with 'Z'
+    const parsedTime = new Date(Date.UTC(year, month, day, hour, minute, second));
     
     expect(parsedTime.getTime()).toBeGreaterThanOrEqual(beforeTime.getTime() - 1000);
     expect(parsedTime.getTime()).toBeLessThanOrEqual(afterTime.getTime() + 1000);

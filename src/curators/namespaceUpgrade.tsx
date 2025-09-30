@@ -1,8 +1,8 @@
 import * as React from "react";
 import { Contact, ContactNote } from "src/models";
 import { ContactManager } from "src/models/contactManager";
-import { getApp } from "src/context/sharedAppContext";
-import { getSettings } from "src/context/sharedSettingsContext";
+import { getApp } from "src/plugin/context/sharedAppContext";
+import { getSettings } from "src/plugin/context/sharedSettingsContext";
 import { CuratorProcessor } from "src/interfaces/CuratorProcessor";
 import { CuratorQueItem } from "src/interfaces/CuratorQueItem";
 import { RunType } from "src/interfaces/RunType";
