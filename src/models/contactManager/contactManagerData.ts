@@ -4,7 +4,7 @@
  */
 
 import { App, TFile, EventRef, WorkspaceLeaf } from 'obsidian';
-import { ContactsPluginSettings } from 'src/interfaces/ContactsPluginSettings';
+import { ContactsPluginSettings } from 'src/definitions/ContactsPluginSettings';
 
 /**
  * Centralized contact manager data storage that keeps related data together

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { setupVCFDropHandler } from '../../../src/plugin/services/dropHandler';
-import type { ContactsPluginSettings } from 'src/interfaces/ContactsPluginSettings';
+import type { ContactsPluginSettings } from 'src/definitions/ContactsPluginSettings';
 import type { App, TFile } from 'obsidian';
 
 // Mock fs module

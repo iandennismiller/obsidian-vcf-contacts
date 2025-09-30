@@ -62,14 +62,3 @@ export {
   getSortName,
   createFileName
 } from './contactNote';
-
-// ============================================================================
-// Interfaces
-// ============================================================================
-
-// Export individual interfaces
-export * from '../../interfaces/IContactNote';
-export * from '../../interfaces/IContactData';
-export * from '../../interfaces/IRelationshipOperations';
-export * from '../../interfaces/IMarkdownOperations';
-export * from '../../interfaces/ISyncOperations';

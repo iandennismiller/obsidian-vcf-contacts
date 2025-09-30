@@ -6,7 +6,7 @@ import { TFile } from 'obsidian';
 import { ContactNote, Contact } from '../contactNote';
 import { ContactManagerData } from './contactManagerData';
 import { getSettings, updateSettings } from '../../plugin/context/sharedSettingsContext';
-import { RunType } from "src/interfaces/RunType";
+import { RunType } from "src/definitions/RunType";
 import { curatorService } from '../curatorManager/curatorManager';
 
 /**

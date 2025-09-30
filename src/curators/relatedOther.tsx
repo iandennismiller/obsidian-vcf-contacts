@@ -3,9 +3,9 @@ import { Contact, ContactNote, FrontmatterRelationship } from "src/models";
 import { ContactManager } from "src/models/contactManager";
 import { getApp } from "src/plugin/context/sharedAppContext";
 import { getSettings } from "src/plugin/context/sharedSettingsContext";
-import { CuratorProcessor } from "src/interfaces/CuratorProcessor";
-import { CuratorQueItem } from "src/interfaces/CuratorQueItem";
-import { RunType } from "src/interfaces/RunType";
+import { CuratorProcessor } from "src/definitions/CuratorProcessor";
+import { CuratorQueItem } from "src/definitions/CuratorQueItem";
+import { RunType } from "src/definitions/RunType";
 
 /**
  * Get the reciprocal relationship type for a given type

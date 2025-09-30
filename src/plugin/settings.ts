@@ -1,10 +1,10 @@
 import { App, PluginSettingTab, Setting, Notice, Modal } from "obsidian";
 import { setSettings } from "src/plugin/context/sharedSettingsContext";
-import { CuratorSettingProperties } from "src/interfaces/CuratorSettingProperties";
+import { CuratorSettingProperties } from "src/definitions/CuratorSettingProperties";
 import { curatorService } from "src/models/curatorManager/curatorManager";
 import ContactsPlugin from "src/main";
 import { FolderSuggest } from "src/plugin/ui/FolderSuggest";
-import { ContactsPluginSettings } from 'src/interfaces/ContactsPluginSettings'
+import { ContactsPluginSettings } from 'src/definitions/ContactsPluginSettings'
 
 const curatorSetting = curatorService.settings();
 const curatorSettingDefaults = curatorSetting.reduce((acc:Record<string, string|boolean>, setting) => {

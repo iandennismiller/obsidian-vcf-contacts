@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ContactManagerData } from '../../../../src/models/contactManager/contactManagerData';
 import { App, TFile } from 'obsidian';
-import { ContactsPluginSettings } from 'src/interfaces/ContactsPluginSettings';
+import { ContactsPluginSettings } from 'src/definitions/ContactsPluginSettings';
 
 describe('ContactManagerData', () => {
   let mockApp: Partial<App>;
