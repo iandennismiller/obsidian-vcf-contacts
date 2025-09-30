@@ -1,0 +1,14 @@
+# GitHub Copilot Coding Agent Setup Steps
+# This file configures the development environment for the Copilot coding agent
+# See: https://docs.github.com/en/copilot/how-tos/use-copilot-agents/coding-agent/customize-the-agent-environment
+
+steps:
+  # Install Node.js dependencies with npm caching
+  - name: Install dependencies
+    run: npm ci
+    cache:
+      # Cache node_modules to speed up subsequent runs
+      paths:
+        - node_modules
+      # Cache key based on package-lock.json for version consistency
+      key: npm-${{ hashFiles('package-lock.json') }}
