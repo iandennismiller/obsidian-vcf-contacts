@@ -90,7 +90,8 @@ export class ContactData {
             this._frontmatter = parseYaml(match[1]) || {};
           } catch (error) {
             console.log(`[ContactData] Error parsing frontmatter for ${this.file.path}: ${error.message}`);
-            this._frontmatter = {};
+            this._frontmatter = null; // Return null for malformed YAML
+            return null;
           }
         } else {
           this._frontmatter = {};

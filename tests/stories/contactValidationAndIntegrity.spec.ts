@@ -104,11 +104,11 @@ describe('Contact Validation and Integrity Story', () => {
       const hasUID = testCase.frontmatter.UID && testCase.frontmatter.UID.trim() !== '';
       const hasFN = testCase.frontmatter.FN && testCase.frontmatter.FN.trim() !== '';
       
-      const isValid = hasUID && hasFN;
+      const isValid = Boolean(hasUID && hasFN);
       const issues = [];
       
-      if (!testCase.frontmatter.UID) issues.push('missing-uid');
-      else if (testCase.frontmatter.UID.trim() === '') issues.push('empty-uid');
+      if (!testCase.frontmatter.hasOwnProperty('UID')) issues.push('missing-uid');
+      else if (!testCase.frontmatter.UID || testCase.frontmatter.UID.trim() === '') issues.push('empty-uid');
       
       if (!testCase.frontmatter.FN) issues.push('missing-name');
       
@@ -291,7 +291,7 @@ FN: Source Contact
 
       // Simple email validation regex
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      const isValidEmail = testCase.email && emailRegex.test(testCase.email);
+      const isValidEmail = Boolean(testCase.email && emailRegex.test(testCase.email));
 
       expect(isValidEmail).toBe(testCase.valid);
     });
@@ -326,8 +326,8 @@ FN: Source Contact
 
       // Basic phone validation - contains digits and common separators
       const phoneRegex = /^[\+\-\(\)\.\s\d]+$/;
-      const hasDigits = /\d{3,}/.test(testCase.phone); // At least 3 digits
-      const isValidPhone = testCase.phone && phoneRegex.test(testCase.phone) && hasDigits;
+      const digitCount = (testCase.phone.match(/\d/g) || []).length; // Count total digits
+      const isValidPhone = Boolean(testCase.phone && phoneRegex.test(testCase.phone) && digitCount >= 7);
 
       expect(isValidPhone).toBe(testCase.valid);
     });
@@ -447,8 +447,12 @@ FN: Source Contact
         // YYYY-MM-DD format
         const bdayRegex = /^\d{4}-\d{2}-\d{2}$/;
         if (bdayRegex.test(testCase.value)) {
-          const date = new Date(testCase.value);
-          isValid = date.toISOString().startsWith(testCase.value);
+          try {
+            const date = new Date(testCase.value);
+            isValid = !isNaN(date.getTime()) && date.toISOString().startsWith(testCase.value);
+          } catch (error) {
+            isValid = false;
+          }
         }
       } else if (testCase.field === 'REV') {
         // ISO 8601 format with Z
@@ -636,8 +640,8 @@ EMAIL: invalid-email
       // Validate phone
       if (contact.frontmatter.TEL) {
         const phoneRegex = /^[\+\-\(\)\.\s\d]+$/;
-        const hasDigits = /\d{3,}/.test(contact.frontmatter.TEL);
-        if (!phoneRegex.test(contact.frontmatter.TEL) || !hasDigits) {
+        const digitCount = (contact.frontmatter.TEL.match(/\d/g) || []).length; // Count total digits
+        if (!phoneRegex.test(contact.frontmatter.TEL) || digitCount < 7) {
           validationReport.issues.push({
             contact: contact.frontmatter.FN,
             issue: 'invalid-phone',
@@ -650,7 +654,16 @@ EMAIL: invalid-email
       // Validate date
       if (contact.frontmatter.BDAY) {
         const bdayRegex = /^\d{4}-\d{2}-\d{2}$/;
-        if (!bdayRegex.test(contact.frontmatter.BDAY)) {
+        let isValidDate = false;
+        if (bdayRegex.test(contact.frontmatter.BDAY)) {
+          try {
+            const date = new Date(contact.frontmatter.BDAY);
+            isValidDate = !isNaN(date.getTime()) && date.toISOString().startsWith(contact.frontmatter.BDAY);
+          } catch (error) {
+            isValidDate = false;
+          }
+        }
+        if (!isValidDate) {
           validationReport.issues.push({
             contact: contact.frontmatter.FN,
             issue: 'invalid-date',
