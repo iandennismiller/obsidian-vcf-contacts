@@ -266,4 +266,159 @@ describe('ContactManagerData', () => {
       expect(contactManagerData.getEventRef()).toBeNull();
     });
   });
+
+  describe('getContactFiles alias', () => {
+    it('should return contact files array from map', () => {
+      const mockFile1 = { 
+        basename: 'contact1', 
+        path: 'Contacts/contact1.md',
+        name: 'contact1.md'
+      } as TFile;
+
+      contactManagerData.setContactFile('uid-1', mockFile1);
+      
+      const files = contactManagerData.getContactFiles();
+      
+      expect(files).toHaveLength(1);
+      expect(files[0]).toBe(mockFile1);
+    });
+  });
+
+  describe('getAllCachedFiles', () => {
+    it('should return all cached files', () => {
+      const mockFile1 = { 
+        basename: 'contact1', 
+        path: 'Contacts/contact1.md',
+        name: 'contact1.md'
+      } as TFile;
+      const mockFile2 = { 
+        basename: 'contact2', 
+        path: 'Contacts/contact2.md',
+        name: 'contact2.md'
+      } as TFile;
+
+      contactManagerData.setContactFile('uid-1', mockFile1);
+      contactManagerData.setContactFile('uid-2', mockFile2);
+      
+      const files = contactManagerData.getAllCachedFiles();
+      
+      expect(files).toHaveLength(2);
+      expect(files).toContain(mockFile1);
+      expect(files).toContain(mockFile2);
+    });
+  });
+
+  describe('extractUIDFromFile', () => {
+    it('should handle read errors when parsing file content', async () => {
+      const mockFile = { 
+        path: 'Contacts/test.md',
+        basename: 'test'
+      } as TFile;
+
+      mockApp.metadataCache!.getFileCache = vi.fn().mockReturnValue({
+        frontmatter: {} // No UID in frontmatter
+      });
+
+      mockApp.vault!.read = vi.fn().mockRejectedValue(new Error('Read error'));
+
+      const uid = await contactManagerData.extractUIDFromFile(mockFile);
+
+      expect(uid).toBeNull();
+    });
+  });
+
+  describe('getAllContactFiles with custom callback', () => {
+    it('should use custom callback to filter files', () => {
+      const mockFiles = [
+        { path: 'Contacts/contact1.md', basename: 'contact1' } as TFile,
+        { path: 'Contacts/contact2.md', basename: 'contact2' } as TFile,
+        { path: 'Other/note.md', basename: 'note' } as TFile
+      ];
+
+      mockApp.vault!.getMarkdownFiles = vi.fn().mockReturnValue(mockFiles);
+      mockApp.metadataCache!.getFileCache = vi.fn().mockReturnValue({
+        frontmatter: { UID: 'test-uid' }
+      });
+
+      const customCallback = (file: TFile) => file.path.startsWith('Contacts');
+      const files = contactManagerData.getAllContactFiles(customCallback);
+
+      expect(files).toHaveLength(2);
+    });
+
+    it('should return cached files when exists and no callback', () => {
+      contactManagerData.invalidateContactFilesCache();
+      
+      const mockFiles = [
+        { path: 'Contacts/contact1.md', basename: 'contact1' } as TFile
+      ];
+
+      mockApp.vault!.getMarkdownFiles = vi.fn().mockReturnValue(mockFiles);
+      mockApp.metadataCache!.getFileCache = vi.fn().mockReturnValue({
+        frontmatter: { UID: 'test-uid' }
+      });
+
+      // First call to populate cache
+      const files1 = contactManagerData.getAllContactFiles();
+      
+      // Second call should return cached results
+      const files2 = contactManagerData.getAllContactFiles();
+
+      expect(files1).toBe(files2); // Same array instance
+      expect(mockApp.vault!.getMarkdownFiles).toHaveBeenCalledTimes(1);
+    });
+
+    it('should handle errors in getAllContactFiles', () => {
+      mockApp.vault!.getMarkdownFiles = vi.fn().mockImplementation(() => {
+        throw new Error('Vault error');
+      });
+
+      const files = contactManagerData.getAllContactFiles();
+
+      expect(files).toEqual([]);
+    });
+  });
+
+  describe('event listeners', () => {
+    it('should setup event listeners', () => {
+      const mockEventRef = { id: 'event-ref' } as any;
+      mockApp.workspace!.on = vi.fn().mockReturnValue(mockEventRef);
+
+      contactManagerData.setupEventListeners();
+
+      expect(mockApp.workspace!.on).toHaveBeenCalledWith('active-leaf-change', expect.any(Function));
+      expect(contactManagerData.getEventRef()).toBe(mockEventRef);
+    });
+
+    it('should not setup event listeners if already set up', () => {
+      const mockEventRef = { id: 'event-ref' } as any;
+      contactManagerData.setEventRef(mockEventRef);
+      mockApp.workspace!.on = vi.fn();
+
+      contactManagerData.setupEventListeners();
+
+      expect(mockApp.workspace!.on).not.toHaveBeenCalled();
+    });
+
+    it('should cleanup event listeners', () => {
+      const mockEventRef = { id: 'event-ref' } as any;
+      mockApp.workspace!.offref = vi.fn();
+      contactManagerData.setEventRef(mockEventRef);
+
+      contactManagerData.cleanupEventListeners();
+
+      expect(mockApp.workspace!.offref).toHaveBeenCalledWith(mockEventRef);
+      expect(contactManagerData.getEventRef()).toBeNull();
+    });
+  });
+
+  describe('getContactFilesFromVault null handling', () => {
+    it('should handle null from getMarkdownFiles', () => {
+      mockApp.vault!.getMarkdownFiles = vi.fn().mockReturnValue(null);
+
+      const files = contactManagerData.getContactFilesFromVault();
+
+      expect(files).toEqual([]);
+    });
+  });
 });

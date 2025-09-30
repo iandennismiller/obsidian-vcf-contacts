@@ -307,4 +307,109 @@ describe('ConsistencyOperations', () => {
         .resolves.not.toThrow();
     });
   });
+
+  describe('validateContactIntegrity', () => {
+    it('should detect files without UIDs', async () => {
+      const fileWithoutUID = { 
+        basename: 'no-uid', 
+        path: 'Contacts/no-uid.md',
+        name: 'no-uid.md'
+      } as TFile;
+
+      mockContactManagerData.getAllContactFiles = vi.fn().mockReturnValue([fileWithoutUID]);
+      mockContactManagerData.extractUIDFromFile = vi.fn().mockResolvedValue(null);
+      mockContactManagerData.getCacheStats = vi.fn().mockReturnValue({
+        uidCount: 0,
+        fileCount: 0,
+        uidCacheSize: 0,
+        contactFilesCacheSize: 0,
+        hasContactFilesCache: false
+      });
+
+      const result = await consistencyOperations.validateContactIntegrity();
+
+      expect(result.isValid).toBe(false);
+      expect(result.issues.some(issue => issue.includes('contact files missing UIDs'))).toBe(true);
+      expect(result.recommendations).toContain('Add UIDs to contact files or remove them from contacts folder');
+    });
+
+    it('should detect duplicate UIDs', async () => {
+      const file1 = { 
+        basename: 'contact1', 
+        path: 'Contacts/contact1.md',
+        name: 'contact1.md'
+      } as TFile;
+      const file2 = { 
+        basename: 'contact2', 
+        path: 'Contacts/contact2.md',
+        name: 'contact2.md'
+      } as TFile;
+
+      mockContactManagerData.getAllContactFiles = vi.fn().mockReturnValue([file1, file2]);
+      mockContactManagerData.extractUIDFromFile = vi.fn().mockResolvedValue('duplicate-uid');
+      mockContactManagerData.getCacheStats = vi.fn().mockReturnValue({
+        uidCount: 1,
+        fileCount: 1,
+        uidCacheSize: 1,
+        contactFilesCacheSize: 1,
+        hasContactFilesCache: false
+      });
+
+      const result = await consistencyOperations.validateContactIntegrity();
+
+      expect(result.isValid).toBe(false);
+      expect(result.issues.some(issue => issue.includes('Duplicate UIDs found'))).toBe(true);
+      expect(result.recommendations).toContain('Resolve duplicate UIDs by updating or removing duplicate contacts');
+    });
+
+    it('should handle validation errors gracefully', async () => {
+      mockContactManagerData.getAllContactFiles = vi.fn().mockImplementation(() => {
+        throw new Error('Validation error');
+      });
+
+      const result = await consistencyOperations.validateContactIntegrity();
+
+      expect(result.isValid).toBe(false);
+      expect(result.issues.some(issue => issue.includes('Validation failed'))).toBe(true);
+      expect(result.recommendations).toContain('Fix validation errors before checking integrity');
+    });
+  });
+
+  describe('extractFrontmatterFromFiles error handling', () => {
+    it('should handle file cache errors', async () => {
+      const mockApp = {
+        metadataCache: {
+          getFileCache: vi.fn().mockImplementation(() => {
+            throw new Error('Cache error');
+          })
+        }
+      };
+      
+      mockContactManagerData.getApp = vi.fn().mockReturnValue(mockApp);
+
+      const contacts = await consistencyOperations.extractFrontmatterFromFiles(mockFiles);
+
+      expect(contacts).toHaveLength(mockFiles.length);
+      expect(contacts[0].data).toEqual({});
+    });
+  });
+
+  describe('createContactTaskList error handling', () => {
+    it('should handle file reading errors', async () => {
+      const mockApp = {
+        metadataCache: {
+          getFileCache: vi.fn().mockImplementation(() => {
+            throw new Error('File read error');
+          })
+        }
+      };
+      
+      mockContactManagerData.getApp = vi.fn().mockReturnValue(mockApp);
+
+      const taskList = await consistencyOperations.createContactTaskList(mockFiles);
+
+      expect(taskList).toHaveLength(mockFiles.length);
+      expect(taskList[0].revTimestamp).toBe(0);
+    });
+  });
 });
