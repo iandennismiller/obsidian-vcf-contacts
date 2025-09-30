@@ -143,8 +143,9 @@ export class RelationshipOperations {
       const normalizedContactName = contactName.toLowerCase().replace(/\s+/g, '-');
       const contactFile = app.vault.getAbstractFileByPath(`${contactsFolder}/${normalizedContactName}.md`);
       
-      if (contactFile instanceof TFile) {
-        return contactFile;
+      // Check if file exists and has the right properties (avoid instanceof in test env)
+      if (contactFile && 'path' in contactFile && 'basename' in contactFile) {
+        return contactFile as TFile;
       }
 
       // Search for file in contacts folder

@@ -454,7 +454,7 @@ export class ContactNote {
           contactName: rel.contactName,
           targetUID: resolved?.uid,
           linkType: resolved?.uid ? 'uid' : 'name',
-          originalType: rel.originalType
+          originalType: rel.type
         });
       }
     }
@@ -533,6 +533,7 @@ export class ContactNote {
       targetContact: string;
       reverseType: string;
       added: boolean;
+      reason?: string;
       error?: string;
     }>;
     errors: string[];
@@ -556,21 +557,23 @@ export class ContactNote {
             targetContact: relationship.contactName,
             reverseType: '',
             added: false,
+            reason: 'target contact not found',
             error: 'Target contact not found'
           });
           continue;
         }
 
         // Get target gender for gender-aware reciprocal relationship
+        // We use sourceGender because the reciprocal will point back to the source
         const targetContact = new ContactNote(this.app, this.settings, targetFile);
-        const targetGender = await targetContact.getGender();
-        const reverseType = this.getReciprocalRelationshipType(relationship.type, targetGender);
+        const reverseType = this.getReciprocalRelationshipType(relationship.type, sourceGender);
         
         if (!reverseType) {
           result.processedRelationships.push({
             targetContact: relationship.contactName,
             reverseType: '',
             added: false,
+            reason: 'no reciprocal relationship type available',
             error: 'No reciprocal relationship type available'
           });
           continue;
@@ -579,17 +582,19 @@ export class ContactNote {
         // Check if reverse relationship already exists
         const targetRelationships = await targetContact.parseRelatedSection();
         
-        const reverseExists = targetRelationships.some(rel => 
-          rel.contactName === sourceContactName && 
-          this.areRelationshipTypesEquivalent(rel.type, reverseType)
-        );
+        const reverseExists = targetRelationships.some(rel => {
+          // Normalize contact names for comparison (case-insensitive, space/dash equivalence)
+          const normalizedRelName = rel.contactName.toLowerCase().replace(/[\s\-]/g, '');
+          const normalizedSourceName = sourceContactName.toLowerCase().replace(/[\s\-]/g, '');
+          return normalizedRelName === normalizedSourceName && 
+            this.areRelationshipTypesEquivalent(rel.type, reverseType);
+        });
 
         if (!reverseExists) {
           // Add reverse relationship
           const newRelationships = [...targetRelationships, {
             type: reverseType,
-            contactName: sourceContactName,
-            originalType: reverseType
+            contactName: sourceContactName
           }];
           
           await targetContact.updateRelatedSectionInContent(newRelationships);
@@ -603,7 +608,8 @@ export class ContactNote {
           result.processedRelationships.push({
             targetContact: relationship.contactName,
             reverseType,
-            added: false
+            added: false,
+            reason: 'relationship already exists'
           });
         }
       }
@@ -805,6 +811,7 @@ export class ContactNote {
       'father': {
         'M': 'son',
         'F': 'daughter',
+        'NB': 'child',
         'O': 'child',
         'N': 'child',
         'U': 'child',
@@ -812,7 +819,8 @@ export class ContactNote {
       },
       'mother': {
         'M': 'son',
-        'F': 'daughter', 
+        'F': 'daughter',
+        'NB': 'child',
         'O': 'child',
         'N': 'child',
         'U': 'child',
@@ -821,6 +829,7 @@ export class ContactNote {
       'parent': {
         'M': 'son',
         'F': 'daughter',
+        'NB': 'child',
         'O': 'child', 
         'N': 'child',
         'U': 'child',
@@ -832,6 +841,7 @@ export class ContactNote {
       'brother': {
         'M': 'brother',
         'F': 'sister',
+        'NB': 'sibling',
         'O': 'sibling',
         'N': 'sibling', 
         'U': 'sibling',
@@ -840,6 +850,7 @@ export class ContactNote {
       'sister': {
         'M': 'brother',
         'F': 'sister',
+        'NB': 'sibling',
         'O': 'sibling',
         'N': 'sibling',
         'U': 'sibling', 
@@ -853,11 +864,13 @@ export class ContactNote {
       'colleague': 'colleague',
       'manager': 'employee',
       'employee': 'manager',
+      'boss': 'employee',
       'mentor': 'mentee',
       'mentee': 'mentor',
       'uncle': {
         'M': 'nephew',
         'F': 'niece',
+        'NB': 'nephew',
         'O': 'nephew',
         'N': 'nephew',
         'U': 'nephew',
@@ -866,6 +879,7 @@ export class ContactNote {
       'aunt': {
         'M': 'nephew',
         'F': 'niece',
+        'NB': 'nephew',
         'O': 'nephew',
         'N': 'nephew',
         'U': 'nephew',
@@ -874,6 +888,7 @@ export class ContactNote {
       'nephew': {
         'M': 'uncle',
         'F': 'aunt',
+        'NB': 'uncle',
         'O': 'uncle',
         'N': 'uncle',
         'U': 'uncle',
@@ -882,6 +897,7 @@ export class ContactNote {
       'niece': {
         'M': 'uncle',
         'F': 'aunt',
+        'NB': 'aunt',
         'O': 'uncle',
         'N': 'uncle',
         'U': 'uncle',
