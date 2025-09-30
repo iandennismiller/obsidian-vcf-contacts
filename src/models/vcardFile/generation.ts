@@ -19,7 +19,9 @@ export class VCardGenerator {
     contactFiles.forEach((file) => {
       try {
         const singleVcard = VCardGenerator.generateVCardFromFile(file, app);
-        vCards.push(singleVcard);
+        if (singleVcard) {
+          vCards.push(singleVcard);
+        }
       } catch (err) {
         vCardsErrors.push({"status": "error", "file": file.basename, "message": err.message});
       }
@@ -64,11 +66,19 @@ export class VCardGenerator {
     return VCardGenerator.objectToVcf(namedObject);
   }
 
-  private static generateVCardFromFile(file: TFile, app?: App): string {
+  private static generateVCardFromFile(file: TFile, app?: App): string | null {
     const appInstance = app || getApp();
     const frontMatter = appInstance.metadataCache.getFileCache(file)?.frontmatter;
     if (!frontMatter) {
       throw new Error('No frontmatter found.');
+    }
+
+    // Validate required fields - either UID or FN should be present
+    const hasUID = frontMatter.UID;
+    const hasFN = frontMatter.FN;
+    
+    if (!hasUID && !hasFN) {
+      throw new Error('Missing required fields (UID or FN).');
     }
 
     const entries = Object.entries(frontMatter) as Array<[string, string]>;
@@ -78,21 +88,31 @@ export class VCardGenerator {
     entries.forEach(([key, value]) => {
       const keyObj = parseKey(key);
 
-      if (['ADR', 'N'].includes(keyObj.key)) {
+      // Check if this is a structured field by looking for subkey/dot notation
+      if (['ADR', 'N'].includes(keyObj.key) && key.includes('.')) {
         structuredFields.push([key, value]);
       } else {
         singleLineFields.push([key, value]);
       }
     });
 
-    const hasFN = singleLineFields.some(([key, _]) => key === 'FN');
-    if (!hasFN) {
+    const fnExists = singleLineFields.some(([key, _]) => key === 'FN');
+    if (!fnExists) {
       singleLineFields.push(['FN', file.basename]);
     }
 
     const structuredLines = VCardGenerator.renderStructuredLines(structuredFields);
     const singleLines = singleLineFields.map(VCardGenerator.renderSingleKey);
-    const lines = structuredLines.concat(singleLines);
+    
+    // Ensure VERSION is included and comes first
+    const versionLine = 'VERSION:4.0';
+    const hasVersion = singleLines.some(line => line.startsWith('VERSION:'));
+    
+    let lines: string[] = [];
+    if (!hasVersion) {
+      lines.push(versionLine);
+    }
+    lines = lines.concat(structuredLines).concat(singleLines);
 
     return `BEGIN:VCARD\n${lines.join("\n")}\nEND:VCARD`;
   }
@@ -137,7 +157,8 @@ export class VCardGenerator {
     entries.forEach(([key, value]) => {
       const keyObj = parseKey(key);
 
-      if (['ADR', 'N'].includes(keyObj.key)) {
+      // Check if this is a structured field by looking for subkey/dot notation
+      if (['ADR', 'N'].includes(keyObj.key) && key.includes('.')) {
         structuredFields.push([key, value]);
       } else {
         singleLineFields.push([key, value]);
@@ -146,7 +167,16 @@ export class VCardGenerator {
 
     const structuredLines = VCardGenerator.renderStructuredLines(structuredFields);
     const singleLines = singleLineFields.map(VCardGenerator.renderSingleKey);
-    const lines = structuredLines.concat(singleLines);
+    
+    // Ensure VERSION is included and comes first
+    const versionLine = 'VERSION:4.0';
+    const hasVersion = singleLines.some(line => line.startsWith('VERSION:'));
+    
+    let lines: string[] = [];
+    if (!hasVersion) {
+      lines.push(versionLine);
+    }
+    lines = lines.concat(structuredLines).concat(singleLines);
 
     return `BEGIN:VCARD\n${lines.join("\n")}\nEND:VCARD`;
   }
