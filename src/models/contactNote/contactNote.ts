@@ -463,9 +463,9 @@ export class ContactNote {
   }
 
   /**
-   * Resolve a contact by UID
+   * Resolve a contact by UID - returns object with frontmatter
    */
-  async resolveContactByUID(uid: string): Promise<TFile | null> {
+  async resolveContactByUID(uid: string): Promise<{ file: TFile; frontmatter: any } | null> {
     const allFiles = this.app.vault.getMarkdownFiles();
     
     for (const file of allFiles) {
@@ -473,7 +473,7 @@ export class ContactNote {
       
       const cache = this.app.metadataCache.getFileCache(file);
       if (cache?.frontmatter?.UID === uid) {
-        return file;
+        return { file, frontmatter: cache.frontmatter };
       }
     }
     
@@ -481,14 +481,21 @@ export class ContactNote {
   }
 
   /**
+   * Resolve contact file by UID - returns just the TFile
+   */
+  async resolveContactFileByUID(uid: string): Promise<TFile | null> {
+    const result = await this.resolveContactByUID(uid);
+    return result?.file || null;
+  }
+
+  /**
    * Resolve contact name by UID
    */
   async resolveContactNameByUID(uid: string): Promise<string | null> {
-    const file = await this.resolveContactByUID(uid);
-    if (!file) return null;
+    const result = await this.resolveContactByUID(uid);
+    if (!result) return null;
     
-    const cache = this.app.metadataCache.getFileCache(file);
-    return cache?.frontmatter?.FN || file.basename;
+    return result.frontmatter?.FN || result.file.basename;
   }
 
   /**
@@ -501,11 +508,10 @@ export class ContactNote {
   } | null> {
     // Check if it's a UID format
     if (identifier.startsWith('urn:uuid:') || ContactNote.isValidUID(identifier)) {
-      const file = await this.resolveContactByUID(identifier);
-      if (file) {
-        const cache = this.app.metadataCache.getFileCache(file);
-        const contactName = cache?.frontmatter?.FN || file.basename;
-        return { file, type: 'uid', contactName };
+      const result = await this.resolveContactByUID(identifier);
+      if (result) {
+        const contactName = result.frontmatter?.FN || result.file.basename;
+        return { file: result.file, type: 'uid', contactName };
       }
     }
     
