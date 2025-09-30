@@ -1,10 +1,8 @@
 import { Plugin, Notice } from 'obsidian';
-import { ContactsView } from "src/ui/sidebar/sidebarView";
 import { VcardFile } from "./models/vcardFile";
-import myScrollTo from "src/ui/myScrollTo";
-import { SyncWatcher } from "src/services/syncWatcher";
-import { setupVCFDropHandler } from 'src/ui/vcfDropHandler';
-import { setApp, clearApp } from "src/context/sharedAppContext";
+import { SyncWatcher } from "src/plugin/services/syncWatcher";
+import { setupVCFDropHandler } from 'src/plugin/services/dropHandler';
+import { setApp, clearApp } from "src/plugin/context/sharedAppContext";
 import { CuratorManager, curatorService } from "./models/curatorManager/curatorManager";
 
 // Curator processor imports
@@ -21,8 +19,8 @@ import { VcardSyncPostProcessor } from 'src/curators/vcardSyncWrite';
 import { ContactNote } from "./models/contactNote";
 import { ContactManager } from "./models/contactManager";
 
-import { ContactsSettingTab, DEFAULT_SETTINGS } from './settings/settings';
-import { ContactsPluginSettings } from  './settings/settings.d';
+import { ContactsSettingTab, DEFAULT_SETTINGS } from './plugin/settings';
+import { ContactsPluginSettings } from  './interfaces/ContactsPluginSettings';
 
 export default class ContactsPlugin extends Plugin {
 	settings: ContactsPluginSettings;
@@ -69,25 +67,7 @@ export default class ContactsPlugin extends Plugin {
 		// Initialize VCF drop handler (watch for .vcf files created in the vault)
 		this.vcfDropCleanup = setupVCFDropHandler(this.app, this.settings);
 
-		this.registerView(
-			VcardFile.CONTACTS_VIEW_CONFIG.type,
-			(leaf) => new ContactsView(leaf, this)
-		);
-
-		this.addRibbonIcon('contact', 'Contacts', () => {
-			this.activateSidebarView();
-			myScrollTo.handleLeafEvent(null);
-		});
-
 		this.addSettingTab(new ContactsSettingTab(this.app, this));
-
-		this.addCommand({
-			id: 'contacts-sidebar',
-			name: "Open Contacts Sidebar",
-			callback: () => {
-				this.activateSidebarView();
-			},
-		});
 
 		this.addCommand({
 			id: 'contacts-create',
@@ -136,22 +116,4 @@ export default class ContactsPlugin extends Plugin {
 		await this.saveData(this.settings);
 	}
 
-	async activateSidebarView() {
-		if (this.app.workspace.getLeavesOfType(VcardFile.CONTACTS_VIEW_CONFIG.type).length < 1) {
-      const leaf = this.app.workspace.getRightLeaf(false);
-      if (leaf) {
-        await leaf.setViewState({
-          type: VcardFile.CONTACTS_VIEW_CONFIG.type,
-          active: true,
-        });
-      }
-		}
-
-    // Grab the leaf
-    const leaf = this.app.workspace.getLeavesOfType(VcardFile.CONTACTS_VIEW_CONFIG.type)[0];
-    if (!leaf) return null;
-
-    await this.app.workspace.revealLeaf(leaf);
-    return leaf.view as ContactsView;
-	}
 }
