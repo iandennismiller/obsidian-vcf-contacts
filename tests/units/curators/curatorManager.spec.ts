@@ -109,7 +109,7 @@ describe('CuratorManager', () => {
     const mockContact = {
       data: { FN: 'Test Contact' },
       file: { path: 'test.md' }
-    };
+    } as any;
 
     it('should process single contact', async () => {
       curatorManager.register(mockProcessorWithResult);
@@ -319,7 +319,7 @@ describe('CuratorManager', () => {
     });
 
     it('should process contacts via service', async () => {
-      const mockContact = { data: { FN: 'Test' }, file: { path: 'test.md' } };
+      const mockContact = { data: { FN: 'Test' }, file: { path: 'test.md' } } as any;
       
       curatorService.register(mockProcessorWithResult);
       const results = await curatorService.process(mockContact, RunType.INPROVEMENT);
@@ -341,7 +341,7 @@ describe('CuratorManager', () => {
       
       // Should handle error gracefully
       await expect(curatorManager.process(
-        { data: { FN: 'Test' }, file: { path: 'test.md' } }, 
+        { data: { FN: 'Test' }, file: { path: 'test.md' } } as any, 
         RunType.IMMEDIATELY
       )).rejects.toThrow('Processing failed');
     });

@@ -31,15 +31,19 @@ describe('UidProcessor', () => {
       // Verify the logic checks for existing UID
       const processorSource = UidProcessor.process.toString();
       expect(processorSource).toContain('contact.data["UID"]');
-      expect(processorSource).toContain('Promise.resolve(void 0)') || 
-        expect(processorSource).toContain('return Promise.resolve(undefined)');
+      expect(
+        processorSource.includes('Promise.resolve(void 0)') || 
+        processorSource.includes('return Promise.resolve(undefined)')
+      ).toBe(true);
     });
 
     it('should check processor setting before processing', () => {
       // Verify the logic respects the processor setting
       const processorSource = UidProcessor.process.toString();
       expect(processorSource).toContain('activeProcessor');
-      expect(processorSource).toContain('getSettings') || expect(processorSource).toContain('__vite_ssr_import');
+      expect(
+        processorSource.includes('getSettings') || processorSource.includes('__vite_ssr_import')
+      ).toBe(true);
     });
   });
 
@@ -96,8 +100,12 @@ describe('UidProcessor', () => {
     it('should use proper context functions', () => {
       // Verify it uses the shared context properly
       const processorSource = UidProcessor.process.toString();
-      expect(processorSource).toContain('getApp') || expect(processorSource).toContain('__vite_ssr_import');
-      expect(processorSource).toContain('getSettings') || expect(processorSource).toContain('__vite_ssr_import');
+      expect(
+        processorSource.includes('getApp') || processorSource.includes('__vite_ssr_import')
+      ).toBe(true);
+      expect(
+        processorSource.includes('getSettings') || processorSource.includes('__vite_ssr_import')
+      ).toBe(true);
     });
   });
 });

@@ -41,7 +41,9 @@ describe('RelatedNamespaceUpgradeProcessor', () => {
       // Verify the logic respects the processor setting
       const processorSource = RelatedNamespaceUpgradeProcessor.process.toString();
       expect(processorSource).toContain('activeProcessor');
-      expect(processorSource).toContain('getSettings') || expect(processorSource).toContain('__vite_ssr_import');
+      expect(
+        processorSource.includes('getSettings') || processorSource.includes('__vite_ssr_import')
+      ).toBe(true);
     });
 
     it('should work with contact data', () => {
@@ -53,9 +55,11 @@ describe('RelatedNamespaceUpgradeProcessor', () => {
     it('should handle relationship field upgrades', () => {
       // Should look for relationship fields that need upgrading
       const processorSource = RelatedNamespaceUpgradeProcessor.process.toString();
-      expect(processorSource).toContain('RELATED') || 
-        expect(processorSource).toContain('upgrade') ||
-        expect(processorSource).toContain('name-based');
+      expect(
+        processorSource.includes('RELATED') || 
+        processorSource.includes('upgrade') ||
+        processorSource.includes('name-based')
+      ).toBe(true);
     });
   });
 
@@ -77,8 +81,10 @@ describe('RelatedNamespaceUpgradeProcessor', () => {
     it('should use ContactNote for file operations', () => {
       // Should use ContactNote abstraction
       const processorSource = RelatedNamespaceUpgradeProcessor.process.toString();
-      expect(processorSource).toContain('ContactNote') ||
-        expect(processorSource).toContain('contact');
+      expect(
+        processorSource.includes('ContactNote') ||
+        processorSource.includes('contact')
+      ).toBe(true);
     });
 
     it('should return proper promise structure', () => {
@@ -90,10 +96,12 @@ describe('RelatedNamespaceUpgradeProcessor', () => {
     it('should handle data persistence when needed', () => {
       // Should save changes back to the contact file when upgrades are made
       const processorSource = RelatedNamespaceUpgradeProcessor.process.toString();
-      expect(processorSource).toContain('update') ||
-        expect(processorSource).toContain('modify') ||
-        expect(processorSource).toContain('save') ||
-        expect(processorSource).toContain('Promise.resolve');
+      expect(
+        processorSource.includes('update') ||
+        processorSource.includes('modify') ||
+        processorSource.includes('save') ||
+        processorSource.includes('Promise.resolve')
+      ).toBe(true);
     });
   });
 
@@ -101,19 +109,23 @@ describe('RelatedNamespaceUpgradeProcessor', () => {
     it('should provide meaningful success messages when upgrades occur', () => {
       // Should inform users about relationship upgrades
       const processorSource = RelatedNamespaceUpgradeProcessor.process.toString();
-      expect(processorSource).toContain('message') ||
-        expect(processorSource).toContain('upgrade') ||
-        expect(processorSource).toContain('converted') ||
-        expect(processorSource).toContain('RELATED');
+      expect(
+        processorSource.includes('message') ||
+        processorSource.includes('upgrade') ||
+        processorSource.includes('converted') ||
+        processorSource.includes('RELATED')
+      ).toBe(true);
     });
 
     it('should return CuratorQueItem when changes are made', () => {
       // Should return proper result structure when upgrades occur
       const processorSource = RelatedNamespaceUpgradeProcessor.process.toString();
-      expect(processorSource).toContain('name') ||
-        expect(processorSource).toContain('runType') ||
-        expect(processorSource).toContain('file') ||
-        expect(processorSource).toContain('this.name');
+      expect(
+        processorSource.includes('name') ||
+        processorSource.includes('runType') ||
+        processorSource.includes('file') ||
+        processorSource.includes('this.name')
+      ).toBe(true);
     });
   });
 

@@ -7,12 +7,14 @@ import { ContactsPluginSettings } from 'src/interfaces/ContactsPluginSettings';
 // Mock TFile properly for instanceof checks
 vi.mock('obsidian', () => ({
   TFile: class MockTFile {
-    constructor(public basename: string, public path: string) {
-      this.name = path.split('/').pop() || basename;
-    }
     basename: string;
     path: string;
     name: string;
+    constructor(basename: string, path: string) {
+      this.basename = basename;
+      this.path = path;
+      this.name = path.split('/').pop() || basename;
+    }
   },
   App: class MockApp {}
 }));
@@ -31,7 +33,7 @@ describe('RelationshipOperations', () => {
       getContent: vi.fn(),
       updateContent: vi.fn(),
       getFrontmatter: vi.fn(),
-      file: mockFile,
+      getFile: vi.fn().mockReturnValue(mockFile),
       getApp: vi.fn().mockReturnValue({
         vault: {
           getMarkdownFiles: vi.fn(),

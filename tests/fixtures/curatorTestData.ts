@@ -7,6 +7,7 @@
  * @module CuratorTestData
  */
 
+import { expect } from 'vitest';
 import type { Contact } from '../../src/models/contactNote/types';
 import { createMockTFile } from '../setup/curatorMocks';
 

@@ -27,7 +27,7 @@ describe('Demo VCF Data Parsing', () => {
       contacts.forEach(({ slug, contact }) => {
         expect(slug).toBeDefined();
         expect(typeof slug).toBe('string');
-        expect(slug.length).toBeGreaterThan(0);
+        expect(slug?.length).toBeGreaterThan(0);
       });
     });
 

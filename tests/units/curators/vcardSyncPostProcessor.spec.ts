@@ -45,20 +45,26 @@ describe('VcardSyncPostProcessor', () => {
       // Verify the logic respects the processor setting
       const processorSource = VcardSyncPostProcessor.process.toString();
       expect(processorSource).toContain('activeProcessor');
-      expect(processorSource).toContain('getSettings') || expect(processorSource).toContain('__vite_ssr_import');
+      expect(
+        processorSource.includes('getSettings') || processorSource.includes('__vite_ssr_import')
+      ).toBe(true);
     });
 
     it('should use proper context functions', () => {
       // Verify it uses the shared context properly
       const processorSource = VcardSyncPostProcessor.process.toString();
-      expect(processorSource).toContain('getSettings') || expect(processorSource).toContain('__vite_ssr_import');
+      expect(
+        processorSource.includes('getSettings') || processorSource.includes('__vite_ssr_import')
+      ).toBe(true);
     });
 
     it('should handle enabled/disabled state properly', () => {
       // Check that it returns undefined when disabled
       const processorSource = VcardSyncPostProcessor.process.toString();
-      expect(processorSource).toContain('Promise.resolve(void 0)') ||
-        expect(processorSource).toContain('return Promise.resolve(undefined)');
+      expect(
+        processorSource.includes('Promise.resolve(void 0)') ||
+        processorSource.includes('return Promise.resolve(undefined)')
+      ).toBe(true);
     });
   });
 
@@ -92,8 +98,10 @@ describe('VcardSyncPostProcessor', () => {
     it('should potentially return CuratorQueItem or undefined', () => {
       // Based on the interface, should return CuratorQueItem | undefined
       const processorSource = VcardSyncPostProcessor.process.toString();
-      expect(processorSource).toContain('Promise.resolve(void 0)') || 
-        expect(processorSource).toContain('Promise.resolve(undefined)');
+      expect(
+        processorSource.includes('Promise.resolve(void 0)') || 
+        processorSource.includes('Promise.resolve(undefined)')
+      ).toBe(true);
     });
   });
 

@@ -60,9 +60,9 @@ describe('Demo Data Integration Tests', () => {
     });
 
     it('should handle all character encodings in demo data', async () => {
-      const vcfContacts = [];
+      const vcfContacts: Array<{ slug: string; contact: any }> = [];
       for await (const [slug, contact] of VCardParser.parse(vcfContent)) {
-        vcfContacts.push({ slug, contact });
+        vcfContacts.push({ slug: slug!, contact });
       }
 
       // Test specific edge cases from demo data
@@ -99,9 +99,9 @@ describe('Demo Data Integration Tests', () => {
     });
 
     it('should process all VCF data types present in demo', async () => {
-      const vcfContacts = [];
+      const vcfContacts: Array<{ slug: string; contact: any }> = [];
       for await (const [slug, contact] of VCardParser.parse(vcfContent)) {
-        vcfContacts.push({ slug, contact });
+        vcfContacts.push({ slug: slug!, contact });
       }
 
       // Check that all major vCard fields are handled

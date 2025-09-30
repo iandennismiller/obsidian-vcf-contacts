@@ -31,7 +31,7 @@ describe('Single VCF File Synchronization Story', () => {
     mockSettings = {
       contactsFolder: 'Contacts',
       defaultHashtag: '#Contact',
-      vcfStorageMethod: 'single-file',
+      vcfStorageMethod: 'single-vcf',
       vcfFilename: 'contacts.vcf',
       vcfWatchFolder: '/test/vcf',
       vcfWatchEnabled: true,

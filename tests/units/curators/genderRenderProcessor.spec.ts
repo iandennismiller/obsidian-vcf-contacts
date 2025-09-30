@@ -41,7 +41,9 @@ describe('GenderRenderProcessor', () => {
     it("should have proper processor configuration", () => {
       const processorSource = GenderRenderProcessor.process.toString();
       expect(processorSource).toContain("activeProcessor");
-      expect(processorSource).toContain("getSettings") || expect(processorSource).toContain("__vite_ssr_import");
+      expect(
+        processorSource.includes("getSettings") || processorSource.includes("__vite_ssr_import")
+      ).toBe(true);
     });
 
     it("should handle contact data appropriately", () => {

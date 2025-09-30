@@ -41,7 +41,9 @@ describe('RelatedListProcessor', () => {
       // Verify the logic respects the processor setting
       const processorSource = RelatedListProcessor.process.toString();
       expect(processorSource).toContain('activeProcessor');
-      expect(processorSource).toContain('getSettings') || expect(processorSource).toContain('__vite_ssr_import');
+      expect(
+        processorSource.includes('getSettings') || processorSource.includes('__vite_ssr_import')
+      ).toBe(true);
     });
 
     it('should work with contact data', () => {
@@ -53,9 +55,11 @@ describe('RelatedListProcessor', () => {
     it('should handle relationship synchronization', () => {
       // Should work with related section and frontmatter
       const processorSource = RelatedListProcessor.process.toString();
-      expect(processorSource).toContain('parseRelatedSection') ||
-        expect(processorSource).toContain('syncRelatedListToFrontmatter') ||
-        expect(processorSource).toContain('parseFrontmatterRelationships');
+      expect(
+        processorSource.includes('parseRelatedSection') ||
+        processorSource.includes('syncRelatedListToFrontmatter') ||
+        processorSource.includes('parseFrontmatterRelationships')
+      ).toBe(true);
     });
   });
 
@@ -63,17 +67,21 @@ describe('RelatedListProcessor', () => {
     it('should sync Related section to frontmatter', () => {
       // Should synchronize Related section content to frontmatter
       const processorSource = RelatedListProcessor.process.toString();
-      expect(processorSource).toContain('syncRelatedListToFrontmatter') ||
-        expect(processorSource).toContain('Related') ||
-        expect(processorSource).toContain('frontmatter');
+      expect(
+        processorSource.includes('syncRelatedListToFrontmatter') ||
+        processorSource.includes('Related') ||
+        processorSource.includes('frontmatter')
+      ).toBe(true);
     });
 
     it('should handle missing relationships', () => {
       // Should identify and handle missing relationships
       const processorSource = RelatedListProcessor.process.toString();
-      expect(processorSource).toContain('missing') ||
-        expect(processorSource).toContain('sync') ||
-        expect(processorSource).toContain('relationship');
+      expect(
+        processorSource.includes('missing') ||
+        processorSource.includes('sync') ||
+        processorSource.includes('relationship')
+      ).toBe(true);
     });
   });
 
@@ -81,8 +89,10 @@ describe('RelatedListProcessor', () => {
     it('should use ContactNote for operations', () => {
       // Should use ContactNote abstraction
       const processorSource = RelatedListProcessor.process.toString();
-      expect(processorSource).toContain('ContactNote') ||
-        expect(processorSource).toContain('contact');
+      expect(
+        processorSource.includes('ContactNote') ||
+        processorSource.includes('contact')
+      ).toBe(true);
     });
 
     it('should return proper promise structure', () => {
@@ -94,9 +104,11 @@ describe('RelatedListProcessor', () => {
     it('should handle REV timestamp updates', () => {
       // Should update REV timestamp when changes are made
       const processorSource = RelatedListProcessor.process.toString();
-      expect(processorSource).toContain('updateFrontmatterValue') ||
-        expect(processorSource).toContain('REV') ||
-        expect(processorSource).toContain('generateRevTimestamp');
+      expect(
+        processorSource.includes('updateFrontmatterValue') ||
+        processorSource.includes('REV') ||
+        processorSource.includes('generateRevTimestamp')
+      ).toBe(true);
     });
   });
 
@@ -104,19 +116,23 @@ describe('RelatedListProcessor', () => {
     it('should provide meaningful success messages', () => {
       // Should inform users about sync operations
       const processorSource = RelatedListProcessor.process.toString();
-      expect(processorSource).toContain('message') ||
-        expect(processorSource).toContain('relationship') ||
-        expect(processorSource).toContain('Added') ||
-        expect(processorSource).toContain('missing');
+      expect(
+        processorSource.includes('message') ||
+        processorSource.includes('relationship') ||
+        processorSource.includes('Added') ||
+        processorSource.includes('missing')
+      ).toBe(true);
     });
 
     it('should return CuratorQueItem when changes are made', () => {
       // Should return proper result structure when sync occurs
       const processorSource = RelatedListProcessor.process.toString();
-      expect(processorSource).toContain('name') ||
-        expect(processorSource).toContain('runType') ||
-        expect(processorSource).toContain('file') ||
-        expect(processorSource).toContain('this.name');
+      expect(
+        processorSource.includes('name') ||
+        processorSource.includes('runType') ||
+        processorSource.includes('file') ||
+        processorSource.includes('this.name')
+      ).toBe(true);
     });
   });
 
