@@ -4,9 +4,9 @@ import { Contact, ContactNote } from "src/models";
 import { VcardManager } from "src/models/vcardManager";
 import { getApp } from "src/plugin/context/sharedAppContext";
 import { getSettings } from "src/plugin/context/sharedSettingsContext";
-import { CuratorProcessor } from "src/interfaces/CuratorProcessor";
-import { CuratorQueItem } from "src/interfaces/CuratorQueItem";
-import { RunType } from "src/interfaces/RunType";
+import { CuratorProcessor } from "src/models/curatorManager/CuratorProcessor";
+import { CuratorQueItem } from "src/models/curatorManager/CuratorQueItem";
+import { RunType } from "src/models/curatorManager/RunType";
 
 const renderGroup = (queItems: CuratorQueItem[]):JSX.Element => {
   return (

@@ -10,10 +10,3 @@ export { VCardWriteQueue } from './writeQueue';
 
 // File operations specific to manager responsibilities
 export { VCardManagerFileOperations } from './fileOperations';
-
-// Interfaces
-// Export individual interfaces
-export * from '../../interfaces/IVCardManager';
-export * from '../../interfaces/IVCardCollection';
-export * from '../../interfaces/IVCardWriteQueue';
-export * from '../../interfaces/IVCardManagerFileOperations';

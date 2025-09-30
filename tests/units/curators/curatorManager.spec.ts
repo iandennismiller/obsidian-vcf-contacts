@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { CuratorManager, curatorService } from '../../../src/models/curatorManager/curatorManager';
-import { RunType } from "../../../src/interfaces";
+import { RunType } from "../../../src/models/curatorManager";
 
 // Mock dependencies
 const mockApp = {
@@ -40,13 +40,13 @@ const mockProcessor = {
 
 const mockProcessorWithResult = {
   name: 'ProcessorWithResult',
-  runType: RunType.INPROVEMENT,
+  runType: RunType.IMPROVEMENT,
   settingPropertyName: 'processorWithResult',
   settingDescription: 'Processor that returns results',
   settingDefaultValue: true,
   process: vi.fn().mockResolvedValue({
     name: 'ProcessorWithResult',
-    runType: RunType.INPROVEMENT,
+    runType: RunType.IMPROVEMENT,
     file: { path: 'test.md' },
     message: 'Test result',
     render: vi.fn(),
@@ -98,11 +98,11 @@ describe('CuratorManager', () => {
 
     it('should support different run types', () => {
       curatorManager.register(mockProcessor); // IMMEDIATELY
-      curatorManager.register(mockProcessorWithResult); // INPROVEMENT
+      curatorManager.register(mockProcessorWithResult); // IMPROVEMENT
       
       const settings = curatorManager.settings();
       expect(settings.some(s => s.runType === RunType.IMMEDIATELY)).toBe(true);
-      expect(settings.some(s => s.runType === RunType.INPROVEMENT)).toBe(true);
+      expect(settings.some(s => s.runType === RunType.IMPROVEMENT)).toBe(true);
     });
   });
 
@@ -114,7 +114,7 @@ describe('CuratorManager', () => {
 
     it('should process single contact', async () => {
       curatorManager.register(mockProcessorWithResult);
-      const results = await curatorManager.process(mockContact, RunType.INPROVEMENT);
+      const results = await curatorManager.process(mockContact, RunType.IMPROVEMENT);
       
       expect(results).toBeInstanceOf(Array);
       expect(mockProcessorWithResult.process).toHaveBeenCalledWith(mockContact);
@@ -123,7 +123,7 @@ describe('CuratorManager', () => {
     it('should process array of contacts', async () => {
       curatorManager.register(mockProcessorWithResult);
       const contacts = [mockContact, { ...mockContact, data: { FN: 'Contact 2' } }];
-      const results = await curatorManager.process(contacts, RunType.INPROVEMENT);
+      const results = await curatorManager.process(contacts, RunType.IMPROVEMENT);
       
       expect(results).toBeInstanceOf(Array);
       expect(mockProcessorWithResult.process).toHaveBeenCalledTimes(2);
@@ -139,7 +139,7 @@ describe('CuratorManager', () => {
 
     it('should return actual results when processors produce them', async () => {
       curatorManager.register(mockProcessorWithResult);
-      const results = await curatorManager.process(mockContact, RunType.INPROVEMENT);
+      const results = await curatorManager.process(mockContact, RunType.IMPROVEMENT);
       
       expect(results.length).toBe(1);
       expect(results[0]).toHaveProperty('name', 'ProcessorWithResult');
@@ -148,7 +148,7 @@ describe('CuratorManager', () => {
 
     it('should only run processors matching the specified run type', async () => {
       curatorManager.register(mockProcessor); // IMMEDIATELY
-      curatorManager.register(mockProcessorWithResult); // INPROVEMENT
+      curatorManager.register(mockProcessorWithResult); // IMPROVEMENT
       
       await curatorManager.process(mockContact, RunType.IMMEDIATELY);
       
@@ -323,7 +323,7 @@ describe('CuratorManager', () => {
       const mockContact = { data: { FN: 'Test' }, file: { path: 'test.md' } } as any;
       
       curatorService.register(mockProcessorWithResult);
-      const results = await curatorService.process(mockContact, RunType.INPROVEMENT);
+      const results = await curatorService.process(mockContact, RunType.IMPROVEMENT);
       
       expect(results).toBeInstanceOf(Array);
       expect(mockProcessorWithResult.process).toHaveBeenCalledWith(mockContact);

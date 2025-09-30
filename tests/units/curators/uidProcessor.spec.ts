@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { UidProcessor } from "../../../src/curators/uidValidate";
-import { RunType } from "../../../src/interfaces";
+import { RunType } from "../../../src/models/curatorManager";
 
 describe('UidProcessor', () => {
   describe('processor properties', () => {

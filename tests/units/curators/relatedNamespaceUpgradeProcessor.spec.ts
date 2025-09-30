@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { RelatedNamespaceUpgradeProcessor } from "../../../src/curators/namespaceUpgrade";
-import { RunType } from "../../../src/interfaces";
+import { RunType } from "../../../src/models/curatorManager";
 
 describe('RelatedNamespaceUpgradeProcessor', () => {
   describe('processor properties', () => {
     it('should have correct processor properties', () => {
       expect(RelatedNamespaceUpgradeProcessor.name).toBe('RelatedNamespaceUpgradeProcessor');
-      expect(RelatedNamespaceUpgradeProcessor.runType).toBe(RunType.INPROVEMENT);
+      expect(RelatedNamespaceUpgradeProcessor.runType).toBe(RunType.IMPROVEMENT);
       expect(RelatedNamespaceUpgradeProcessor.settingPropertyName).toBe('relatedNamespaceUpgradeProcessor');
       expect(RelatedNamespaceUpgradeProcessor.settingDescription).toContain('upgrades name-based RELATED relationships');
       expect(RelatedNamespaceUpgradeProcessor.settingDefaultValue).toBe(true);
@@ -21,7 +21,7 @@ describe('RelatedNamespaceUpgradeProcessor', () => {
   describe('processor behavior verification', () => {
     it('should be an IMPROVEMENT processor type', () => {
       // Namespace upgrades are improvements to data structure
-      expect(RelatedNamespaceUpgradeProcessor.runType).toBe(RunType.INPROVEMENT);
+      expect(RelatedNamespaceUpgradeProcessor.runType).toBe(RunType.IMPROVEMENT);
     });
 
     it('should be enabled by default', () => {

@@ -64,13 +64,3 @@ export const ensureHasName = ContactManagerUtils.ensureHasName;
 
 /** Extract frontmatter from contact files */
 export const getFrontmatterFromFiles = ContactManagerUtils.getFrontmatterFromFiles;
-
-// ============================================================================
-// Interfaces
-// ============================================================================
-
-// Export individual interfaces
-export * from '../../interfaces/IContactManager';
-export * from '../../interfaces/IContactManagerData';
-export * from '../../interfaces/IConsistencyOperations';
-export * from '../../interfaces/IContactManagerUtils';

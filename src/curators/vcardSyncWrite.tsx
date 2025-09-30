@@ -4,9 +4,9 @@ import { VcardManager } from "src/models/vcardManager";
 import { VcardFile } from "src/models/vcardFile";
 import { getApp } from "src/plugin/context/sharedAppContext";
 import { getSettings } from "src/plugin/context/sharedSettingsContext";
-import { CuratorProcessor } from "src/interfaces/CuratorProcessor";
-import { CuratorQueItem } from "src/interfaces/CuratorQueItem";
-import { RunType } from "src/interfaces/RunType";
+import { CuratorProcessor } from "src/models/curatorManager/CuratorProcessor";
+import { CuratorQueItem } from "src/models/curatorManager/CuratorQueItem";
+import { RunType } from "src/models/curatorManager/RunType";
 
 const renderGroup = (queItems: CuratorQueItem[]): JSX.Element => {
   return (
@@ -31,7 +31,7 @@ const render = (queItem: CuratorQueItem): JSX.Element => {
 
 export const VcardSyncPostProcessor: CuratorProcessor = {
   name: "VCard Sync Post Processor",
-  runType: RunType.INPROVEMENT,
+  runType: RunType.IMPROVEMENT,
   settingPropertyName: "vcardSyncPostProcessor",
   settingDescription: "VCard Write Back: Automatically writes contact data back to VCard files when Obsidian contact has newer revision data. Requires both VCard Folder Watching and VCard Write Back to be enabled.",
   settingDefaultValue: true,

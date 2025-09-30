@@ -6,7 +6,7 @@ import { TFile } from 'obsidian';
 import { ContactNote, Contact } from '../contactNote';
 import { ContactManagerData } from './contactManagerData';
 import { getSettings, updateSettings } from '../../plugin/context/sharedSettingsContext';
-import { RunType } from "src/interfaces/RunType";
+import { RunType } from "src/models/curatorManager/RunType";
 import { curatorService } from '../curatorManager/curatorManager';
 
 /**
@@ -82,7 +82,7 @@ export class ConsistencyOperations {
       if (originalVcardSyncPostProcessorState) {
         console.log('[ConsistencyOperations] Running final vcardSyncPostProcessor pass...');
         const allContacts = await this.getFrontmatterFromFiles(allContactFiles);
-        await curatorService.process(allContacts, RunType.INPROVEMENT);
+        await curatorService.process(allContacts, RunType.IMPROVEMENT);
         console.log('[ConsistencyOperations] Final vcardSyncPostProcessor pass completed');
       }
 
@@ -141,8 +141,8 @@ export class ConsistencyOperations {
       // Process with all curator processors except vcardSyncPostProcessor
       // Note: vcardSyncPostProcessor is already disabled by the caller
       await curatorService.process(contacts, RunType.IMMEDIATELY);
-      await curatorService.process(contacts, RunType.INPROVEMENT);
-      await curatorService.process(contacts, RunType.UPCOMMING);
+      await curatorService.process(contacts, RunType.IMPROVEMENT);
+      await curatorService.process(contacts, RunType.UPCOMING);
       
       // Check which contacts had their REV timestamp updated
       for (const [uid, taskItem] of taskList) {

@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { GenderInferenceProcessor } from "../../../src/curators/genderInference";
-import { RunType } from "../../../src/interfaces";
+import { RunType } from "../../../src/models/curatorManager";
 
 describe('GenderInferenceProcessor', () => {
   describe('processor properties', () => {
     it('should have correct processor properties', () => {
       expect(GenderInferenceProcessor.name).toBe('GenderInferenceProcessor');
-      expect(GenderInferenceProcessor.runType).toBe(RunType.INPROVEMENT);
+      expect(GenderInferenceProcessor.runType).toBe(RunType.IMPROVEMENT);
       expect(GenderInferenceProcessor.settingPropertyName).toBe('genderInferenceProcessor');
       expect(GenderInferenceProcessor.settingDescription).toContain('Automatically infers gender');
       expect(GenderInferenceProcessor.settingDefaultValue).toBe(true);
@@ -21,7 +21,7 @@ describe('GenderInferenceProcessor', () => {
   describe('processor behavior verification', () => {
     it('should be an IMPROVEMENT processor type', () => {
       // Gender inference is an improvement to contact data
-      expect(GenderInferenceProcessor.runType).toBe(RunType.INPROVEMENT);
+      expect(GenderInferenceProcessor.runType).toBe(RunType.IMPROVEMENT);
     });
 
     it('should be enabled by default', () => {

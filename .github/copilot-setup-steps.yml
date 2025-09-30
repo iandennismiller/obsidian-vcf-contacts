@@ -10,5 +10,8 @@ steps:
       # Cache node_modules to speed up subsequent runs
       paths:
         - node_modules
+        - ~/.npm
       # Cache key based on package-lock.json for version consistency
       key: npm-${{ hashFiles('package-lock.json') }}
+      restore-keys: |
+        npm-

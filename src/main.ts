@@ -20,7 +20,7 @@ import { ContactNote } from "./models/contactNote";
 import { ContactManager } from "./models/contactManager";
 
 import { ContactsSettingTab, DEFAULT_SETTINGS } from './plugin/settings';
-import { ContactsPluginSettings } from  './interfaces/ContactsPluginSettings';
+import { ContactsPluginSettings } from  './plugin/settings';
 
 /* istanbul ignore next */
 // Plugin lifecycle methods integrate with Obsidian API and require full app context

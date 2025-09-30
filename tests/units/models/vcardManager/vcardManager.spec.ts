@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { VcardManager } from '../../../../src/models/vcardManager/vcardManager';
-import { ContactsPluginSettings } from 'src/interfaces/ContactsPluginSettings';
+import { ContactsPluginSettings } from 'src/plugin/settings';
 
 // Mock the sub-components
 vi.mock('../../../../src/models/vcardManager/vcardCollection', () => ({

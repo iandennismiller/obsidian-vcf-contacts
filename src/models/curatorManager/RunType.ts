@@ -8,6 +8,6 @@
 
 export enum RunType {
   IMMEDIATELY = 'immediately',
-  UPCOMMING = 'upcoming',
-  INPROVEMENT = 'inprovement',
+  UPCOMING = 'upcoming',
+  IMPROVEMENT = 'improvement'
 }

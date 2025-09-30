@@ -3,10 +3,10 @@ import { App, Notice, TFile } from 'obsidian';
 import * as path from 'path';
 import { VcardManager, VCardFileInfo } from "../../models/vcardManager";
 import { ContactManager } from "../../models/contactManager";
-import { ContactsPluginSettings } from 'src/interfaces/ContactsPluginSettings';
+import { ContactsPluginSettings } from 'src/plugin/settings';
 import { onSettingsChange } from "src/plugin/context/sharedSettingsContext";
 import { curatorService } from "src/models/curatorManager/curatorManager";
-import { RunType } from "src/interfaces/RunType";
+import { RunType } from "src/models/curatorManager/RunType";
 
 /**
  * Information about a VCard file being tracked by the watcher

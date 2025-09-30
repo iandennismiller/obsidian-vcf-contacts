@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { RelatedFrontMatterProcessor } from "../../../src/curators/relatedFrontMatter";
-import { RunType } from "../../../src/interfaces";
+import { RunType } from "../../../src/models/curatorManager";
 
 describe('RelatedFrontMatterProcessor', () => {
   describe('processor properties', () => {
     it('should have correct processor properties', () => {
       expect(RelatedFrontMatterProcessor.name).toBe('RelatedFrontMatterProcessor');
-      expect(RelatedFrontMatterProcessor.runType).toBe(RunType.INPROVEMENT);
+      expect(RelatedFrontMatterProcessor.runType).toBe(RunType.IMPROVEMENT);
       expect(RelatedFrontMatterProcessor.settingPropertyName).toBe('relatedFrontMatterProcessor');
       expect(RelatedFrontMatterProcessor.settingDescription).toContain('syncs RELATED frontmatter');
       expect(RelatedFrontMatterProcessor.settingDefaultValue).toBe(true);
@@ -28,7 +28,7 @@ describe('RelatedFrontMatterProcessor', () => {
     it('should handle bidirectional relationships', () => {
       // The processor works with bidirectional relationship synchronization
       // ensuring that relationships are properly maintained in both directions
-      expect(RelatedFrontMatterProcessor.runType).toBe(RunType.INPROVEMENT);
+      expect(RelatedFrontMatterProcessor.runType).toBe(RunType.IMPROVEMENT);
     });
 
     it('should be enabled by default', () => {

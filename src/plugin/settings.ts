@@ -1,10 +1,24 @@
 import { App, PluginSettingTab, Setting, Notice, Modal } from "obsidian";
 import { setSettings } from "src/plugin/context/sharedSettingsContext";
-import { CuratorSettingProperties } from "src/interfaces/CuratorSettingProperties";
+import { CuratorSettingProperties } from "src/models/curatorManager/CuratorSettingProperties";
 import { curatorService } from "src/models/curatorManager/curatorManager";
 import ContactsPlugin from "src/main";
 import { FolderSuggest } from "src/plugin/ui/FolderSuggest";
-import { ContactsPluginSettings } from 'src/interfaces/ContactsPluginSettings'
+
+export interface ContactsPluginSettings {
+  contactsFolder: string;
+  defaultHashtag: string;
+  vcfStorageMethod: 'single-vcf' | 'vcf-folder';
+  vcfFilename: string;
+  vcfWatchFolder: string;
+  vcfWatchEnabled: boolean;
+  vcfWatchPollingInterval: number;
+  vcfWriteBackEnabled: boolean;
+  vcfCustomizeIgnoreList: boolean;
+  vcfIgnoreFilenames: string[];
+  vcfIgnoreUIDs: string[];
+  [key: string]: string|boolean|number|string[];
+}
 
 const curatorSetting = curatorService.settings();
 const curatorSettingDefaults = curatorSetting.reduce((acc:Record<string, string|boolean>, setting) => {
