@@ -242,4 +242,107 @@ describe('VcardManager', () => {
       await expect(vcardManager.writeVCardFile('test.vcf', 'content')).rejects.toThrow('File operation error');
     });
   });
+
+  describe('scanVCFFolder', () => {
+    it('should return empty array when folder does not exist', async () => {
+      (vcardManager as any).fileOps.watchFolderExists.mockResolvedValue(false);
+
+      const result = await vcardManager.scanVCFFolder(new Map());
+
+      expect(result).toEqual([]);
+    });
+
+    it('should return empty array when no files in folder', async () => {
+      (vcardManager as any).fileOps.watchFolderExists.mockResolvedValue(true);
+      (vcardManager as any).collection.listVCardFiles.mockResolvedValue([]);
+
+      const result = await vcardManager.scanVCFFolder(new Map());
+
+      expect(result).toEqual([]);
+    });
+
+    it('should return new files that are not in known files', async () => {
+      (vcardManager as any).fileOps.watchFolderExists.mockResolvedValue(true);
+      (vcardManager as any).collection.listVCardFiles.mockResolvedValue([
+        '/test/vcf/new.vcf',
+        '/test/vcf/existing.vcf'
+      ]);
+      (vcardManager as any).collection.getVCardFileInfo
+        .mockResolvedValueOnce({ path: '/test/vcf/new.vcf', lastModified: 2000 })
+        .mockResolvedValueOnce({ path: '/test/vcf/existing.vcf', lastModified: 1000 });
+
+      const knownFiles = new Map([
+        ['/test/vcf/existing.vcf', { path: '/test/vcf/existing.vcf', lastModified: 1000 }]
+      ]);
+
+      const result = await vcardManager.scanVCFFolder(knownFiles);
+
+      expect(result).toContain('/test/vcf/new.vcf');
+      expect(result).not.toContain('/test/vcf/existing.vcf');
+    });
+
+    it('should return modified files', async () => {
+      (vcardManager as any).fileOps.watchFolderExists.mockResolvedValue(true);
+      (vcardManager as any).collection.listVCardFiles.mockResolvedValue(['/test/vcf/modified.vcf']);
+      (vcardManager as any).collection.getVCardFileInfo.mockResolvedValue({
+        path: '/test/vcf/modified.vcf',
+        lastModified: 2000
+      });
+
+      const knownFiles = new Map([
+        ['/test/vcf/modified.vcf', { path: '/test/vcf/modified.vcf', lastModified: 1000 }]
+      ]);
+
+      const result = await vcardManager.scanVCFFolder(knownFiles);
+
+      expect(result).toContain('/test/vcf/modified.vcf');
+    });
+
+    it('should filter ignored files', async () => {
+      const settingsWithIgnore = {
+        ...mockSettings,
+        vcfIgnoreFilenames: ['ignored.vcf']
+      };
+      vcardManager.updateSettings(settingsWithIgnore);
+
+      (vcardManager as any).fileOps.watchFolderExists.mockResolvedValue(true);
+      (vcardManager as any).collection.listVCardFiles.mockResolvedValue([
+        '/test/vcf/normal.vcf',
+        '/test/vcf/ignored.vcf'
+      ]);
+      (vcardManager as any).collection.getVCardFileInfo.mockResolvedValue({
+        path: '/test/vcf/normal.vcf',
+        lastModified: 1000
+      });
+
+      const result = await vcardManager.scanVCFFolder(new Map());
+
+      expect(result).toContain('/test/vcf/normal.vcf');
+      expect(result).not.toContain('/test/vcf/ignored.vcf');
+    });
+
+    it('should skip files that return null file info', async () => {
+      (vcardManager as any).fileOps.watchFolderExists.mockResolvedValue(true);
+      (vcardManager as any).collection.listVCardFiles.mockResolvedValue([
+        '/test/vcf/valid.vcf',
+        '/test/vcf/invalid.vcf'
+      ]);
+      (vcardManager as any).collection.getVCardFileInfo
+        .mockResolvedValueOnce({ path: '/test/vcf/valid.vcf', lastModified: 1000 })
+        .mockResolvedValueOnce(null);
+
+      const result = await vcardManager.scanVCFFolder(new Map());
+
+      expect(result).toContain('/test/vcf/valid.vcf');
+      expect(result).not.toContain('/test/vcf/invalid.vcf');
+    });
+
+    it('should handle errors gracefully', async () => {
+      (vcardManager as any).fileOps.watchFolderExists.mockRejectedValue(new Error('Scan error'));
+
+      const result = await vcardManager.scanVCFFolder(new Map());
+
+      expect(result).toEqual([]);
+    });
+  });
 });
