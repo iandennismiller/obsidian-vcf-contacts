@@ -1,132 +1,136 @@
 # Feature Overview
 
-## Core Features
+## Core Capabilities
 
-### 📥 VCF Import/Export
-- **Full vCard 4.0 Support**: Import and export complete contact data
-- **Batch Processing**: Handle multiple contacts at once
-- **Smart Updates**: Automatic conflict resolution based on revision timestamps
+### Relationship Management
+
+The plugin's primary focus is on tracking and managing relationships between contacts:
+
+#### Bidirectional Relationship Tracking
+- Define relationships in a markdown "Related" section using familiar wiki-link syntax
+- Automatic reciprocal relationship creation (adding "father [[John]]" to Jane automatically adds "child [[Jane]]" to John)
+- Gender-aware relationship terms (parent → mother/father, child → son/daughter)
+- Support for complex relationship types: family, professional, and social
+
+#### Relationship Synchronization
+- Bidirectional sync between markdown "Related" section and vCard RELATED fields
+- Changes in one contact automatically propagate to related contacts
+- UID-based references maintain relationship integrity across contact name changes
+- Consistency validation ensures all relationships are reciprocal
+
+#### Supported Relationship Types
+- **Family**: parent, child, sibling, spouse, partner, cousin, grandparent, grandchild, aunt, uncle, niece, nephew
+- **Professional**: colleague, boss, employee, manager, coworker, assistant
+- **Social**: friend, neighbor, acquaintance, teammate, classmate
+- **Custom**: Define your own relationship types
+
+### VCF Import/Export
+
+Standard vCard format support for interoperability:
+
+- **vCard 4.0 Compliance**: Full support for the latest vCard standard
+- **Import**: Create contacts from .vcf files (single contacts or entire databases)
+- **Export**: Generate standard .vcf files for use in other applications
+- **Batch Operations**: Process multiple contacts simultaneously
 - **Name Extraction**: Automatic file naming from contact data
+- **Smart Updates**: Revision timestamp comparison for conflict resolution
 
-### 📂 Folder Watching
-- **Automatic Monitoring**: Background scanning of VCF folders
-- **Real-time Sync**: Detects new files and changes automatically  
-- **Cross-Platform**: Works with local filesystem folders anywhere
+### Folder Watching
+
+Background monitoring of external VCF folders:
+
+- **Automatic Synchronization**: Detects and imports new VCF files
+- **Change Detection**: Updates contacts when VCF files are modified
+- **Duplicate Prevention**: Uses UID tracking to avoid duplicate contacts
 - **Intelligent Updates**: Only processes new or modified files
-- **Duplicate Prevention**: Uses UID tracking to avoid duplicates
+- **Cross-Platform**: Works with any local filesystem folder
+- **Configurable Polling**: Adjust scan frequency to your needs
 
-### 🖼️ Avatar Management
-- **Multiple Sources**: Support for local files, URLs, and embedded images
-- **Automatic Extraction**: Profile photos from VCF files are handled automatically
-- **Flexible Display**: Avatars appear in contact lists and individual contact views
+### Contact Data Management
 
-### 🔍 Search & Navigation
-- **Fast Lookup**: Quick contact search and filtering
-- **Obsidian Integration**: Leverage built-in search capabilities
-- **Smart Filtering**: Search by name, email, phone, or any field
-- **List Views**: Browse contacts with visual avatars
+Standard vCard field support:
 
-### 📞 Quick Actions
-- **One-Click Operations**: Direct calling, emailing, and messaging
-- **Copy to Clipboard**: Quick copy of phone numbers, emails, addresses
-- **External App Integration**: Open in default system apps
-- **Customizable Actions**: Configure which actions appear
-
-### 🔗 Knowledge Integration
-- **Bi-directional Links**: Connect contacts to your notes seamlessly
-- **Relationship Tracking**: Maintain relationships between contacts
-- **Context Awareness**: Contacts appear in relevant note contexts
-- **Rich Connections**: Full Obsidian linking capabilities
-
-### 📱 Social Profiles
-- **Multiple Platforms**: Support for various social media platforms
-- **Direct Links**: Quick access to online profiles
-- **Profile Management**: Organize and display social connections
-- **Custom Fields**: Add your own social platform types
-
-## Advanced Features
-
-### ⚡ Performance Optimizations
-- **Large Database Support**: Optimized for thousands of contacts
-- **Efficient Caching**: Smart memory management
-- **Background Processing**: Non-blocking operations
-- **Minimal Resource Usage**: Lightweight implementation
-
-### 🎨 Customization
-- **Flexible Layout**: Customize contact display formats
-- **Field Configuration**: Show/hide specific contact fields
-- **Theme Integration**: Respects Obsidian theme settings
-- **Plugin Integration**: Works well with other Obsidian plugins
-
-### 🛡️ Data Management
-- **Standard Compliance**: Full vCard 4.0 compatibility
-- **Data Integrity**: Automatic validation and error handling
-- **Backup Friendly**: All data stored as standard markdown files
-- **Version Control**: Git-friendly file format
-- **Migration Support**: Easy import from other contact systems
-
-### 🔧 Developer Features
-- **Plugin API**: Extensible architecture for developers
-- **Event System**: Hook into contact operations
-- **Custom Processors**: Add your own data processing logic
-- **Modular Design**: Clean separation of concerns
-
-## Contact Field Support
-
-### 📞 Basic Information
+#### Basic Information
 - Names (Given, Family, Middle, Prefix, Suffix)
-- Phone numbers (Multiple types: Mobile, Home, Work, etc.)
+- Phone numbers (Multiple types: Mobile, Home, Work)
 - Email addresses (Multiple addresses with type labels)
 - Organization information (Company, Department, Title)
 
-### 🏠 Addresses
+#### Addresses
 - Complete address support (Street, City, State, ZIP, Country)
 - Multiple address types (Home, Work, Other)
 - International format support
-- Label customization
 
-### 🌐 Digital Presence
+#### Metadata
+- Birthday and anniversary tracking
+- Categories and tags
+- Unique identifiers (UID) for contact linking
+- Revision timestamps (REV) for sync operations
+- Gender information for relationship processing
+
+#### Online Presence
 - Website URLs
 - Social media profiles
-- Instant messaging handles
 - Custom online presence fields
 
-### 📅 Important Dates
-- Birthday tracking
-- Anniversary dates
-- Custom date fields
-- Reminder capabilities
+## Technical Features
 
-### 🗂️ Organization
-- Categories and tags
-- Group memberships
-- Custom classification
-- Privacy settings
+### Data Consistency
 
-### 🔤 International Support
-- Unicode character support
-- Multiple language handling
-- Phonetic name fields
-- Cultural naming conventions
+Automated consistency operations:
+
+- **UID Management**: Automatic UID generation and validation
+- **Relationship Validation**: Ensures all relationships are reciprocal
+- **Frontmatter Sync**: Keeps frontmatter and markdown in sync
+- **Name Change Handling**: Updates all references when contact names change
+- **Orphan Detection**: Identifies and reports broken relationship references
+
+### Processor Architecture
+
+Extensible processor system for data operations:
+
+- **Gender Inference**: Automatically infers gender from relationship terms
+- **Gender Rendering**: Converts generic terms to gender-specific terms
+- **Relationship Sync**: Synchronizes relationships between contacts
+- **UID Processing**: Manages unique identifiers
+- **VCF Sync**: Handles VCF file synchronization
+- **Namespace Migration**: Upgrades old data formats
+
+### Write Queue System
+
+Controlled file operations:
+
+- **Queue Management**: Prevents file system conflicts during batch operations
+- **Sequential Processing**: Ensures operations complete in order
+- **Error Handling**: Robust error handling for file operations
+- **Status Tracking**: Monitor operation progress
 
 ## Integration Capabilities
 
-### 📧 External Applications
-- **Email Clients**: Direct integration with mail apps
-- **Phone Systems**: Click-to-call functionality
-- **Calendar Apps**: Birthday and anniversary sync
-- **Address Books**: Two-way synchronization
+### External Applications
 
-### 🔄 Sync Services
-- **Cloud Storage**: Works with synced folders
-- **Contact Services**: Import from major contact providers
-- **Backup Systems**: Compatible with backup solutions
-- **Version Control**: Git integration friendly
+Interoperability with standard tools:
 
-### 📱 Mobile Support
-- **Cross-Platform**: Works with Obsidian mobile apps
-- **Responsive Design**: Adapts to different screen sizes
-- **Touch Friendly**: Optimized for mobile interaction
-- **Sync Compatible**: Maintains data consistency across devices
+- **Email Clients**: Compatible with Gmail, Outlook, Apple Mail
+- **Phone Systems**: Works with iOS Contacts, Android Contacts
+- **CRM Systems**: Import/export with Salesforce, HubSpot
+- **Address Books**: Standard vCard format support
 
-This comprehensive feature set makes the VCF Contacts plugin a powerful solution for managing contacts within your Obsidian knowledge vault while maintaining compatibility with external contact management systems.
+### Obsidian Integration
+
+Leverages Obsidian features:
+
+- **Wiki Links**: Use standard Obsidian link syntax for relationships
+- **Frontmatter**: Contact data stored in YAML frontmatter
+- **Search**: Full integration with Obsidian search
+- **Tags**: Standard tag support for categorization
+- **Backlinks**: Relationship references appear in backlinks
+
+### Version Control
+
+Git-friendly design:
+
+- **Plain Text**: All data stored as markdown files
+- **Readable Diffs**: Changes are human-readable in diffs
+- **Merge-Friendly**: Conflicts are manageable
+- **Portable**: Easy to backup and migrate

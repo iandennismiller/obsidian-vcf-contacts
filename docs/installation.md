@@ -1,15 +1,15 @@
 # Installation Guide
 
-## 📦 Installation
+## Installation Methods
 
-### 🔄 Automatic via Community Plugins
+### Community Plugins (Recommended)
 
 1. Open **Settings → Community Plugins**
 2. Disable **Safe Mode** (if enabled)
 3. Click **Browse**, search for `VCF Contacts`
 4. Click **Install**, then **Enable**
 
-### 🧰 Manual Installation
+### Manual Installation
 
 1. Download the latest release from [GitHub Releases](https://github.com/iandennismiller/obsidian-vcf-contacts/releases)
 2. Extract the files to your vault's plugins folder:
