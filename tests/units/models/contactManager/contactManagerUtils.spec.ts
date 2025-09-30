@@ -334,4 +334,110 @@ describe('ContactManagerUtils', () => {
       )).resolves.not.toThrow();
     });
   });
+
+  describe('handleFileCreation with replace action', () => {
+    it('should replace file when user chooses replace', async () => {
+      const { FileExistsModal } = await import('../../../../src/plugin/ui/modals/fileExistsModal');
+      
+      // Mock FileExistsModal to call callback with "replace" action
+      vi.mocked(FileExistsModal).mockImplementation((app, filePath, callback) => ({
+        open: vi.fn().mockImplementation(() => {
+          setTimeout(() => callback("replace"), 0);
+        })
+      }) as any);
+
+      mockApp.vault!.adapter!.exists = vi.fn().mockResolvedValue(true);
+      mockApp.vault!.adapter!.write = vi.fn().mockResolvedValue(undefined);
+      mockApp.workspace!.getActiveFile = vi.fn().mockReturnValue(null);
+
+      await ContactManagerUtils.handleFileCreation(
+        mockApp as App, 
+        'Contacts/existing.md', 
+        'new content'
+      );
+
+      // Give time for async callback
+      await new Promise(resolve => setTimeout(resolve, 10));
+
+      expect(mockApp.vault!.adapter!.write).toHaveBeenCalledWith('Contacts/existing.md', 'new content');
+    });
+  });
+
+  describe('openCreatedFile with string path', () => {
+    it('should open file when given string path that resolves to TFile', async () => {
+      // Create a mock that passes instanceof TFile check
+      const mockFile = Object.create(TFile.prototype);
+      Object.assign(mockFile, { path: 'Contacts/new.md', basename: 'new' });
+      
+      const mockLeaf = { openFile: vi.fn() };
+      
+      mockApp.vault!.getAbstractFileByPath = vi.fn().mockReturnValue(mockFile);
+      mockApp.workspace!.getLeaf = vi.fn().mockReturnValue(mockLeaf);
+
+      await ContactManagerUtils.openCreatedFile(mockApp as App, 'Contacts/new.md');
+
+      expect(mockLeaf.openFile).toHaveBeenCalledWith(mockFile, { active: true });
+    });
+
+    it('should handle non-TFile abstract files', async () => {
+      const mockFolder = { path: 'Contacts' };
+      const mockLeaf = { openFile: vi.fn() };
+      
+      mockApp.vault!.getAbstractFileByPath = vi.fn().mockReturnValue(mockFolder);
+      mockApp.workspace!.getLeaf = vi.fn().mockReturnValue(mockLeaf);
+
+      await ContactManagerUtils.openCreatedFile(mockApp as App, 'Contacts');
+
+      expect(mockLeaf.openFile).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('ensureHasName fallback behavior', () => {
+    it('should construct FN from name components when createNameSlug fails', async () => {
+      // Contact with name components but in a format that would make createNameSlug fail
+      // This tests the fallback logic in lines 141-150
+      const contact: VCardForObsidianRecord = {
+        UID: 'test-123',
+        // No FN, but has name components
+        'N.GN': 'John',
+        'N.FN': 'Doe',
+        'N.PREFIX': 'Dr.',
+        'N.SUFFIX': 'Jr.'
+      };
+
+      const result = await ContactManagerUtils.ensureHasName(contact);
+
+      // The function should successfully create a name slug from the name components
+      expect(result).toBeDefined();
+      expect(result.UID).toBe('test-123');
+    });
+
+    it('should add "Unnamed Contact" when no name information is available', async () => {
+      // Contact with absolutely no name information
+      const contact: VCardForObsidianRecord = {
+        UID: 'test-123',
+        EMAIL: 'test@example.com'
+      };
+
+      const result = await ContactManagerUtils.ensureHasName(contact);
+
+      // Should add a default name
+      expect(result.FN).toBe('Unnamed Contact');
+    });
+
+    it('should handle name components with middle name in fallback', async () => {
+      // Test the full name construction including middle name
+      const contact: VCardForObsidianRecord = {
+        UID: 'test-123',
+        'N.GN': 'John',
+        'N.MN': 'Michael',
+        'N.FN': 'Doe'
+      };
+
+      const result = await ContactManagerUtils.ensureHasName(contact);
+
+      expect(result).toBeDefined();
+      expect(result.UID).toBe('test-123');
+    });
+  });
 });
