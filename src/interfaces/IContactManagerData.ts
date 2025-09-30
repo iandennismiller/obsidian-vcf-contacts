@@ -7,7 +7,7 @@
  */
 
 import { TFile, App } from 'obsidian';
-import { ContactsPluginSettings } from '../settings/settings';
+import { ContactsPluginSettings } from './ContactsPluginSettings';
 
 export interface IContactManagerData {
   /**

@@ -1,7 +1,7 @@
 import { App, TFile, Notice, Workspace, normalizePath } from 'obsidian';
 import { VCardForObsidianRecord } from '../vcardFile';
 import { Contact } from '../contactNote';
-import { FileExistsModal } from '../../ui/modals/fileExistsModal';
+import { FileExistsModal } from '../../plugin/ui/modals/fileExistsModal';
 import { curatorService } from '../curatorManager/curatorManager';
 import { RunType } from "src/interfaces/RunType";
 

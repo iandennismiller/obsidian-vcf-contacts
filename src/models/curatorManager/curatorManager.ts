@@ -1,5 +1,5 @@
 import { Notice, App } from 'obsidian';
-import { ContactsPluginSettings } from '../../settings/settings';
+import { ContactsPluginSettings } from '../../interfaces/ContactsPluginSettings';
 import { ContactManager } from '../contactManager';
 import { Contact } from '../index';
 import { CuratorSettingProperties } from '../../interfaces/CuratorSettingProperties';
