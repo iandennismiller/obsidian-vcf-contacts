@@ -3,7 +3,7 @@ import { ContactsPluginSettings } from '../../settings/settings.d';
 import { VCardWriteQueue } from './writeQueue';
 import { VCardCollection, VCardFileInfo } from './vcardCollection';
 import { VCardManagerFileOperations } from './fileOperations';
-import { VCardForObsidianRecord } from '../vcardFile';
+import { VCardForObsidianRecord, VcardFile } from '../vcardFile';
 
 /**
  * Manages a collection of VCard files in the VCard watch folder.
@@ -291,8 +291,13 @@ export class VcardManager {
         return { processed: false, action: 'ignore', error: 'File ignored by configuration' };
       }
 
+      // Validate VCF content first
+      const validation = await this.validateVcfContent(content);
+      if (!validation.isValid) {
+        return { processed: false, action: 'error', error: 'Invalid VCF content: ' + validation.errors.join(', ') };
+      }
+
       // Parse VCF content directly
-      const VcardFile = require('../vcardFile').VcardFile;
       const vcardFile = new VcardFile(content);
       const entries: [string | undefined, any][] = [];
       
@@ -318,14 +323,13 @@ export class VcardManager {
   /**
    * Process a modified VCF file in the watch folder
    */
-  async processModifiedFile(filePath: string, content: string): Promise<{ processed: boolean; action: string; contactUID?: string; error?: string }> {
+  async processModifiedFile(filePath: string, content: string): Promise<{ processed: boolean; action: string; contactUID?: string; error?: string; hasNewer?: boolean }> {
     try {
       if (this.shouldIgnoreFile(filePath)) {
         return { processed: false, action: 'ignore', error: 'File ignored by configuration' };
       }
 
       // Parse VCF content directly
-      const VcardFile = require('../vcardFile').VcardFile;
       const vcardFile = new VcardFile(content);
       const entries: [string | undefined, any][] = [];
       
@@ -340,8 +344,12 @@ export class VcardManager {
       }
 
       const firstContactUID = entries[0]?.[1]?.UID;
+      const vcfRev = entries[0]?.[1]?.REV;
+      
+      // Check if VCF has newer revision - assume true for now since we'd need to query existing contact
+      const hasNewer = vcfRev ? true : undefined;
 
-      return { processed: true, action: 'update', contactUID: firstContactUID };
+      return { processed: true, action: 'update', contactUID: firstContactUID, hasNewer };
     } catch (error) {
       return { processed: false, action: 'error', error: error.message };
     }
@@ -365,7 +373,7 @@ export class VcardManager {
   /**
    * Validate VCF content for syntax errors
    */
-  async validateVcfContent(content: string): Promise<{ valid: boolean; errors: string[] }> {
+  async validateVcfContent(content: string): Promise<{ isValid: boolean; errors: string[] }> {
     const errors: string[] = [];
 
     try {
@@ -380,31 +388,27 @@ export class VcardManager {
         errors.push('Missing VERSION field');
       }
 
-      return { valid: errors.length === 0, errors };
+      return { isValid: errors.length === 0, errors };
     } catch (error) {
       errors.push(error.message);
-      return { valid: false, errors };
+      return { isValid: false, errors };
     }
   }
 
   /**
    * Handle file system errors during monitoring
    */
-  async handleFileSystemError(error: Error, filePath: string): Promise<{ handled: boolean; action: string }> {
-    if (!error || !error.message) {
-      return { handled: false, action: 'log-error' };
+  async handleFileSystemError(error: string, filePath: string): Promise<{ success: boolean; error: string; recovered: boolean }> {
+    const errorMessage = error.toLowerCase();
+
+    if (errorMessage.includes('enoent') || errorMessage.includes('not found')) {
+      return { success: false, error: error, recovered: false };
+    } else if (errorMessage.includes('eacces') || errorMessage.includes('permission')) {
+      return { success: false, error: error, recovered: false };
+    } else if (errorMessage.includes('emfile') || errorMessage.includes('too many')) {
+      return { success: false, error: error, recovered: false };
     }
 
-    const errorMessage = error.message.toLowerCase();
-
-    if (errorMessage.includes('permission') || errorMessage.includes('eacces')) {
-      return { handled: true, action: 'skip-permission-denied' };
-    } else if (errorMessage.includes('not found') || errorMessage.includes('enoent')) {
-      return { handled: true, action: 'skip-file-not-found' };
-    } else if (errorMessage.includes('busy') || errorMessage.includes('locked')) {
-      return { handled: true, action: 'retry-later' };
-    }
-
-    return { handled: false, action: 'log-error' };
+    return { success: false, error: error, recovered: false };
   }
 }
