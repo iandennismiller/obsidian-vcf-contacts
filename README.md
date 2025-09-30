@@ -1,44 +1,52 @@
 
 # VCF Contacts Plugin for Obsidian
 
-**Bring people into your knowledge vault.**
+Manage contacts in Obsidian using the vCard 4.0 standard format. This plugin integrates contact data with your knowledge base, enabling relationship tracking and bidirectional synchronization with external contact management systems.
 
-A powerful way to manage, link, and export contact data directly within [Obsidian](https://obsidian.md).
-
-## Quick Links
+## Documentation
 
 - [Installation Guide](docs/installation.md)
 - [Getting Started](docs/getting-started.md)
 - [Feature Overview](docs/features.md)
 - [VCard Format Guide](docs/vcard-format.md)
 - [Development](docs/development.md)
+- [User Stories](docs/user-stories.md)
 
-## 🚀 Features at a Glance
+## Core Features
 
-- 📥 **VCF Import/Export**: Seamlessly import and export standard vCard (.vcf) files
-- 📂 **Folder Watching**: Automatically sync with your contacts folder
-- 🖼️ **Avatars**: Visual contact management with profile photos
-- 🔍 **Fast Search**: Quick contact lookup and filtering
-- 📞 **Quick Actions**: One-click calling, emailing, and more
-- 🔗 **Bi-directional Links**: Connect contacts to your notes and thoughts
-- 📱 **Social Profiles**: Link to social media and online presence
-- ⚡ **Performance**: Optimized for large contact databases
+- **vCard 4.0 Standard**: Full compliance with vCard format for interoperability
+- **Relationship Management**: Bidirectional relationship tracking between contacts with automatic reciprocal updates
+- **Folder Watching**: Monitor external VCF folders and automatically sync changes
+- **Import/Export**: Standard VCF file import and export functionality
+- **UID-Based Linking**: Contact references use unique identifiers to maintain integrity across name changes
+- **Gender-Aware Processing**: Automatic relationship term conversion based on contact gender
 
-## Why This Plugin?
+## Architecture
 
-This plugin bridges the gap between traditional contact management and knowledge management, allowing you to:
+The plugin uses a modular architecture organized around core models:
 
-- Keep contact information alongside your notes and thoughts
-- Create rich connections between people and your knowledge base
-- Maintain standard vCard compatibility for universal access
-- Leverage Obsidian's powerful linking and search capabilities
+- **ContactManager**: Collection-level operations and contact file management
+- **ContactNote**: Individual contact operations, relationships, and markdown rendering
+- **VcardFile**: VCF file parsing, generation, and validation
+- **VcardManager**: VCF collection management with write queue system
+- **CuratorManager**: Processor-based system for contact data operations
+
+## Relationship Features
+
+The plugin provides comprehensive relationship tracking capabilities:
+
+- Define relationships in a "Related" section using markdown list syntax
+- Automatic bidirectional relationship synchronization
+- Gender-aware relationship terms (e.g., mother/father, son/daughter)
+- Support for standard relationship types: family, professional, and social
+- Relationships stored in vCard RELATED fields for standards compliance
 
 ## Support
 
 - [Report Issues](https://github.com/iandennismiller/obsidian-vcf-contacts/issues)
-- [Request Features](https://github.com/iandennismiller/obsidian-vcf-contacts/discussions)
-- [Development Documentation](docs/development.md)
+- [Discussions](https://github.com/iandennismiller/obsidian-vcf-contacts/discussions)
+- [Development Guide](docs/development.md)
 
 ## License
 
-Licensed under the MIT License. See [LICENSE](LICENSE) for details.
+MIT License. See [LICENSE](LICENSE) for details.

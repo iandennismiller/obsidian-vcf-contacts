@@ -2,24 +2,99 @@
 
 ## Architecture Overview
 
-The VCF Contacts plugin follows a clean, modular architecture with clear separation of concerns:
+The VCF Contacts plugin uses a model-based architecture with clear separation of concerns. The codebase is organized into domain models, each handling a specific aspect of contact management.
 
-### Core Components
+### Core Models
 
-- **ContactManager**: Handles collection-level operations (UID management, caching, file operations)
-- **ContactNote**: Manages individual contact operations (CRUD operations, file I/O)
-- **VcardManager**: Manages collections of VCard files with write queue system
-- **VcardFile**: Handles single VCard file operations (parsing, writing)
-- **FolderWatcher**: Monitors VCard folders and triggers processors
-- **Insight Processors**: Specialized processors for different sync operations
+The plugin's architecture is organized under `src/models/`:
+
+#### ContactManager (`src/models/contactManager/`)
+Manages the collection of contact notes in the vault:
+- **contactManager.ts**: Main interface for contact collection operations
+- **contactManagerData.ts**: Contact caching and data access
+- **contactManagerUtils.ts**: Utility functions for contact file operations
+- **consistencyOperations.ts**: Ensures data consistency across contacts
+
+Responsibilities:
+- Contact file detection and scanning
+- UID-based contact lookup and caching
+- Bidirectional relationship synchronization
+- Contact collection consistency operations
+
+#### ContactNote (`src/models/contactNote/`)
+Manages individual contact note operations:
+- **contactNote.ts**: Main ContactNote class with core functionality
+- **contactData.ts**: Contact data access and manipulation
+- **relationshipOperations.ts**: Relationship parsing and management
+- **syncOperations.ts**: Synchronization between markdown and frontmatter
+- **markdownOperations.ts**: Markdown rendering and section management
+- **types.ts**: Type definitions for contact operations
+
+Responsibilities:
+- Individual contact CRUD operations
+- Relationship parsing from markdown and frontmatter
+- Gender-aware relationship term processing
+- Frontmatter and markdown synchronization
+- Related section rendering
+
+#### VcardFile (`src/models/vcardFile/`)
+Handles VCF file operations:
+- **vcardFile.ts**: Main VCardFile class
+- **parsing.ts**: VCF file parsing logic
+- **generation.ts**: VCF file generation from contact data
+- **fileOperations.ts**: File system operations for VCF files
+- **types.ts**: VCard-specific type definitions
+
+Responsibilities:
+- VCF file parsing (vCard 4.0 format)
+- VCF file generation and validation
+- Conversion between Obsidian frontmatter and vCard format
+- File system operations (read, write, list VCF files)
+
+#### VcardManager (`src/models/vcardManager/`)
+Manages collections of VCF files:
+- **vcardManager.ts**: Main manager for VCF collections
+- **vcardCollection.ts**: Collection management logic
+- **writeQueue.ts**: Queued write operations to prevent conflicts
+- **fileOperations.ts**: Batch file operations
+
+Responsibilities:
+- VCF collection management
+- Write queue system for controlled file operations
+- Batch processing of VCF files
+- Coordination between multiple VCF file operations
+
+#### CuratorManager (`src/models/curatorManager/`)
+Processor-based system for contact operations:
+- **curatorManager.ts**: Coordinates processor execution
+
+Responsibilities:
+- Register and manage curator processors
+- Execute processors in appropriate order
+- Handle processor dependencies
+
+### Curator Processors
+
+The plugin uses a processor-based architecture for data operations (`src/curators/`). Each processor handles a specific aspect of contact data management:
+
+- **genderInferenceProcessor**: Infers gender from relationship terms
+- **genderRenderProcessor**: Renders gender-aware relationship terms
+- **relatedFrontMatterProcessor**: Syncs relationships to frontmatter
+- **relatedListProcessor**: Syncs relationships to Related section
+- **relatedNamespaceUpgradeProcessor**: Migrates old relationship formats
+- **relatedOtherProcessor**: Handles special relationship types
+- **uidProcessor**: Manages contact UIDs
+- **vcardSyncPreProcessor**: Prepares contacts for VCF sync
+- **vcardSyncPostProcessor**: Finalizes VCF sync operations
 
 ### Key Design Principles
 
-1. **Single Responsibility**: Each class has one clear purpose
-2. **CRUD Architecture**: Clear separation between collection and individual operations  
-3. **Event-Driven**: Uses Obsidian's event system for reactive updates
-4. **Write Queue**: Controlled file operations to prevent conflicts
-5. **Data Consistency**: Iterative processing ensures stable contact states
+1. **Model-Based Organization**: Domain logic organized by models (Contact, VCard, Manager)
+2. **Separation of Concerns**: Each model handles a specific domain
+3. **Processor Pattern**: Data operations implemented as independent processors
+4. **Write Queue System**: Prevents file system conflicts during batch operations
+5. **Bidirectional Sync**: Maintains consistency between markdown and frontmatter
+6. **UID-Based References**: Contact relationships use unique identifiers
 
 ## Development Setup
 
@@ -62,55 +137,88 @@ The VCF Contacts plugin follows a clean, modular architecture with clear separat
 
 ```
 src/
-├── contactManager.ts          # Collection-level contact operations
-├── contactNote.ts            # Individual contact CRUD operations
-├── vcardManager.ts           # VCard file collection management
-├── vcardFile.ts              # Single VCard file operations
-├── index.ts                  # Main exports
-├── main.ts                   # Plugin entry point
-├── services/
-│   └── folderWatcher.ts      # VCard folder monitoring
-├── insights/
-│   ├── insightService.ts     # Processor coordination
-│   ├── insight.d.ts          # Type definitions
-│   └── processors/           # Individual processors
-├── ui/                       # User interface components
-├── settings/                 # Plugin settings
-└── context/                  # Shared context providers
+├── models/
+│   ├── contactManager/        # Contact collection management
+│   │   ├── contactManager.ts
+│   │   ├── contactManagerData.ts
+│   │   ├── contactManagerUtils.ts
+│   │   └── consistencyOperations.ts
+│   ├── contactNote/           # Individual contact operations
+│   │   ├── contactNote.ts
+│   │   ├── contactData.ts
+│   │   ├── relationshipOperations.ts
+│   │   ├── syncOperations.ts
+│   │   ├── markdownOperations.ts
+│   │   └── types.ts
+│   ├── vcardFile/             # VCF file operations
+│   │   ├── vcardFile.ts
+│   │   ├── parsing.ts
+│   │   ├── generation.ts
+│   │   ├── fileOperations.ts
+│   │   └── types.ts
+│   ├── vcardManager/          # VCF collection management
+│   │   ├── vcardManager.ts
+│   │   ├── vcardCollection.ts
+│   │   ├── writeQueue.ts
+│   │   └── fileOperations.ts
+│   └── curatorManager/        # Processor coordination
+│       └── curatorManager.ts
+├── curators/                  # Data operation processors
+│   ├── genderInferenceProcessor.ts
+│   ├── genderRenderProcessor.ts
+│   ├── relatedFrontMatterProcessor.ts
+│   ├── relatedListProcessor.ts
+│   ├── uidProcessor.ts
+│   └── ...
+├── plugin/                    # Plugin infrastructure
+│   ├── services/
+│   ├── settings/
+│   └── ui/
+├── interfaces/                # Type definitions
+└── main.ts                    # Plugin entry point
 ```
 
 ## Key Concepts
 
-### Insight Processors
+### Relationship Management
 
-The plugin uses a processor-based architecture for handling contact operations:
+The plugin provides comprehensive bidirectional relationship tracking:
 
 ```typescript
-export interface InsightProcessor {
+// Relationships are defined in markdown
+## Related
+- mother [[Jane Doe]]
+- colleague [[John Smith]]
+
+// And synchronized to frontmatter
+RELATED[parent]: urn:uuid:jane-doe-uuid
+RELATED[colleague]: urn:uuid:john-smith-uuid
+```
+
+Key features:
+- **Bidirectional Sync**: Changes in one contact automatically update related contacts
+- **Gender-Aware Terms**: Automatically converts relationship terms based on gender (e.g., parent → mother/father)
+- **UID-Based References**: Uses unique identifiers to maintain relationships across name changes
+- **Reciprocal Updates**: Adding "daughter [[Jane]]" to John automatically adds "father [[John]]" to Jane
+
+### Curator Processors
+
+The plugin uses a processor-based architecture for data operations:
+
+```typescript
+export interface CuratorProcessor {
   name: string;
-  runType: RunType;
-  settingPropertyName: string;
-  settingDescription: string;
-  settingDefaultValue: boolean;
-  process(contact: Contact): Promise<InsightQueItem | undefined>;
+  enabled: boolean;
+  process(contact: Contact): Promise<void>;
 }
 ```
 
-Example processor:
-```typescript
-export const MyProcessor: InsightProcessor = {
-  name: "My Custom Processor",
-  runType: RunType.IMMEDIATELY,
-  settingPropertyName: "myProcessor",
-  settingDescription: "Does something useful",
-  settingDefaultValue: true,
-  
-  async process(contact: Contact): Promise<InsightQueItem | undefined> {
-    // Your processing logic here
-    return undefined; // or return an InsightQueItem
-  }
-};
-```
+Processors handle specific operations:
+- Data validation and transformation
+- Relationship synchronization
+- Gender inference and rendering
+- VCF format conversion
+- UID management
 
 ### Contact Data Structure
 
@@ -121,19 +229,34 @@ export type Contact = {
 };
 ```
 
-### Write Queue System
-
-The VcardManager includes a write queue to prevent file conflicts:
-
-```typescript
-// Queue a VCard write operation
-await vcardManager.queueVcardWrite(uid, vcardData);
-
-// Check queue status
-const status = vcardManager.getWriteQueueStatus();
-```
+Contact data includes:
+- Standard vCard fields (FN, N, EMAIL, TEL, etc.)
+- Relationship references (RELATED fields)
+- Metadata (UID, REV, VERSION)
+- Custom fields
 
 ## Testing
+
+### Test Organization
+
+Tests are organized by component and user story:
+
+```
+tests/
+├── units/                     # Unit tests for models and processors
+│   ├── models/
+│   │   ├── contactNote/
+│   │   ├── vcardFile/
+│   │   └── ...
+│   ├── curators/
+│   └── services/
+├── stories/                   # User story integration tests
+│   ├── bidirectionalRelationshipSync.spec.ts
+│   ├── singleVcfFileSync.spec.ts
+│   ├── individualVcfFolderSync.spec.ts
+│   └── vcfDropImport.spec.ts
+└── demo-data/                 # Tests using demo contact data
+```
 
 ### Running Tests
 
@@ -141,7 +264,7 @@ const status = vcardManager.getWriteQueueStatus();
 # Run all tests
 npm test
 
-# Run tests in watch mode
+# Run tests in watch mode  
 npm run test:watch
 
 # Run tests with coverage
@@ -150,28 +273,39 @@ npm run test:coverage
 
 ### Test Structure
 
-Tests are organized by component:
-- `tests/contactManager.spec.ts`
-- `tests/contactNote.spec.ts`
-- `tests/vcardManager.spec.ts`
-- etc.
+Tests use Vitest as the testing framework:
 
-### Writing Tests
-
-Example test structure:
 ```typescript
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { ContactManager } from '../src/contactManager';
+import { ContactNote } from '../src/models/contactNote';
 
-describe('ContactManager', () => {
-  let contactManager: ContactManager;
+describe('ContactNote', () => {
+  let contactNote: ContactNote;
 
   beforeEach(() => {
     // Setup test fixtures
   });
 
-  it('should perform expected behavior', () => {
+  it('should parse relationships from markdown', async () => {
     // Test implementation
+  });
+});
+```
+
+### Testing Relationships
+
+Relationship testing is a key focus:
+
+```typescript
+it('should add reciprocal relationships bidirectionally', async () => {
+  // Add relationship in one contact
+  await addRelationship(contact1, 'father', contact2);
+  
+  // Verify reciprocal relationship is added
+  const relationships = await contact2.parseRelatedSection();
+  expect(relationships).toContainEqual({
+    type: 'child',
+    contactName: contact1.basename
   });
 });
 ```
@@ -193,64 +327,78 @@ describe('ContactManager', () => {
 
 - **TypeScript**: Use strict TypeScript with proper typing
 - **ESLint**: Follow the configured ESLint rules
-- **Formatting**: Use Prettier for consistent formatting
 - **Comments**: Add JSDoc comments for public methods
 - **Tests**: Include tests for new functionality
+- **Model Organization**: Keep related functionality within appropriate models
 
 ### Architecture Guidelines
 
-1. **Single Responsibility**: Each class should have one clear purpose
-2. **Interface Segregation**: Keep interfaces focused and minimal
-3. **Dependency Injection**: Use dependency injection for testability
-4. **Error Handling**: Implement proper error handling and logging
-5. **Performance**: Consider performance implications of changes
+1. **Model-Based Organization**: Place functionality in appropriate domain models
+2. **Processor Pattern**: Implement data operations as processors when possible
+3. **Separation of Concerns**: Keep parsing, business logic, and UI separate
+4. **Dependency Injection**: Use dependency injection for testability
+5. **Error Handling**: Implement proper error handling and logging
 
 ## Plugin API
 
 ### Extending the Plugin
 
-The plugin provides extension points for developers:
+The plugin provides extension points through the processor system:
 
 #### Custom Processors
 
-Create custom insight processors:
+Create custom curator processors:
 
 ```typescript
-import { InsightProcessor, RunType } from 'src/insights/insight.d';
+import { CuratorProcessor } from 'src/interfaces/CuratorProcessor';
 
-export const MyCustomProcessor: InsightProcessor = {
-  // Implementation
+export const MyCustomProcessor: CuratorProcessor = {
+  name: "My Custom Processor",
+  enabled: true,
+  
+  async process(contact: Contact): Promise<void> {
+    // Your processing logic here
+    // Access contact data via contact.file and contact.data
+  }
 };
 
 // Register the processor
-insightService.register(MyCustomProcessor);
+curatorManager.register(MyCustomProcessor);
 ```
 
-#### Custom Contact Fields
+#### Relationship Operations
 
-Add support for custom vCard fields:
+Work with relationships programmatically:
 
 ```typescript
-// In ContactNote class
-async updateCustomField(fieldName: string, value: string): Promise<void> {
-  await this.updateFrontmatterValue(fieldName, value);
-}
+import { ContactNote } from 'src/models/contactNote';
+
+// Parse relationships from a contact
+const contactNote = new ContactNote(app, settings, file);
+const relationships = await contactNote.parseRelatedSection();
+
+// Add a relationship
+await contactNote.addRelationship('friend', 'John Doe');
+
+// Sync relationships bidirectionally
+await contactManager.syncContactFile(file);
 ```
 
-### Event Hooks
+#### VCF Operations
 
-Listen to contact events:
+Work with VCF files:
 
 ```typescript
-// Contact created
-this.app.workspace.on('vcf-contacts:contact-created', (contact: Contact) => {
-  // Handle contact creation
-});
+import { VcardFile } from 'src/models/vcardFile';
 
-// Contact updated  
-this.app.workspace.on('vcf-contacts:contact-updated', (contact: Contact) => {
-  // Handle contact update
-});
+// Parse a VCF file
+const vcardData = await VcardFile.parseVCFFile(filePath);
+
+// Generate VCF from contact
+const vcfContent = await VcardFile.generateVCardFromObsidianNote(file, app);
+
+// Write VCF file
+await VcardFile.writeVCFFile(filePath, vcfContent);
 ```
 
 ## Deployment
@@ -277,23 +425,22 @@ this.app.workspace.on('vcf-contacts:contact-updated', (contact: Contact) => {
 
 ### Common Issues
 
-1. **Build Errors**: Check TypeScript version and dependencies
+1. **Build Errors**: Verify TypeScript version and dependencies are installed
 2. **Test Failures**: Ensure test environment is properly configured
 3. **Plugin Loading**: Verify manifest.json format
-4. **Performance**: Use browser dev tools to profile
+4. **Relationship Sync Issues**: Check that contacts have valid UIDs
+5. **VCF Parse Errors**: Ensure VCF files follow vCard 4.0 format
 
 ### Debugging
 
-1. **Console Logging**: Use console.log() for basic debugging
-2. **Obsidian Dev Tools**: Press Ctrl+Shift+I to open dev tools
-3. **Breakpoints**: Set breakpoints in TypeScript source
-4. **Plugin Reload**: Disable/enable plugin to reload changes
+1. **Console Logging**: Check Obsidian dev console (Ctrl+Shift+I)
+2. **Test Debugging**: Run tests with `--reporter=verbose` flag
+3. **Processor Debugging**: Add logging to individual processors
+4. **Relationship Issues**: Use test fixtures to isolate problems
 
 ## Getting Help
 
 - **Issues**: Report bugs on [GitHub Issues](https://github.com/iandennismiller/obsidian-vcf-contacts/issues)
 - **Discussions**: Ask questions in [GitHub Discussions](https://github.com/iandennismiller/obsidian-vcf-contacts/discussions)
-- **Contributing**: See [CONTRIBUTING.md](CONTRIBUTING.md)
-- **Discord**: Join the Obsidian community Discord
 
-This documentation provides the foundation for contributing to and extending the VCF Contacts plugin. The modular architecture makes it easy to add new features while maintaining code quality and performance.
+This documentation reflects the current model-based architecture and relationship-focused features of the VCF Contacts plugin.
