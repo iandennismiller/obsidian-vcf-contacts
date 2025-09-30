@@ -27,11 +27,11 @@ npm install
 # Build the plugin
 npm run build
 
-# Run tests
+# Run tests once (CI mode)
 npm test
 
-# Run tests once (CI mode)
-npm run test:run
+# Run tests in watch mode
+npm run test:watch
 
 # Run tests with coverage
 npm run test:coverage
@@ -113,11 +113,11 @@ Tests are organized in `tests/` directory:
 ### Running Tests
 
 ```bash
-# Run all tests in watch mode
+# Run tests once (CI mode)
 npm test
 
-# Run tests once (CI mode)
-npm run test:run
+# Run all tests in watch mode
+npm run test:watch
 
 # Run with coverage report
 npm run test:coverage
