@@ -8,6 +8,8 @@ import { createContactSlug } from '../contactNote';
 export class VCardParser {
   /**
    * Parse VCard data and yield [slug, vCardObject] tuples
+   * @param {string} vcardData - The raw VCard data to parse
+   * @returns {AsyncGenerator} An async generator that yields arrays with two elements: slug (string or undefined) and vCardObject
    */
   static async* parse(vcardData: string): AsyncGenerator<[string | undefined, VCardForObsidianRecord], void, unknown> {
     const singles: string[] = VCardParser.parseToSingles(vcardData);
