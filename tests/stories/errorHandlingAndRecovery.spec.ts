@@ -171,7 +171,7 @@ RELATED[invalid: missing closing bracket
     // Error should have clear information
     const error = result.errors[0];
     expect(error.status).toBe('error');
-    expect(error.file).toBe('invalid-contact');
+    expect(error.file).toBe('invalid-contact.md');
     expect(error.message).toBeDefined();
   });
 

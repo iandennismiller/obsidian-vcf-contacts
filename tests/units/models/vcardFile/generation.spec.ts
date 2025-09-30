@@ -66,7 +66,7 @@ describe('VCardGenerator', () => {
 
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].status).toBe('error');
-      expect(result.errors[0].file).toBe('problem-file');
+      expect(result.errors[0].file).toBe('problem-file.md');
     });
   });
 
