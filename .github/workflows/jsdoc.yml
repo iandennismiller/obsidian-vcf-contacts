@@ -33,7 +33,7 @@ jobs:
         run: npm ci
       
       - name: Install JSDoc
-        run: npm install --save-dev jsdoc jsdoc-to-markdown better-docs
+        run: npm install --save-dev --legacy-peer-deps jsdoc jsdoc-to-markdown better-docs
       
       - name: Generate JSDoc
         run: npx jsdoc -c jsdoc.json -r src -d docs/api
