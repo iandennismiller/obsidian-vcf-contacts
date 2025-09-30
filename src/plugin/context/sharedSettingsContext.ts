@@ -16,6 +16,14 @@ export function getSettings(): ContactsPluginSettings {
   return _settings
 }
 
+export function updateSettings(partialSettings: Partial<ContactsPluginSettings>) {
+  if (!_settings) {
+    throw new Error('Plugin context has not been set.')
+  }
+  _settings = { ..._settings, ...partialSettings };
+  _listeners.forEach((listener) => listener(_settings!));
+}
+
 export function clearSettings() {
   _settings = undefined;
   _listeners.clear();
