@@ -109,6 +109,132 @@ describe('SyncOperations', () => {
       });
     });
 
+    it('should handle adding third relationship of same kind', async () => {
+      // According to spec: "A 3-element set would include RELATED[2:friend]"
+      const mockRelationships: ParsedRelationship[] = [
+        { type: 'friend', contactName: 'Alice', line: 'friend: [[Alice]]' },
+        { type: 'friend', contactName: 'Bob', line: 'friend: [[Bob]]' },
+        { type: 'friend', contactName: 'Charlie', line: 'friend: [[Charlie]]' },
+      ];
+
+      vi.mocked(mockRelationshipOps.parseRelatedSection).mockResolvedValue(mockRelationships);
+      vi.mocked(mockContactData.getFrontmatter).mockResolvedValue({});
+      vi.mocked(mockRelationshipOps.resolveContact)
+        .mockResolvedValueOnce({ uid: 'alice-uid', name: 'Alice', file: mockFile })
+        .mockResolvedValueOnce({ uid: 'bob-uid', name: 'Bob', file: mockFile })
+        .mockResolvedValueOnce({ uid: 'charlie-uid', name: 'Charlie', file: mockFile });
+      vi.mocked(mockRelationshipOps.formatRelatedValue)
+        .mockReturnValueOnce('urn:uuid:alice-uid')
+        .mockReturnValueOnce('urn:uuid:bob-uid')
+        .mockReturnValueOnce('urn:uuid:charlie-uid');
+
+      const result = await syncOps.syncRelatedListToFrontmatter();
+
+      expect(result.success).toBe(true);
+      expect(mockContactData.updateMultipleFrontmatterValues).toHaveBeenCalledWith({
+        'RELATED[friend]': 'urn:uuid:alice-uid',
+        'RELATED[1:friend]': 'urn:uuid:bob-uid',
+        'RELATED[2:friend]': 'urn:uuid:charlie-uid',
+      });
+    });
+
+    it('should handle adding multiple relationships of same kind (5 colleagues)', async () => {
+      const mockRelationships: ParsedRelationship[] = [
+        { type: 'colleague', contactName: 'Person A', line: 'colleague: [[Person A]]' },
+        { type: 'colleague', contactName: 'Person B', line: 'colleague: [[Person B]]' },
+        { type: 'colleague', contactName: 'Person C', line: 'colleague: [[Person C]]' },
+        { type: 'colleague', contactName: 'Person D', line: 'colleague: [[Person D]]' },
+        { type: 'colleague', contactName: 'Person E', line: 'colleague: [[Person E]]' },
+      ];
+
+      vi.mocked(mockRelationshipOps.parseRelatedSection).mockResolvedValue(mockRelationships);
+      vi.mocked(mockContactData.getFrontmatter).mockResolvedValue({});
+      vi.mocked(mockRelationshipOps.resolveContact)
+        .mockResolvedValueOnce({ uid: 'person-a-uid', name: 'Person A', file: mockFile })
+        .mockResolvedValueOnce({ uid: 'person-b-uid', name: 'Person B', file: mockFile })
+        .mockResolvedValueOnce({ uid: 'person-c-uid', name: 'Person C', file: mockFile })
+        .mockResolvedValueOnce({ uid: 'person-d-uid', name: 'Person D', file: mockFile })
+        .mockResolvedValueOnce({ uid: 'person-e-uid', name: 'Person E', file: mockFile });
+      vi.mocked(mockRelationshipOps.formatRelatedValue)
+        .mockReturnValueOnce('urn:uuid:person-a-uid')
+        .mockReturnValueOnce('urn:uuid:person-b-uid')
+        .mockReturnValueOnce('urn:uuid:person-c-uid')
+        .mockReturnValueOnce('urn:uuid:person-d-uid')
+        .mockReturnValueOnce('urn:uuid:person-e-uid');
+
+      const result = await syncOps.syncRelatedListToFrontmatter();
+
+      expect(result.success).toBe(true);
+      expect(mockContactData.updateMultipleFrontmatterValues).toHaveBeenCalledWith({
+        'RELATED[colleague]': 'urn:uuid:person-a-uid',
+        'RELATED[1:colleague]': 'urn:uuid:person-b-uid',
+        'RELATED[2:colleague]': 'urn:uuid:person-c-uid',
+        'RELATED[3:colleague]': 'urn:uuid:person-d-uid',
+        'RELATED[4:colleague]': 'urn:uuid:person-e-uid',
+      });
+    });
+
+    it('should handle removing relationships and re-indexing', async () => {
+      // Start with 3 friends, remove one from the middle
+      const mockRelationships: ParsedRelationship[] = [
+        { type: 'friend', contactName: 'Alice', line: 'friend: [[Alice]]' },
+        { type: 'friend', contactName: 'Charlie', line: 'friend: [[Charlie]]' },
+      ];
+
+      // Old frontmatter had 3 friends
+      vi.mocked(mockRelationshipOps.parseRelatedSection).mockResolvedValue(mockRelationships);
+      vi.mocked(mockContactData.getFrontmatter).mockResolvedValue({
+        'RELATED[friend]': 'urn:uuid:alice-uid',
+        'RELATED[1:friend]': 'urn:uuid:bob-uid',
+        'RELATED[2:friend]': 'urn:uuid:charlie-uid',
+      });
+      vi.mocked(mockRelationshipOps.resolveContact)
+        .mockResolvedValueOnce({ uid: 'alice-uid', name: 'Alice', file: mockFile })
+        .mockResolvedValueOnce({ uid: 'charlie-uid', name: 'Charlie', file: mockFile });
+      vi.mocked(mockRelationshipOps.formatRelatedValue)
+        .mockReturnValueOnce('urn:uuid:alice-uid')
+        .mockReturnValueOnce('urn:uuid:charlie-uid');
+
+      const result = await syncOps.syncRelatedListToFrontmatter();
+
+      expect(result.success).toBe(true);
+      // Should re-index: Alice stays at [friend], Charlie moves to [1:friend]
+      expect(mockContactData.updateMultipleFrontmatterValues).toHaveBeenCalledWith({
+        'RELATED[friend]': 'urn:uuid:alice-uid',
+        'RELATED[1:friend]': 'urn:uuid:charlie-uid',
+      });
+    });
+
+    it('should sort relationships by value for deterministic ordering', async () => {
+      // According to spec: "First sort by key, then sort by value"
+      const mockRelationships: ParsedRelationship[] = [
+        { type: 'friend', contactName: 'Zebra', line: 'friend: [[Zebra]]' },
+        { type: 'friend', contactName: 'Apple', line: 'friend: [[Apple]]' },
+        { type: 'friend', contactName: 'Middle', line: 'friend: [[Middle]]' },
+      ];
+
+      vi.mocked(mockRelationshipOps.parseRelatedSection).mockResolvedValue(mockRelationships);
+      vi.mocked(mockContactData.getFrontmatter).mockResolvedValue({});
+      vi.mocked(mockRelationshipOps.resolveContact)
+        .mockResolvedValueOnce({ uid: 'zebra-uid', name: 'Zebra', file: mockFile })
+        .mockResolvedValueOnce({ uid: 'apple-uid', name: 'Apple', file: mockFile })
+        .mockResolvedValueOnce({ uid: 'middle-uid', name: 'Middle', file: mockFile });
+      vi.mocked(mockRelationshipOps.formatRelatedValue)
+        .mockReturnValueOnce('urn:uuid:zebra-uid')
+        .mockReturnValueOnce('urn:uuid:apple-uid')
+        .mockReturnValueOnce('urn:uuid:middle-uid');
+
+      const result = await syncOps.syncRelatedListToFrontmatter();
+
+      expect(result.success).toBe(true);
+      // Implementation should sort by value for deterministic ordering
+      const calledWith = vi.mocked(mockContactData.updateMultipleFrontmatterValues).mock.calls[0][0];
+      expect(Object.keys(calledWith)).toHaveLength(3);
+      expect(calledWith['RELATED[friend]']).toBeDefined();
+      expect(calledWith['RELATED[1:friend]']).toBeDefined();
+      expect(calledWith['RELATED[2:friend]']).toBeDefined();
+    });
+
     it('should keep unresolved relationships as name references (forward references)', async () => {
       // According to spec: "name: namespace is used when the other contact note does not exist yet"
       // This allows forward references to contacts not yet created
