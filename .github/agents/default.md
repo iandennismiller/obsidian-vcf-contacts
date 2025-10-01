@@ -22,7 +22,7 @@ This is an Obsidian plugin that manages contacts using the vCard 4.0 standard fo
 
 ```bash
 # Install dependencies
-npm install
+npm install --legacy-peer-deps
 
 # Build the plugin
 npm run build
