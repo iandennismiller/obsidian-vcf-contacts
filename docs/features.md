@@ -7,22 +7,28 @@
 The plugin's primary focus is on tracking and managing relationships between contacts:
 
 #### Bidirectional Relationship Tracking
-- Define relationships in a markdown "Related" section using familiar wiki-link syntax
-- Automatic reciprocal relationship creation (adding "father [[John]]" to Jane automatically adds "child [[Jane]]" to John)
-- Gender-aware relationship terms (parent → mother/father, child → son/daughter)
+- Define relationships in a markdown "## Related" section using familiar wiki-link syntax
+- Each relationship is a list item: `- relationship_kind [[Contact Name]]`
+- Automatic reciprocal relationship creation (adding "- father [[John]]" to Jane automatically adds "- child [[Jane]]" to John)
+- Gender-aware relationship terms (parent → mother/father, child → son/daughter based on GENDER field)
 - Support for complex relationship types: family, professional, and social
+- The Related heading is case-insensitive and depth-agnostic (works with "## related", "### Related", etc.)
 
 #### Relationship Synchronization
-- Bidirectional sync between markdown "Related" section and vCard RELATED fields
+- Bidirectional sync between markdown "## Related" section and vCard RELATED fields
 - Changes in one contact automatically propagate to related contacts
 - UID-based references maintain relationship integrity across contact name changes
 - Consistency validation ensures all relationships are reciprocal
+- Plugin automatically adds "## Related" heading to contacts that need it
+- Cleans up extra newlines and manages heading formatting automatically
+- Genderless relationship types stored in frontmatter/vCard, gender applied only when rendering Related list
 
 #### Supported Relationship Types
-- **Family**: parent, child, sibling, spouse, partner, cousin, grandparent, grandchild, aunt, uncle, niece, nephew
+- **Family**: parent, child, sibling, spouse, partner, cousin, grandparent, grandchild, aunt-uncle, niece-nephew
 - **Professional**: colleague, boss, employee, manager, coworker, assistant
 - **Social**: friend, neighbor, acquaintance, teammate, classmate
 - **Custom**: Define your own relationship types
+- All types stored in genderless form internally, rendered with gender when displaying in Related list
 
 ### VCF Import/Export
 
@@ -64,9 +70,9 @@ Standard vCard field support:
 #### Metadata
 - Birthday and anniversary tracking
 - Categories and tags
-- Unique identifiers (UID) for contact linking
-- Revision timestamps (REV) for sync operations
-- Gender information for relationship processing
+- Unique identifiers (UID) for contact linking - UUID format preferred
+- Revision timestamps (REV) automatically updated when data changes
+- Gender information (M, F, NB, U) for relationship processing
 
 #### Online Presence
 - Website URLs
@@ -79,22 +85,23 @@ Standard vCard field support:
 
 Automated consistency operations:
 
-- **UID Management**: Automatic UID generation and validation
+- **UID Management**: Automatic UID generation (UUID format preferred) and validation
 - **Relationship Validation**: Ensures all relationships are reciprocal
-- **Frontmatter Sync**: Keeps frontmatter and markdown in sync
+- **Frontmatter Sync**: Keeps frontmatter and markdown in sync, only updating REV when data actually changes
 - **Name Change Handling**: Updates all references when contact names change
 - **Orphan Detection**: Identifies and reports broken relationship references
+- **Deterministic Ordering**: Relationships sorted by key then value for consistent serialization
 
 ### Processor Architecture
 
 Extensible processor system for data operations:
 
-- **Gender Inference**: Automatically infers gender from relationship terms
-- **Gender Rendering**: Converts generic terms to gender-specific terms
-- **Relationship Sync**: Synchronizes relationships between contacts
-- **UID Processing**: Manages unique identifiers
-- **VCF Sync**: Handles VCF file synchronization
-- **Namespace Migration**: Upgrades old data formats
+- **Gender Inference**: Automatically infers gender from gendered relationship terms (mother → F, father → M)
+- **Gender Rendering**: Converts genderless terms to gender-specific terms for display in Related list
+- **Relationship Sync**: Synchronizes relationships between contacts bidirectionally
+- **UID Processing**: Manages unique identifiers with UUID format preference
+- **VCF Sync**: Handles VCF file synchronization with REV timestamp management
+- **Namespace Migration**: Upgrades old data formats to current standards
 
 ### Write Queue System
 
