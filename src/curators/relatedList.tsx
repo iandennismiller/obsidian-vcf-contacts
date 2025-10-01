@@ -35,9 +35,13 @@ export const RelatedListProcessor: CuratorProcessor = {
   settingDefaultValue: true,
 
   async process(contact: Contact): Promise<CuratorQueItem | undefined> {
+    console.log(`[RelatedListProcessor] Starting process for contact: ${contact.file.basename}`);
+    
     const activeProcessor = getSettings()[`${this.settingPropertyName}`] as boolean;
+    console.log(`[RelatedListProcessor] Processor enabled: ${activeProcessor}`);
     
     if (!activeProcessor) {
+      console.log(`[RelatedListProcessor] Processor disabled, returning early`);
       return Promise.resolve(undefined);
     }
 
@@ -49,14 +53,27 @@ export const RelatedListProcessor: CuratorProcessor = {
       // First check if there are Related section relationships
       const relatedSectionRelationships = await contactNote.parseRelatedSection();
       
+      console.log(`[RelatedListProcessor] Parsed ${relatedSectionRelationships.length} relationships from Related section`);
+      
       if (relatedSectionRelationships.length === 0) {
         // No Related section relationships to sync
+        console.log(`[RelatedListProcessor] No relationships in Related section, returning early`);
         return Promise.resolve(undefined);
       }
       
       // Get current frontmatter relationships
       const currentFrontmatterRelationships = await contactNote.parseFrontmatterRelationships();
       const currentFrontmatter = await contactNote.getFrontmatter() || {};
+      
+      console.log(`[RelatedListProcessor] Found ${relatedSectionRelationships.length} relationships in Related section`);
+      relatedSectionRelationships.forEach(rel => {
+        console.log(`[RelatedListProcessor]   Related section: ${rel.type} -> ${rel.contactName}`);
+      });
+      
+      console.log(`[RelatedListProcessor] Found ${currentFrontmatterRelationships.length} relationships in frontmatter`);
+      currentFrontmatterRelationships.forEach(rel => {
+        console.log(`[RelatedListProcessor]   Frontmatter: ${rel.type} -> ${rel.value} (parsedValue: ${rel.parsedValue ? rel.parsedValue.type + ':' + rel.parsedValue.value : 'undefined'})`);
+      });
       
       // Count missing relationships before sync
       let missingCount = 0;
@@ -67,15 +84,21 @@ export const RelatedListProcessor: CuratorProcessor = {
         // Need to handle both name-based and UID-based frontmatter relationships
         let relationshipExists = false;
         
+        console.log(`[RelatedListProcessor] Checking if ${relRel.type} -> ${relRel.contactName} exists in frontmatter...`);
+        
         for (const fmRel of currentFrontmatterRelationships) {
           // Types must match (case-insensitive)
           if (fmRel.type.toLowerCase() !== relRel.type.toLowerCase()) {
             continue;
           }
           
+          console.log(`[RelatedListProcessor]   Comparing with frontmatter ${fmRel.type}: ${fmRel.value}`);
+          
           // Check if frontmatter uses name-based reference
           if (fmRel.parsedValue && fmRel.parsedValue.type === 'name') {
+            console.log(`[RelatedListProcessor]     Parsed as name: ${fmRel.parsedValue.value}`);
             if (fmRel.parsedValue.value === relRel.contactName) {
+              console.log(`[RelatedListProcessor]     MATCH! Relationship exists.`);
               relationshipExists = true;
               break;
             }
@@ -85,7 +108,9 @@ export const RelatedListProcessor: CuratorProcessor = {
           if (fmRel.parsedValue && (fmRel.parsedValue.type === 'uid' || fmRel.parsedValue.type === 'uuid')) {
             try {
               const resolvedName = await contactNote.resolveContactNameByUID(fmRel.parsedValue.value);
+              console.log(`[RelatedListProcessor]     Parsed as UID, resolved to: ${resolvedName}`);
               if (resolvedName === relRel.contactName) {
+                console.log(`[RelatedListProcessor]     MATCH! Relationship exists.`);
                 relationshipExists = true;
                 break;
               }
@@ -94,11 +119,19 @@ export const RelatedListProcessor: CuratorProcessor = {
               console.debug(`[RelatedListProcessor] Could not resolve UID ${fmRel.parsedValue.value}: ${error}`);
             }
           }
+          
+          // If parsedValue is undefined, this frontmatter entry can't be matched
+          if (!fmRel.parsedValue) {
+            console.log(`[RelatedListProcessor]     parsedValue is undefined, cannot match (malformed value)`);
+          }
         }
         
         if (!relationshipExists) {
+          console.log(`[RelatedListProcessor]   Result: MISSING from frontmatter`);
           missingCount++;
           missingRelationships.push(`${relRel.type} -> ${relRel.contactName}`);
+        } else {
+          console.log(`[RelatedListProcessor]   Result: EXISTS in frontmatter`);
         }
       }
       
@@ -107,6 +140,10 @@ export const RelatedListProcessor: CuratorProcessor = {
         return Promise.resolve(undefined);
       }
       
+      // Log what we're about to sync
+      console.log(`[RelatedListProcessor] About to sync ${missingCount} missing relationship(s) for ${contact.file.basename}`);
+      missingRelationships.forEach(rel => console.log(`[RelatedListProcessor]   - ${rel}`));
+      
       // Use the existing syncRelatedListToFrontmatter method
       const syncResult = await contactNote.syncRelatedListToFrontmatter();
       
@@ -114,6 +151,12 @@ export const RelatedListProcessor: CuratorProcessor = {
         console.error(`[RelatedListProcessor] Failed to sync Related list to frontmatter for ${contact.file.name}`);
         syncResult.errors.forEach(error => console.error(error));
         return Promise.resolve(undefined);
+      }
+      
+      console.log(`[RelatedListProcessor] Sync completed successfully for ${contact.file.basename}`);
+      if (syncResult.errors.length > 0) {
+        console.warn(`[RelatedListProcessor] Sync had warnings:`);
+        syncResult.errors.forEach(error => console.warn(`[RelatedListProcessor]   - ${error}`));
       }
       
       // Update REV timestamp if the front matter changed (we know it changed because missingCount > 0)
@@ -146,7 +189,9 @@ export const RelatedListProcessor: CuratorProcessor = {
       });
       
     } catch (error: any) {
-      console.error(`[RelatedListProcessor] Error processing contact ${contact.file.name}: ${error.message}`);
+      console.error(`[RelatedListProcessor] Error processing contact ${contact.file.name}:`);
+      console.error(`[RelatedListProcessor] Error message: ${error.message}`);
+      console.error(`[RelatedListProcessor] Error stack: ${error.stack}`);
       return Promise.resolve(undefined);
     }
   }

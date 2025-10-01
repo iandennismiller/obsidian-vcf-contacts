@@ -35,34 +35,69 @@ export class RelationshipOperations {
     // Matches any heading level (##, ###, ####, etc.) with "Related" in any case
     const relatedSectionMatch = content.match(/(^|\n)(#{2,})\s*related\s*\n([\s\S]*?)(?=\n#{2,}\s|\n\n(?:#|$)|\n$)/i);
     if (!relatedSectionMatch) {
+      console.log(`[RelationshipOperations] No Related section found in content`);
       return relationships;
     }
 
     const relatedContent = relatedSectionMatch[3];
+    console.log(`[RelationshipOperations] Found Related section content: ${relatedContent.substring(0, 200)}`);
+    
     const lines = relatedContent.split('\n').filter(line => line.trim());
+    console.log(`[RelationshipOperations] Parsing ${lines.length} lines from Related section`);
 
     for (const line of lines) {
-      // Parse different formats: "- Type: [[Contact Name]]" or "- [[Contact Name]] (Type)"
-      const match1 = line.match(/^-\s*([^:]+):\s*\[\[([^\]]+)\]\]/);
-      const match2 = line.match(/^-\s*\[\[([^\]]+)\]\]\s*\(([^)]+)\)/);
+      console.log(`[RelationshipOperations] Parsing line: "${line}"`);
+      
+      // Parse different formats (in order of preference):
+      // 1. "- type [[Contact Name]]" (canonical format - no colon)
+      // 2. "- type: [[Contact Name]]" (alternative format with colon)
+      // 3. "- [[Contact Name]] (type)" (with brackets, type in parentheses)
+      // 4. "- type: Contact Name" (plain text with colon - fallback for non-wiki-link format)
+      const match1 = line.match(/^-\s*(\w+)\s+\[\[([^\]]+)\]\]/); // type [[Name]] - canonical
+      const match2 = line.match(/^-\s*([^:]+):\s*\[\[([^\]]+)\]\]/); // type: [[Name]] - alternative
+      const match3 = line.match(/^-\s*\[\[([^\]]+)\]\]\s*\(([^)]+)\)/); // [[Name]] (type)
+      const match4 = line.match(/^-\s*([^:]+):\s*(.+)$/); // type: Name - plain text fallback
 
       if (match1) {
         const [, type, contactName] = match1;
+        console.log(`[RelationshipOperations]   Matched format 1 (type [[Name]] - canonical): ${type} -> ${contactName}`);
         relationships.push({
           type: type.trim(),
           contactName: contactName.trim(),
           linkType: 'name' // Markdown links are always name-based
         });
       } else if (match2) {
-        const [, contactName, type] = match2;
+        const [, type, contactName] = match2;
+        console.log(`[RelationshipOperations]   Matched format 2 (type: [[Name]] - alternative): ${type} -> ${contactName}`);
         relationships.push({
           type: type.trim(),
           contactName: contactName.trim(),
           linkType: 'name' // Markdown links are always name-based
         });
+      } else if (match3) {
+        const [, contactName, type] = match3;
+        console.log(`[RelationshipOperations]   Matched format 3 ([[Name]] (type)): ${type} -> ${contactName}`);
+        relationships.push({
+          type: type.trim(),
+          contactName: contactName.trim(),
+          linkType: 'name' // Markdown links are always name-based
+        });
+      } else if (match4 && !match4[2].startsWith('[[')) {
+        // Format: "- type: Name" (plain text with colon, without brackets - fallback)
+        // Only accept if it doesn't start with [[ (to avoid matching malformed bracket syntax)
+        const [, type, contactName] = match4;
+        console.log(`[RelationshipOperations]   Matched format 4 (type: Name - plain text fallback): ${type} -> ${contactName}`);
+        relationships.push({
+          type: type.trim(),
+          contactName: contactName.trim(),
+          linkType: 'name'
+        });
+      } else {
+        console.log(`[RelationshipOperations]   No match for this line - skipping`);
       }
     }
 
+    console.log(`[RelationshipOperations] Parsed ${relationships.length} relationships from Related section`);
     return relationships;
   }
 
