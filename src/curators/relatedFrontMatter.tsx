@@ -65,7 +65,7 @@ export const RelatedFrontMatterProcessor: CuratorProcessor = {
         
         if (fmRel.parsedValue && fmRel.parsedValue.type === 'name') {
           contactName = fmRel.parsedValue.value;
-        } else if (fmRel.parsedValue && fmRel.parsedValue.type === 'uid') {
+        } else if (fmRel.parsedValue && (fmRel.parsedValue.type === 'uid' || fmRel.parsedValue.type === 'uuid')) {
           // Try to resolve UID to name
           const resolvedContact = await contactNote.resolveContact(fmRel.parsedValue.value);
           contactName = resolvedContact?.name || fmRel.parsedValue.value;

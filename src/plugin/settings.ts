@@ -5,6 +5,9 @@ import { curatorService } from "src/models/curatorManager/curatorManager";
 import ContactsPlugin from "src/main";
 import { FolderSuggest } from "src/plugin/ui/FolderSuggest";
 
+// Import curator registration to ensure processors are registered before we access their settings
+import "src/curatorRegistration";
+
 export interface ContactsPluginSettings {
   contactsFolder: string;
   defaultHashtag: string;

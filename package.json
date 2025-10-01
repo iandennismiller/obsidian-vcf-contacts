@@ -4,10 +4,10 @@
 	"description": "Effortlessly manage, organize, and interact with your contacts inside Obsidian. Import, export, and structure vCard (VCF) files seamlessly while keeping all contact details accessible in your knowledge base. Includes click-to-call, right-click copy, structured metadata, and more!",
 	"main": "build/main.js",
 	"scripts": {
+		"build": "npm run compile && npm run production",
 		"dev": "node esbuild.config.mjs",
 		"production": "node esbuild.config.mjs production",
 		"compile": "tsc -noEmit -skipLibCheck",
-		"build": "npm run compile && npm run production",
 		"version": "node version-bump.mjs && git add manifest.json versions.json",
 		"test": "vitest run",
 		"test:watch": "vitest",

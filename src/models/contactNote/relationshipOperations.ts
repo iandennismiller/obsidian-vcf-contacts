@@ -77,13 +77,90 @@ export class RelationshipOperations {
 
     for (const [key, value] of Object.entries(frontmatter)) {
       if (key.startsWith('RELATED')) {
+        // Handle RELATED as an object (from RELATED.type YAML dot notation)
+        if (key === 'RELATED' && typeof value === 'object' && value !== null && !Array.isArray(value)) {
+          // This is a nested object from YAML dot notation
+          // Process each property as a separate relationship
+          for (const [nestedKey, nestedValue] of Object.entries(value)) {
+            if (typeof nestedValue === 'string') {
+              const correctedKey = `RELATED[${nestedKey}]`;
+              const type = nestedKey;
+              const parsedValue = this.parseRelatedValue(nestedValue);
+              
+              relationships.push({
+                key: correctedKey,
+                type,
+                value: nestedValue,
+                parsedValue: parsedValue || undefined
+              });
+              
+              console.info(`[RelationshipOperations] Auto-corrected malformed RELATED.${nestedKey} to RELATED[${nestedKey}]`);
+            }
+          }
+          continue;
+        }
+        
+        // Handle RELATED.type format (dot notation as a key) - convert to RELATED[type]
+        if (key.includes('.') && key !== 'RELATED') {
+          // Extract the type from RELATED.type or RELATED.x.y format
+          const parts = key.split('.');
+          if (parts[0] === 'RELATED' && parts.length >= 2) {
+            const typePart = parts.slice(1).join('.');
+            
+            if (typeof value === 'string') {
+              const correctedKey = `RELATED[${typePart}]`;
+              const parsedValue = this.parseRelatedValue(value);
+              
+              relationships.push({
+                key: correctedKey,
+                type: typePart,
+                value: value,
+                parsedValue: parsedValue || undefined
+              });
+              
+              console.info(`[RelationshipOperations] Auto-corrected malformed ${key} to RELATED[${typePart}]`);
+              continue;
+            } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+              // Handle nested object under RELATED.type key
+              // e.g., RELATED.friend: { name: "Jane Smith" }
+              for (const [nestedKey, nestedValue] of Object.entries(value)) {
+                if (typeof nestedValue === 'string') {
+                  // Create a combined type from the path
+                  const combinedType = `${typePart}.${nestedKey}`;
+                  const correctedKey = `RELATED[${combinedType}]`;
+                  const parsedValue = this.parseRelatedValue(nestedValue);
+                  
+                  relationships.push({
+                    key: correctedKey,
+                    type: combinedType,
+                    value: nestedValue,
+                    parsedValue: parsedValue || undefined
+                  });
+                  
+                  console.info(`[RelationshipOperations] Auto-corrected malformed ${key}.${nestedKey} to RELATED[${combinedType}]`);
+                }
+              }
+              continue;
+            } else {
+              console.warn(`[RelationshipOperations] Skipping malformed RELATED key "${key}": Use RELATED[type] format instead. Value type: ${typeof value}`);
+              continue;
+            }
+          }
+        }
+        
+        // Skip non-string values to prevent .startsWith() errors
+        if (typeof value !== 'string') {
+          console.warn(`[RelationshipOperations] Skipping non-string RELATED value for key ${key}: ${typeof value}. Expected string value like "name:ContactName", "uid:...", or "urn:uuid:..."`);
+          continue;
+        }
+        
         const type = this.extractRelationshipType(key);
-        const parsedValue = this.parseRelatedValue(value as string);
+        const parsedValue = this.parseRelatedValue(value);
         
         relationships.push({
           key,
           type,
-          value: value as string,
+          value: value,
           parsedValue: parsedValue || undefined
         });
       }

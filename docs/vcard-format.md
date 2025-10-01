@@ -7,6 +7,7 @@ The VCF Contacts plugin uses the industry-standard vCard 4.0 format to store con
 ## What is vCard?
 
 vCard is an electronic business card format that contains contact information in a standardized way. It's supported by:
+
 - Email clients (Gmail, Outlook, Apple Mail)
 - Phone contact apps (iOS Contacts, Android Contacts)
 - CRM systems (Salesforce, HubSpot)
@@ -15,6 +16,7 @@ vCard is an electronic business card format that contains contact information in
 ## File Structure
 
 Each contact in your vault consists of:
+
 1. **Markdown file** (e.g., `John Doe.md`) - The main contact note
 2. **Frontmatter section** - Contains vCard-compliant contact data
 3. **Content area** - Your notes, links, and thoughts about the contact
@@ -23,7 +25,7 @@ Each contact in your vault consists of:
 
 ```markdown
 ---
-UID: urn:uuid:12345678-1234-5678-9012-123456789012
+UID: 12345678-1234-5678-9012-123456789012
 VERSION: "4.0"
 FN: John Doe
 N.GN: John
@@ -61,6 +63,7 @@ Software engineer at Acme Corporation. Specializes in backend development.
 | `N.PREFIX` | Name Prefix | `Mr.` |
 | `N.SUFFIX` | Name Suffix | `Jr.` |
 | `NICKNAME` | Nickname | `Johnny` |
+| `GENDER` | Gender | `M` |
 
 ### 📧 Communication
 
@@ -111,8 +114,14 @@ Software engineer at Acme Corporation. Specializes in backend development.
 |-------|-------------|---------|
 | `CATEGORIES` | Categories/Tags | `work,developer,friend` |
 | `NOTE` | General Notes | `Met at conference` |
-| `UID` | Unique Identifier | `urn:uuid:12345...` |
+| `UID` | Unique Identifier (e.g. UUID) | `12345...` |
 | `REV` | Last Modified | `2024-01-15T10:30:00Z` |
+
+### Relationships
+
+| Field | Description | Example |
+|-------|-------------|---------|
+| `RELATED` | Categories/Tags | `RELATED;TYPE=friend:urn:uuid:12345...` |
 
 ## Field Indexing
 
@@ -133,6 +142,7 @@ TEL[3:HOME]: +1-555-111-2222      # Home phone
 Common type labels for categorizing information:
 
 ### Phone Types
+
 - `CELL`, `MOBILE` - Mobile phone
 - `WORK` - Work phone  
 - `HOME` - Home phone
@@ -140,16 +150,19 @@ Common type labels for categorizing information:
 - `PAGER` - Pager
 
 ### Email Types
+
 - `WORK` - Work email
 - `HOME` - Personal email
 - `OTHER` - Other email
 
 ### Address Types
+
 - `HOME` - Home address
 - `WORK` - Work address
 - `OTHER` - Other address
 
 ### URL Types
+
 - `WORK` - Work website
 - `HOME` - Personal website
 - `OTHER` - Other website
@@ -161,9 +174,9 @@ Common type labels for categorizing information:
 The plugin supports relationship tracking between contacts:
 
 ```yaml
-RELATED[1:SPOUSE]: Jane Doe
-RELATED[2:COLLEAGUE]: Bob Smith
-RELATED[3:FRIEND]: Alice Johnson
+RELATED[1:SPOUSE]: name:Jane Doe
+RELATED[FRIEND]: name:Bob Smith
+RELATED[1:FRIEND]: name:Alice Johnson
 ```
 
 ### Gender Support
@@ -171,7 +184,7 @@ RELATED[3:FRIEND]: Alice Johnson
 ```yaml
 GENDER: M    # Male
 GENDER: F    # Female  
-GENDER: O    # Other
+GENDER: NB    # Non-binary
 GENDER: N    # Not specified
 ```
 
@@ -193,6 +206,7 @@ PHOTO: /path/to/local/photo.jpg      # Local file
 ## Import/Export
 
 The plugin can:
+
 - **Import** from any vCard 4.0 compliant file
 - **Export** to standard .vcf files compatible with other systems
 - **Sync** bidirectionally with external contact sources

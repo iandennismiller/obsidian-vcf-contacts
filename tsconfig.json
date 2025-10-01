@@ -21,10 +21,11 @@
     ]
   },
   "include": [
-    "**/*.ts",
-    "**/*.tsx"
+    "src/**/*.ts",
+    "src/**/*.tsx"
   ],
   "exclude": [
-    "docs/old/**/*"
+    "docs/old/**/*",
+    "tests/**/*"
   ]
 }
