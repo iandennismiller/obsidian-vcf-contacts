@@ -48,8 +48,9 @@ describe('Regression: Non-String RELATED Values (Issue 5)', () => {
     const filePath = path.join(process.cwd(), 'src/models/contactNote/relationshipOperations.ts');
     const content = fs.readFileSync(filePath, 'utf-8');
     
-    // Verify warning messages explain the issue
-    expect(content).toContain('malformed RELATED key');
-    expect(content).toContain('Use RELATED[type] format');
+    // Verify auto-correction messages are present (Issue 6 enhancement)
+    expect(content).toContain('Auto-corrected malformed');
+    expect(content).toContain('RELATED.');
+    expect(content).toContain('RELATED[');
   });
 });

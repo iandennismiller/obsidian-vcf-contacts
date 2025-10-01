@@ -57,6 +57,16 @@ Regression tests ensure that once a bug is fixed, it doesn't resurface in future
 - Removal of unsafe type casts
 - Informative warning messages
 
+### issue6-malformed-related-dot-notation.spec.ts
+**Bug**: YAML dot notation (RELATED.friend) created nested objects that the processor couldn't handle  
+**Error**: "[RelationshipOperations] Skipping malformed RELATED key "RELATED.friend": Use RELATED[type] format instead of RELATED.type. Value type: object"  
+**Fixed in**: commit [current]  
+**Tests**:
+- Auto-correction of RELATED.type to RELATED[type]
+- Handling nested RELATED objects with multiple relationships
+- Skipping non-string values in nested objects
+- Working with mixed malformed and correct formats
+
 ## Running Regression Tests
 
 Run all regression tests:

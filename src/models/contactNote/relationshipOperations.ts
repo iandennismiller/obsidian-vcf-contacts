@@ -77,14 +77,32 @@ export class RelationshipOperations {
 
     for (const [key, value] of Object.entries(frontmatter)) {
       if (key.startsWith('RELATED')) {
+        // Handle RELATED as an object (from RELATED.type YAML dot notation)
+        if (key === 'RELATED' && typeof value === 'object' && value !== null && !Array.isArray(value)) {
+          // This is a nested object from YAML dot notation
+          // Process each property as a separate relationship
+          for (const [nestedKey, nestedValue] of Object.entries(value)) {
+            if (typeof nestedValue === 'string') {
+              const correctedKey = `RELATED[${nestedKey}]`;
+              const type = nestedKey;
+              const parsedValue = this.parseRelatedValue(nestedValue);
+              
+              relationships.push({
+                key: correctedKey,
+                type,
+                value: nestedValue,
+                parsedValue: parsedValue || undefined
+              });
+              
+              console.info(`[RelationshipOperations] Auto-corrected malformed RELATED.${nestedKey} to RELATED[${nestedKey}]`);
+            }
+          }
+          continue;
+        }
+        
         // Skip non-string values to prevent .startsWith() errors
         if (typeof value !== 'string') {
-          // Check if this is a malformed RELATED.type format instead of RELATED[type]
-          if (key.includes('.')) {
-            console.warn(`[RelationshipOperations] Skipping malformed RELATED key "${key}": Use RELATED[type] format instead of RELATED.type. Value type: ${typeof value}`);
-          } else {
-            console.warn(`[RelationshipOperations] Skipping non-string RELATED value for key ${key}: ${typeof value}. Expected string value like "name:ContactName", "uid:...", or "urn:uuid:..."`);
-          }
+          console.warn(`[RelationshipOperations] Skipping non-string RELATED value for key ${key}: ${typeof value}. Expected string value like "name:ContactName", "uid:...", or "urn:uuid:..."`);
           continue;
         }
         
