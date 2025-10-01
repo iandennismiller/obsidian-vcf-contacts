@@ -79,6 +79,57 @@ FN: John Doe
       });
     });
 
+    it('should handle Related heading with different cases and depths', async () => {
+      // According to spec: "The heading is case insensitive: '## related' is equivalent to '## Related'"
+      // and "The heading depth is not relevant: works on '### related' or '#### RELATED' too"
+      const contentLowercase = `---
+UID: test-1
+---
+
+## related
+- spouse: [[Jane Doe]]
+
+#Contact`;
+
+      const contentUppercase = `---
+UID: test-2
+---
+
+### RELATED
+- friend: [[Bob Smith]]
+
+#Contact`;
+
+      const contentMixedCase = `---
+UID: test-3
+---
+
+###### ReLaTeD
+- colleague: [[Alice Jones]]
+
+#Contact`;
+
+      mockContactData.getContent = vi.fn()
+        .mockResolvedValueOnce(contentLowercase)
+        .mockResolvedValueOnce(contentUppercase)
+        .mockResolvedValueOnce(contentMixedCase);
+
+      // Test lowercase
+      let relationships = await relationshipOperations.parseRelatedSection();
+      expect(relationships).toHaveLength(1);
+      expect(relationships[0].type).toBe('spouse');
+
+      // Test uppercase
+      relationships = await relationshipOperations.parseRelatedSection();
+      expect(relationships).toHaveLength(1);
+      expect(relationships[0].type).toBe('friend');
+
+      // Test mixed case
+      relationships = await relationshipOperations.parseRelatedSection();
+      expect(relationships).toHaveLength(1);
+      expect(relationships[0].type).toBe('colleague');
+    });
+
     it('should handle empty Related section', async () => {
       const content = `---
 UID: john-doe-123

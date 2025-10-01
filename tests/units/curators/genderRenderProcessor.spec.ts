@@ -19,9 +19,10 @@ describe('GenderRenderProcessor', () => {
   });
 
   describe('functionality', () => {
-    it('should render gender-appropriate pronouns', () => {
-      // The processor renders gender-appropriate pronouns in contact displays
-      // This enhances the user experience by using correct pronouns
+    it('should render gender-appropriate relationship terms', () => {
+      // The processor renders gender-appropriate relationship terms in Related list
+      // (e.g., "father" instead of "parent" when GENDER is M)
+      // This enhances the user experience by using familiar gendered terms
       expect(GenderRenderProcessor.settingDescription).toContain('gendered');
     });
 
