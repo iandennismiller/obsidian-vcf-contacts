@@ -30,6 +30,13 @@ vi.mock('../../../../src/models/vcardManager/writeQueue', () => ({
   }))
 }));
 
+// Mock VcardFile
+vi.mock('../../../../src/models/vcardFile', () => ({
+  VcardFile: vi.fn().mockImplementation(() => ({
+    parse: vi.fn()
+  }))
+}));
+
 describe('VcardManager', () => {
   let mockSettings: ContactsPluginSettings;
   let vcardManager: VcardManager;
@@ -343,6 +350,371 @@ describe('VcardManager', () => {
       const result = await vcardManager.scanVCFFolder(new Map());
 
       expect(result).toEqual([]);
+    });
+  });
+
+  describe('processVCFContents', () => {
+    it('should return empty array when parsing fails', async () => {
+      (vcardManager as any).collection.readAndParseVCard.mockResolvedValue(null);
+
+      const result = await vcardManager.processVCFContents('/test/file.vcf');
+
+      expect(result).toEqual([]);
+    });
+
+    it('should filter out entries without slug or UID', async () => {
+      (vcardManager as any).collection.readAndParseVCard.mockResolvedValue([
+        ['valid-slug', { UID: 'uid-123', FN: 'John Doe' }],
+        [null, { UID: 'uid-456', FN: 'Jane Doe' }],
+        ['slug', { FN: 'No UID' }]
+      ]);
+
+      const result = await vcardManager.processVCFContents('/test/file.vcf');
+
+      expect(result).toHaveLength(1);
+      expect(result[0][0]).toBe('valid-slug');
+      expect(result[0][1].UID).toBe('uid-123');
+    });
+
+    it('should filter out ignored UIDs', async () => {
+      const settingsWithIgnore = {
+        ...mockSettings,
+        vcfIgnoreUIDs: ['ignored-uid']
+      };
+      vcardManager.updateSettings(settingsWithIgnore);
+
+      (vcardManager as any).collection.readAndParseVCard.mockResolvedValue([
+        ['valid-slug', { UID: 'valid-uid', FN: 'John Doe' }],
+        ['ignored-slug', { UID: 'ignored-uid', FN: 'Ignored' }]
+      ]);
+
+      const result = await vcardManager.processVCFContents('/test/file.vcf');
+
+      expect(result).toHaveLength(1);
+      expect(result[0][1].UID).toBe('valid-uid');
+    });
+
+    it('should handle errors gracefully', async () => {
+      (vcardManager as any).collection.readAndParseVCard.mockRejectedValue(new Error('Parse error'));
+
+      const result = await vcardManager.processVCFContents('/test/file.vcf');
+
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('isMonitoringEnabled', () => {
+    it('should return true when monitoring is enabled', () => {
+      expect(vcardManager.isMonitoringEnabled()).toBe(true);
+    });
+
+    it('should return false when monitoring is disabled', () => {
+      const disabledSettings = { ...mockSettings, vcfWatchEnabled: false };
+      vcardManager.updateSettings(disabledSettings);
+
+      expect(vcardManager.isMonitoringEnabled()).toBe(false);
+    });
+  });
+
+  describe('getPollingInterval', () => {
+    it('should return polling interval in milliseconds', () => {
+      const result = vcardManager.getPollingInterval();
+
+      expect(result).toBe(30000); // 30 seconds * 1000
+    });
+
+    it('should return default 5000ms when not set', () => {
+      const settingsWithoutInterval = { ...mockSettings, vcfWatchPollingInterval: 0 };
+      vcardManager.updateSettings(settingsWithoutInterval);
+
+      const result = vcardManager.getPollingInterval();
+
+      expect(result).toBe(5000);
+    });
+  });
+
+  describe('validateVcfContent', () => {
+    it('should validate valid VCF content', async () => {
+      const validContent = 'BEGIN:VCARD\nVERSION:3.0\nFN:John Doe\nEND:VCARD';
+
+      const result = await vcardManager.validateVcfContent(validContent);
+
+      expect(result.isValid).toBe(true);
+      expect(result.errors).toEqual([]);
+    });
+
+    it('should detect missing BEGIN:VCARD', async () => {
+      const invalidContent = 'VERSION:3.0\nFN:John Doe\nEND:VCARD';
+
+      const result = await vcardManager.validateVcfContent(invalidContent);
+
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContain('Missing BEGIN:VCARD');
+    });
+
+    it('should detect missing END:VCARD', async () => {
+      const invalidContent = 'BEGIN:VCARD\nVERSION:3.0\nFN:John Doe';
+
+      const result = await vcardManager.validateVcfContent(invalidContent);
+
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContain('Missing END:VCARD');
+    });
+
+    it('should detect missing VERSION field', async () => {
+      const invalidContent = 'BEGIN:VCARD\nFN:John Doe\nEND:VCARD';
+
+      const result = await vcardManager.validateVcfContent(invalidContent);
+
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContain('Missing VERSION field');
+    });
+  });
+
+  describe('handleFileSystemError', () => {
+    it('should handle ENOENT errors', async () => {
+      const result = await vcardManager.handleFileSystemError('ENOENT: file not found', '/test/file.vcf');
+
+      expect(result.success).toBe(false);
+      expect(result.recovered).toBe(false);
+      expect(result.error).toContain('ENOENT');
+    });
+
+    it('should handle permission errors', async () => {
+      const result = await vcardManager.handleFileSystemError('EACCES: permission denied', '/test/file.vcf');
+
+      expect(result.success).toBe(false);
+      expect(result.recovered).toBe(false);
+      expect(result.error).toContain('EACCES');
+    });
+
+    it('should handle too many files errors', async () => {
+      const result = await vcardManager.handleFileSystemError('EMFILE: too many open files', '/test/file.vcf');
+
+      expect(result.success).toBe(false);
+      expect(result.recovered).toBe(false);
+      expect(result.error).toContain('EMFILE');
+    });
+
+    it('should handle unknown errors', async () => {
+      const result = await vcardManager.handleFileSystemError('Unknown error', '/test/file.vcf');
+
+      expect(result.success).toBe(false);
+      expect(result.recovered).toBe(false);
+      expect(result.error).toBe('Unknown error');
+    });
+  });
+
+  describe('processDeletedFile', () => {
+    it('should return delete action with UID', async () => {
+      const result = await vcardManager.processDeletedFile('/test/file.vcf', 'test-uid');
+
+      expect(result.processed).toBe(true);
+      expect(result.action).toBe('delete');
+      expect(result.contactUID).toBe('test-uid');
+    });
+
+    it('should return delete action without UID', async () => {
+      const result = await vcardManager.processDeletedFile('/test/file.vcf');
+
+      expect(result.processed).toBe(true);
+      expect(result.action).toBe('delete');
+      expect(result.contactUID).toBeUndefined();
+    });
+  });
+
+  describe('readAndParseVCard', () => {
+    it('should delegate to collection', async () => {
+      const mockParsed = [['slug', { UID: 'uid-123', FN: 'John Doe' }]];
+      (vcardManager as any).collection.readAndParseVCard.mockResolvedValue(mockParsed);
+
+      const result = await vcardManager.readAndParseVCard('/test/file.vcf');
+
+      expect(result).toEqual(mockParsed);
+      expect((vcardManager as any).collection.readAndParseVCard).toHaveBeenCalledWith('/test/file.vcf');
+    });
+  });
+
+  describe('getAllVCardFiles', () => {
+    it('should delegate to collection', async () => {
+      const mockFiles = [
+        { path: '/test/file1.vcf', lastModified: 1000 },
+        { path: '/test/file2.vcf', lastModified: 2000 }
+      ];
+      (vcardManager as any).collection.getAllVCardFiles.mockResolvedValue(mockFiles);
+
+      const result = await vcardManager.getAllVCardFiles();
+
+      expect(result).toEqual(mockFiles);
+      expect((vcardManager as any).collection.getAllVCardFiles).toHaveBeenCalled();
+    });
+  });
+
+  describe('filterIgnoredFiles', () => {
+    it('should delegate to collection', () => {
+      const inputFiles = ['/test/file1.vcf', '/test/file2.vcf'];
+      const filteredFiles = ['/test/file1.vcf'];
+      (vcardManager as any).collection.filterIgnoredFiles.mockReturnValue(filteredFiles);
+
+      const result = vcardManager.filterIgnoredFiles(inputFiles);
+
+      expect(result).toEqual(filteredFiles);
+      expect((vcardManager as any).collection.filterIgnoredFiles).toHaveBeenCalledWith(inputFiles);
+    });
+  });
+
+  describe('processNewFile', () => {
+    it('should return ignore action for ignored files', async () => {
+      const settingsWithIgnore = {
+        ...mockSettings,
+        vcfIgnoreFilenames: ['ignored.vcf']
+      };
+      vcardManager.updateSettings(settingsWithIgnore);
+
+      const result = await vcardManager.processNewFile('/test/ignored.vcf', 'content');
+
+      expect(result.processed).toBe(false);
+      expect(result.action).toBe('ignore');
+      expect(result.error).toBe('File ignored by configuration');
+    });
+
+    it('should return error for invalid VCF content', async () => {
+      const result = await vcardManager.processNewFile('/test/file.vcf', 'invalid content');
+
+      expect(result.processed).toBe(false);
+      expect(result.action).toBe('error');
+      expect(result.error).toContain('Invalid VCF content');
+    });
+
+    it('should return none action when no valid contacts found', async () => {
+      const { VcardFile } = await import('../../../../src/models/vcardFile');
+      const mockParse = vi.fn().mockImplementation(async function*() {
+        yield ['slug', { UID: 'ignored-uid', FN: 'Ignored' }];
+      });
+      (VcardFile as any).mockImplementation(() => ({
+        parse: mockParse
+      }));
+
+      const settingsWithIgnore = {
+        ...mockSettings,
+        vcfIgnoreUIDs: ['ignored-uid']
+      };
+      vcardManager.updateSettings(settingsWithIgnore);
+
+      const validContent = 'BEGIN:VCARD\nVERSION:3.0\nUID:ignored-uid\nFN:Ignored\nEND:VCARD';
+      const result = await vcardManager.processNewFile('/test/file.vcf', validContent);
+
+      expect(result.processed).toBe(false);
+      expect(result.action).toBe('none');
+      expect(result.error).toBe('No valid contacts found');
+    });
+
+    it('should return create action for valid new file', async () => {
+      const { VcardFile } = await import('../../../../src/models/vcardFile');
+      const mockParse = vi.fn().mockImplementation(async function*() {
+        yield ['john-doe', { UID: 'new-uid-123', FN: 'John Doe' }];
+      });
+      (VcardFile as any).mockImplementation(() => ({
+        parse: mockParse
+      }));
+
+      const validContent = 'BEGIN:VCARD\nVERSION:3.0\nUID:new-uid-123\nFN:John Doe\nEND:VCARD';
+      const result = await vcardManager.processNewFile('/test/file.vcf', validContent);
+
+      expect(result.processed).toBe(true);
+      expect(result.action).toBe('create');
+      expect(result.contactUID).toBe('new-uid-123');
+    });
+
+    it('should handle parsing errors', async () => {
+      const { VcardFile } = await import('../../../../src/models/vcardFile');
+      const mockParse = vi.fn().mockImplementation(async function*() {
+        throw new Error('Parse failure');
+      });
+      (VcardFile as any).mockImplementation(() => ({
+        parse: mockParse
+      }));
+
+      const validContent = 'BEGIN:VCARD\nVERSION:3.0\nEND:VCARD';
+      const result = await vcardManager.processNewFile('/test/file.vcf', validContent);
+
+      expect(result.processed).toBe(false);
+      expect(result.action).toBe('error');
+      expect(result.error).toBe('Parse failure');
+    });
+  });
+
+  describe('processModifiedFile', () => {
+    it('should return ignore action for ignored files', async () => {
+      const settingsWithIgnore = {
+        ...mockSettings,
+        vcfIgnoreFilenames: ['ignored.vcf']
+      };
+      vcardManager.updateSettings(settingsWithIgnore);
+
+      const result = await vcardManager.processModifiedFile('/test/ignored.vcf', 'content');
+
+      expect(result.processed).toBe(false);
+      expect(result.action).toBe('ignore');
+      expect(result.error).toBe('File ignored by configuration');
+    });
+
+    it('should return none action when no valid contacts found', async () => {
+      const { VcardFile } = await import('../../../../src/models/vcardFile');
+      const mockParse = vi.fn().mockImplementation(async function*() {
+        yield ['slug', { UID: 'ignored-uid', FN: 'Ignored' }];
+      });
+      (VcardFile as any).mockImplementation(() => ({
+        parse: mockParse
+      }));
+
+      const settingsWithIgnore = {
+        ...mockSettings,
+        vcfIgnoreUIDs: ['ignored-uid']
+      };
+      vcardManager.updateSettings(settingsWithIgnore);
+
+      const validContent = 'BEGIN:VCARD\nVERSION:3.0\nUID:ignored-uid\nFN:Ignored\nEND:VCARD';
+      const result = await vcardManager.processModifiedFile('/test/file.vcf', validContent);
+
+      expect(result.processed).toBe(false);
+      expect(result.action).toBe('none');
+      expect(result.error).toBe('No valid contacts found');
+    });
+
+    it('should return update action for valid modified file', async () => {
+      const { VcardFile } = await import('../../../../src/models/vcardFile');
+      const mockParse = vi.fn().mockImplementation(async function*() {
+        yield ['john-doe', { UID: 'modified-uid-123', FN: 'John Doe', REV: '2024-01-01T12:00:00Z' }];
+      });
+      (VcardFile as any).mockImplementation(() => ({
+        parse: mockParse
+      }));
+
+      const validContent = 'BEGIN:VCARD\nVERSION:3.0\nUID:modified-uid-123\nREV:2024-01-01T12:00:00Z\nFN:John Doe\nEND:VCARD';
+      const result = await vcardManager.processModifiedFile('/test/file.vcf', validContent);
+
+      expect(result.processed).toBe(true);
+      expect(result.action).toBe('update');
+      expect(result.contactUID).toBe('modified-uid-123');
+      expect(result.hasNewer).toBe(true);
+    });
+
+    it('should handle parsing errors', async () => {
+      const { VcardFile } = await import('../../../../src/models/vcardFile');
+      const mockParse = vi.fn().mockImplementation(async function*() {
+        throw new Error('Parse failure');
+      });
+      (VcardFile as any).mockImplementation(() => ({
+        parse: mockParse
+      }));
+
+      const validContent = 'BEGIN:VCARD\nVERSION:3.0\nEND:VCARD';
+      const result = await vcardManager.processModifiedFile('/test/file.vcf', validContent);
+
+      expect(result.processed).toBe(false);
+      expect(result.action).toBe('error');
+      expect(result.error).toBe('Parse failure');
     });
   });
 });
