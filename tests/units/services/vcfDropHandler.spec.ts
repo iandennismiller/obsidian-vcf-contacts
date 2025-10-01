@@ -471,7 +471,7 @@ describe('vcfDropHandler', () => {
         frontmatter: { UID: 'rename-uid' }
       });
       
-      const renameSpy = vi.spyOn(app.vault, 'rename').mockResolvedValue();
+      const renameSpy = vi.spyOn(app.vault, 'rename').mockResolvedValue(undefined as any);
       
       setupVCFDropHandler(app as unknown as App, settings);
       
@@ -511,7 +511,7 @@ describe('vcfDropHandler', () => {
       
       // Make rename fail but modify succeed
       app.vault.rename = vi.fn().mockRejectedValue(new Error('Rename not allowed'));
-      const modifySpy = vi.spyOn(app.vault, 'modify').mockResolvedValue();
+      const modifySpy = vi.spyOn(app.vault, 'modify').mockResolvedValue(undefined as any);
       
       setupVCFDropHandler(app as unknown as App, settings);
       
