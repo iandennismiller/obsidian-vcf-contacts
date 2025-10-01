@@ -77,13 +77,19 @@ export class RelationshipOperations {
 
     for (const [key, value] of Object.entries(frontmatter)) {
       if (key.startsWith('RELATED')) {
+        // Skip non-string values to prevent .startsWith() errors
+        if (typeof value !== 'string') {
+          console.warn(`[RelationshipOperations] Skipping non-string RELATED value for key ${key}: ${typeof value}`);
+          continue;
+        }
+        
         const type = this.extractRelationshipType(key);
-        const parsedValue = this.parseRelatedValue(value as string);
+        const parsedValue = this.parseRelatedValue(value);
         
         relationships.push({
           key,
           type,
-          value: value as string,
+          value: value,
           parsedValue: parsedValue || undefined
         });
       }
