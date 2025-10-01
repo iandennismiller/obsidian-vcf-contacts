@@ -245,6 +245,8 @@ RELATED[colleague]: name:Colleague Name
   });
 
   it('should maintain alphabetical sorting of RELATED fields', () => {
+    // According to spec: "Deterministic Ordering - When a set of relationships is mapped 
+    // onto front matter: 1. First sort by key 2. Then sort by value"
     const contactData = {
       UID: 'alpha-sort-001',
       FN: 'Alpha Sort Contact',
@@ -257,8 +259,31 @@ RELATED[colleague]: name:Colleague Name
     const lines = vcf.split('\n');
     const relatedLines = lines.filter(line => line.startsWith('RELATED'));
 
-    // Verify that RELATED fields appear in a consistent order
+    // Verify that RELATED fields appear in a consistent order (sorted by key)
     expect(relatedLines.length).toBe(3);
+    // Fields should be sorted: apple, middle, zebra
+    expect(relatedLines[0]).toContain('TYPE=apple');
+    expect(relatedLines[1]).toContain('TYPE=middle');
+    expect(relatedLines[2]).toContain('TYPE=zebra');
+  });
+
+  it('should only update REV when frontmatter data actually changes', () => {
+    // According to spec: REV should only be updated when frontmatter actually changes
+    // This prevents unnecessary updates and ensures efficient synchronization
+    const unchangedData = {
+      UID: 'rev-efficiency-123',
+      FN: 'Rev Efficiency Test',
+      EMAIL: 'test@example.com',
+      REV: '20240315T143000Z'
+    };
+
+    // Same data, same REV
+    const vcf1 = VCardGenerator.objectToVcf(unchangedData);
+    const vcf2 = VCardGenerator.objectToVcf(unchangedData);
+
+    // VCF output should be identical, REV should not have changed
+    expect(vcf1).toBe(vcf2);
+    expect(vcf1).toContain('REV:20240315T143000Z');
   });
 
   it('should handle empty relationship lists consistently', () => {

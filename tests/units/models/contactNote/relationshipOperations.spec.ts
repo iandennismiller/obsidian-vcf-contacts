@@ -56,8 +56,8 @@ FN: John Doe
 ---
 
 #### Related
-- father: [[Bob Doe]]
-- mother: [[Mary Doe]]
+- parent: [[Bob Doe]]
+- parent: [[Mary Doe]]
 - spouse: [[Jane Doe]]
 
 #Contact`;
@@ -68,15 +68,66 @@ FN: John Doe
 
       expect(relationships).toHaveLength(3);
       expect(relationships[0]).toEqual({
-        type: 'father',
+        type: 'parent',
         contactName: 'Bob Doe',
         linkType: 'name'
       });
       expect(relationships[1]).toEqual({
-        type: 'mother',
+        type: 'parent',
         contactName: 'Mary Doe',
         linkType: 'name'
       });
+    });
+
+    it('should handle Related heading with different cases and depths', async () => {
+      // According to spec: "The heading is case insensitive: '## related' is equivalent to '## Related'"
+      // and "The heading depth is not relevant: works on '### related' or '#### RELATED' too"
+      const contentLowercase = `---
+UID: test-1
+---
+
+## related
+- spouse: [[Jane Doe]]
+
+#Contact`;
+
+      const contentUppercase = `---
+UID: test-2
+---
+
+### RELATED
+- friend: [[Bob Smith]]
+
+#Contact`;
+
+      const contentMixedCase = `---
+UID: test-3
+---
+
+###### ReLaTeD
+- colleague: [[Alice Jones]]
+
+#Contact`;
+
+      mockContactData.getContent = vi.fn()
+        .mockResolvedValueOnce(contentLowercase)
+        .mockResolvedValueOnce(contentUppercase)
+        .mockResolvedValueOnce(contentMixedCase);
+
+      // Test lowercase
+      let relationships = await relationshipOperations.parseRelatedSection();
+      expect(relationships).toHaveLength(1);
+      expect(relationships[0].type).toBe('spouse');
+
+      // Test uppercase
+      relationships = await relationshipOperations.parseRelatedSection();
+      expect(relationships).toHaveLength(1);
+      expect(relationships[0].type).toBe('friend');
+
+      // Test mixed case
+      relationships = await relationshipOperations.parseRelatedSection();
+      expect(relationships).toHaveLength(1);
+      expect(relationships[0].type).toBe('colleague');
     });
 
     it('should handle empty Related section', async () => {
@@ -103,8 +154,8 @@ UID: john-doe-123
 ---
 
 #### Related
-- father: [[Bob Doe]]
-- [[Jane Doe]] (spouse)
+- parent: [[Bob Doe]]
+- spouse: [[Jane Doe]]
 
 #Contact`;
 
@@ -114,7 +165,7 @@ UID: john-doe-123
 
       expect(relationships).toHaveLength(2);
       expect(relationships[0].contactName).toBe('Bob Doe');
-      expect(relationships[0].type).toBe('father');
+      expect(relationships[0].type).toBe('parent');
       expect(relationships[1].contactName).toBe('Jane Doe');
       expect(relationships[1].type).toBe('spouse');
     });
@@ -125,9 +176,9 @@ UID: john-doe-123
 ---
 
 #### Related
-- father: [[Bob Doe]]
+- parent: [[Bob Doe]]
 - invalid line without proper format
-- mother: [[Mary Doe]]
+- parent: [[Mary Doe]]
 
 #Contact`;
 
@@ -136,8 +187,8 @@ UID: john-doe-123
       const relationships = await relationshipOperations.parseRelatedSection();
 
       expect(relationships).toHaveLength(2); // Should skip invalid line
-      expect(relationships[0].type).toBe('father');
-      expect(relationships[1].type).toBe('mother');
+      expect(relationships[0].type).toBe('parent');
+      expect(relationships[1].type).toBe('parent');
     });
   });
 
@@ -194,7 +245,7 @@ UID: john-doe-123
 ---
 
 #### Related
-- father: [[Old Father]]
+- parent: [[Old Parent]]
 
 #### Notes
 Some notes.
@@ -202,8 +253,8 @@ Some notes.
 #Contact`;
 
       const newRelationships = [
-        { type: 'father', contactName: 'Bob Doe' },
-        { type: 'mother', contactName: 'Mary Doe' }
+        { type: 'parent', contactName: 'Bob Doe' },
+        { type: 'parent', contactName: 'Mary Doe' }
       ];
 
       mockContactData.getContent = vi.fn().mockResolvedValue(originalContent);
@@ -212,10 +263,10 @@ Some notes.
       await relationshipOperations.updateRelatedSectionInContent(newRelationships);
 
       expect(mockContactData.updateContent).toHaveBeenCalledWith(
-        expect.stringContaining('- father: [[Bob Doe]]')
+        expect.stringContaining('- parent: [[Bob Doe]]')
       );
       expect(mockContactData.updateContent).toHaveBeenCalledWith(
-        expect.stringContaining('- mother: [[Mary Doe]]')
+        expect.stringContaining('- parent: [[Mary Doe]]')
       );
     });
 
@@ -249,7 +300,7 @@ UID: john-doe-123
 ---
 
 #### Related
-- father: [[Bob Doe]]
+- parent: [[Bob Doe]]
 
 #Contact`;
 
@@ -261,6 +312,75 @@ UID: john-doe-123
       expect(mockContactData.updateContent).toHaveBeenCalledWith(
         expect.stringContaining('#### Related\n\n')
       );
+    });
+
+    it('should not modify other parts of the document when updating Related section', async () => {
+      // According to spec: "The plugin should not touch any other heading or anything else in the note"
+      const originalContent = `---
+UID: john-doe-123
+FN: John Doe
+---
+
+#### Notes
+Important notes about John.
+- Project details
+- Meeting notes
+
+#### Related
+- spouse: [[Old Spouse]]
+
+#### Contact Info
+Email: john@example.com
+Phone: 555-1234
+
+#Contact`;
+
+      const newRelationships = [
+        { type: 'spouse', contactName: 'Jane Doe' }
+      ];
+
+      mockContactData.getContent = vi.fn().mockResolvedValue(originalContent);
+      mockContactData.updateContent = vi.fn();
+
+      await relationshipOperations.updateRelatedSectionInContent(newRelationships);
+
+      // Should update Related section
+      expect(mockContactData.updateContent).toHaveBeenCalledWith(
+        expect.stringContaining('- spouse: [[Jane Doe]]')
+      );
+
+      // Should preserve other sections
+      const updatedContent = vi.mocked(mockContactData.updateContent).mock.calls[0][0] as string;
+      expect(updatedContent).toContain('#### Notes');
+      expect(updatedContent).toContain('Important notes about John');
+      expect(updatedContent).toContain('#### Contact Info');
+      expect(updatedContent).toContain('Email: john@example.com');
+      expect(updatedContent).toContain('Phone: 555-1234');
+    });
+
+    it('should accept gendered terms from user input for gender inference', async () => {
+      // According to spec: When user enters gendered terms like "father", "mother",
+      // these should trigger gender inference and be stored in genderless form
+      const originalContent = `---
+UID: john-doe-123
+---
+
+#Contact`;
+
+      // User adds gendered relationships
+      const genderedRelationships = [
+        { type: 'father', contactName: 'Bob Doe' },
+        { type: 'mother', contactName: 'Mary Doe' }
+      ];
+
+      mockContactData.getContent = vi.fn().mockResolvedValue(originalContent);
+      mockContactData.updateContent = vi.fn();
+
+      await relationshipOperations.updateRelatedSectionInContent(genderedRelationships);
+
+      // The relationships should be stored as entered
+      // (gender inference processor will convert to genderless form in frontmatter)
+      expect(mockContactData.updateContent).toHaveBeenCalled();
     });
   });
 

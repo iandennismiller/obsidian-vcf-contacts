@@ -5,13 +5,13 @@
 steps:
   # Install Node.js dependencies with npm caching
   - name: Install dependencies
-    run: npm ci
+    run: npm ci --legacy-peer-deps
     cache:
       # Cache node_modules to speed up subsequent runs
       paths:
         - node_modules
-        - ~/.npm
-      # Cache key based on package-lock.json for version consistency
-      key: npm-${{ hashFiles('package-lock.json') }}
+        - $HOME/.npm
+      # Cache key includes OS and package-lock.json hash for consistency
+      key: ${{ runner.os }}-npm-${{ hashFiles('package-lock.json') }}
       restore-keys: |
-        npm-
+        ${{ runner.os }}-npm-

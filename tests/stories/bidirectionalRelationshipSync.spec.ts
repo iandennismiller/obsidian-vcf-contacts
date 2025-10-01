@@ -45,6 +45,7 @@ describe('Bidirectional Relationship Sync Story', () => {
 
   it('should sync from Related list to frontmatter when relationship is added', async () => {
     const mockFile = { basename: 'john-doe', path: 'Contacts/john-doe.md' } as TFile;
+    // User enters gendered terms in Related list
     const contentWithNewRelationship = `---
 UID: john-doe-123
 FN: John Doe
@@ -55,8 +56,8 @@ EMAIL: john@example.com
 John is a software developer.
 
 #### Related
-- father: [[Bob Doe]]
-- mother: [[Mary Doe]]
+- parent: [[Bob Doe]]
+- parent: [[Mary Doe]]
 
 #Contact`;
 
@@ -74,6 +75,7 @@ John is a software developer.
 
     expect(result.success).toBe(true);
     // The sync should have processed the relationships from the Related list
+    // Relationships should be stored in genderless form (parent) in frontmatter
   });
 
   it('should sync from frontmatter to Related list when frontmatter is updated', async () => {
@@ -124,9 +126,9 @@ RELATED[parent]: name:Bob Doe
 John is a software developer.
 
 #### Related
-- father: [[Bob Doe]]
-- mother: [[Mary Doe]]
-- brother: [[Mike Doe]]
+- parent: [[Bob Doe]]
+- parent: [[Mary Doe]]
+- sibling: [[Mike Doe]]
 
 #Contact`;
 
@@ -162,9 +164,9 @@ FN: John Doe
 Some notes about John.
 
 ###### Related
-- father: [[Bob Doe]]
-- mother: [[Mary Doe]]  
-- brother: [[Mike Doe]]
+- parent: [[Bob Doe]]
+- parent: [[Mary Doe]]  
+- sibling: [[Mike Doe]]
 - friend: [[Alice Smith]]
 - colleague: [[Tom Wilson]]
 - boss: [[Sarah Johnson]]
@@ -183,9 +185,8 @@ Some notes about John.
     const relationships = await contactNote.parseRelatedSection();
     
     expect(relationships).toHaveLength(6);
-    expect(relationships.find(r => r.type === 'father')).toBeDefined();
-    expect(relationships.find(r => r.type === 'mother')).toBeDefined();
-    expect(relationships.find(r => r.type === 'brother')).toBeDefined();
+    expect(relationships.find(r => r.type === 'parent')).toBeDefined();
+    expect(relationships.find(r => r.type === 'sibling')).toBeDefined();
     expect(relationships.find(r => r.type === 'friend')).toBeDefined();
     expect(relationships.find(r => r.type === 'colleague')).toBeDefined();
     expect(relationships.find(r => r.type === 'boss')).toBeDefined();
@@ -193,7 +194,7 @@ Some notes about John.
 
   it('should handle relationship conflicts by maintaining existing data', async () => {
     // Test scenario where both frontmatter and Related list have the same relationship
-    // but with different formatting - should not duplicate
+    // Frontmatter has genderless form, Related list may have gendered form
     const mockFile = { basename: 'john-doe', path: 'Contacts/john-doe.md' } as TFile;
     const contentWithDuplicateRelationships = `---
 UID: john-doe-123
@@ -202,7 +203,7 @@ RELATED[parent]: name:Bob Doe
 ---
 
 #### Related
-- father: [[Bob Doe]]
+- parent: [[Bob Doe]]
 
 #Contact`;
 

@@ -5,8 +5,10 @@ import { ContactsPluginSettings } from 'src/plugin/settings';
 
 /**
  * User Story 7: Automatic Reverse Relationships
- * As a user, when I add "father: [[John Doe]]" to Jane's contact, I want John's 
- * contact to automatically get "daughter: [[Jane Doe]]" in his relationships.
+ * As a user, when I add a parent relationship to Jane's contact, I want the 
+ * reciprocal child relationship to automatically appear on the parent's contact.
+ * The system stores relationships in genderless form (parent/child) in frontmatter,
+ * but can render them with gendered terms (father/daughter) based on GENDER field.
  */
 describe('Automatic Reverse Relationships Story', () => {
   let mockApp: Partial<App>;
@@ -46,22 +48,23 @@ describe('Automatic Reverse Relationships Story', () => {
   });
 
   it('should add reverse parent-child relationship automatically', async () => {
-    // Setup Jane Doe adding "father: [[John Doe]]"
+    // Setup Jane adding a parent relationship (may use gendered term "father")
     const janeFile = { basename: 'jane-doe', path: 'Contacts/jane-doe.md' } as TFile;
     const johnFile = { basename: 'john-doe', path: 'Contacts/john-doe.md' } as TFile;
     
     mockContactFiles.set('Contacts/jane-doe.md', janeFile);
     mockContactFiles.set('Contacts/john-doe.md', johnFile);
 
-    // Jane's content with father relationship
+    // Jane's content - stored in genderless form in frontmatter
     const janeContent = `---
 UID: jane-doe-456
 FN: Jane Doe
 GENDER: F
+RELATED[parent]: urn:uuid:john-doe-123
 ---
 
 #### Related
-- father: [[John Doe]]
+- parent: [[John Doe]]
 
 #Contact`;
 
