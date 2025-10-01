@@ -56,8 +56,8 @@ FN: John Doe
 ---
 
 #### Related
-- father: [[Bob Doe]]
-- mother: [[Mary Doe]]
+- parent: [[Bob Doe]]
+- parent: [[Mary Doe]]
 - spouse: [[Jane Doe]]
 
 #Contact`;
@@ -68,12 +68,12 @@ FN: John Doe
 
       expect(relationships).toHaveLength(3);
       expect(relationships[0]).toEqual({
-        type: 'father',
+        type: 'parent',
         contactName: 'Bob Doe',
         linkType: 'name'
       });
       expect(relationships[1]).toEqual({
-        type: 'mother',
+        type: 'parent',
         contactName: 'Mary Doe',
         linkType: 'name'
       });
@@ -103,8 +103,8 @@ UID: john-doe-123
 ---
 
 #### Related
-- father: [[Bob Doe]]
-- [[Jane Doe]] (spouse)
+- parent: [[Bob Doe]]
+- spouse: [[Jane Doe]]
 
 #Contact`;
 
@@ -114,7 +114,7 @@ UID: john-doe-123
 
       expect(relationships).toHaveLength(2);
       expect(relationships[0].contactName).toBe('Bob Doe');
-      expect(relationships[0].type).toBe('father');
+      expect(relationships[0].type).toBe('parent');
       expect(relationships[1].contactName).toBe('Jane Doe');
       expect(relationships[1].type).toBe('spouse');
     });
@@ -125,9 +125,9 @@ UID: john-doe-123
 ---
 
 #### Related
-- father: [[Bob Doe]]
+- parent: [[Bob Doe]]
 - invalid line without proper format
-- mother: [[Mary Doe]]
+- parent: [[Mary Doe]]
 
 #Contact`;
 
@@ -136,8 +136,8 @@ UID: john-doe-123
       const relationships = await relationshipOperations.parseRelatedSection();
 
       expect(relationships).toHaveLength(2); // Should skip invalid line
-      expect(relationships[0].type).toBe('father');
-      expect(relationships[1].type).toBe('mother');
+      expect(relationships[0].type).toBe('parent');
+      expect(relationships[1].type).toBe('parent');
     });
   });
 
@@ -194,7 +194,7 @@ UID: john-doe-123
 ---
 
 #### Related
-- father: [[Old Father]]
+- parent: [[Old Parent]]
 
 #### Notes
 Some notes.
@@ -202,8 +202,8 @@ Some notes.
 #Contact`;
 
       const newRelationships = [
-        { type: 'father', contactName: 'Bob Doe' },
-        { type: 'mother', contactName: 'Mary Doe' }
+        { type: 'parent', contactName: 'Bob Doe' },
+        { type: 'parent', contactName: 'Mary Doe' }
       ];
 
       mockContactData.getContent = vi.fn().mockResolvedValue(originalContent);
@@ -212,10 +212,10 @@ Some notes.
       await relationshipOperations.updateRelatedSectionInContent(newRelationships);
 
       expect(mockContactData.updateContent).toHaveBeenCalledWith(
-        expect.stringContaining('- father: [[Bob Doe]]')
+        expect.stringContaining('- parent: [[Bob Doe]]')
       );
       expect(mockContactData.updateContent).toHaveBeenCalledWith(
-        expect.stringContaining('- mother: [[Mary Doe]]')
+        expect.stringContaining('- parent: [[Mary Doe]]')
       );
     });
 
@@ -249,7 +249,7 @@ UID: john-doe-123
 ---
 
 #### Related
-- father: [[Bob Doe]]
+- parent: [[Bob Doe]]
 
 #Contact`;
 
@@ -261,6 +261,31 @@ UID: john-doe-123
       expect(mockContactData.updateContent).toHaveBeenCalledWith(
         expect.stringContaining('#### Related\n\n')
       );
+    });
+
+    it('should accept gendered terms from user input for gender inference', async () => {
+      // According to spec: When user enters gendered terms like "father", "mother",
+      // these should trigger gender inference and be stored in genderless form
+      const originalContent = `---
+UID: john-doe-123
+---
+
+#Contact`;
+
+      // User adds gendered relationships
+      const genderedRelationships = [
+        { type: 'father', contactName: 'Bob Doe' },
+        { type: 'mother', contactName: 'Mary Doe' }
+      ];
+
+      mockContactData.getContent = vi.fn().mockResolvedValue(originalContent);
+      mockContactData.updateContent = vi.fn();
+
+      await relationshipOperations.updateRelatedSectionInContent(genderedRelationships);
+
+      // The relationships should be stored as entered
+      // (gender inference processor will convert to genderless form in frontmatter)
+      expect(mockContactData.updateContent).toHaveBeenCalled();
     });
   });
 

@@ -73,7 +73,7 @@ John is a software developer.
 
 #### Related
 - spouse: [[Jane Doe]]
-- father: [[Bob Doe]]
+- parent: [[Bob Doe]]
 
 #Contact`;
 

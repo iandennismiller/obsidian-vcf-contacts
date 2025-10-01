@@ -4,9 +4,13 @@ import { ContactNote } from '../../src/models/contactNote';
 import { ContactsPluginSettings } from 'src/plugin/settings';
 
 /**
- * User Story 12: Gender-Aware Relationship Processing
- * As a user, I want the plugin to use gender information to create appropriate 
- * relationship labels (e.g., "son" vs "daughter" when adding a "child" relationship).
+ * User Story 13: Gender-Aware Relationship Processing
+ * As a user, I want the plugin to use gender information when rendering relationships.
+ * Relationships are stored in genderless form (parent, child, sibling) in frontmatter
+ * and vCard RELATED fields, but rendered with gendered terms (father, daughter, brother)
+ * in the Related list based on the contact's GENDER field.
+ * When I specify gendered terms like "mother" or "father", the plugin infers the 
+ * contact's gender and updates the GENDER field accordingly.
  */
 describe('Gender-Aware Relationship Processing Story', () => {
   let mockApp: Partial<App>;
@@ -63,41 +67,47 @@ describe('Gender-Aware Relationship Processing Story', () => {
     expect(contactNote.parseGender('nb')).toBe('NB');
   });
 
-  it('should apply gender-aware relationship mapping for family relationships', () => {
+  it('should apply gender-aware relationship mapping for display', () => {
+    // Relationships stored in genderless form, but displayed with gendered terms
     const familyRelationships = [
-      { baseType: 'child', maleForm: 'son', femaleForm: 'daughter' },
-      { baseType: 'parent', maleForm: 'father', femaleForm: 'mother' },
-      { baseType: 'sibling', maleForm: 'brother', femaleForm: 'sister' },
-      { baseType: 'grandparent', maleForm: 'grandfather', femaleForm: 'grandmother' },
-      { baseType: 'grandchild', maleForm: 'grandson', femaleForm: 'granddaughter' },
-      { baseType: 'spouse', maleForm: 'husband', femaleForm: 'wife' }
+      { genderlessType: 'child', maleForm: 'son', femaleForm: 'daughter' },
+      { genderlessType: 'parent', maleForm: 'father', femaleForm: 'mother' },
+      { genderlessType: 'sibling', maleForm: 'brother', femaleForm: 'sister' },
+      { genderlessType: 'grandparent', maleForm: 'grandfather', femaleForm: 'grandmother' },
+      { genderlessType: 'grandchild', maleForm: 'grandson', femaleForm: 'granddaughter' },
+      { genderlessType: 'spouse', maleForm: 'husband', femaleForm: 'wife' }
     ];
 
-    familyRelationships.forEach(({ baseType, maleForm, femaleForm }) => {
-      // Simulate gender-aware relationship processing
-      const maleRelationship = applyGenderToRelationship(baseType, 'M');
-      const femaleRelationship = applyGenderToRelationship(baseType, 'F');
+    familyRelationships.forEach(({ genderlessType, maleForm, femaleForm }) => {
+      // Simulate gender-aware relationship rendering
+      const maleRelationship = applyGenderToRelationship(genderlessType, 'M');
+      const femaleRelationship = applyGenderToRelationship(genderlessType, 'F');
+      const unknownGenderRelationship = applyGenderToRelationship(genderlessType, undefined);
       
       expect(maleRelationship).toBe(maleForm);
       expect(femaleRelationship).toBe(femaleForm);
+      // When gender is unknown, use genderless form
+      expect(unknownGenderRelationship).toBe(genderlessType);
     });
   });
 
-  it('should handle reverse relationship inference with gender', () => {
-    // When adding "son: [[John]]" to a parent, should automatically add "father" or "mother" to John
+  it('should handle reverse relationship inference with genderless storage', () => {
+    // When adding gendered relationship terms, they trigger gender inference
+    // But relationships are stored in genderless form
     const reverseRelationships = [
-      { original: 'son', male_reverse: 'father', female_reverse: 'mother' },
-      { original: 'daughter', male_reverse: 'father', female_reverse: 'mother' },
-      { original: 'father', male_reverse: 'son', female_reverse: 'daughter' },
-      { original: 'mother', male_reverse: 'son', female_reverse: 'daughter' },
-      { original: 'brother', male_reverse: 'brother', female_reverse: 'sister' },
-      { original: 'sister', male_reverse: 'brother', female_reverse: 'sister' },
-      { original: 'husband', male_reverse: 'wife', female_reverse: 'husband' },
-      { original: 'wife', male_reverse: 'wife', female_reverse: 'husband' }
+      { genderless: 'child', gendered_input: 'son', reverse_genderless: 'parent' },
+      { genderless: 'child', gendered_input: 'daughter', reverse_genderless: 'parent' },
+      { genderless: 'parent', gendered_input: 'father', reverse_genderless: 'child' },
+      { genderless: 'parent', gendered_input: 'mother', reverse_genderless: 'child' },
+      { genderless: 'sibling', gendered_input: 'brother', reverse_genderless: 'sibling' },
+      { genderless: 'sibling', gendered_input: 'sister', reverse_genderless: 'sibling' },
+      { genderless: 'spouse', gendered_input: 'husband', reverse_genderless: 'spouse' },
+      { genderless: 'spouse', gendered_input: 'wife', reverse_genderless: 'spouse' }
     ];
 
-    reverseRelationships.forEach(({ original, male_reverse, female_reverse }) => {
-      const maleReverse = getReverseRelationship(original, 'M');
+    reverseRelationships.forEach(({ genderless, gendered_input, reverse_genderless }) => {
+      // The reverse relationship should always use genderless form in storage
+      const reverse = getReverseRelationshipType(genderless);
       const femaleReverse = getReverseRelationship(original, 'F');
       
       expect(maleReverse).toBe(male_reverse);
