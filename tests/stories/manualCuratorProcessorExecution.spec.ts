@@ -185,8 +185,8 @@ FN: Bob Jones
     // Verify the updated frontmatter contains the relationships
     expect(updatedFrontmatter['RELATED[spouse]']).toBeDefined();
     expect(updatedFrontmatter['RELATED[spouse]']).toContain('jane-uid-456');
-    expect(updatedFrontmatter['RELATED[1:friend]']).toBeDefined();
-    expect(updatedFrontmatter['RELATED[1:friend]']).toContain('bob-uid-789');
+    expect(updatedFrontmatter['RELATED[friend]']).toBeDefined();
+    expect(updatedFrontmatter['RELATED[friend]']).toContain('bob-uid-789');
   });
 
   it('should handle partial sync where some relationships exist and some are missing', async () => {
@@ -287,7 +287,7 @@ FN: Diana Evans
     
     // Both relationships should be in the updated frontmatter
     expect(updatedFrontmatter['RELATED[colleague]']).toBeDefined();
-    expect(updatedFrontmatter['RELATED[1:friend]']).toBeDefined();
+    expect(updatedFrontmatter['RELATED[friend]']).toBeDefined();
   });
 
   it('should return undefined when all relationships are already synced', async () => {
