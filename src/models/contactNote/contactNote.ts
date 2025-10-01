@@ -94,28 +94,7 @@ export class ContactNote {
    * Parse GENDER field value from vCard
    */
   parseGender(value: string): Gender {
-    if (!value || value.trim() === '') {
-      return null;
-    }
-    
-    const normalized = value.trim().toUpperCase();
-    switch (normalized) {
-      case 'M':
-      case 'MALE':
-        return 'M';
-      case 'F':
-      case 'FEMALE':
-        return 'F';
-      case 'NB':
-      case 'NON-BINARY':
-      case 'NONBINARY':
-        return 'NB';
-      case 'U':
-      case 'UNSPECIFIED':
-        return 'U';
-      default:
-        return null;
-    }
+    return this.contactData.parseGender(value);
   }
 
   /**
@@ -1150,7 +1129,7 @@ export class ContactNote {
    * Generate REV timestamp for vCard compatibility
    */
   generateRevTimestamp(): string {
-    return new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    return this.contactData.generateRevTimestamp();
   }
 
   /**
