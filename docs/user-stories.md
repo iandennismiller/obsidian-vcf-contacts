@@ -36,47 +36,56 @@ This document outlines user stories and use cases for managing contacts and rela
 ### 10. Social Relationships
 **As a user**, I want to manage social relationships like "friend", "neighbor", "classmate", "teammate" and maintain them across my contact network.
 
+### 11. Incremental Relationship Management
+**As a user**, I want to add relationships (one at a time) to a contact over the course of several plugin load/unload cycles, with the expectation that relationships in the front matter and vcards will be curated and consistent.
+
 ## Contact Data Management Stories
 
-### 11. Contact Creation from Template
+### 12. Contact Creation from Template
 **As a user**, when I create a new contact note, I want it to follow a consistent template with proper frontmatter fields for UID, name, email, phone, and other vCard-standard fields.
 
-### 12. Gender-Aware Relationship Processing
+### 13. Gender-Aware Relationship Processing
 **As a user**, I want the plugin to use gender information to create appropriate relationship labels (e.g., "son" vs "daughter" when adding a "child" relationship).
 
-### 13. UID-Based Contact Linking
+### 14. UID-Based Contact Linking
 **As a user**, I want contacts to be linked by their unique UIDs rather than just names, so that contact name changes don't break relationships.
 
-### 14. Contact Metadata Sync
+### 15. Contact Metadata Sync
 **As a user**, I want changes to contact metadata (name, email, phone, address) in my Obsidian notes to be reflected in the corresponding VCF files automatically.
 
-### 15. Contact Deduplication
+### 16. Contact Deduplication
 **As a user**, when importing VCF files, I want the plugin to detect existing contacts by UID and update them rather than creating duplicates.
+
+### 17. Efficient VCF Updates
+**As a user**, I expect VCFs will only be updated when the data actually change; the plugin should ensure vcard and front matter are always sorted to prevent relationships, which inherently have no "order," from shuffling around chaotically when refreshed.
 
 ## Advanced Workflow Stories
 
-### 16. Bulk Contact Operations
+### 18. Bulk Contact Operations
 **As a user**, I want to perform bulk operations like syncing all contacts, validating all relationships, or updating all VCF files from my Obsidian contacts at once.
 
-### 17. Contact Validation and Integrity
+### 19. Contact Validation and Integrity
 **As a user**, I want the plugin to validate that all relationship references point to existing contacts and warn me about broken links or missing contacts.
 
-### 18. Selective Field Synchronization  
+### 20. Selective Field Synchronization  
 **As a user**, I want to control which fields sync between Obsidian and VCF files, so I can keep some information private to Obsidian while sharing basic contact info via VCF.
 
-### 19. Contact History and Versioning
+### 21. Contact History and Versioning
 **As a user**, I want to track when contact information was last updated (REV field) and maintain version consistency between Obsidian and VCF files.
 
-### 20. Integration Workflows
+### 22. Integration Workflows
 **As a user**, I want to integrate this plugin with my existing contact management workflow, including address books, CRM systems, and mobile devices that support vCard import/export.
+
+### 23. Configurable Folder and Filename Settings
+**As a user**, I want to control the folder or filename in the configuration settings; the rest of the plugin should make reference to these values as appropriate.
 
 ## Technical Stories
 
-### 21. Error Handling and Recovery
+### 24. Error Handling and Recovery
 **As a user**, when sync operations fail or encounter errors, I want clear error messages and guidance on how to resolve conflicts between Obsidian and VCF data.
 
-### 22. Performance with Large Contact Lists  
+### 25. Performance with Large Contact Lists  
 **As a user**, I want the plugin to handle large contact databases (hundreds or thousands of contacts) efficiently without slowing down Obsidian.
 
-### 23. Backup and Restore
+### 26. Backup and Restore
 **As a user**, I want confidence that my contact data is safe, with the ability to backup and restore both Obsidian contacts and VCF files if something goes wrong.
