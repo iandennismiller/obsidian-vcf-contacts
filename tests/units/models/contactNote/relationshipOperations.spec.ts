@@ -314,6 +314,50 @@ UID: john-doe-123
       );
     });
 
+    it('should not modify other parts of the document when updating Related section', async () => {
+      // According to spec: "The plugin should not touch any other heading or anything else in the note"
+      const originalContent = `---
+UID: john-doe-123
+FN: John Doe
+---
+
+#### Notes
+Important notes about John.
+- Project details
+- Meeting notes
+
+#### Related
+- spouse: [[Old Spouse]]
+
+#### Contact Info
+Email: john@example.com
+Phone: 555-1234
+
+#Contact`;
+
+      const newRelationships = [
+        { type: 'spouse', contactName: 'Jane Doe' }
+      ];
+
+      mockContactData.getContent = vi.fn().mockResolvedValue(originalContent);
+      mockContactData.updateContent = vi.fn();
+
+      await relationshipOperations.updateRelatedSectionInContent(newRelationships);
+
+      // Should update Related section
+      expect(mockContactData.updateContent).toHaveBeenCalledWith(
+        expect.stringContaining('- spouse: [[Jane Doe]]')
+      );
+
+      // Should preserve other sections
+      const updatedContent = vi.mocked(mockContactData.updateContent).mock.calls[0][0] as string;
+      expect(updatedContent).toContain('#### Notes');
+      expect(updatedContent).toContain('Important notes about John');
+      expect(updatedContent).toContain('#### Contact Info');
+      expect(updatedContent).toContain('Email: john@example.com');
+      expect(updatedContent).toContain('Phone: 555-1234');
+    });
+
     it('should accept gendered terms from user input for gender inference', async () => {
       // According to spec: When user enters gendered terms like "father", "mother",
       // these should trigger gender inference and be stored in genderless form

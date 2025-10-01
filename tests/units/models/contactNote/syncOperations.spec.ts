@@ -109,7 +109,9 @@ describe('SyncOperations', () => {
       });
     });
 
-    it('should keep unresolved relationships as name references', async () => {
+    it('should keep unresolved relationships as name references (forward references)', async () => {
+      // According to spec: "name: namespace is used when the other contact note does not exist yet"
+      // This allows forward references to contacts not yet created
       const mockRelationships: ParsedRelationship[] = [
         { type: 'friend', contactName: 'Unknown Person', line: 'friend: [[Unknown Person]]' },
       ];
