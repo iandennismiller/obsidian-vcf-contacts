@@ -77,16 +77,9 @@ export class SyncOperations {
       }
 
       // Apply all frontmatter updates in one operation
+      // Note: We need to pass empty values to delete malformed keys
       if (Object.keys(frontmatterUpdates).length > 0) {
-        // Remove empty/deleted fields
-        const filteredUpdates: Record<string, string> = {};
-        Object.entries(frontmatterUpdates).forEach(([key, value]) => {
-          if (value !== '') {
-            filteredUpdates[key] = value;
-          }
-        });
-        
-        await this.contactData.updateMultipleFrontmatterValues(filteredUpdates);
+        await this.contactData.updateMultipleFrontmatterValues(frontmatterUpdates);
       }
 
       return { success: true, errors };

@@ -479,4 +479,102 @@ Some notes about Isabel.
     expect(result).toBeUndefined();
     expect(mockApp.vault!.modify).not.toHaveBeenCalled();
   });
+
+  it('should fix malformed RELATED frontmatter keys (RELATED.type format)', async () => {
+    // Setup: Contact with RELATED.friend format (malformed) in frontmatter
+    // but correct format in Related section
+    const jasonFile = { basename: 'jason-brown', path: 'Contacts/jason-brown.md' } as TFile;
+    const kellyFile = { basename: 'kelly-white', path: 'Contacts/kelly-white.md' } as TFile;
+
+    mockContactFiles.set(jasonFile.path, jasonFile);
+    mockContactFiles.set(kellyFile.path, kellyFile);
+
+    // Jason has malformed frontmatter with RELATED.friend (should be RELATED[friend])
+    const jasonContent = `---
+UID: jason-uid-999
+FN: Jason Brown
+RELATED.friend:
+  - kelly-white
+---
+
+#### Related
+- friend: [[Kelly White]]
+
+#Contact`;
+
+    const kellyContent = `---
+UID: kelly-uid-000
+FN: Kelly White
+---
+
+#Contact`;
+
+    mockApp.vault!.read = vi.fn().mockImplementation((file: TFile) => {
+      if (file.path === jasonFile.path) return Promise.resolve(jasonContent);
+      if (file.path === kellyFile.path) return Promise.resolve(kellyContent);
+      return Promise.reject(new Error('File not found'));
+    });
+
+    // The metadataCache will return the YAML as parsed by Obsidian
+    // RELATED.friend becomes a nested structure
+    mockApp.metadataCache!.getFileCache = vi.fn().mockImplementation((file: TFile) => {
+      if (file.path === jasonFile.path) {
+        return {
+          frontmatter: {
+            UID: 'jason-uid-999',
+            FN: 'Jason Brown',
+            RELATED: {
+              friend: ['kelly-white']  // This is how YAML dot notation gets parsed
+            }
+          }
+        };
+      }
+      if (file.path === kellyFile.path) {
+        return { frontmatter: { UID: 'kelly-uid-000', FN: 'Kelly White' } };
+      }
+      return null;
+    });
+
+    let updatedFrontmatter: Record<string, any> = {};
+    let updatedContent = '';
+    mockApp.vault!.modify = vi.fn().mockImplementation(async (file: TFile, newContent: string) => {
+      updatedContent = newContent;
+      const frontmatterMatch = newContent.match(/^---\n([\s\S]*?)\n---/);
+      if (frontmatterMatch) {
+        const frontmatterText = frontmatterMatch[1];
+        const lines = frontmatterText.split('\n');
+        lines.forEach(line => {
+          // Match key: value, handling brackets properly
+          const match = line.match(/^([^:]+?(?:\[[^\]]*\])?):\s*(.+)$/);
+          if (match) {
+            updatedFrontmatter[match[1]] = match[2];
+          }
+        });
+      }
+      return Promise.resolve();
+    });
+
+    const jasonContact: Contact = {
+      file: jasonFile,
+      UID: 'jason-uid-999',
+      FN: 'Jason Brown'
+    };
+
+    // Run the processor
+    const result = await RelatedListProcessor.process(jasonContact);
+
+    // Should detect that malformed keys need to be fixed
+    expect(result).toBeDefined();
+    expect(result?.message).toContain('missing relationship');
+    expect(mockApp.vault!.modify).toHaveBeenCalled();
+    
+    // Verify the frontmatter was updated with correct format
+    // Should have RELATED[friend] not RELATED.friend
+    expect(updatedFrontmatter['RELATED[friend]']).toBeDefined();
+    expect(updatedFrontmatter['RELATED[friend]']).toContain('kelly-uid-000');
+    
+    // Should NOT have the old malformed key
+    expect(updatedContent).not.toContain('RELATED.friend');
+    expect(updatedContent).toContain('RELATED[friend]');
+  });
 });

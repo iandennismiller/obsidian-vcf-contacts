@@ -81,8 +81,11 @@ describe('SyncOperations', () => {
       const result = await syncOps.syncRelatedListToFrontmatter();
 
       expect(result.success).toBe(true);
-      // Should call update with empty object to clear RELATED fields
-      expect(mockContactData.updateMultipleFrontmatterValues).toHaveBeenCalledWith({});
+      // Should call update with empty strings to clear RELATED fields
+      expect(mockContactData.updateMultipleFrontmatterValues).toHaveBeenCalledWith({
+        'RELATED[spouse]': '',
+        'RELATED[1:child]': '',
+      });
     });
 
     it('should handle multiple relationships with indexed fields', async () => {
@@ -199,9 +202,11 @@ describe('SyncOperations', () => {
 
       expect(result.success).toBe(true);
       // Should re-index: Alice stays at [friend], Charlie moves to [1:friend]
+      // Also marks old [2:friend] for deletion with empty string
       expect(mockContactData.updateMultipleFrontmatterValues).toHaveBeenCalledWith({
         'RELATED[friend]': 'urn:uuid:alice-uid',
         'RELATED[1:friend]': 'urn:uuid:charlie-uid',
+        'RELATED[2:friend]': '', // Marked for deletion
       });
     });
 
