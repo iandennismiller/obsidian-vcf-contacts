@@ -97,12 +97,10 @@ Common relationship types (stored in genderless form):
 
 ## Importing Contacts
 
-### Import VCF Files
+### Drop VCF Files
 
-1. Open the plugin interface
-2. Click **Import VCF**
-3. Select a `.vcf` file (single contact or database export)
-4. Fill in required fields if prompted (Given Name, Family Name)
+1. Drag the VCF onto Obsidian (the vcf itself is not saved in the vault)
+2. The new contact will be created as a contact note
 
 ### VCF Folder Watching
 
