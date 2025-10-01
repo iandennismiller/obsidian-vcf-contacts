@@ -165,6 +165,18 @@ export class VCardGenerator {
       }
     });
 
+    // Sort single line fields for deterministic ordering
+    // First by key, then by value (per spec)
+    singleLineFields.sort((a, b) => {
+      // Compare keys first
+      if (a[0] < b[0]) return -1;
+      if (a[0] > b[0]) return 1;
+      // If keys are equal, compare values
+      if (a[1] < b[1]) return -1;
+      if (a[1] > b[1]) return 1;
+      return 0;
+    });
+
     const structuredLines = VCardGenerator.renderStructuredLines(structuredFields);
     const singleLines = singleLineFields.map(VCardGenerator.renderSingleKey);
     
