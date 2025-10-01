@@ -3,6 +3,7 @@ import { VcardFile } from "./models/vcardFile";
 import { SyncWatcher } from "src/plugin/services/syncWatcher";
 import { setupVCFDropHandler } from 'src/plugin/services/dropHandler';
 import { setApp, clearApp } from "src/plugin/context/sharedAppContext";
+import { setSettings, clearSettings } from "src/plugin/context/sharedSettingsContext";
 import { CuratorManager, curatorService } from "./models/curatorManager/curatorManager";
 
 // Curator processor imports
@@ -35,6 +36,8 @@ export default class ContactsPlugin extends Plugin {
 		await this.loadSettings();
 		// Set up app context for shared utilities
 		setApp(this.app);
+		// Set up settings context for curator processors
+		setSettings(this.settings);
 
 		// Register curator processors
 		curatorService.register(UidProcessor);
@@ -87,6 +90,8 @@ export default class ContactsPlugin extends Plugin {
 
 		// Clean up app context
 		clearApp();
+		// Clean up settings context
+		clearSettings();
 
 		// Clean up VCF sync watcher
 		if (this.syncWatcher) {
@@ -107,6 +112,8 @@ export default class ContactsPlugin extends Plugin {
 
 	async saveSettings() {
 		await this.saveData(this.settings);
+		// Update shared settings context to keep it in sync
+		setSettings(this.settings);
 	}
 
 }

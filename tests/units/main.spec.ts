@@ -17,6 +17,10 @@ vi.mock('../../src/plugin/context/sharedAppContext', () => ({
   setApp: vi.fn(),
   clearApp: vi.fn(),
 }));
+vi.mock('../../src/plugin/context/sharedSettingsContext', () => ({
+  setSettings: vi.fn(),
+  clearSettings: vi.fn(),
+}));
 vi.mock('../../src/models/curatorManager/curatorManager', () => ({
   CuratorManager: vi.fn().mockImplementation(() => ({
     registerCommands: vi.fn(),
