@@ -143,7 +143,14 @@ export class RelationshipOperations {
               }
               continue;
             } else {
-              console.warn(`[RelationshipOperations] Skipping malformed RELATED key "${key}": Use RELATED[type] format instead. Value type: ${typeof value}`);
+              // Provide more specific error message based on value type
+              let valueType: string = typeof value;
+              if (value === null) {
+                valueType = 'null';
+              } else if (Array.isArray(value)) {
+                valueType = 'array';
+              }
+              console.warn(`[RelationshipOperations] Skipping malformed RELATED key "${key}": Use RELATED[type] format instead. Value type: ${valueType}`);
               continue;
             }
           }
