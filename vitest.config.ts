@@ -10,7 +10,7 @@ export default defineConfig({
     },
   },
   test: {
-    include: ['tests-disabled/**/*.spec.ts'],  // Temporarily disabled - tests being updated to match specs
+    include: ['tests/**/*.spec.ts'],
     globals: true,
     environment: 'node',
     coverage: {
