@@ -48,35 +48,45 @@ export class RelationshipOperations {
     for (const line of lines) {
       console.log(`[RelationshipOperations] Parsing line: "${line}"`);
       
-      // Parse different formats: 
-      // 1. "- Type: [[Contact Name]]" (with brackets - preferred format)
-      // 2. "- [[Contact Name]] (Type)" (with brackets)
-      // 3. "- Type: Contact Name" (plain text with colon - fallback)
-      const match1 = line.match(/^-\s*([^:]+):\s*\[\[([^\]]+)\]\]/);
-      const match2 = line.match(/^-\s*\[\[([^\]]+)\]\]\s*\(([^)]+)\)/);
-      const match3 = line.match(/^-\s*([^:]+):\s*(.+)$/); // Type: Name (without brackets, but with colon)
+      // Parse different formats (in order of preference):
+      // 1. "- type [[Contact Name]]" (canonical format - no colon)
+      // 2. "- type: [[Contact Name]]" (alternative format with colon)
+      // 3. "- [[Contact Name]] (type)" (with brackets, type in parentheses)
+      // 4. "- type: Contact Name" (plain text with colon - fallback for non-wiki-link format)
+      const match1 = line.match(/^-\s*(\w+)\s+\[\[([^\]]+)\]\]/); // type [[Name]] - canonical
+      const match2 = line.match(/^-\s*([^:]+):\s*\[\[([^\]]+)\]\]/); // type: [[Name]] - alternative
+      const match3 = line.match(/^-\s*\[\[([^\]]+)\]\]\s*\(([^)]+)\)/); // [[Name]] (type)
+      const match4 = line.match(/^-\s*([^:]+):\s*(.+)$/); // type: Name - plain text fallback
 
       if (match1) {
         const [, type, contactName] = match1;
-        console.log(`[RelationshipOperations]   Matched format 1 (Type: [[Name]]): ${type} -> ${contactName}`);
+        console.log(`[RelationshipOperations]   Matched format 1 (type [[Name]] - canonical): ${type} -> ${contactName}`);
         relationships.push({
           type: type.trim(),
           contactName: contactName.trim(),
           linkType: 'name' // Markdown links are always name-based
         });
       } else if (match2) {
-        const [, contactName, type] = match2;
-        console.log(`[RelationshipOperations]   Matched format 2 ([[Name]] (Type)): ${type} -> ${contactName}`);
+        const [, type, contactName] = match2;
+        console.log(`[RelationshipOperations]   Matched format 2 (type: [[Name]] - alternative): ${type} -> ${contactName}`);
         relationships.push({
           type: type.trim(),
           contactName: contactName.trim(),
           linkType: 'name' // Markdown links are always name-based
         });
-      } else if (match3 && !match3[2].startsWith('[[')) {
-        // Format: "- Type: Name" (plain text with colon, without brackets)
+      } else if (match3) {
+        const [, contactName, type] = match3;
+        console.log(`[RelationshipOperations]   Matched format 3 ([[Name]] (type)): ${type} -> ${contactName}`);
+        relationships.push({
+          type: type.trim(),
+          contactName: contactName.trim(),
+          linkType: 'name' // Markdown links are always name-based
+        });
+      } else if (match4 && !match4[2].startsWith('[[')) {
+        // Format: "- type: Name" (plain text with colon, without brackets - fallback)
         // Only accept if it doesn't start with [[ (to avoid matching malformed bracket syntax)
-        const [, type, contactName] = match3;
-        console.log(`[RelationshipOperations]   Matched format 3 (Type: Name): ${type} -> ${contactName}`);
+        const [, type, contactName] = match4;
+        console.log(`[RelationshipOperations]   Matched format 4 (type: Name - plain text fallback): ${type} -> ${contactName}`);
         relationships.push({
           type: type.trim(),
           contactName: contactName.trim(),

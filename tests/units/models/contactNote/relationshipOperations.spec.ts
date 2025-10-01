@@ -49,7 +49,42 @@ describe('RelationshipOperations', () => {
   });
 
   describe('parseRelatedSection', () => {
-    it('should parse relationships from Related section', async () => {
+    it('should parse relationships from Related section using canonical format (type [[Name]])', async () => {
+      const content = `---
+UID: john-doe-123
+FN: John Doe
+---
+
+#### Related
+- parent [[Bob Doe]]
+- parent [[Mary Doe]]
+- spouse [[Jane Doe]]
+
+#Contact`;
+
+      mockContactData.getContent = vi.fn().mockResolvedValue(content);
+
+      const relationships = await relationshipOperations.parseRelatedSection();
+
+      expect(relationships).toHaveLength(3);
+      expect(relationships[0]).toEqual({
+        type: 'parent',
+        contactName: 'Bob Doe',
+        linkType: 'name'
+      });
+      expect(relationships[1]).toEqual({
+        type: 'parent',
+        contactName: 'Mary Doe',
+        linkType: 'name'
+      });
+      expect(relationships[2]).toEqual({
+        type: 'spouse',
+        contactName: 'Jane Doe',
+        linkType: 'name'
+      });
+    });
+
+    it('should parse relationships with colon format (type: [[Name]]) for backward compatibility', async () => {
       const content = `---
 UID: john-doe-123
 FN: John Doe
