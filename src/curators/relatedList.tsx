@@ -64,11 +64,37 @@ export const RelatedListProcessor: CuratorProcessor = {
       
       for (const relRel of relatedSectionRelationships) {
         // Check if this relationship is missing from frontmatter
-        const relationshipExists = currentFrontmatterRelationships.some(fmRel => 
-          fmRel.parsedValue && fmRel.parsedValue.type === 'name' &&
-          fmRel.parsedValue.value === relRel.contactName && 
-          fmRel.type.toLowerCase() === relRel.type.toLowerCase()
-        );
+        // Need to handle both name-based and UID-based frontmatter relationships
+        let relationshipExists = false;
+        
+        for (const fmRel of currentFrontmatterRelationships) {
+          // Types must match (case-insensitive)
+          if (fmRel.type.toLowerCase() !== relRel.type.toLowerCase()) {
+            continue;
+          }
+          
+          // Check if frontmatter uses name-based reference
+          if (fmRel.parsedValue && fmRel.parsedValue.type === 'name') {
+            if (fmRel.parsedValue.value === relRel.contactName) {
+              relationshipExists = true;
+              break;
+            }
+          }
+          
+          // Check if frontmatter uses UID-based reference - need to resolve it
+          if (fmRel.parsedValue && (fmRel.parsedValue.type === 'uid' || fmRel.parsedValue.type === 'uuid')) {
+            try {
+              const resolvedName = await contactNote.resolveContactNameByUID(fmRel.parsedValue.value);
+              if (resolvedName === relRel.contactName) {
+                relationshipExists = true;
+                break;
+              }
+            } catch (error) {
+              // If resolution fails, continue checking other relationships
+              console.debug(`[RelatedListProcessor] Could not resolve UID ${fmRel.parsedValue.value}: ${error}`);
+            }
+          }
+        }
         
         if (!relationshipExists) {
           missingCount++;
