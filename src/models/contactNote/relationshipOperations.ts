@@ -79,7 +79,12 @@ export class RelationshipOperations {
       if (key.startsWith('RELATED')) {
         // Skip non-string values to prevent .startsWith() errors
         if (typeof value !== 'string') {
-          console.warn(`[RelationshipOperations] Skipping non-string RELATED value for key ${key}: ${typeof value}`);
+          // Check if this is a malformed RELATED.type format instead of RELATED[type]
+          if (key.includes('.')) {
+            console.warn(`[RelationshipOperations] Skipping malformed RELATED key "${key}": Use RELATED[type] format instead of RELATED.type. Value type: ${typeof value}`);
+          } else {
+            console.warn(`[RelationshipOperations] Skipping non-string RELATED value for key ${key}: ${typeof value}. Expected string value like "name:ContactName", "uid:...", or "urn:uuid:..."`);
+          }
           continue;
         }
         
