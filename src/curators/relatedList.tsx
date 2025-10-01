@@ -35,9 +35,13 @@ export const RelatedListProcessor: CuratorProcessor = {
   settingDefaultValue: true,
 
   async process(contact: Contact): Promise<CuratorQueItem | undefined> {
+    console.log(`[RelatedListProcessor] Starting process for contact: ${contact.file.basename}`);
+    
     const activeProcessor = getSettings()[`${this.settingPropertyName}`] as boolean;
+    console.log(`[RelatedListProcessor] Processor enabled: ${activeProcessor}`);
     
     if (!activeProcessor) {
+      console.log(`[RelatedListProcessor] Processor disabled, returning early`);
       return Promise.resolve(undefined);
     }
 
@@ -49,8 +53,11 @@ export const RelatedListProcessor: CuratorProcessor = {
       // First check if there are Related section relationships
       const relatedSectionRelationships = await contactNote.parseRelatedSection();
       
+      console.log(`[RelatedListProcessor] Parsed ${relatedSectionRelationships.length} relationships from Related section`);
+      
       if (relatedSectionRelationships.length === 0) {
         // No Related section relationships to sync
+        console.log(`[RelatedListProcessor] No relationships in Related section, returning early`);
         return Promise.resolve(undefined);
       }
       
@@ -182,7 +189,9 @@ export const RelatedListProcessor: CuratorProcessor = {
       });
       
     } catch (error: any) {
-      console.error(`[RelatedListProcessor] Error processing contact ${contact.file.name}: ${error.message}`);
+      console.error(`[RelatedListProcessor] Error processing contact ${contact.file.name}:`);
+      console.error(`[RelatedListProcessor] Error message: ${error.message}`);
+      console.error(`[RelatedListProcessor] Error stack: ${error.stack}`);
       return Promise.resolve(undefined);
     }
   }
