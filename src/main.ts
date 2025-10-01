@@ -6,17 +6,6 @@ import { setApp, clearApp } from "src/plugin/context/sharedAppContext";
 import { setSettings, clearSettings } from "src/plugin/context/sharedSettingsContext";
 import { CuratorManager, curatorService } from "./models/curatorManager/curatorManager";
 
-// Curator processor imports
-import { UidProcessor } from 'src/curators/uidValidate';
-import { VcardSyncPreProcessor } from 'src/curators/vcardSyncRead';
-import { RelatedOtherProcessor } from 'src/curators/relatedOther';
-import { RelatedFrontMatterProcessor } from 'src/curators/relatedFrontMatter';
-import { RelatedListProcessor } from 'src/curators/relatedList';
-import { GenderInferenceProcessor } from 'src/curators/genderInference';
-import { GenderRenderProcessor } from 'src/curators/genderRender';
-import { RelatedNamespaceUpgradeProcessor } from 'src/curators/namespaceUpgrade';
-import { VcardSyncPostProcessor } from 'src/curators/vcardSyncWrite';
-
 import { ContactNote } from "./models/contactNote";
 import { ContactManager } from "./models/contactManager";
 
@@ -39,16 +28,8 @@ export default class ContactsPlugin extends Plugin {
 		// Set up settings context for curator processors
 		setSettings(this.settings);
 
-		// Register curator processors
-		curatorService.register(UidProcessor);
-		curatorService.register(VcardSyncPreProcessor);
-		curatorService.register(RelatedOtherProcessor);
-		curatorService.register(RelatedFrontMatterProcessor);
-		curatorService.register(RelatedListProcessor);
-		curatorService.register(RelatedNamespaceUpgradeProcessor);
-		curatorService.register(GenderInferenceProcessor);
-		curatorService.register(GenderRenderProcessor);
-		curatorService.register(VcardSyncPostProcessor);
+		// Note: Curator processors are registered in curatorRegistration.ts at module load time
+		// This ensures they're available when DEFAULT_SETTINGS is created
 
 		// Initialize ContactManager for automatic syncing
 		this.contactManager = new ContactManager(this.app, this.settings);
