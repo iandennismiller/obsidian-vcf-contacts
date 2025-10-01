@@ -190,6 +190,52 @@ UID: john-doe-123
       expect(relationships[0].type).toBe('parent');
       expect(relationships[1].type).toBe('parent');
     });
+
+    it('should parse plain text format without brackets (Type: Name)', async () => {
+      const content = `---
+UID: test-123
+---
+
+#### Related
+- friend: First Last
+- friend: Second Last
+- sister: Sis Last
+- parent: First Last Sr.
+- parent: Other Last
+
+#Contact`;
+
+      mockContactData.getContent = vi.fn().mockResolvedValue(content);
+
+      const relationships = await relationshipOperations.parseRelatedSection();
+
+      expect(relationships).toHaveLength(5);
+      expect(relationships[0]).toEqual({
+        type: 'friend',
+        contactName: 'First Last',
+        linkType: 'name'
+      });
+      expect(relationships[1]).toEqual({
+        type: 'friend',
+        contactName: 'Second Last',
+        linkType: 'name'
+      });
+      expect(relationships[2]).toEqual({
+        type: 'sister',
+        contactName: 'Sis Last',
+        linkType: 'name'
+      });
+      expect(relationships[3]).toEqual({
+        type: 'parent',
+        contactName: 'First Last Sr.',
+        linkType: 'name'
+      });
+      expect(relationships[4]).toEqual({
+        type: 'parent',
+        contactName: 'Other Last',
+        linkType: 'name'
+      });
+    });
   });
 
   describe('parseFrontmatterRelationships', () => {
