@@ -261,26 +261,64 @@ UID: john-doe-123
     });
 
     it('should handle RELATED.friend with array value', async () => {
-      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const consoleInfoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
       
       const frontmatter = {
         UID: 'john-doe-123',
-        'RELATED.friend': ['Jane Doe', 'Bob Smith']
+        'RELATED.friend': ['name:Jane Doe', 'name:Bob Smith']
       };
 
       mockContactData.getFrontmatter = vi.fn().mockReturnValue(frontmatter);
 
       const relationships = await relationshipOperations.parseFrontmatterRelationships();
 
-      expect(relationships).toHaveLength(0);
-      expect(consoleWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Skipping malformed RELATED key "RELATED.friend"')
+      expect(relationships).toHaveLength(2);
+      expect(relationships[0].type).toBe('friend');
+      expect(relationships[0].key).toBe('RELATED[friend]');
+      expect(relationships[0].value).toBe('name:Jane Doe');
+      expect(relationships[1].type).toBe('friend');
+      expect(relationships[1].key).toBe('RELATED[1:friend]');
+      expect(relationships[1].value).toBe('name:Bob Smith');
+      expect(consoleInfoSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Auto-corrected malformed RELATED.friend[0] to RELATED[friend]')
       );
-      expect(consoleWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Value type: array')
+      expect(consoleInfoSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Auto-corrected malformed RELATED.friend[1] to RELATED[1:friend]')
       );
       
-      consoleWarnSpy.mockRestore();
+      consoleInfoSpy.mockRestore();
+    });
+
+    it('should handle RELATED object with array values', async () => {
+      const consoleInfoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
+      
+      const frontmatter = {
+        UID: 'john-doe-123',
+        RELATED: {
+          friend: ['name:Jane Doe', 'name:Bob Smith'],
+          colleague: 'name:Alice Johnson'
+        }
+      };
+
+      mockContactData.getFrontmatter = vi.fn().mockReturnValue(frontmatter);
+
+      const relationships = await relationshipOperations.parseFrontmatterRelationships();
+
+      expect(relationships).toHaveLength(3);
+      // First friend
+      expect(relationships[0].type).toBe('friend');
+      expect(relationships[0].key).toBe('RELATED[friend]');
+      expect(relationships[0].value).toBe('name:Jane Doe');
+      // Second friend
+      expect(relationships[1].type).toBe('friend');
+      expect(relationships[1].key).toBe('RELATED[1:friend]');
+      expect(relationships[1].value).toBe('name:Bob Smith');
+      // Colleague
+      expect(relationships[2].type).toBe('colleague');
+      expect(relationships[2].key).toBe('RELATED[colleague]');
+      expect(relationships[2].value).toBe('name:Alice Johnson');
+      
+      consoleInfoSpy.mockRestore();
     });
 
     it('should handle RELATED.friend with empty object', async () => {
