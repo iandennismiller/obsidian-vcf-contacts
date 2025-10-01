@@ -96,6 +96,24 @@ export class RelationshipOperations {
               });
               
               console.info(`[RelationshipOperations] Auto-corrected malformed RELATED.${nestedKey} to RELATED[${nestedKey}]`);
+            } else if (Array.isArray(nestedValue)) {
+              // Handle arrays in RELATED object - convert to indexed format
+              for (let i = 0; i < nestedValue.length; i++) {
+                const arrayValue = nestedValue[i];
+                if (typeof arrayValue === 'string') {
+                  const correctedKey = i === 0 ? `RELATED[${nestedKey}]` : `RELATED[${i}:${nestedKey}]`;
+                  const parsedValue = this.parseRelatedValue(arrayValue);
+                  
+                  relationships.push({
+                    key: correctedKey,
+                    type: nestedKey,
+                    value: arrayValue,
+                    parsedValue: parsedValue || undefined
+                  });
+                  
+                  console.info(`[RelationshipOperations] Auto-corrected malformed RELATED.${nestedKey}[${i}] to ${correctedKey}`);
+                }
+              }
             }
           }
           continue;
@@ -121,6 +139,26 @@ export class RelationshipOperations {
               
               console.info(`[RelationshipOperations] Auto-corrected malformed ${key} to RELATED[${typePart}]`);
               continue;
+            } else if (Array.isArray(value)) {
+              // Handle array of relationships - convert to indexed RELATED[n:type] format
+              for (let i = 0; i < value.length; i++) {
+                const arrayValue = value[i];
+                if (typeof arrayValue === 'string') {
+                  // Use RELATED[type] for first item, RELATED[n:type] for subsequent items
+                  const correctedKey = i === 0 ? `RELATED[${typePart}]` : `RELATED[${i}:${typePart}]`;
+                  const parsedValue = this.parseRelatedValue(arrayValue);
+                  
+                  relationships.push({
+                    key: correctedKey,
+                    type: typePart,
+                    value: arrayValue,
+                    parsedValue: parsedValue || undefined
+                  });
+                  
+                  console.info(`[RelationshipOperations] Auto-corrected malformed ${key}[${i}] to ${correctedKey}`);
+                }
+              }
+              continue;
             } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
               // Handle nested object under RELATED.type key
               // e.g., RELATED.friend: { name: "Jane Smith" }
@@ -143,7 +181,14 @@ export class RelationshipOperations {
               }
               continue;
             } else {
-              console.warn(`[RelationshipOperations] Skipping malformed RELATED key "${key}": Use RELATED[type] format instead. Value type: ${typeof value}`);
+              // Provide more specific error message based on value type
+              let valueType: string = typeof value;
+              if (value === null) {
+                valueType = 'null';
+              } else if (Array.isArray(value)) {
+                valueType = 'array';
+              }
+              console.warn(`[RelationshipOperations] Skipping malformed RELATED key "${key}": Use RELATED[type] format instead. Value type: ${valueType}`);
               continue;
             }
           }
