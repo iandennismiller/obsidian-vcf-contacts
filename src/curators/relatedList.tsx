@@ -107,6 +107,10 @@ export const RelatedListProcessor: CuratorProcessor = {
         return Promise.resolve(undefined);
       }
       
+      // Log what we're about to sync
+      console.log(`[RelatedListProcessor] About to sync ${missingCount} missing relationship(s) for ${contact.file.basename}`);
+      missingRelationships.forEach(rel => console.log(`[RelatedListProcessor]   - ${rel}`));
+      
       // Use the existing syncRelatedListToFrontmatter method
       const syncResult = await contactNote.syncRelatedListToFrontmatter();
       
@@ -114,6 +118,12 @@ export const RelatedListProcessor: CuratorProcessor = {
         console.error(`[RelatedListProcessor] Failed to sync Related list to frontmatter for ${contact.file.name}`);
         syncResult.errors.forEach(error => console.error(error));
         return Promise.resolve(undefined);
+      }
+      
+      console.log(`[RelatedListProcessor] Sync completed successfully for ${contact.file.basename}`);
+      if (syncResult.errors.length > 0) {
+        console.warn(`[RelatedListProcessor] Sync had warnings:`);
+        syncResult.errors.forEach(error => console.warn(`[RelatedListProcessor]   - ${error}`));
       }
       
       // Update REV timestamp if the front matter changed (we know it changed because missingCount > 0)
