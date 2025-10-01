@@ -120,6 +120,27 @@ export class RelationshipOperations {
               
               console.info(`[RelationshipOperations] Auto-corrected malformed ${key} to RELATED[${typePart}]`);
               continue;
+            } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+              // Handle nested object under RELATED.type key
+              // e.g., RELATED.friend: { name: "Jane Smith" }
+              for (const [nestedKey, nestedValue] of Object.entries(value)) {
+                if (typeof nestedValue === 'string') {
+                  // Create a combined type from the path
+                  const combinedType = `${typePart}.${nestedKey}`;
+                  const correctedKey = `RELATED[${combinedType}]`;
+                  const parsedValue = this.parseRelatedValue(nestedValue);
+                  
+                  relationships.push({
+                    key: correctedKey,
+                    type: combinedType,
+                    value: nestedValue,
+                    parsedValue: parsedValue || undefined
+                  });
+                  
+                  console.info(`[RelationshipOperations] Auto-corrected malformed ${key}.${nestedKey} to RELATED[${combinedType}]`);
+                }
+              }
+              continue;
             } else {
               console.warn(`[RelationshipOperations] Skipping malformed RELATED key "${key}": Use RELATED[type] format instead. Value type: ${typeof value}`);
               continue;

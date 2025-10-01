@@ -191,7 +191,7 @@ RELATED.friend: name:Jane Smith
     expect(content).toContain('RELATED[');
   });
 
-  it('should handle RELATED.type with non-string value by warning', async () => {
+  it('should handle RELATED.type with nested non-string object by skipping non-strings', async () => {
     const mockFile = { 
       basename: 'john-doe', 
       path: 'Contacts/john-doe.md',
@@ -201,14 +201,51 @@ RELATED.friend: name:Jane Smith
     mockApp.metadataCache!.getFileCache = vi.fn().mockReturnValue({
       frontmatter: {
         UID: 'john-doe-123',
-        'RELATED.friend': { nested: 'object' }  // Non-string value with dot key
+        'RELATED.friend': { 
+          nested: { deep: 'object' },  // Non-string nested value
+          valid: 'name:Jane Smith'      // Valid string value
+        }
       }
     });
 
     const contactNote = new ContactNote(mockApp as App, mockSettings, mockFile);
     const relationships = await contactNote.parseFrontmatterRelationships();
 
-    // Should skip the malformed entry
-    expect(relationships.length).toBe(0);
+    // Should extract only the valid string property
+    expect(relationships.length).toBe(1);
+    expect(relationships[0].type).toBe('friend.valid');
+    expect(relationships[0].value).toBe('name:Jane Smith');
+  });
+
+  it('should handle RELATED.type with nested object containing strings', async () => {
+    const mockFile = { 
+      basename: 'john-doe', 
+      path: 'Contacts/john-doe.md',
+      name: 'john-doe.md'
+    } as TFile;
+
+    mockApp.metadataCache!.getFileCache = vi.fn().mockReturnValue({
+      frontmatter: {
+        UID: 'john-doe-123',
+        'RELATED.friend': { 
+          person1: 'name:Jane Smith',
+          person2: 'name:Bob Johnson'
+        }
+      }
+    });
+
+    const contactNote = new ContactNote(mockApp as App, mockSettings, mockFile);
+    const relationships = await contactNote.parseFrontmatterRelationships();
+
+    // Should extract both nested properties
+    expect(relationships.length).toBe(2);
+    
+    const person1Rel = relationships.find(r => r.type === 'friend.person1');
+    expect(person1Rel).toBeDefined();
+    expect(person1Rel?.value).toBe('name:Jane Smith');
+    
+    const person2Rel = relationships.find(r => r.type === 'friend.person2');
+    expect(person2Rel).toBeDefined();
+    expect(person2Rel?.value).toBe('name:Bob Johnson');
   });
 });
