@@ -199,7 +199,7 @@ export class ContactData {
   /**
    * Generate a revision timestamp in VCF format
    */
-  private generateRevTimestamp(): string {
+  generateRevTimestamp(): string {
     return new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
   }
 
@@ -252,7 +252,7 @@ export class ContactData {
   /**
    * Parse gender value - grouped with gender data access
    */
-  private parseGender(value: string): Gender {
+  parseGender(value: string): Gender {
     if (!value || value.trim() === '') {
       return null;
     }

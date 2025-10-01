@@ -49,6 +49,31 @@ export {
   SyncOperations 
 } from './syncOperations';
 
+export {
+  /** Validation operations for contact data */
+  ValidationOperations
+} from './validationOperations';
+
+export {
+  /** Revision and timestamp operations */
+  RevisionOperations
+} from './revisionOperations';
+
+export {
+  /** UID-based operations and conflict detection */
+  UIDOperations
+} from './uidOperations';
+
+export {
+  /** Advanced relationship operations */
+  AdvancedRelationshipOperations
+} from './advancedRelationshipOperations';
+
+export {
+  /** Relationship helper methods */
+  RelationshipHelpers
+} from './relationshipHelpers';
+
 // Export utility functions for backward compatibility
 export { 
   parseKey,
@@ -61,4 +86,4 @@ export {
   uiSafeString,
   getSortName,
   createFileName
-} from './contactNote';
+} from './utilityFunctions';
