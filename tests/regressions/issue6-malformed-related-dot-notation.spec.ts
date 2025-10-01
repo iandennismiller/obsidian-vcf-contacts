@@ -72,9 +72,7 @@ RELATED.friend: name:Jane Smith
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        RELATED: {
-          friend: 'name:Jane Smith'
-        }
+        'RELATED.friend': 'name:Jane Smith'  // Key with dot in it
       }
     });
 
@@ -191,5 +189,26 @@ RELATED.friend: name:Jane Smith
     expect(content).toContain('Auto-corrected malformed');
     expect(content).toContain('RELATED.');
     expect(content).toContain('RELATED[');
+  });
+
+  it('should handle RELATED.type with non-string value by warning', async () => {
+    const mockFile = { 
+      basename: 'john-doe', 
+      path: 'Contacts/john-doe.md',
+      name: 'john-doe.md'
+    } as TFile;
+
+    mockApp.metadataCache!.getFileCache = vi.fn().mockReturnValue({
+      frontmatter: {
+        UID: 'john-doe-123',
+        'RELATED.friend': { nested: 'object' }  // Non-string value with dot key
+      }
+    });
+
+    const contactNote = new ContactNote(mockApp as App, mockSettings, mockFile);
+    const relationships = await contactNote.parseFrontmatterRelationships();
+
+    // Should skip the malformed entry
+    expect(relationships.length).toBe(0);
   });
 });

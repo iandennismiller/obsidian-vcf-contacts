@@ -100,6 +100,33 @@ export class RelationshipOperations {
           continue;
         }
         
+        // Handle RELATED.type format (dot notation as a key) - convert to RELATED[type]
+        if (key.includes('.') && key !== 'RELATED') {
+          // Extract the type from RELATED.type or RELATED.x.y format
+          const parts = key.split('.');
+          if (parts[0] === 'RELATED' && parts.length >= 2) {
+            const typePart = parts.slice(1).join('.');
+            
+            if (typeof value === 'string') {
+              const correctedKey = `RELATED[${typePart}]`;
+              const parsedValue = this.parseRelatedValue(value);
+              
+              relationships.push({
+                key: correctedKey,
+                type: typePart,
+                value: value,
+                parsedValue: parsedValue || undefined
+              });
+              
+              console.info(`[RelationshipOperations] Auto-corrected malformed ${key} to RELATED[${typePart}]`);
+              continue;
+            } else {
+              console.warn(`[RelationshipOperations] Skipping malformed RELATED key "${key}": Use RELATED[type] format instead. Value type: ${typeof value}`);
+              continue;
+            }
+          }
+        }
+        
         // Skip non-string values to prevent .startsWith() errors
         if (typeof value !== 'string') {
           console.warn(`[RelationshipOperations] Skipping non-string RELATED value for key ${key}: ${typeof value}. Expected string value like "name:ContactName", "uid:...", or "urn:uuid:..."`);
