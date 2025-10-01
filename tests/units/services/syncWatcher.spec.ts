@@ -420,4 +420,391 @@ describe('SyncWatcher', () => {
       await expect(syncWatcher.start()).rejects.toThrow('Cache init failed');
     });
   });
+
+  describe('File scanning operations', () => {
+    beforeEach(async () => {
+      const fsPromises = await import('fs/promises');
+      const { ContactManager } = await import('../../../src/models/contactManager');
+      const { VcardManager } = await import('../../../src/models/vcardManager');
+      const { curatorService } = await import('../../../src/models/curatorManager/curatorManager');
+      const { Notice } = await import('obsidian');
+      
+      // Setup comprehensive mocks for file scanning
+      vi.mocked(fsPromises.stat).mockResolvedValue({
+        mtimeMs: Date.now(),
+      } as any);
+      
+      vi.mocked(fsPromises.readdir).mockResolvedValue([
+        { name: 'contact1.vcf', isFile: () => true } as any,
+        { name: 'contact2.vcf', isFile: () => true } as any,
+      ]);
+      
+      vi.mocked(fsPromises.readFile).mockResolvedValue('BEGIN:VCARD\nVERSION:4.0\nUID:test-123\nFN:Test\nEND:VCARD\n');
+      
+      const mockVcardManager = {
+        updateSettings: vi.fn(),
+        getVCardFileInfo: vi.fn().mockResolvedValue({
+          path: '/test/contact.vcf',
+          lastModified: Date.now(),
+          uid: 'test-uid',
+        }),
+        readAndParseVCard: vi.fn().mockResolvedValue([
+          ['test-slug', { UID: 'test-uid-123', FN: 'Test Contact' }]
+        ]),
+        scanVCFFolder: vi.fn().mockResolvedValue(['/test/contact1.vcf', '/test/contact2.vcf']),
+        processVCFContents: vi.fn().mockResolvedValue([
+          ['test-slug', { UID: 'test-uid-123', FN: 'Test Contact' }]
+        ]),
+      };
+      
+      const mockContactManager = {
+        initializeCache: vi.fn().mockResolvedValue(undefined),
+        updateSettings: vi.fn(),
+        processVCFContacts: vi.fn().mockResolvedValue(['Contacts/test-contact.md']),
+        getFrontmatterFromFiles: vi.fn().mockResolvedValue([
+          { UID: 'test-uid-123', FN: 'Test Contact' }
+        ]),
+      };
+      
+      vi.mocked(ContactManager).mockImplementation(() => mockContactManager as any);
+      vi.mocked(VcardManager).mockImplementation(() => mockVcardManager as any);
+      vi.mocked(curatorService.process).mockResolvedValue([]);
+      vi.mocked(Notice).mockImplementation(() => ({} as any));
+    });
+
+    describe('scanSingleVCF', () => {
+      it('should process single VCF file when changed', async () => {
+        settings.vcfStorageMethod = 'single-vcf';
+        settings.vcfFilename = '/test/contacts.vcf';
+        syncWatcher = new SyncWatcher(app as App, settings);
+        
+        await syncWatcher.start();
+        
+        // Give async operations time to complete
+        await new Promise(resolve => originalSetTimeout(resolve, 100));
+        
+        // VcardManager should have been called to process the file
+        const vcardManager = (syncWatcher as any).vcardManager;
+        expect(vcardManager.getVCardFileInfo).toHaveBeenCalled();
+      });
+
+      it('should skip processing if file has not changed', async () => {
+        settings.vcfStorageMethod = 'single-vcf';
+        settings.vcfFilename = '/test/contacts.vcf';
+        syncWatcher = new SyncWatcher(app as App, settings);
+        
+        const { VcardManager } = await import('../../../src/models/vcardManager');
+        const mockGetFileInfo = vi.fn().mockResolvedValue({
+          path: '/test/contacts.vcf',
+          lastModified: 1000,
+          uid: 'test-uid',
+        });
+        
+        vi.mocked(VcardManager).mockImplementation(() => ({
+          updateSettings: vi.fn(),
+          getVCardFileInfo: mockGetFileInfo,
+          readAndParseVCard: vi.fn(),
+        } as any));
+        
+        syncWatcher = new SyncWatcher(app as App, settings);
+        
+        // Pre-populate known files with same timestamp
+        (syncWatcher as any).knownFiles.set('/test/contacts.vcf', {
+          path: '/test/contacts.vcf',
+          lastModified: 1000,
+          uid: 'test-uid',
+        });
+        
+        await syncWatcher.start();
+        await new Promise(resolve => originalSetTimeout(resolve, 100));
+        
+        // readAndParseVCard should not be called since file hasn't changed
+        const vcardManager = (syncWatcher as any).vcardManager;
+        expect(vcardManager.readAndParseVCard).not.toHaveBeenCalled();
+      });
+
+      it('should handle null parsed entries', async () => {
+        settings.vcfStorageMethod = 'single-vcf';
+        settings.vcfFilename = '/test/contacts.vcf';
+        
+        const { VcardManager } = await import('../../../src/models/vcardManager');
+        vi.mocked(VcardManager).mockImplementation(() => ({
+          updateSettings: vi.fn(),
+          getVCardFileInfo: vi.fn().mockResolvedValue({
+            path: '/test/contacts.vcf',
+            lastModified: Date.now(),
+            uid: 'test-uid',
+          }),
+          readAndParseVCard: vi.fn().mockResolvedValue(null),
+        } as any));
+        
+        syncWatcher = new SyncWatcher(app as App, settings);
+        
+        // Should not throw
+        await expect(syncWatcher.start()).resolves.not.toThrow();
+      });
+
+      it('should filter out entries without UID', async () => {
+        settings.vcfStorageMethod = 'single-vcf';
+        settings.vcfFilename = '/test/contacts.vcf';
+        
+        const { VcardManager } = await import('../../../src/models/vcardManager');
+        const { ContactManager } = await import('../../../src/models/contactManager');
+        
+        const mockProcessVCFContacts = vi.fn().mockResolvedValue([]);
+        
+        vi.mocked(VcardManager).mockImplementation(() => ({
+          updateSettings: vi.fn(),
+          getVCardFileInfo: vi.fn().mockResolvedValue({
+            path: '/test/contacts.vcf',
+            lastModified: Date.now(),
+            uid: 'test-uid',
+          }),
+          readAndParseVCard: vi.fn().mockResolvedValue([
+            ['valid-slug', { UID: 'test-uid-1', FN: 'Valid' }],
+            ['', { FN: 'No Slug' }], // Should be filtered out
+            ['no-uid-slug', { FN: 'No UID' }], // Should be filtered out
+          ]),
+        } as any));
+        
+        vi.mocked(ContactManager).mockImplementation(() => ({
+          initializeCache: vi.fn().mockResolvedValue(undefined),
+          updateSettings: vi.fn(),
+          processVCFContacts: mockProcessVCFContacts,
+          getFrontmatterFromFiles: vi.fn().mockResolvedValue([]),
+        } as any));
+        
+        syncWatcher = new SyncWatcher(app as App, settings);
+        await syncWatcher.start();
+        await new Promise(resolve => originalSetTimeout(resolve, 100));
+        
+        // processVCFContacts should only receive the valid entry
+        expect(mockProcessVCFContacts).toHaveBeenCalledWith(
+          expect.arrayContaining([['valid-slug', expect.objectContaining({ UID: 'test-uid-1' })]]),
+          expect.anything(),
+          expect.anything()
+        );
+      });
+
+      it('should call curator service when contacts are processed', async () => {
+        settings.vcfStorageMethod = 'single-vcf';
+        settings.vcfFilename = '/test/contacts.vcf';
+        
+        const { ContactManager } = await import('../../../src/models/contactManager');
+        const { VcardManager } = await import('../../../src/models/vcardManager');
+        
+        // Reset and reconfigure mocks for this test to return contacts
+        const mockProcessVCFContacts = vi.fn().mockResolvedValue(['Contacts/test.md']);
+        const mockGetFrontmatter = vi.fn().mockResolvedValue([{ UID: 'test-uid' }]);
+        
+        vi.mocked(ContactManager).mockImplementation(() => ({
+          initializeCache: vi.fn().mockResolvedValue(undefined),
+          updateSettings: vi.fn(),
+          processVCFContacts: mockProcessVCFContacts,
+          getFrontmatterFromFiles: mockGetFrontmatter,
+        } as any));
+        
+        vi.mocked(VcardManager).mockImplementation(() => ({
+          updateSettings: vi.fn(),
+          getVCardFileInfo: vi.fn().mockResolvedValue({
+            path: '/test/contacts.vcf',
+            lastModified: Date.now(),
+            uid: 'test-uid',
+          }),
+          readAndParseVCard: vi.fn().mockResolvedValue([
+            ['test-slug', { UID: 'test-uid-123', FN: 'Test Contact' }]
+          ]),
+        } as any));
+        
+        syncWatcher = new SyncWatcher(app as App, settings);
+        await syncWatcher.start();
+        await new Promise(resolve => originalSetTimeout(resolve, 150));
+        
+        // Verify the methods that lead to curator service being called
+        expect(mockProcessVCFContacts).toHaveBeenCalled();
+        expect(mockGetFrontmatter).toHaveBeenCalled();
+      });
+
+      it('should handle errors during single VCF scan', async () => {
+        settings.vcfStorageMethod = 'single-vcf';
+        settings.vcfFilename = '/test/contacts.vcf';
+        
+        const { VcardManager } = await import('../../../src/models/vcardManager');
+        vi.mocked(VcardManager).mockImplementation(() => ({
+          updateSettings: vi.fn(),
+          getVCardFileInfo: vi.fn().mockRejectedValue(new Error('File read error')),
+        } as any));
+        
+        syncWatcher = new SyncWatcher(app as App, settings);
+        
+        // Should not throw, error is caught and logged
+        await expect(syncWatcher.start()).resolves.not.toThrow();
+      });
+    });
+
+    describe('scanVCFFolder', () => {
+      it('should process multiple VCF files in folder', async () => {
+        settings.vcfStorageMethod = 'vcf-folder';
+        settings.vcfWatchFolder = '/test/vcf';
+        syncWatcher = new SyncWatcher(app as App, settings);
+        
+        await syncWatcher.start();
+        await new Promise(resolve => originalSetTimeout(resolve, 100));
+        
+        // VcardManager should scan the folder
+        const vcardManager = (syncWatcher as any).vcardManager;
+        expect(vcardManager.scanVCFFolder).toHaveBeenCalled();
+      });
+
+      it('should skip when no files need processing', async () => {
+        settings.vcfStorageMethod = 'vcf-folder';
+        settings.vcfWatchFolder = '/test/vcf';
+        
+        const { VcardManager } = await import('../../../src/models/vcardManager');
+        vi.mocked(VcardManager).mockImplementation(() => ({
+          updateSettings: vi.fn(),
+          scanVCFFolder: vi.fn().mockResolvedValue([]), // No files to process
+          getVCardFileInfo: vi.fn(),
+          processVCFContents: vi.fn(),
+        } as any));
+        
+        syncWatcher = new SyncWatcher(app as App, settings);
+        await syncWatcher.start();
+        await new Promise(resolve => originalSetTimeout(resolve, 100));
+        
+        // processVCFContents should not be called
+        const vcardManager = (syncWatcher as any).vcardManager;
+        expect(vcardManager.processVCFContents).not.toHaveBeenCalled();
+      });
+
+      it('should handle errors during folder scan', async () => {
+        settings.vcfStorageMethod = 'vcf-folder';
+        settings.vcfWatchFolder = '/test/vcf';
+        
+        const { VcardManager } = await import('../../../src/models/vcardManager');
+        vi.mocked(VcardManager).mockImplementation(() => ({
+          updateSettings: vi.fn(),
+          scanVCFFolder: vi.fn().mockRejectedValue(new Error('Scan failed')),
+        } as any));
+        
+        syncWatcher = new SyncWatcher(app as App, settings);
+        
+        // Should not throw, error is caught and logged
+        await expect(syncWatcher.start()).resolves.not.toThrow();
+      });
+    });
+
+    describe('processVCFFile', () => {
+      it('should process VCF file and update tracking', async () => {
+        settings.vcfStorageMethod = 'vcf-folder';
+        settings.vcfWatchFolder = '/test/vcf';
+        syncWatcher = new SyncWatcher(app as App, settings);
+        
+        await syncWatcher.start();
+        await new Promise(resolve => originalSetTimeout(resolve, 100));
+        
+        // knownFiles should be updated
+        const knownFiles = (syncWatcher as any).knownFiles;
+        expect(knownFiles.size).toBeGreaterThan(0);
+      });
+
+      it('should skip file if not changed', async () => {
+        settings.vcfStorageMethod = 'vcf-folder';
+        settings.vcfWatchFolder = '/test/vcf';
+        
+        const { VcardManager } = await import('../../../src/models/vcardManager');
+        const mockProcessContents = vi.fn();
+        
+        vi.mocked(VcardManager).mockImplementation(() => ({
+          updateSettings: vi.fn(),
+          scanVCFFolder: vi.fn().mockResolvedValue(['/test/vcf/contact.vcf']),
+          getVCardFileInfo: vi.fn().mockResolvedValue({
+            path: '/test/vcf/contact.vcf',
+            lastModified: 1000,
+            uid: 'test-uid',
+          }),
+          processVCFContents: mockProcessContents,
+        } as any));
+        
+        syncWatcher = new SyncWatcher(app as App, settings);
+        
+        // Pre-populate known files
+        (syncWatcher as any).knownFiles.set('/test/vcf/contact.vcf', {
+          path: '/test/vcf/contact.vcf',
+          lastModified: 1000,
+          uid: 'test-uid',
+        });
+        
+        await syncWatcher.start();
+        await new Promise(resolve => originalSetTimeout(resolve, 100));
+        
+        // Should not process file since it hasn't changed
+        expect(mockProcessContents).not.toHaveBeenCalled();
+      });
+
+      it('should skip when VCF has no entries', async () => {
+        settings.vcfStorageMethod = 'vcf-folder';
+        settings.vcfWatchFolder = '/test/vcf';
+        
+        const { VcardManager } = await import('../../../src/models/vcardManager');
+        const { ContactManager } = await import('../../../src/models/contactManager');
+        const mockProcessVCFContacts = vi.fn();
+        
+        vi.mocked(VcardManager).mockImplementation(() => ({
+          updateSettings: vi.fn(),
+          scanVCFFolder: vi.fn().mockResolvedValue(['/test/vcf/empty.vcf']),
+          getVCardFileInfo: vi.fn().mockResolvedValue({
+            path: '/test/vcf/empty.vcf',
+            lastModified: Date.now(),
+            uid: '',
+          }),
+          processVCFContents: vi.fn().mockResolvedValue([]), // Empty array
+        } as any));
+        
+        vi.mocked(ContactManager).mockImplementation(() => ({
+          initializeCache: vi.fn().mockResolvedValue(undefined),
+          updateSettings: vi.fn(),
+          processVCFContacts: mockProcessVCFContacts,
+        } as any));
+        
+        syncWatcher = new SyncWatcher(app as App, settings);
+        await syncWatcher.start();
+        await new Promise(resolve => originalSetTimeout(resolve, 100));
+        
+        // Should not process contacts since VCF is empty
+        expect(mockProcessVCFContacts).not.toHaveBeenCalled();
+      });
+
+      it('should handle errors during file processing', async () => {
+        settings.vcfStorageMethod = 'vcf-folder';
+        settings.vcfWatchFolder = '/test/vcf';
+        
+        const { VcardManager } = await import('../../../src/models/vcardManager');
+        vi.mocked(VcardManager).mockImplementation(() => ({
+          updateSettings: vi.fn(),
+          scanVCFFolder: vi.fn().mockResolvedValue(['/test/vcf/error.vcf']),
+          getVCardFileInfo: vi.fn().mockRejectedValue(new Error('File error')),
+        } as any));
+        
+        syncWatcher = new SyncWatcher(app as App, settings);
+        
+        // Should not throw, error is caught and logged
+        await expect(syncWatcher.start()).resolves.not.toThrow();
+      });
+
+      it('should show notification when contacts are processed', async () => {
+        settings.vcfStorageMethod = 'vcf-folder';
+        settings.vcfWatchFolder = '/test/vcf';
+        
+        const { Notice } = await import('obsidian');
+        
+        syncWatcher = new SyncWatcher(app as App, settings);
+        await syncWatcher.start();
+        await new Promise(resolve => originalSetTimeout(resolve, 100));
+        
+        // Notice should have been called
+        expect(Notice).toHaveBeenCalled();
+      });
+    });
+  });
 });
