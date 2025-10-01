@@ -1,7 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { ContactNote } from '../../../../src/models/contactNote/contactNote';
+import { 
+  ContactNote, 
+  parseKey, 
+  createNameSlug, 
+  createContactSlug, 
+  isKind, 
+  fileId, 
+  getUiName, 
+  getSortName, 
+  uiSafeString, 
+  createFileName 
+} from '../../../../src/models/contactNote/contactNote';
 import { App, TFile } from 'obsidian';
 import { ContactsPluginSettings } from 'src/plugin/settings';
+import { VCardKinds } from '../../../../src/models/vcardFile';
 
 describe('ContactNote', () => {
   let mockApp: Partial<App>;
@@ -917,6 +929,167 @@ FN: John Doe
       
       // Should return null or a file
       expect(result === null || result instanceof Object).toBe(true);
+    });
+  });
+
+  describe('utility functions', () => {
+    it('should parse frontmatter keys with parseKey', () => {
+      // Simple key
+      let result = parseKey('EMAIL');
+      expect(result.key).toBe('EMAIL');
+      expect(result.index).toBeUndefined();
+      expect(result.type).toBeUndefined();
+      
+      // Key with type
+      result = parseKey('RELATED[spouse]');
+      expect(result.key).toBe('RELATED');
+      expect(result.type).toBe('spouse');
+      
+      // Key with index and type
+      result = parseKey('RELATED[1:spouse]');
+      expect(result.key).toBe('RELATED');
+      expect(result.index).toBe('1');
+      expect(result.type).toBe('spouse');
+      
+      // Key with just index
+      result = parseKey('TEL[0]');
+      expect(result.key).toBe('TEL');
+      expect(result.index).toBe('0');
+      
+      // Key with bracket and subkey
+      result = parseKey('TEL[0].TYPE');
+      expect(result.key).toBe('TEL');
+      expect(result.index).toBe('0');
+      expect(result.subkey).toBe('TYPE');
+      
+      // Key with dot but no brackets returns the whole string as key
+      result = parseKey('N.GN');
+      expect(result.key).toBe('N.GN');
+    });
+
+    it('should create name slug with createNameSlug', () => {
+      const record: any = {
+        KIND: VCardKinds.Individual,
+        'N.GN': 'John',
+        'N.FN': 'Doe',
+        FN: 'John Doe'
+      };
+      
+      const slug = createNameSlug(record);
+      expect(slug).toBe('John Doe');
+    });
+
+    it('should fallback to FN when name parts are missing', () => {
+      const record: any = {
+        FN: 'John Doe'
+      };
+      
+      const slug = createNameSlug(record);
+      expect(slug).toBe('John Doe');
+    });
+
+    it('should throw error when no name is found', () => {
+      const record: any = {};
+      
+      expect(() => createNameSlug(record)).toThrow('No name found for record');
+    });
+
+    it('should sanitize file names', () => {
+      const record: any = {
+        FN: 'John/Doe<Test>'
+      };
+      
+      const slug = createNameSlug(record);
+      // Illegal characters should be replaced with spaces
+      expect(slug).not.toContain('/');
+      expect(slug).not.toContain('<');
+      expect(slug).not.toContain('>');
+    });
+
+    it('should create contact slug', () => {
+      const record: any = {
+        FN: 'John Doe'
+      };
+      
+      const slug = createContactSlug(record);
+      expect(slug).toBe('John Doe');
+    });
+
+    it('should check vCard kind', () => {
+      const individualRecord: any = {
+        KIND: VCardKinds.Individual
+      };
+      
+      expect(isKind(individualRecord, VCardKinds.Individual)).toBe(true);
+      expect(isKind(individualRecord, VCardKinds.Group)).toBe(false);
+      
+      // No KIND defaults to individual
+      const noKindRecord: any = {};
+      expect(isKind(noKindRecord, VCardKinds.Individual)).toBe(true);
+    });
+
+    it('should generate file ID', () => {
+      const file = {
+        path: 'Contacts/john-doe.md'
+      } as TFile;
+      
+      const id = fileId(file);
+      expect(id).toBe('Contacts_john_doe_md');
+    });
+
+    it('should get UI name from contact', () => {
+      const contact: any = {
+        data: {
+          'N.GN': 'John',
+          'N.FN': 'Doe',
+          FN: 'John Doe'
+        },
+        file: { basename: 'john-doe' }
+      };
+      
+      const name = getUiName(contact);
+      expect(name).toContain('John');
+      expect(name).toContain('Doe');
+    });
+
+    it('should get sort name from contact', () => {
+      const contact: any = {
+        data: {
+          'N.FN': 'Doe',
+          'N.GN': 'John',
+          FN: 'John Doe'
+        },
+        file: { basename: 'john-doe' }
+      };
+      
+      const name = getSortName(contact);
+      expect(name).toContain('Doe');
+      expect(name).toContain('John');
+    });
+
+    it('should make string UI safe', () => {
+      const unsafe = '<script>alert("test")</script>';
+      const safe = uiSafeString(unsafe);
+      
+      expect(safe).not.toContain('<script>');
+      expect(safe).toContain('&lt;');
+      expect(safe).toContain('&gt;');
+    });
+
+    it('should create file name with .md extension', () => {
+      const record: any = {
+        FN: 'John Doe'
+      };
+      
+      const fileName = createFileName(record);
+      expect(fileName).toBe('John Doe.md');
+    });
+
+    it('should fallback to contact.md on error', () => {
+      const record: any = {};
+      
+      const fileName = createFileName(record);
+      expect(fileName).toBe('contact.md');
     });
   });
 
