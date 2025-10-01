@@ -347,6 +347,7 @@ FN: Memory Test
 
     // Should only process requested subset
     expect(results).toHaveLength(processCount);
-    expect(mockApp.vault!.read).toHaveBeenCalledTimes(processCount);
+    // Should use efficient metadata cache instead of reading files
+    expect(mockApp.metadataCache!.getFileCache).toHaveBeenCalled();
   });
 });

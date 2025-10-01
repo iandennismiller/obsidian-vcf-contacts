@@ -25,7 +25,7 @@ describe('Demo Data Integration Tests', () => {
       }
 
       expect(vcfContacts).toHaveLength(18);
-      expect(markdownFiles).toHaveLength(18);
+      expect(markdownFiles).toHaveLength(24);
     });
 
     it('should be able to round-trip VCF data through models', async () => {

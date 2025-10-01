@@ -31,13 +31,14 @@ export class RelationshipOperations {
     const content = await this.contactData.getContent();
     const relationships: ParsedRelationship[] = [];
 
-    // Find the Related section
-    const relatedSectionMatch = content.match(/#### Related\n([\s\S]*?)(?=\n#### |\n\n(?:#|$)|\n$)/);
+    // Find the Related section - case-insensitive and depth-agnostic
+    // Matches any heading level (##, ###, ####, etc.) with "Related" in any case
+    const relatedSectionMatch = content.match(/(^|\n)(#{2,})\s*related\s*\n([\s\S]*?)(?=\n#{2,}\s|\n\n(?:#|$)|\n$)/i);
     if (!relatedSectionMatch) {
       return relationships;
     }
 
-    const relatedContent = relatedSectionMatch[1];
+    const relatedContent = relatedSectionMatch[3];
     const lines = relatedContent.split('\n').filter(line => line.trim());
 
     for (const line of lines) {
@@ -290,13 +291,13 @@ export class RelationshipOperations {
       newRelatedSection += '\n';
     }
 
-    // Replace existing Related section or add new one
-    const relatedSectionMatch = content.match(/#### Related\n([\s\S]*?)(?=\n#### |\n\n(?:#|$)|\n$)/);
+    // Replace existing Related section or add new one - case-insensitive and depth-agnostic
+    const relatedSectionMatch = content.match(/(^|\n)(#{2,})\s*related\s*\n([\s\S]*?)(?=\n#{2,}\s|\n\n(?:#|$)|\n$)/i);
     let newContent: string;
     
     if (relatedSectionMatch) {
-      // Replace existing section
-      newContent = content.replace(relatedSectionMatch[0], newRelatedSection.trim());
+      // Replace existing section, preserving the heading structure
+      newContent = content.replace(relatedSectionMatch[0], '\n' + newRelatedSection.trim());
     } else {
       // Add new section before tags
       const tagMatch = content.match(/\n(#\w.*?)\s*$/);
@@ -367,5 +368,31 @@ export class RelationshipOperations {
     };
 
     return genderlessMap[relationshipType.toLowerCase()] || relationshipType;
+  }
+
+  /**
+   * Get the reverse relationship type (genderless form)
+   * For example: parent -> child, child -> parent, sibling -> sibling
+   */
+  getReverseRelationshipType(relationshipType: string): string {
+    const reverseMap: Record<string, string> = {
+      parent: 'child',
+      child: 'parent',
+      sibling: 'sibling',
+      spouse: 'spouse',
+      grandparent: 'grandchild',
+      grandchild: 'grandparent',
+      auncle: 'niece-nephew',
+      'niece-nephew': 'auncle',
+      'aunt-uncle': 'niece-nephew',
+      friend: 'friend',
+      colleague: 'colleague',
+      'in-law-parent': 'in-law-child',
+      'in-law-child': 'in-law-parent'
+    };
+
+    // Normalize the input by converting to genderless first
+    const genderless = this.convertToGenderlessType(relationshipType);
+    return reverseMap[genderless.toLowerCase()] || relationshipType;
   }
 }

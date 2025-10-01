@@ -108,10 +108,8 @@ describe('Gender-Aware Relationship Processing Story', () => {
     reverseRelationships.forEach(({ genderless, gendered_input, reverse_genderless }) => {
       // The reverse relationship should always use genderless form in storage
       const reverse = getReverseRelationshipType(genderless);
-      const femaleReverse = getReverseRelationship(original, 'F');
       
-      expect(maleReverse).toBe(male_reverse);
-      expect(femaleReverse).toBe(female_reverse);
+      expect(reverse).toBe(reverse_genderless);
     });
   });
 
@@ -206,6 +204,26 @@ function applyGenderToRelationship(baseType: string, gender: string | null): str
   
   // Fall back to base type for unknown mappings or null/empty gender
   return baseType;
+}
+
+function getReverseRelationshipType(relationshipType: string): string {
+  const reverseMap: Record<string, string> = {
+    parent: 'child',
+    child: 'parent',
+    sibling: 'sibling',
+    spouse: 'spouse',
+    grandparent: 'grandchild',
+    grandchild: 'grandparent',
+    auncle: 'niece-nephew',
+    'niece-nephew': 'auncle',
+    'aunt-uncle': 'niece-nephew',
+    friend: 'friend',
+    colleague: 'colleague',
+    'in-law-parent': 'in-law-child',
+    'in-law-child': 'in-law-parent'
+  };
+
+  return reverseMap[relationshipType.toLowerCase()] || relationshipType;
 }
 
 function getReverseRelationship(relationship: string, targetGender: string): string {

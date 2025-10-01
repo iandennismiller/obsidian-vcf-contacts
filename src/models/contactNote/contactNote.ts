@@ -1220,7 +1220,7 @@ export class ContactNote {
  * Parse a frontmatter key into its components
  */
 export function parseKey(key: string): ParsedKey {
-  const match = key.match(/^([^[]+)(?:\[([^\]]*)\])?(?:\.(.+))?$/);
+  const match = key.match(/^([^.[]+)(?:\[([^\]]*)\])?(?:\.(.+))?$/);
   if (!match) {
     return { key };
   }
