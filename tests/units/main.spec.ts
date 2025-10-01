@@ -4,11 +4,37 @@ import { App, Plugin } from 'obsidian';
 
 // Mock all dependencies
 vi.mock('../../src/models/vcardFile');
-vi.mock('../../src/plugin/services/syncWatcher');
-vi.mock('../../src/plugin/services/dropHandler');
-vi.mock('../../src/plugin/context/sharedAppContext');
-vi.mock('../../src/models/curatorManager/curatorManager');
-vi.mock('../../src/models/contactManager');
+vi.mock('../../src/plugin/services/syncWatcher', () => ({
+  SyncWatcher: vi.fn().mockImplementation(() => ({
+    start: vi.fn().mockResolvedValue(undefined),
+    stop: vi.fn(),
+  }))
+}));
+vi.mock('../../src/plugin/services/dropHandler', () => ({
+  setupVCFDropHandler: vi.fn().mockReturnValue(vi.fn())
+}));
+vi.mock('../../src/plugin/context/sharedAppContext', () => ({
+  setApp: vi.fn(),
+  clearApp: vi.fn(),
+}));
+vi.mock('../../src/models/curatorManager/curatorManager', () => ({
+  CuratorManager: vi.fn().mockImplementation(() => ({
+    registerCommands: vi.fn(),
+  })),
+  curatorService: {
+    register: vi.fn(),
+    process: vi.fn().mockResolvedValue([]),
+  }
+}));
+vi.mock('../../src/models/contactManager', () => ({
+  ContactManager: vi.fn().mockImplementation(() => ({
+    initializeCache: vi.fn().mockResolvedValue(undefined),
+    setupEventListeners: vi.fn(),
+    ensureContactDataConsistency: vi.fn().mockResolvedValue(undefined),
+    cleanupEventListeners: vi.fn(),
+    updateSettings: vi.fn(),
+  }))
+}));
 vi.mock('../../src/plugin/settings');
 vi.mock('../../src/curators/uidValidate');
 vi.mock('../../src/curators/vcardSyncRead');
@@ -74,10 +100,16 @@ describe('ContactsPlugin (main.ts)', () => {
         on: vi.fn(),
         off: vi.fn(),
         getMarkdownFiles: vi.fn().mockReturnValue([]),
+        read: vi.fn(),
+        delete: vi.fn(),
+        modify: vi.fn(),
+        rename: vi.fn(),
+        getAbstractFileByPath: vi.fn().mockReturnValue(null),
       },
       metadataCache: {
         on: vi.fn(),
         off: vi.fn(),
+        getFileCache: vi.fn().mockReturnValue({ frontmatter: {} }),
       },
     };
 
