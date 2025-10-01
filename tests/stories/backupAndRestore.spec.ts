@@ -308,8 +308,8 @@ END:VCARD`;
 
     // Should maintain ordered history
     expect(backupHistory).toHaveLength(3);
-    expect(backupHistory[0].timestamp).toBeLessThan(backupHistory[1].timestamp);
-    expect(backupHistory[1].timestamp).toBeLessThan(backupHistory[2].timestamp);
+    expect(new Date(backupHistory[0].timestamp).getTime()).toBeLessThan(new Date(backupHistory[1].timestamp).getTime());
+    expect(new Date(backupHistory[1].timestamp).getTime()).toBeLessThan(new Date(backupHistory[2].timestamp).getTime());
   });
 
   it('should validate restored data matches backup', async () => {

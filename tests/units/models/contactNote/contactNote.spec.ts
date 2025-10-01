@@ -962,9 +962,10 @@ FN: John Doe
       expect(result.index).toBe('0');
       expect(result.subkey).toBe('TYPE');
       
-      // Key with dot but no brackets returns the whole string as key
+      // Key with dot but no brackets splits into key and subkey
       result = parseKey('N.GN');
-      expect(result.key).toBe('N.GN');
+      expect(result.key).toBe('N');
+      expect(result.subkey).toBe('GN');
     });
 
     it('should create name slug with createNameSlug', () => {

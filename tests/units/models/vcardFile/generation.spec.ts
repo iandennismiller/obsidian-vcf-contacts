@@ -127,17 +127,9 @@ describe('VCardGenerator', () => {
 
       const result = VCardGenerator.objectToVcf(vCardObject);
 
-      // Updated to match the structured field format
-      expect(result).toContain('N.FN:Doe');
-      expect(result).toContain('N.GN:John');
-      expect(result).toContain('N.MN:William');
-      expect(result).toContain('N.PREFIX:Dr.');
-      expect(result).toContain('N.SUFFIX:Jr.');
-      expect(result).toContain('ADR.STREET:123 Main St');
-      expect(result).toContain('ADR.LOCALITY:Anytown');
-      expect(result).toContain('ADR.REGION:CA');
-      expect(result).toContain('ADR.POSTAL:12345');
-      expect(result).toContain('ADR.COUNTRY:USA');
+      // Structured fields should be combined into proper vCard format
+      expect(result).toContain('N:Doe;John;William;Dr.;Jr.');
+      expect(result).toContain('ADR:;;123 Main St;Anytown;CA;12345;USA');
     });
 
     it('should handle empty or minimal objects', () => {

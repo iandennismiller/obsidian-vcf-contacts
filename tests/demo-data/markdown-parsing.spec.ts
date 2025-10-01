@@ -14,7 +14,7 @@ describe('Demo Markdown Data Validation', () => {
 
   describe('Markdown file structure validation', () => {
     it('should find all expected markdown demo files', () => {
-      expect(markdownFiles).toHaveLength(18);
+      expect(markdownFiles).toHaveLength(24);
       
       // Check for key demo files
       const expectedFiles = [

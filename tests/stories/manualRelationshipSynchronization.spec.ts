@@ -377,12 +377,18 @@ FN: ${file.basename}
       )
     );
 
-    const successful = results.filter(r => r.status === 'fulfilled').length;
-    const failed = results.filter(r => r.status === 'rejected').length;
+    // All promises fulfill since performFullSync catches errors
+    // Check the actual success/failure in the results
+    const successfulResults = results.filter(r => 
+      r.status === 'fulfilled' && r.value.success
+    ).length;
+    const failedResults = results.filter(r => 
+      r.status === 'fulfilled' && !r.value.success
+    ).length;
 
-    // Should provide summary
-    expect(successful).toBe(2);
-    expect(failed).toBe(1);
+    // Should provide summary - all fulfill but some have success: false
+    expect(successfulResults).toBe(2);
+    expect(failedResults).toBe(1);
     expect(results).toHaveLength(3);
   });
 });
