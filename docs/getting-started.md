@@ -10,55 +10,79 @@ After installation, configure the plugin:
 
 ## Working with Relationships
 
-The plugin's relationship management is its primary feature. Relationships are defined in a "Related" section using markdown list syntax.
+The plugin's relationship management is its primary feature. Relationships are defined in a "## Related" section using markdown list syntax with Obsidian wiki-links.
+
+### The Related Section
+
+The plugin automatically manages a "## Related" heading in each contact note:
+- The heading is case-insensitive ("## related", "## Related", "### RELATED" all work)
+- The depth of the heading doesn't matter (## or ### or ####)
+- If a contact doesn't have a Related section when opened, the plugin adds it when needed
+- The plugin cleans up extra newlines and fixes capitalization automatically
+- Only the Related section is managed; other headings and content are not touched
 
 ### Adding Relationships
 
-In any contact note, add a "Related" section:
+In any contact note, add relationships as a markdown list under the "## Related" heading:
 
 ```markdown
 ---
 FN: Jane Doe
 UID: urn:uuid:jane-uuid
+GENDER: F
 ---
 
 ## Related
-- father [[John Doe]]
-- mother [[Mary Doe]]
+- parent [[John Doe]]
+- parent [[Mary Doe]]
 - sibling [[Jack Doe]]
 - friend [[Alice Smith]]
 ```
+
+Each relationship follows the format: `- relationship_kind [[Contact Name]]`
 
 ### Automatic Reciprocal Updates
 
 When you add a relationship, the plugin automatically creates the reciprocal relationship:
 
-- Add "father [[John Doe]]" to Jane's contact
-- John's contact automatically gets "child [[Jane Doe]]" (or "daughter [[Jane Doe]]" if gender is set)
+- Add "- father [[John Doe]]" to Jane's contact
+- John's contact automatically gets "- child [[Jane Doe]]" (or "- daughter [[Jane Doe]]" if John's contact has Jane's GENDER set to F)
+
+The reciprocal relationship is added to John's "## Related" section automatically.
 
 ### Gender-Aware Terms
 
-The plugin converts relationship terms based on contact gender:
+The plugin uses gender information to render appropriate relationship terms in the Related list:
 
-- "parent" becomes "mother" or "father"
-- "child" becomes "son" or "daughter"  
-- "sibling" becomes "sister" or "brother"
+- "parent" is stored internally but renders as "mother" or "father" based on GENDER
+- "child" renders as "son" or "daughter"  
+- "sibling" renders as "sister" or "brother"
+- "aunt-uncle" renders as "aunt" or "uncle"
 
-Set gender in frontmatter:
+When you type gendered terms like "mother", "father", "son", "daughter", the plugin:
+1. Infers the target contact's gender and updates their GENDER field
+2. Converts the relationship type to its genderless form for storage
+3. Stores the genderless type in frontmatter and vCard RELATED fields
+
+Gender values in frontmatter:
 ```yaml
-GENDER: M    # Male
-GENDER: F    # Female
+GENDER: M    # Male - renders gendered terms as masculine
+GENDER: F    # Female - renders gendered terms as feminine
+GENDER: NB   # Non-binary - renders genderless terms
+GENDER: U    # Unspecified - renders genderless terms
 ```
+
+If GENDER is NB, U, blank, or not present, genderless terms are used.
 
 ### Relationship Types
 
-Common relationship types:
+Common relationship types (stored in genderless form):
 
 **Family:**
 - parent, child, sibling
 - spouse, partner
 - grandparent, grandchild
-- aunt, uncle, niece, nephew
+- aunt-uncle, niece-nephew
 - cousin
 
 **Professional:**
@@ -73,12 +97,10 @@ Common relationship types:
 
 ## Importing Contacts
 
-### Import VCF Files
+### Drop VCF Files
 
-1. Open the plugin interface
-2. Click **Import VCF**
-3. Select a `.vcf` file (single contact or database export)
-4. Fill in required fields if prompted (Given Name, Family Name)
+1. Drag the VCF onto Obsidian (the vcf itself is not saved in the vault)
+2. The new contact will be created as a contact note
 
 ### VCF Folder Watching
 
@@ -133,7 +155,7 @@ N.FN: Doe
 EMAIL[1]: jane@example.com
 TEL[1:CELL]: +1-555-123-4567
 GENDER: F
-REV: 2024-01-15T10:30:00Z
+REV: 20250925T141344Z
 ---
 
 ## Related
@@ -141,19 +163,31 @@ REV: 2024-01-15T10:30:00Z
 #Contact
 ```
 
+**Key Fields:**
+- **UID**: Unique identifier in UUID format (preferred) with `urn:uuid:` prefix
+- **REV**: Revision timestamp in format `YYYYMMDDTHHMMSSZ` - automatically updated when data changes
+- **GENDER**: M, F, NB, or U for relationship rendering
+
 ## Data Synchronization
 
 ### Frontmatter and Markdown Sync
 
-The plugin maintains bidirectional synchronization:
+The plugin maintains bidirectional synchronization between the Related list and frontmatter:
 
 **Markdown to Frontmatter:**
-- Relationships in the "Related" section sync to RELATED fields in frontmatter
-- Changes are propagated to related contacts
+- Relationships in the "## Related" section sync to RELATED fields in frontmatter
+- Format: `RELATED[type]: urn:uuid:target-uid` or `uid:custom-id` or `name:Contact Name`
+- Multiple relationships of same type are indexed: `RELATED[friend]`, `RELATED[1:friend]`, etc.
+- Changes propagate to related contacts automatically
+- Genderless types stored in frontmatter
 
 **Frontmatter to Markdown:**
-- RELATED fields in frontmatter appear in the "Related" section
+- RELATED fields in frontmatter appear in the "## Related" section
+- UID references (`urn:uuid:`, `uid:`) are resolved to contact names for display
 - Gender information affects relationship term rendering
+- Format in markdown: `- relationship_kind [[Contact Name]]`
+
+The plugin ensures both representations stay synchronized and updates the REV field only when data actually changes.
 
 ### Consistency Operations
 
@@ -174,18 +208,29 @@ Contacts are linked by unique identifiers (UIDs) rather than names. This ensures
 - No broken links from renamed contacts
 - Reliable contact references in VCF exports
 
-UIDs are stored in frontmatter:
+UIDs are stored in frontmatter using UUID format (preferred):
 ```yaml
 UID: urn:uuid:12345678-1234-5678-9012-123456789012
 ```
+
+In RELATED fields, three namespace formats are used:
+- `urn:uuid:` - For valid UUID identifiers (preferred)
+- `uid:` - For non-UUID unique identifiers
+- `name:` - For contacts that don't exist yet
+
+In the Related list, all contacts are displayed with their human-readable names using Obsidian wiki-links: `[[Contact Name]]`
 
 ### Revision Timestamps
 
 The REV field tracks when contacts were last modified:
 
 ```yaml
-REV: 2024-01-15T10:30:00Z
+REV: 20250925T141344Z
 ```
+
+Format: `YYYYMMDDTHHMMSSZ` (e.g., September 25, 2025 at 14:13:44 UTC)
+
+The plugin automatically updates REV whenever frontmatter changes, but only if the data actually changed. This prevents unnecessary updates and ensures efficient synchronization.
 
 Used for:
 - Conflict resolution during sync

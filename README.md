@@ -35,11 +35,12 @@ The plugin uses a modular architecture organized around core models:
 
 The plugin provides comprehensive relationship tracking capabilities:
 
-- Define relationships in a "Related" section using markdown list syntax
+- Define relationships in a "## Related" section using markdown list syntax
+- Format: `- relationship_kind [[Contact Name]]` using Obsidian wiki-links
 - Automatic bidirectional relationship synchronization
-- Gender-aware relationship terms (e.g., mother/father, son/daughter)
+- Gender-aware relationship terms (e.g., mother/father, son/daughter based on GENDER field)
 - Support for standard relationship types: family, professional, and social
-- Relationships stored in vCard RELATED fields for standards compliance
+- Relationships stored as genderless types in vCard RELATED fields with UID references for standards compliance
 
 ## Support
 

@@ -1,0 +1,88 @@
+BEGIN:VCARD
+VERSION:4.0
+N:Johnson;Sarah;;;
+FN:Sarah Johnson
+EMAIL;TYPE=HOME:sarah.johnson@email.com
+TEL;TYPE=CELL:+1-555-0101
+GENDER:F
+UID:urn:uuid:a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d
+REV:20250101T120000Z
+RELATED;TYPE=spouse:urn:uuid:b2c3d4e5-f6a7-4b5c-9d0e-1f2a3b4c5d6e
+RELATED;TYPE=child:urn:uuid:c3d4e5f6-a7b8-4c5d-0e1f-2a3b4c5d6e7f
+RELATED;TYPE=child:urn:uuid:d4e5f6a7-b8c9-4d5e-1f2a-3b4c5d6e7f8a
+NOTE:Mother of two wonderful children. Works as a software engineer.
+END:VCARD
+BEGIN:VCARD
+VERSION:4.0
+N:Johnson;Michael;;;
+FN:Michael Johnson
+EMAIL;TYPE=HOME:michael.johnson@email.com
+TEL;TYPE=CELL:+1-555-0102
+GENDER:M
+UID:urn:uuid:b2c3d4e5-f6a7-4b5c-9d0e-1f2a3b4c5d6e
+REV:20250101T120000Z
+RELATED;TYPE=spouse:urn:uuid:a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d
+RELATED;TYPE=child:urn:uuid:c3d4e5f6-a7b8-4c5d-0e1f-2a3b4c5d6e7f
+RELATED;TYPE=child:urn:uuid:d4e5f6a7-b8c9-4d5e-1f2a-3b4c5d6e7f8a
+RELATED;TYPE=sibling:urn:uuid:e5f6a7b8-c9d0-4e5f-2a3b-4c5d6e7f8a9b
+NOTE:Father of two. Works as a teacher. Brother to Jennifer.
+END:VCARD
+BEGIN:VCARD
+VERSION:4.0
+N:Johnson;Emma;;;
+FN:Emma Johnson
+EMAIL;TYPE=HOME:emma.johnson@email.com
+TEL;TYPE=CELL:+1-555-0103
+GENDER:F
+UID:urn:uuid:c3d4e5f6-a7b8-4c5d-0e1f-2a3b4c5d6e7f
+REV:20250101T120000Z
+RELATED;TYPE=parent:urn:uuid:a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d
+RELATED;TYPE=parent:urn:uuid:b2c3d4e5-f6a7-4b5c-9d0e-1f2a3b4c5d6e
+RELATED;TYPE=sibling:urn:uuid:d4e5f6a7-b8c9-4d5e-1f2a-3b4c5d6e7f8a
+RELATED;TYPE=friend:urn:uuid:f6a7b8c9-d0e1-4f5a-3b4c-5d6e7f8a9b0c
+RELATED;TYPE=friend:name:Alex Chen
+NOTE:High school student. Enjoys reading and coding.
+END:VCARD
+BEGIN:VCARD
+VERSION:4.0
+N:Johnson;Noah;;;
+FN:Noah Johnson
+EMAIL;TYPE=HOME:noah.johnson@email.com
+TEL;TYPE=CELL:+1-555-0104
+GENDER:M
+UID:urn:uuid:d4e5f6a7-b8c9-4d5e-1f2a-3b4c5d6e7f8a
+REV:20250101T120000Z
+RELATED;TYPE=parent:urn:uuid:a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d
+RELATED;TYPE=parent:urn:uuid:b2c3d4e5-f6a7-4b5c-9d0e-1f2a3b4c5d6e
+RELATED;TYPE=sibling:urn:uuid:c3d4e5f6-a7b8-4c5d-0e1f-2a3b4c5d6e7f
+RELATED;TYPE=aunt-uncle:urn:uuid:e5f6a7b8-c9d0-4e5f-2a3b-4c5d6e7f8a9b
+NOTE:Middle school student. Loves sports and gaming.
+END:VCARD
+BEGIN:VCARD
+VERSION:4.0
+N:Martinez;Jennifer;;;
+FN:Jennifer Martinez
+EMAIL;TYPE=HOME:jennifer.martinez@email.com
+TEL;TYPE=CELL:+1-555-0105
+GENDER:F
+UID:urn:uuid:e5f6a7b8-c9d0-4e5f-2a3b-4c5d6e7f8a9b
+REV:20250101T120000Z
+RELATED;TYPE=sibling:urn:uuid:b2c3d4e5-f6a7-4b5c-9d0e-1f2a3b4c5d6e
+RELATED;TYPE=niece-nephew:urn:uuid:c3d4e5f6-a7b8-4c5d-0e1f-2a3b4c5d6e7f
+RELATED;TYPE=niece-nephew:urn:uuid:d4e5f6a7-b8c9-4d5e-1f2a-3b4c5d6e7f8a
+RELATED;TYPE=colleague:uid:olivia-smith-work-id
+NOTE:Marketing manager. Sister to Michael. Works with Olivia.
+END:VCARD
+BEGIN:VCARD
+VERSION:4.0
+N:Smith;Olivia;;;
+FN:Olivia Smith
+EMAIL;TYPE=HOME:olivia.smith@email.com
+TEL;TYPE=CELL:+1-555-0106
+GENDER:F
+UID:urn:uuid:f6a7b8c9-d0e1-4f5a-3b4c-5d6e7f8a9b0c
+REV:20250101T120000Z
+RELATED;TYPE=friend:urn:uuid:c3d4e5f6-a7b8-4c5d-0e1f-2a3b4c5d6e7f
+RELATED;TYPE=colleague:uid:jennifer-martinez-work-id
+NOTE:Works in marketing. Friend of Emma and colleague of Jennifer.
+END:VCARD
