@@ -379,13 +379,21 @@ export class RelationshipOperations {
       // Replace existing section, preserving the heading structure
       newContent = content.replace(relatedSectionMatch[0], '\n' + newRelatedSection.trim());
     } else {
-      // Add new section before tags
-      const tagMatch = content.match(/\n(#\w.*?)\s*$/);
-      if (tagMatch) {
-        const insertIndex = content.lastIndexOf(tagMatch[1]);
-        newContent = content.substring(0, insertIndex) + newRelatedSection + '\n' + tagMatch[1] + '\n';
+      // Check if Contact section exists - Related should come after Contact
+      const contactSectionMatch = content.match(/(^|\n)(#{2,})\s*contact\s*\n[\s\S]*?(?=\n#{2,}\s|\n\n(?:#|$)|\n$)/i);
+      if (contactSectionMatch) {
+        // Insert Related section after Contact section
+        const contactEndIndex = content.indexOf(contactSectionMatch[0]) + contactSectionMatch[0].length;
+        newContent = content.substring(0, contactEndIndex) + '\n' + newRelatedSection + content.substring(contactEndIndex);
       } else {
-        newContent = content + '\n' + newRelatedSection;
+        // Add new section before tags
+        const tagMatch = content.match(/\n(#\w.*?)\s*$/);
+        if (tagMatch) {
+          const insertIndex = content.lastIndexOf(tagMatch[1]);
+          newContent = content.substring(0, insertIndex) + newRelatedSection + '\n' + tagMatch[1] + '\n';
+        } else {
+          newContent = content + '\n' + newRelatedSection;
+        }
       }
     }
 

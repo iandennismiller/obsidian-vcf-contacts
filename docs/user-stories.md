@@ -248,6 +248,20 @@ USA
 - Names: Show prefix, given, middle, family, suffix in readable format
 - Dates: Display in user-friendly format (not ISO 8601)
 
+### 34a. Contact Section Before Related Section
+**As a user**, I expect the Contact section to always appear before the Related section in contact notes. This ensures a consistent document structure where contact information (email, phone, address) is presented before relationship information. The plugin should:
+
+- Place the Contact section before the Related section when both exist
+- Maintain this ordering when adding new sections
+- Preserve this ordering when updating existing sections
+- Handle edge cases like missing sections gracefully
+
+**Expected behavior:**
+- When adding a Contact section to a note with an existing Related section, insert Contact before Related
+- When adding a Related section to a note with an existing Contact section, insert Related after Contact
+- When both sections exist and are out of order, maintain their current positions during updates (fixing ordering is a separate operation)
+- The sections should appear in this order: frontmatter → body content → Contact section → Related section → hashtags
+
 ### 35. Bidirectional Contact Sync Processors
 **As a user**, I want two curator processors that maintain synchronization between the Contact section and frontmatter, similar to how Related list synchronization works:
 

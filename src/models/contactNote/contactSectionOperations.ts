@@ -477,7 +477,7 @@ export class ContactSectionOperations {
 
   /**
    * Update the Contact section in markdown content
-   * Replaces existing Contact section or adds it before the final hashtags
+   * Replaces existing Contact section or adds it before Related section (if exists) or before final hashtags
    */
   async updateContactSectionInContent(contactSection: string): Promise<void> {
     const content = await this.contactData.getContent();
@@ -490,13 +490,21 @@ export class ContactSectionOperations {
       // Replace existing Contact section
       newContent = content.replace(contactSectionMatch[0], `\n${contactSection}`);
     } else {
-      // Add Contact section before final hashtags (match both single and double newlines)
-      const hashtagMatch = content.match(/\n+(#\w+.*?)$/);
-      if (hashtagMatch) {
-        newContent = content.replace(hashtagMatch[0], `\n\n${contactSection}\n\n${hashtagMatch[1]}`);
+      // Check if Related section exists - Contact should come before Related
+      const relatedSectionMatch = content.match(/(^|\n)(#{2,})\s*related\s*\n/i);
+      if (relatedSectionMatch) {
+        // Insert Contact section before Related section
+        const relatedIndex = content.indexOf(relatedSectionMatch[0]);
+        newContent = content.substring(0, relatedIndex) + `\n${contactSection}\n` + content.substring(relatedIndex);
       } else {
-        // Add at the end
-        newContent = `${content}\n\n${contactSection}`;
+        // Add Contact section before final hashtags (match both single and double newlines)
+        const hashtagMatch = content.match(/\n+(#\w+.*?)$/);
+        if (hashtagMatch) {
+          newContent = content.replace(hashtagMatch[0], `\n\n${contactSection}\n\n${hashtagMatch[1]}`);
+        } else {
+          // Add at the end
+          newContent = `${content}\n\n${contactSection}`;
+        }
       }
     }
 
