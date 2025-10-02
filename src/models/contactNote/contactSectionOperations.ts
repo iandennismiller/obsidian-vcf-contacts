@@ -490,10 +490,10 @@ export class ContactSectionOperations {
       // Replace existing Contact section
       newContent = content.replace(contactSectionMatch[0], `\n${contactSection}`);
     } else {
-      // Add Contact section before final hashtags
-      const hashtagMatch = content.match(/\n\n(#\w+.*?)$/);
+      // Add Contact section before final hashtags (match both single and double newlines)
+      const hashtagMatch = content.match(/\n+(#\w+.*?)$/);
       if (hashtagMatch) {
-        newContent = content.replace(hashtagMatch[0], `\n\n${contactSection}\n${hashtagMatch[0]}`);
+        newContent = content.replace(hashtagMatch[0], `\n\n${contactSection}\n\n${hashtagMatch[1]}`);
       } else {
         // Add at the end
         newContent = `${content}\n\n${contactSection}`;

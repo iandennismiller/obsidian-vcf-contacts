@@ -493,5 +493,48 @@ FN: Test Contact
       expect(updatedContent).toContain('new@example.com');
       expect(updatedContent).not.toContain('old@example.com');
     });
+
+    it('should not create duplicate Contact sections on multiple runs', async () => {
+      const initialContent = `---
+UID: test-123
+FN: Test Contact
+---
+#Contact`;
+
+      const newSection = `## Contact
+
+📧 Email
+- Home: test@example.com`;
+
+      // First call - should add Contact section
+      mockApp.vault!.read = vi.fn().mockResolvedValue(initialContent);
+      let capturedContent = '';
+      mockApp.vault!.modify = vi.fn().mockImplementation((file, content) => {
+        capturedContent = content;
+        return Promise.resolve();
+      });
+
+      await ops.updateContactSectionInContent(newSection);
+
+      expect(mockApp.vault!.modify).toHaveBeenCalled();
+      expect(capturedContent).toContain('## Contact');
+      
+      // Count occurrences of "## Contact"
+      const firstRunMatches = (capturedContent.match(/## Contact/g) || []).length;
+      expect(firstRunMatches).toBe(1);
+
+      // Second call - should replace, not duplicate
+      mockApp.vault!.read = vi.fn().mockResolvedValue(capturedContent);
+      mockApp.vault!.modify = vi.fn().mockImplementation((file, content) => {
+        capturedContent = content;
+        return Promise.resolve();
+      });
+
+      await ops.updateContactSectionInContent(newSection);
+
+      // Should still have only one "## Contact"
+      const secondRunMatches = (capturedContent.match(/## Contact/g) || []).length;
+      expect(secondRunMatches).toBe(1);
+    });
   });
 });
