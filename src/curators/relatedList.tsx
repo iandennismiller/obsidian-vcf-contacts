@@ -75,6 +75,46 @@ export const RelatedListProcessor: CuratorProcessor = {
         console.log(`[RelatedListProcessor]   Frontmatter: ${rel.type} -> ${rel.value} (parsedValue: ${rel.parsedValue ? rel.parsedValue.type + ':' + rel.parsedValue.value : 'undefined'})`);
       });
       
+      // Check for duplicates in Related section
+      const seenRelationships = new Map<string, boolean>(); // key: genderlessType:contactName
+      let hasDuplicates = false;
+      
+      for (const rel of relatedSectionRelationships) {
+        const genderlessType = contactNote.convertToGenderlessType(rel.type);
+        const key = `${genderlessType}:${rel.contactName.toLowerCase()}`;
+        if (seenRelationships.has(key)) {
+          hasDuplicates = true;
+          console.log(`[RelatedListProcessor] Duplicate detected: ${rel.type} -> ${rel.contactName}`);
+        } else {
+          seenRelationships.set(key, true);
+        }
+      }
+      
+      if (hasDuplicates) {
+        console.log(`[RelatedListProcessor] Duplicates found in Related section, triggering deduplication sync`);
+        const syncResult = await contactNote.syncRelatedListToFrontmatter();
+        
+        if (!syncResult.success) {
+          console.error(`[RelatedListProcessor] Failed to sync Related list to frontmatter for ${contact.file.name}`);
+          syncResult.errors.forEach(error => console.error(error));
+          return Promise.resolve(undefined);
+        }
+        
+        console.log(`[RelatedListProcessor] Deduplication sync completed successfully for ${contact.file.basename}`);
+        
+        // Update REV timestamp
+        await contactNote.updateRev();
+        
+        return Promise.resolve({
+          name: this.name,
+          runType: this.runType,
+          file: contact.file,
+          message: `Removed duplicate relationships from ${contact.file.name}`,
+          render,
+          renderGroup
+        });
+      }
+      
       // Count missing relationships before sync
       let missingCount = 0;
       const missingRelationships: string[] = [];
