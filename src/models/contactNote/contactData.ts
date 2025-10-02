@@ -205,7 +205,8 @@ export class ContactData {
     }
     
     await this.updateContent(newContent);
-    this._frontmatter = frontmatter;
+    // updateContent() already invalidates _frontmatter cache, so Obsidian's metadata cache
+    // will be used on next read. This ensures fresh data after write.
   }
 
   /**
