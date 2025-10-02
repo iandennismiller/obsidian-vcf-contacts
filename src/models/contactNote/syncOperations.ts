@@ -100,7 +100,7 @@ export class SyncOperations {
       const frontmatter = await this.contactData.getFrontmatter();
       if (frontmatter) {
         Object.keys(frontmatter).forEach(key => {
-          if (key.startsWith('RELATED')) {
+          if (key.startsWith('RELATED') || key === 'RELATED') {
             frontmatterUpdates[key] = ''; // Mark for deletion
           }
         });
