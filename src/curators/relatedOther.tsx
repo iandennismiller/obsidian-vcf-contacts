@@ -74,17 +74,8 @@ const render = (queItem: CuratorQueItem): JSX.Element => {
 export const RelatedOtherProcessor: CuratorProcessor = {
   name: "RelatedOtherProcessor",
   runType: RunType.IMPROVEMENT,
-  settingPropertyName: "relatedOtherProcessor",
-  settingDescription: "Automatically adds missing reciprocal relationships to contact frontmatter based on other contacts' RELATED fields",
-  settingDefaultValue: true,
 
   async process(contact: Contact): Promise<CuratorQueItem | undefined> {
-    const activeProcessor = getSettings()[`${this.settingPropertyName}`] as boolean;
-    
-    if (!activeProcessor) {
-      return Promise.resolve(undefined);
-    }
-
     const settings = getSettings();
     const app = getApp();
     const contactManager = new ContactManager(app, settings);

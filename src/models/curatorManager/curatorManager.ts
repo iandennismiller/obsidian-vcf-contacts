@@ -2,7 +2,6 @@ import { Notice, App } from 'obsidian';
 import { ContactsPluginSettings } from 'src/plugin/settings';
 import { ContactManager } from '../contactManager';
 import { Contact } from '../index';
-import { CuratorSettingProperties } from './CuratorSettingProperties';
 import { CuratorProcessor } from './CuratorProcessor';
 import { CuratorQueItem } from './CuratorQueItem';
 import { RunType } from './RunType';
@@ -59,19 +58,6 @@ export class CuratorManager {
       contactArray.map((contact) => processSingleContact(contact, runType))
     );
     return results.flat().filter((curator) => curator !== undefined) as CuratorQueItem[];
-  }
-
-  /**
-   * Get curator processor settings
-   */
-  settings(): CuratorSettingProperties[] {
-    return Array.from(processors.values()).map(processor => ({
-      name: processor.name,
-      runType: processor.runType,
-      settingPropertyName: processor.settingPropertyName,
-      settingDescription: processor.settingDescription,
-      settingDefaultValue: processor.settingDefaultValue,
-    }));
   }
 
   /**
@@ -177,16 +163,6 @@ export const curatorService = {
       contactArray.map((contact) => processSingleContact(contact, runType))
     );
     return results.flat().filter((curator) => curator !== undefined) as CuratorQueItem[];
-  },
-
-  settings(): CuratorSettingProperties[] {
-    return Array.from(processors.values()).map(processor => ({
-      name: processor.name,
-      runType: processor.runType,
-      settingPropertyName: processor.settingPropertyName,
-      settingDescription: processor.settingDescription,
-      settingDefaultValue: processor.settingDefaultValue,
-    }));
   },
 
   // Test utility method to clear processors

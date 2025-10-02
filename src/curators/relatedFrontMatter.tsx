@@ -30,17 +30,8 @@ const render = (queItem: CuratorQueItem): JSX.Element => {
 export const RelatedFrontMatterProcessor: CuratorProcessor = {
   name: "RelatedFrontMatterProcessor",
   runType: RunType.IMPROVEMENT,
-  settingPropertyName: "relatedFrontMatterProcessor",
-  settingDescription: "Automatically syncs RELATED frontmatter fields to the Related markdown section, adding missing relationships",
-  settingDefaultValue: true,
 
   async process(contact: Contact): Promise<CuratorQueItem | undefined> {
-    const activeProcessor = getSettings()[`${this.settingPropertyName}`] as boolean;
-    
-    if (!activeProcessor) {
-      return Promise.resolve(undefined);
-    }
-
     const settings = getSettings();
     const app = getApp();
     const contactNote = new ContactNote(app, settings, contact.file);

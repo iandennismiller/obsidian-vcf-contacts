@@ -30,21 +30,8 @@ const render = (queItem: CuratorQueItem): JSX.Element => {
 export const RelatedListProcessor: CuratorProcessor = {
   name: "RelatedListProcessor",
   runType: RunType.IMPROVEMENT,
-  settingPropertyName: "relatedListProcessor",
-  settingDescription: "Automatically syncs Related markdown section to RELATED frontmatter fields, adding missing relationships",
-  settingDefaultValue: true,
 
   async process(contact: Contact): Promise<CuratorQueItem | undefined> {
-    console.log(`[RelatedListProcessor] Starting process for contact: ${contact.file.basename}`);
-    
-    const activeProcessor = getSettings()[`${this.settingPropertyName}`] as boolean;
-    console.log(`[RelatedListProcessor] Processor enabled: ${activeProcessor}`);
-    
-    if (!activeProcessor) {
-      console.log(`[RelatedListProcessor] Processor disabled, returning early`);
-      return Promise.resolve(undefined);
-    }
-
     const settings = getSettings();
     const app = getApp();
     const contactNote = new ContactNote(app, settings, contact.file);

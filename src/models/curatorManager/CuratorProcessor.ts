@@ -12,9 +12,6 @@ import { CuratorQueItem } from "./CuratorQueItem";
 
 export interface CuratorProcessor {
   name: string;
-  runType: RunType
-  settingPropertyName: string;
-  settingDescription: string;
-  settingDefaultValue: boolean;
+  runType: RunType;
   process(contact: Contact): Promise<CuratorQueItem | undefined>;
 }

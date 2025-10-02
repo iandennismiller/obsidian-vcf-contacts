@@ -1,12 +1,7 @@
 import { App, PluginSettingTab, Setting, Notice, Modal } from "obsidian";
 import { setSettings } from "src/plugin/context/sharedSettingsContext";
-import { CuratorSettingProperties } from "src/models/curatorManager/CuratorSettingProperties";
-import { curatorService } from "src/models/curatorManager/curatorManager";
 import ContactsPlugin from "src/main";
 import { FolderSuggest } from "src/plugin/ui/FolderSuggest";
-
-// Import curator registration to ensure processors are registered before we access their settings
-import "src/curatorRegistration";
 
 export interface ContactsPluginSettings {
   contactsFolder: string;
@@ -20,14 +15,9 @@ export interface ContactsPluginSettings {
   vcfCustomizeIgnoreList: boolean;
   vcfIgnoreFilenames: string[];
   vcfIgnoreUIDs: string[];
+  logLevel: 'DEBUG' | 'INFO' | 'WARNING' | 'ERROR';
   [key: string]: string|boolean|number|string[];
 }
-
-const curatorSetting = curatorService.settings();
-const curatorSettingDefaults = curatorSetting.reduce((acc:Record<string, string|boolean>, setting) => {
-  acc[setting.settingPropertyName] = setting.settingDefaultValue;
-  return acc;
-}, {} as Record<string, string>);
 
 export const DEFAULT_SETTINGS: ContactsPluginSettings = {
   contactsFolder: "",
@@ -41,7 +31,7 @@ export const DEFAULT_SETTINGS: ContactsPluginSettings = {
   vcfCustomizeIgnoreList: false,
   vcfIgnoreFilenames: [],
   vcfIgnoreUIDs: [],
-  ...curatorSettingDefaults
+  logLevel: 'INFO'
 }
 
 /* istanbul ignore next */
@@ -110,24 +100,32 @@ export class ContactsSettingTab extends PluginSettingTab {
           setSettings(this.plugin.settings);
         }));
 
-    curatorSetting.forEach((settingProps :CuratorSettingProperties) => {
-      const settingKey = settingProps.settingPropertyName;
-      const currentValue = this.plugin.settings[settingKey];
+    // Log Level Setting
+    const logLevelDesc = document.createDocumentFragment();
+    logLevelDesc.append(
+      "Control the verbosity of plugin logging in the console.",
+      logLevelDesc.createEl("br"),
+      logLevelDesc.createEl("strong", { text: "INFO: " }),
+      "Shows important information and errors (recommended)",
+      logLevelDesc.createEl("br"),
+      logLevelDesc.createEl("strong", { text: "DEBUG: " }),
+      "Shows detailed debugging information for troubleshooting"
+    );
 
-      if (typeof currentValue === "boolean") {
-        new Setting(containerEl)
-          .setName(settingProps.name)
-          .setDesc(settingProps.settingDescription)
-          .addToggle(toggle =>
-            toggle
-              .setValue(currentValue)
-              .onChange(async (value) => {
-                this.plugin.settings[settingKey] = value;
-                await this.plugin.saveSettings();
-                setSettings(this.plugin.settings);
-              }));
-      }
-    })
+    new Setting(containerEl)
+      .setName("Log Level")
+      .setDesc(logLevelDesc)
+      .addDropdown(dropdown => {
+        dropdown
+          .addOption('INFO', 'INFO')
+          .addOption('DEBUG', 'DEBUG')
+          .setValue(this.plugin.settings.logLevel)
+          .onChange(async (value: 'DEBUG' | 'INFO' | 'WARNING' | 'ERROR') => {
+            this.plugin.settings.logLevel = value;
+            await this.plugin.saveSettings();
+            setSettings(this.plugin.settings);
+          });
+      });
 
     // VCF Storage Configuration
     const vcfStorageTitle = containerEl.createEl("h3", { text: "VCF Storage Configuration" });

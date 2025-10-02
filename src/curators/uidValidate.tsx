@@ -42,13 +42,9 @@ const render = (queItem: CuratorQueItem):JSX.Element => {
 export const UidProcessor: CuratorProcessor = {
   name: "UidProcessor",
   runType: RunType.IMMEDIATELY,
-  settingPropertyName: "UIDProcessor",
-  settingDescription: "Automatically generates a unique identifier (UID) for contact when missing. (e.g. when the contact is created manually)",
-  settingDefaultValue: true,
 
   async process(contact:Contact): Promise<CuratorQueItem | undefined> {
-    const activeProcessor = getSettings()[`${this.settingPropertyName}`] as boolean;
-    if (!activeProcessor || contact.data["UID"]) {
+    if (contact.data["UID"]) {
       return Promise.resolve(undefined);
     }
 

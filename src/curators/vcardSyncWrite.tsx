@@ -32,17 +32,13 @@ const render = (queItem: CuratorQueItem): JSX.Element => {
 export const VcardSyncPostProcessor: CuratorProcessor = {
   name: "VCard Sync Post Processor",
   runType: RunType.IMPROVEMENT,
-  settingPropertyName: "vcardSyncPostProcessor",
-  settingDescription: "VCard Write Back: Automatically writes contact data back to VCard files when Obsidian contact has newer revision data. Requires both VCard Folder Watching and VCard Write Back to be enabled.",
-  settingDefaultValue: true,
 
   async process(contact: Contact): Promise<CuratorQueItem | undefined> {
     const settings = getSettings();
-    const activeProcessor = settings[`${this.settingPropertyName}`] as boolean;
     const vcfWatchEnabled = settings.vcfWatchEnabled;
     const vcfWriteBackEnabled = settings.vcfWriteBackEnabled;
     
-    if (!activeProcessor || !vcfWatchEnabled || !vcfWriteBackEnabled || !contact.data["UID"]) {
+    if (!vcfWatchEnabled || !vcfWriteBackEnabled || !contact.data["UID"]) {
       return Promise.resolve(undefined);
     }
 

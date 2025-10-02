@@ -30,17 +30,8 @@ const render = (queItem: CuratorQueItem): JSX.Element => {
 export const GenderInferenceProcessor: CuratorProcessor = {
   name: "GenderInferenceProcessor",
   runType: RunType.IMPROVEMENT,
-  settingPropertyName: "genderInferenceProcessor",
-  settingDescription: "Automatically infers gender from relationship types and adds GENDER to contacts' frontmatter when missing",
-  settingDefaultValue: true,
 
   async process(contact: Contact): Promise<CuratorQueItem | undefined> {
-    const activeProcessor = getSettings()[`${this.settingPropertyName}`] as boolean;
-    
-    if (!activeProcessor) {
-      return Promise.resolve(undefined);
-    }
-
     const settings = getSettings();
     const app = getApp();
     const contactNote = new ContactNote(app, settings, contact.file);

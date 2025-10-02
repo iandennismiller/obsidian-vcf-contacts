@@ -32,15 +32,11 @@ const render = (queItem: CuratorQueItem):JSX.Element => {
 export const VcardSyncPreProcessor: CuratorProcessor = {
   name: "VCard Sync Pre Processor",
   runType: RunType.IMMEDIATELY,
-  settingPropertyName: "vcardSyncPreProcessor",
-  settingDescription: "VCard Folder Watcher: Automatically imports/updates contact data from VCard files when they have newer revision data. Requires VCard Folder Watching to be enabled.",
-  settingDefaultValue: true,
 
   async process(contact:Contact): Promise<CuratorQueItem | undefined> {
-    const activeProcessor = getSettings()[`${this.settingPropertyName}`] as boolean;
     const vcfWatchEnabled = getSettings().vcfWatchEnabled;
     
-    if (!activeProcessor || !vcfWatchEnabled || !contact.data["UID"]) {
+    if (!vcfWatchEnabled || !contact.data["UID"]) {
       return Promise.resolve(undefined);
     }
 

@@ -30,17 +30,8 @@ const render = (queItem: CuratorQueItem): JSX.Element => {
 export const GenderRenderProcessor: CuratorProcessor = {
   name: "GenderRenderProcessor",
   runType: RunType.IMPROVEMENT,
-  settingPropertyName: "genderRenderProcessor",
-  settingDescription: "Automatically replaces ungendered relationship terms in Related section with gendered equivalents when contact gender is known",
-  settingDefaultValue: true,
 
   async process(contact: Contact): Promise<CuratorQueItem | undefined> {
-    const activeProcessor = getSettings()[`${this.settingPropertyName}`] as boolean;
-    
-    if (!activeProcessor) {
-      return Promise.resolve(undefined);
-    }
-
     const settings = getSettings();
     const app = getApp();
     const contactNote = new ContactNote(app, settings, contact.file);
