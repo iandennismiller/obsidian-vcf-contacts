@@ -4,6 +4,7 @@
 
 import { ContactData } from './contactData';
 import { RelationshipOperations, ParsedRelationship, FrontmatterRelationship } from './relationshipOperations';
+import { Gender } from './types';
 
 /**
  * Synchronization operations that work directly with ContactData
@@ -26,10 +27,10 @@ export class SyncOperations {
    */
   private deduplicateRelationships(relationships: ParsedRelationship[]): {
     deduplicated: ParsedRelationship[];
-    inferredGender: Map<string, 'M' | 'F'>;
+    inferredGender: Map<string, Gender>;
   } {
     const seen = new Map<string, ParsedRelationship>(); // key: contactName (lowercase)
-    const inferredGender = new Map<string, 'M' | 'F'>();
+    const inferredGender = new Map<string, Gender>();
     
     for (const rel of relationships) {
       const contactKey = rel.contactName.toLowerCase();
