@@ -83,7 +83,7 @@ This document outlines user stories and use cases for managing contacts and rela
 **As a user**, I want to integrate this plugin with my existing contact management workflow, including address books, CRM systems, and mobile devices that support vCard import/export.
 
 ### 23. Configurable Folder and Filename Settings
-**As a user**, I want to control the folder or filename in the configuration settings; the rest of the plugin should make reference to these values as appropriate.
+**As a user**, I want to control the folder or filename in the configuration settings; the rest of the plugin should make reference to these values as appropriate. When I select the VCF Folder storage method and enable the "Customize Ignore List" toggle, I expect to see input fields for specifying UIDs and filenames to ignore during sync. These ignore list settings should become visible immediately when I enable the customization toggle, without requiring any other settings to be enabled first.
 
 ### 24. Manual Relationship Synchronization
 **As a user**, I want a command to manually trigger relationship synchronization across all contacts, ensuring that all bidirectional relationships are consistent and properly propagated through the graph.
