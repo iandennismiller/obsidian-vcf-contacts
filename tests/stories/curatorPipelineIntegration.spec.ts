@@ -618,4 +618,278 @@ REV: 20230101T120000Z
 
     console.log('\n[SUCCESS] Existing keys preserved when adding new relationships!');
   });
+
+  it('should handle inconsistent RELATED frontmatter (more in frontmatter than Related section)', async () => {
+    console.log('\n=== INCONSISTENT RELATED FRONTMATTER TEST ===\n');
+
+    // Simulate the user's scenario: contact has 3 friend relationships in frontmatter
+    // but only 2 friends in the Related section (an inconsistency/error state)
+    const testFile = { basename: 'inconsistent-contact', path: 'Contacts/inconsistent-contact.md', name: 'inconsistent-contact.md' } as TFile;
+    const friend1 = { basename: 'friend1', path: 'Contacts/friend1.md', name: 'friend1.md' } as TFile;
+    const friend2 = { basename: 'friend2', path: 'Contacts/friend2.md', name: 'friend2.md' } as TFile;
+    const friend3 = { basename: 'friend3', path: 'Contacts/friend3.md', name: 'friend3.md' } as TFile;
+
+    [testFile, friend1, friend2, friend3].forEach(f => mockContactFiles.set(f.path, f));
+
+    // Contact has 3 friend relationships in frontmatter but only 2 in Related section
+    fileContents.set(testFile.path, `---
+UID: inconsistent-uid
+FN: Inconsistent Contact
+REV: 20230101T120000Z
+"RELATED[friend]": uid:friend1-uid
+"RELATED[1:friend]": uid:friend2-uid
+"RELATED[2:friend]": uid:friend3-uid
+---
+
+#### Related
+- friend: [[Friend1]]
+- friend: [[Friend2]]
+
+#Contact`);
+
+    fileContents.set(friend1.path, `---\nUID: friend1-uid\nFN: Friend1\n---\n#Contact`);
+    fileContents.set(friend2.path, `---\nUID: friend2-uid\nFN: Friend2\n---\n#Contact`);
+    fileContents.set(friend3.path, `---\nUID: friend3-uid\nFN: Friend3\n---\n#Contact`);
+
+    console.log('[SETUP] Contact with inconsistent RELATED frontmatter (3 in FM, 2 in Related)');
+    
+    const initialFrontmatter = extractFrontmatter(fileContents.get(testFile.path)!);
+    console.log('[INITIAL] Frontmatter RELATED keys:');
+    Object.keys(initialFrontmatter).filter(k => k.startsWith('RELATED')).forEach(key => {
+      console.log(`  ${key}: ${initialFrontmatter[key]}`);
+    });
+
+    const initialRelated = extractRelatedSection(fileContents.get(testFile.path)!);
+    console.log('[INITIAL] Related section items:', initialRelated.length);
+    initialRelated.forEach(rel => console.log(`  ${rel}`));
+
+    const testContact: Contact = { file: testFile, UID: 'inconsistent-uid', FN: 'Inconsistent Contact' };
+
+    console.log('\n[RUN 1] Running RelatedListProcessor (first time)...');
+    const result1 = await RelatedListProcessor.process(testContact);
+    console.log(`[RUN 1 RESULT] ${result1 ? result1.message : 'No changes'}`);
+
+    // Check state after first run
+    let currentFrontmatter = extractFrontmatter(fileContents.get(testFile.path)!);
+    const run1FriendKeys = Object.keys(currentFrontmatter).filter(k => k.toLowerCase().includes('friend')).sort();
+    console.log(`[RUN 1 STATE] Friend keys after first run (${run1FriendKeys.length}):`, run1FriendKeys);
+    run1FriendKeys.forEach(key => console.log(`  ${key}: ${currentFrontmatter[key]}`));
+
+    // Run processor a second time (user mentioned running twice)
+    console.log('\n[RUN 2] Running RelatedListProcessor (second time)...');
+    writeHistory = []; // Clear write history for second run
+    const result2 = await RelatedListProcessor.process(testContact);
+    console.log(`[RUN 2 RESULT] ${result2 ? result2.message : 'No changes'}`);
+
+    // Check final state after second run
+    const finalFrontmatter = extractFrontmatter(fileContents.get(testFile.path)!);
+    const run2FriendKeys = Object.keys(finalFrontmatter).filter(k => k.toLowerCase().includes('friend')).sort();
+    console.log(`[RUN 2 STATE] Friend keys after second run (${run2FriendKeys.length}):`, run2FriendKeys);
+    run2FriendKeys.forEach(key => console.log(`  ${key}: ${finalFrontmatter[key]}`));
+
+    // Check if state is stable (no changes on second run)
+    const stateStable = run1FriendKeys.length === run2FriendKeys.length;
+    console.log(`\n[STABILITY CHECK] State stable after second run: ${stateStable}`);
+    
+    if (!stateStable) {
+      console.log('[WARNING] State changed on second run! This indicates instability.');
+      console.log(`  First run had ${run1FriendKeys.length} friend keys, second run has ${run2FriendKeys.length}`);
+    }
+
+    // The processor should sync to match the Related section (2 friends)
+    // and remove the extra friend3 relationship
+    expect(run2FriendKeys.length).toBe(2);
+    expect(finalFrontmatter['RELATED[friend]']).toBeDefined();
+    expect(finalFrontmatter['RELATED[1:friend]']).toBeDefined();
+    expect(finalFrontmatter['RELATED[2:friend]']).toBeUndefined(); // Should be removed
+
+    console.log('\n[SUCCESS] Inconsistent frontmatter handled correctly!');
+  });
+
+  it('should handle contact with no RELATED frontmatter requiring multiple runs', async () => {
+    console.log('\n=== NO INITIAL RELATED FRONTMATTER TEST ===\n');
+
+    // User mentioned a contact with no relationships in frontmatter that needed
+    // to run the processor twice before it updated correctly
+    const testFile = { basename: 'empty-fm-contact', path: 'Contacts/empty-fm-contact.md', name: 'empty-fm-contact.md' } as TFile;
+    const friend = { basename: 'friend', path: 'Contacts/friend.md', name: 'friend.md' } as TFile;
+    const sibling = { basename: 'sibling', path: 'Contacts/sibling.md', name: 'sibling.md' } as TFile;
+
+    [testFile, friend, sibling].forEach(f => mockContactFiles.set(f.path, f));
+
+    // Contact has NO RELATED fields in frontmatter, but has relationships in Related section
+    fileContents.set(testFile.path, `---
+UID: empty-fm-uid
+FN: Empty FM Contact
+REV: 20230101T120000Z
+---
+
+#### Related
+- friend: [[Friend]]
+- sibling: [[Sibling]]
+
+#Contact`);
+
+    fileContents.set(friend.path, `---\nUID: friend-uid\nFN: Friend\n---\n#Contact`);
+    fileContents.set(sibling.path, `---\nUID: sibling-uid\nFN: Sibling\n---\n#Contact`);
+
+    console.log('[SETUP] Contact with NO RELATED in frontmatter');
+    
+    const initialFrontmatter = extractFrontmatter(fileContents.get(testFile.path)!);
+    const initialRelatedKeys = Object.keys(initialFrontmatter).filter(k => k.startsWith('RELATED'));
+    console.log('[INITIAL] Frontmatter RELATED keys:', initialRelatedKeys.length === 0 ? 'NONE' : initialRelatedKeys);
+
+    const testContact: Contact = { file: testFile, UID: 'empty-fm-uid', FN: 'Empty FM Contact' };
+
+    // First run
+    console.log('\n[RUN 1] Running RelatedListProcessor (first time)...');
+    writeHistory = [];
+    const result1 = await RelatedListProcessor.process(testContact);
+    console.log(`[RUN 1 RESULT] ${result1 ? result1.message : 'No changes'}`);
+    console.log(`[RUN 1] Writes performed: ${writeHistory.length}`);
+
+    const afterRun1 = extractFrontmatter(fileContents.get(testFile.path)!);
+    const run1Keys = Object.keys(afterRun1).filter(k => k.startsWith('RELATED')).sort();
+    console.log(`[RUN 1 STATE] RELATED keys (${run1Keys.length}):`, run1Keys);
+    run1Keys.forEach(key => console.log(`  ${key}: ${afterRun1[key]}`));
+
+    // Second run
+    console.log('\n[RUN 2] Running RelatedListProcessor (second time)...');
+    writeHistory = [];
+    const result2 = await RelatedListProcessor.process(testContact);
+    console.log(`[RUN 2 RESULT] ${result2 ? result2.message : 'No changes'}`);
+    console.log(`[RUN 2] Writes performed: ${writeHistory.length}`);
+
+    const afterRun2 = extractFrontmatter(fileContents.get(testFile.path)!);
+    const run2Keys = Object.keys(afterRun2).filter(k => k.startsWith('RELATED')).sort();
+    console.log(`[RUN 2 STATE] RELATED keys (${run2Keys.length}):`, run2Keys);
+    run2Keys.forEach(key => console.log(`  ${key}: ${afterRun2[key]}`));
+
+    // Check if first run created the keys
+    console.log(`\n[ANALYSIS] First run created keys: ${run1Keys.length > 0}`);
+    console.log(`[ANALYSIS] Second run needed: ${writeHistory.length > 0}`);
+    
+    if (run1Keys.length === 0 && run2Keys.length > 0) {
+      console.log('[WARNING] First run did NOT create RELATED keys! Required second run.');
+      console.log('[WARNING] This is the bug the user is describing!');
+    } else if (run1Keys.length > 0 && run2Keys.length > run1Keys.length) {
+      console.log('[WARNING] Second run added MORE keys! State not stable after first run.');
+    }
+
+    // After either run, we should have the relationships
+    expect(run2Keys.length).toBeGreaterThanOrEqual(2);
+    expect(afterRun2['RELATED[friend]']).toBeDefined();
+    expect(afterRun2['RELATED[sibling]']).toBeDefined();
+
+    // Ideally, first run should have created the keys (test for regression)
+    if (run1Keys.length > 0) {
+      console.log('\n[SUCCESS] First run correctly created RELATED keys (no bug)!');
+    } else {
+      console.log('\n[BUG REPRODUCED] First run failed to create keys, required second run!');
+    }
+  });
+
+  it('should detect rapid reversion of changes within same processing cycle', async () => {
+    console.log('\n=== RAPID REVERSION DETECTION TEST ===\n');
+
+    // User reports seeing changes appear then disappear within fraction of a second
+    // This test monitors for rapid writes that could indicate reversion
+    const testFile = { basename: 'reversion-test', path: 'Contacts/reversion-test.md', name: 'reversion-test.md' } as TFile;
+    const friend1 = { basename: 'friend1', path: 'Contacts/friend1.md', name: 'friend1.md' } as TFile;
+    const friend2 = { basename: 'friend2', path: 'Contacts/friend2.md', name: 'friend2.md' } as TFile;
+
+    [testFile, friend1, friend2].forEach(f => mockContactFiles.set(f.path, f));
+
+    fileContents.set(testFile.path, `---
+UID: reversion-uid
+FN: Reversion Test
+REV: 20230101T120000Z
+---
+
+#### Related
+- friend: [[Friend1]]
+- friend: [[Friend2]]
+
+#Contact`);
+
+    fileContents.set(friend1.path, `---\nUID: friend1-uid\nFN: Friend1\n---\n#Contact`);
+    fileContents.set(friend2.path, `---\nUID: friend2-uid\nFN: Friend2\n---\n#Contact`);
+
+    const testContact: Contact = { file: testFile, UID: 'reversion-uid', FN: 'Reversion Test' };
+
+    writeHistory = [];
+    console.log('[PROCESSING] Running processor and monitoring for rapid writes...');
+    
+    await RelatedListProcessor.process(testContact);
+
+    console.log(`\n[WRITE-ANALYSIS] Total writes: ${writeHistory.length}`);
+    
+    // Analyze each write for RELATED keys
+    const writeStates: Array<{ writeNum: number; timestamp: number; relatedKeys: string[]; relatedCount: number }> = [];
+    
+    writeHistory.forEach((write, idx) => {
+      const fm = extractFrontmatter(write.content);
+      const relatedKeys = Object.keys(fm).filter(k => k.startsWith('RELATED')).sort();
+      writeStates.push({
+        writeNum: idx + 1,
+        timestamp: write.timestamp,
+        relatedKeys: relatedKeys,
+        relatedCount: relatedKeys.length
+      });
+    });
+
+    // Look for reversion pattern: keys added then removed/changed
+    let reversionDetected = false;
+    for (let i = 1; i < writeStates.length; i++) {
+      const prev = writeStates[i - 1];
+      const curr = writeStates[i];
+      const timeDiff = curr.timestamp - prev.timestamp;
+      
+      console.log(`\nWrite #${curr.writeNum} (${timeDiff}ms after previous):`);
+      console.log(`  Keys: ${curr.relatedKeys.join(', ')}`);
+      
+      // Check if keys were lost
+      const lostKeys = prev.relatedKeys.filter(k => !curr.relatedKeys.includes(k));
+      if (lostKeys.length > 0) {
+        console.log(`  [REVERSION!] Lost keys from previous write: ${lostKeys.join(', ')}`);
+        reversionDetected = true;
+      }
+      
+      // Check if values changed for same keys
+      const changedKeys: string[] = [];
+      curr.relatedKeys.forEach(key => {
+        if (prev.relatedKeys.includes(key)) {
+          const prevContent = extractFrontmatter(writeHistory[i - 1].content);
+          const currContent = extractFrontmatter(writeHistory[i].content);
+          if (prevContent[key] !== currContent[key]) {
+            changedKeys.push(key);
+          }
+        }
+      });
+      
+      if (changedKeys.length > 0) {
+        console.log(`  [VALUE CHANGE] Keys with changed values: ${changedKeys.join(', ')}`);
+        changedKeys.forEach(key => {
+          const prevContent = extractFrontmatter(writeHistory[i - 1].content);
+          const currContent = extractFrontmatter(writeHistory[i].content);
+          console.log(`    ${key}: "${prevContent[key]}" -> "${currContent[key]}"`);
+        });
+      }
+    }
+
+    if (reversionDetected) {
+      console.log('\n[BUG DETECTED] Reversion pattern found - keys were lost between writes!');
+    } else {
+      console.log('\n[SUCCESS] No reversion detected - keys maintained throughout processing!');
+    }
+
+    // The test passes if we don't detect reversions
+    expect(reversionDetected).toBe(false);
+
+    // Verify final state has the expected relationships
+    const finalContent = fileContents.get(testFile.path)!;
+    const finalFrontmatter = extractFrontmatter(finalContent);
+    expect(finalFrontmatter['RELATED[friend]']).toBeDefined();
+    expect(finalFrontmatter['RELATED[1:friend]']).toBeDefined();
+  });
 });
