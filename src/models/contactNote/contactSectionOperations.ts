@@ -130,7 +130,8 @@ export class ContactSectionOperations {
       if (!line) continue;
 
       // Check for field type headers (e.g., "📧 Email", "Email", etc.)
-      const headerMatch = line.match(/^(?:[\p{Emoji}\uFE0F]+\s*)?(\w+)$/u);
+      // Only match known field type names to avoid false positives
+      const headerMatch = line.match(/^(?:[\p{Emoji}\uFE0F]+\s*)?(Email|Emails|Phone|Phones|Address|Addresses|Website|Websites|URL)s?$/ui);
       if (headerMatch) {
         // Flush any pending address
         if (currentFieldType === 'ADR' && addressBuffer.length > 0) {
@@ -191,6 +192,8 @@ export class ContactSectionOperations {
           if (labelMatch) {
             currentLabel = labelMatch[1];
           }
+          // Don't add label line to buffer
+          continue;
         } else {
           addressBuffer.push(line);
         }
@@ -212,7 +215,11 @@ export class ContactSectionOperations {
   private parseAddressBuffer(lines: string[], label: string, fields: ParsedContactField[]): void {
     if (lines.length === 0) return;
 
-    // Simple parsing: first line is street, middle lines are locality/region/postal, last is country
+    // Address parsing logic:
+    // - First line is always STREET
+    // - If 2 lines: second line is city/state/zip
+    // - If 3+ lines: second line is city/state/zip, last line is country
+    
     if (lines.length >= 1) {
       fields.push({
         fieldType: 'ADR',
@@ -223,8 +230,14 @@ export class ContactSectionOperations {
     }
     
     if (lines.length >= 2) {
+      // Determine which line contains city/state/zip
+      // If 3+ lines, it's the middle line (lines[1])
+      // If 2 lines, it's the last line (lines[1])
+      const cityLineIndex = lines.length >= 3 ? 1 : lines.length - 1;
+      const cityLine = lines[cityLineIndex];
+      
       // Parse "City, State ZIP" format
-      const cityMatch = lines[lines.length - 2].match(/^([^,]+),?\s*([A-Z]{2})?\s*(\d{5}(?:-\d{4})?)?$/);
+      const cityMatch = cityLine.match(/^([^,]+),?\s*([A-Z]{2})?\s*(\d{5}(?:-\d{4})?)?$/);
       if (cityMatch) {
         const [, locality, region, postal] = cityMatch;
         if (locality) {
@@ -257,7 +270,7 @@ export class ContactSectionOperations {
           fieldType: 'ADR',
           fieldLabel: label,
           component: 'LOCALITY',
-          value: lines[lines.length - 2]
+          value: cityLine
         });
       }
     }
