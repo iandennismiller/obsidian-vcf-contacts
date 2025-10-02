@@ -39,6 +39,9 @@ This document outlines user stories and use cases for managing contacts and rela
 ### 11. Incremental Relationship Management
 **As a user**, I want to add relationships (one at a time) to a contact over the course of several plugin load/unload cycles, with the expectation that relationships in the front matter and vcards will be curated and consistent.
 
+### 11a. Relationship De-duplication
+**As a user**, when I have duplicate relationships in my Related list (including cases where the same relationship appears with both gendered and ungendered terms like "mother" and "parent"), I want the plugin to automatically de-duplicate them. When a relationship appears twice - once with a gendered term (like "mother", "father", "sister", "brother") and once with an ungendered term (like "parent", "sibling") - the plugin should keep only the gendered version and infer the contact's gender from it. The plugin should also remove exact duplicate relationships where the same relationship type and contact appear multiple times. This ensures my Related list and frontmatter stay clean and consistent without manual intervention.
+
 ## Contact Data Management Stories
 
 ### 12. Contact Creation from Template

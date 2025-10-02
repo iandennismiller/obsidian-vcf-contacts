@@ -39,6 +39,8 @@ describe('SyncOperations', () => {
       resolveContact: vi.fn(),
       formatRelatedValue: vi.fn(),
       updateRelatedSectionInContent: vi.fn(),
+      inferGenderFromRelationship: vi.fn(),
+      convertToGenderlessType: vi.fn((type: string) => type), // Default: return same type
     } as any;
 
     syncOps = new SyncOperations(mockContactData, mockRelationshipOps);

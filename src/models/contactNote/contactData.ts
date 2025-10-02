@@ -3,7 +3,7 @@
  * Groups all contact-related data in one place to minimize cache misses.
  */
 
-import { TFile, App, parseYaml } from 'obsidian';
+import { TFile, App, parseYaml, stringifyYaml } from 'obsidian';
 import { Gender } from './types';
 
 /**
@@ -137,32 +137,44 @@ export class ContactData {
    * Update multiple frontmatter values in one operation
    */
   async updateMultipleFrontmatterValues(updates: Record<string, string>, skipRevUpdate = false): Promise<void> {
+    console.log(`[ContactData] updateMultipleFrontmatterValues called with ${Object.keys(updates).length} updates`);
     const frontmatter = await this.getFrontmatter();
     if (!frontmatter) {
+      console.log(`[ContactData] No frontmatter found, returning`);
       return;
     }
+
+    console.log(`[ContactData] Current frontmatter keys: ${Object.keys(frontmatter).join(', ')}`);
 
     // Check if any values have actually changed
     let hasChanges = false;
     for (const [key, value] of Object.entries(updates)) {
-      if (frontmatter[key] !== value) {
+      const currentValue = frontmatter[key];
+      const valuesMatch = currentValue === value;
+      console.log(`[ContactData] Checking ${key}: current="${currentValue}", new="${value}", match=${valuesMatch}`);
+      if (!valuesMatch) {
         hasChanges = true;
-        break;
       }
     }
 
+    console.log(`[ContactData] hasChanges: ${hasChanges}`);
     if (!hasChanges) {
+      console.log(`[ContactData] No changes detected, returning`);
       return; // No changes needed
     }
 
     // Apply all updates
     for (const [key, value] of Object.entries(updates)) {
       if (value === '') {
+        console.log(`[ContactData] Deleting key: ${key}`);
         delete frontmatter[key];
       } else {
+        console.log(`[ContactData] Setting ${key} = ${value}`);
         frontmatter[key] = value;
       }
     }
+
+    console.log(`[ContactData] After updates, frontmatter keys: ${Object.keys(frontmatter).join(', ')}`);
 
     // Update REV timestamp unless skipRevUpdate is true
     if (!skipRevUpdate) {
@@ -170,13 +182,13 @@ export class ContactData {
     }
 
     await this.saveFrontmatter(frontmatter);
+    console.log(`[ContactData] Frontmatter saved successfully`);
   }
 
   private async saveFrontmatter(frontmatter: Record<string, any>): Promise<void> {
     const content = await this.getContent();
-    const frontmatterYaml = Object.keys(frontmatter)
-      .map(key => `${key}: ${frontmatter[key]}`)
-      .join('\n');
+    // Use Obsidian's stringifyYaml to properly handle complex structures
+    const frontmatterYaml = stringifyYaml(frontmatter);
     
     const hasExistingFrontmatter = content.startsWith('---\n');
     let newContent: string;
@@ -184,16 +196,17 @@ export class ContactData {
     if (hasExistingFrontmatter) {
       const endIndex = content.indexOf('---\n', 4);
       if (endIndex !== -1) {
-        newContent = `---\n${frontmatterYaml}\n---\n${content.substring(endIndex + 4)}`;
+        newContent = `---\n${frontmatterYaml}---\n${content.substring(endIndex + 4)}`;
       } else {
-        newContent = `---\n${frontmatterYaml}\n---\n${content}`;
+        newContent = `---\n${frontmatterYaml}---\n${content}`;
       }
     } else {
-      newContent = `---\n${frontmatterYaml}\n---\n${content}`;
+      newContent = `---\n${frontmatterYaml}---\n${content}`;
     }
     
     await this.updateContent(newContent);
-    this._frontmatter = frontmatter;
+    // updateContent() already invalidates _frontmatter cache, so Obsidian's metadata cache
+    // will be used on next read. This ensures fresh data after write.
   }
 
   /**
