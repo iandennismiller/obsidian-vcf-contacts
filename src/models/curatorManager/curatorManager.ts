@@ -10,13 +10,21 @@ import { RunType } from './RunType';
 const processors = new Map<string, CuratorProcessor>();
 
 const processSingleContact = async (contact: Contact, runType: RunType) => {
-  const curator = [];
+  const results = [];
+  
+  // Run processors sequentially to avoid race conditions
+  // When multiple processors run concurrently with Promise.all(), they can
+  // read stale data and overwrite each other's changes to the same file
   for (const processor of processors.values()) {
     if (processor.runType === runType) {
-      curator.push(processor.process(contact));
+      const result = await processor.process(contact);
+      if (result) {
+        results.push(result);
+      }
     }
   }
-  return Promise.all(curator);
+  
+  return results;
 }
 
 /**
@@ -39,9 +47,14 @@ export class CuratorManager {
 
   /**
    * Process contacts with curator processors
+   * 
+   * Processes multiple contacts in parallel, but processors for each contact
+   * run sequentially to avoid race conditions when multiple processors modify
+   * the same file.
    */
   async process(contacts: Contact | Contact[], runType: RunType): Promise<CuratorQueItem[]> {
     const contactArray = Array.isArray(contacts) ? contacts : [contacts];
+    // Process contacts in parallel (safe - different files)
     const results = await Promise.all(
       contactArray.map((contact) => processSingleContact(contact, runType))
     );

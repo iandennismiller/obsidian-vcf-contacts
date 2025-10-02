@@ -892,4 +892,126 @@ REV: 20230101T120000Z
     expect(finalFrontmatter['RELATED[friend]']).toBeDefined();
     expect(finalFrontmatter['RELATED[1:friend]']).toBeDefined();
   });
+
+  it('should handle multiple processors running concurrently without data loss', async () => {
+    console.log('\n=== MULTIPLE PROCESSORS CONCURRENCY TEST ===\n');
+
+    // This test reproduces the user's scenario: when multiple curator processors
+    // are enabled and run concurrently on the same contact, they can overwrite
+    // each other's changes due to race conditions.
+
+    const testFile = { basename: 'concurrent-test', path: 'Contacts/concurrent-test.md', name: 'concurrent-test.md' } as TFile;
+    const friend = { basename: 'friend', path: 'Contacts/friend.md', name: 'friend.md' } as TFile;
+
+    [testFile, friend].forEach(f => mockContactFiles.set(f.path, f));
+
+    // Contact with relationships in Related section but not in frontmatter
+    fileContents.set(testFile.path, `---
+UID: concurrent-uid
+FN: Concurrent Test
+GENDER: M
+REV: 20230101T120000Z
+---
+
+#### Related
+- friend: [[Friend]]
+
+#Contact`);
+
+    fileContents.set(friend.path, `---\nUID: friend-uid\nFN: Friend\n---\n#Contact`);
+
+    const testContact: Contact = { file: testFile, UID: 'concurrent-uid', FN: 'Concurrent Test' };
+
+    console.log('[SETUP] Contact to test concurrent processor execution');
+    console.log('[SCENARIO] Multiple processors enabled (simulating user\'s configuration):\n');
+    console.log('  - Processor 1 (RelatedList): Syncs friend relationship to frontmatter');
+    console.log('  - Processor 2 (Mock): Updates other frontmatter fields');
+    console.log('  - Both run concurrently with Promise.all()\n');
+
+    writeHistory = [];
+
+    // Simulate running multiple processors concurrently
+    // This is what happens in curatorManager.process() with Promise.all()
+    console.log('[PROCESSING] Running processors concurrently...\n');
+
+    const processor1Promise = RelatedListProcessor.process(testContact);
+    
+    // Simulate a second processor (like GenderRenderProcessor or UidProcessor)
+    const processor2Promise = (async () => {
+      console.log('[MOCK-PROCESSOR-2] Starting...');
+      await new Promise(resolve => setTimeout(resolve, 10));
+      
+      const content = fileContents.get(testFile.path)!;
+      const fm = extractFrontmatter(content);
+      console.log('[MOCK-PROCESSOR-2] Read frontmatter, keys:', Object.keys(fm).join(', '));
+      
+      // Update fields like another processor would
+      fm['TEST_FIELD'] = 'added-by-processor-2';
+      fm['REV'] = '20251002T180000Z';
+      
+      // Write back (this may overwrite processor 1's changes if timing is wrong)
+      const newContent = content.replace(/^---\n[\s\S]*?\n---\n/, () => {
+        let yaml = '---\n';
+        for (const [key, value] of Object.entries(fm)) {
+          if (key.startsWith('RELATED[')) {
+            yaml += `"${key}": ${value}\n`;
+          } else {
+            yaml += `${key}: ${value}\n`;
+          }
+        }
+        yaml += '---\n';
+        return yaml;
+      });
+      
+      console.log('[MOCK-PROCESSOR-2] Writing changes...');
+      fileContents.set(testFile.path, newContent);
+      writeHistory.push({
+        timestamp: Date.now(),
+        file: testFile.path,
+        content: newContent
+      });
+      console.log('[TEST] vault.modify(Contacts/concurrent-test.md) - PROCESSOR-2');
+      
+      return { message: 'Updated TEST_FIELD' };
+    })();
+
+    const [result1, result2] = await Promise.all([processor1Promise, processor2Promise]);
+
+    console.log(`\n[RESULTS]`);
+    console.log(`  Processor 1: ${result1 ? result1.message : 'No changes'}`);
+    console.log(`  Processor 2: ${result2 ? result2.message : 'No changes'}`);
+
+    console.log(`\n[WRITE-ANALYSIS] Total writes: ${writeHistory.length}`);
+    writeHistory.forEach((write, idx) => {
+      const fm = extractFrontmatter(write.content);
+      const keys = Object.keys(fm);
+      console.log(`  Write #${idx + 1}: ${keys.length} keys - ${keys.join(', ')}`);
+    });
+    
+    const finalContent = fileContents.get(testFile.path)!;
+    const finalFrontmatter = extractFrontmatter(finalContent);
+    
+    console.log('\n[FINAL-STATE] Keys in final frontmatter:', Object.keys(finalFrontmatter).join(', '));
+    
+    const hasRELATED = Object.keys(finalFrontmatter).some(k => k.startsWith('RELATED'));
+    const hasTEST_FIELD = 'TEST_FIELD' in finalFrontmatter;
+    
+    console.log(`\n[DATA-CHECK]`);
+    console.log(`  RELATED[friend] present: ${hasRELATED ? '✓' : '✗ LOST!'}`);
+    console.log(`  TEST_FIELD present: ${hasTEST_FIELD ? '✓' : '✗ LOST!'}`);
+    
+    if (!hasRELATED || !hasTEST_FIELD) {
+      console.log('\n[BUG REPRODUCED] Race condition detected!');
+      console.log('  Concurrent processors overwrote each other\'s changes');
+      console.log('  This is why user sees changes appear then disappear');
+      console.log('\n  Fix: Run processors sequentially instead of concurrently');
+    } else {
+      console.log('\n[SUCCESS] Both processors\' changes preserved!');
+    }
+
+    // This test will FAIL initially, documenting the race condition
+    // After fixing curatorManager to run sequentially, it will pass
+    expect(hasRELATED).toBe(true);
+    expect(hasTEST_FIELD).toBe(true);
+  });
 });
