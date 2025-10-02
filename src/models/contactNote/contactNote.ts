@@ -17,6 +17,7 @@ import { RevisionOperations } from './revisionOperations';
 import { UIDOperations } from './uidOperations';
 import { AdvancedRelationshipOperations } from './advancedRelationshipOperations';
 import { RelationshipHelpers } from './relationshipHelpers';
+import { ContactSectionOperations } from './contactSectionOperations';
 
 // Re-export types for backward compatibility and external use
 export type { Contact, ParsedKey, Gender, ParsedRelationship, FrontmatterRelationship, ResolvedContact };
@@ -42,6 +43,7 @@ export class ContactNote {
   private uidOps: UIDOperations;
   private advancedRelationshipOps: AdvancedRelationshipOperations;
   private relationshipHelpers: RelationshipHelpers;
+  private contactSectionOps: ContactSectionOperations;
 
   constructor(app: App, settings: ContactsPluginSettings, file: TFile) {
     this.app = app;
@@ -59,6 +61,7 @@ export class ContactNote {
     this.uidOps = new UIDOperations(app, settings, this.contactData);
     this.advancedRelationshipOps = new AdvancedRelationshipOperations(app, settings, this.contactData, this.relationshipOps);
     this.relationshipHelpers = new RelationshipHelpers();
+    this.contactSectionOps = new ContactSectionOperations(this.contactData);
   }
 
   // === Core File Operations (directly from ContactData) ===
@@ -562,5 +565,35 @@ export class ContactNote {
    */
   async shouldUpdateFromVCF(record: Record<string, any>): Promise<boolean> {
     return this.revisionOps.shouldUpdateFromVCF(record);
+  }
+
+  // === Contact Section Operations ===
+
+  /**
+   * Parse Contact section from markdown
+   */
+  async parseContactSection() {
+    return this.contactSectionOps.parseContactSection();
+  }
+
+  /**
+   * Generate Contact section markdown from frontmatter
+   */
+  async generateContactSection(): Promise<string> {
+    return this.contactSectionOps.generateContactSection();
+  }
+
+  /**
+   * Update Contact section in markdown content
+   */
+  async updateContactSectionInContent(contactSection: string): Promise<void> {
+    return this.contactSectionOps.updateContactSectionInContent(contactSection);
+  }
+
+  /**
+   * Validate contact fields
+   */
+  validateContactFields(fields: any[]): string[] {
+    return this.contactSectionOps.validateContactFields(fields);
   }
 }
