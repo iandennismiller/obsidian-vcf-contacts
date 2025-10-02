@@ -84,7 +84,7 @@ REV: 20240101T120000Z
 ---
 
 #### Related
-- friend: [[Bob Jones]]
+- friend [[Bob Jones]]
 
 #Contact`;
 
@@ -180,7 +180,7 @@ FN: Bob Jones
     expect(updatedFrontmatter['RELATED[friend]']).toContain('bob-uid-456');
     
     // Verify the Related list still contains the relationship
-    expect(updatedContent).toContain('- friend: [[Bob Jones]]');
+    expect(updatedContent).toContain('- friend [[Bob Jones]]');
   });
 
   it('should add missing relationship from frontmatter to Related list without deleting from frontmatter', async () => {
@@ -286,7 +286,7 @@ FN: Diana White
     expect(fmResult?.message).toContain('Added 1 missing relationship');
     
     // Verify the relationship was added to the Related list
-    expect(updatedContent).toContain('- colleague: [[Diana White]]');
+    expect(updatedContent).toContain('- colleague [[Diana White]]');
     
     // Verify the frontmatter still contains the relationship
     expect(updatedContent).toContain('RELATED[colleague]: urn:uuid:diana-uid-012');
@@ -313,7 +313,7 @@ REV: 20240101T120000Z
 ---
 
 #### Related
-- friend: [[Bob Jones]]
+- friend [[Bob Jones]]
 
 #Contact`;
 
@@ -388,8 +388,8 @@ FN: Charlie Wilson
     expect(fmResult?.message).toContain('Added 1 missing relationship');
     
     // Verify both relationships exist in the final content
-    expect(updatedContent).toContain('- friend: [[Bob Jones]]');  // Should NOT be deleted!
-    expect(updatedContent).toContain('- colleague: [[Charlie Wilson]]');  // Should be added
+    expect(updatedContent).toContain('- friend [[Bob Jones]]');  // Should NOT be deleted!
+    expect(updatedContent).toContain('- colleague [[Charlie Wilson]]');  // Should be added
     expect(updatedContent).toContain('RELATED[colleague]: urn:uuid:charlie-uid-888');
   });
 
@@ -410,7 +410,7 @@ REV: 20240101T120000Z
 ---
 
 #### Related
-- spouse: [[Frank Miller]]
+- spouse [[Frank Miller]]
 
 #Contact`;
 
@@ -477,7 +477,7 @@ FN: Frank Miller
     expect(finalResult).toBeDefined();
     
     // Verify both representations exist in the final content
-    expect(updatedContent).toContain('- spouse: [[Frank Miller]]');
+    expect(updatedContent).toContain('- spouse [[Frank Miller]]');
     expect(updatedContent).toContain('RELATED[spouse]');
     expect(updatedContent).toContain('frank-uid-678');
   });
@@ -507,8 +507,8 @@ REV: 20240101T120000Z
 ---
 
 #### Related
-- friend: [[Ivan Petrov]]
-- colleague: [[Julia Wong]]
+- friend [[Ivan Petrov]]
+- colleague [[Julia Wong]]
 
 #Contact`;
 
@@ -593,9 +593,9 @@ FN: Kevin Singh
     
     // Verify all three relationships exist in both locations
     // Related list should have: friend Ivan, colleague Julia, neighbor Kevin
-    expect(updatedContent).toContain('- friend: [[Ivan Petrov]]');
-    expect(updatedContent).toContain('- colleague: [[Julia Wong]]');
-    expect(updatedContent).toContain('- neighbor: [[Kevin Singh]]');
+    expect(updatedContent).toContain('- friend [[Ivan Petrov]]');
+    expect(updatedContent).toContain('- colleague [[Julia Wong]]');
+    expect(updatedContent).toContain('- neighbor [[Kevin Singh]]');
     
     // Frontmatter should have: friend Ivan, colleague Julia, neighbor Kevin
     expect(updatedContent).toContain('RELATED[friend]');

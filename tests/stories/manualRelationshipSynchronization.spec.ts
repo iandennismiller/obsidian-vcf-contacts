@@ -65,7 +65,7 @@ RELATED[spouse]: urn:uuid:jane-uid-456
 ---
 
 #### Related
-- spouse: [[Jane Smith]]
+- spouse [[Jane Smith]]
 
 #Contact`);
       } else if (file.path === janeFile.path) {
@@ -85,7 +85,7 @@ RELATED[friend]: urn:uuid:john-uid-123
 ---
 
 #### Related
-- friend: [[John Doe]]
+- friend [[John Doe]]
 
 #Contact`);
       }
@@ -155,7 +155,7 @@ RELATED[colleague]: urn:uuid:charlie-uid-222
 ---
 
 #### Related
-- colleague: [[Charlie]]
+- colleague [[Charlie]]
 
 #Contact`);
       } else {
@@ -166,7 +166,7 @@ RELATED[colleague]: urn:uuid:alice-uid-111
 ---
 
 #### Related
-- colleague: [[Alice]]
+- colleague [[Alice]]
 
 #Contact`);
       }
@@ -221,7 +221,7 @@ RELATED[spouse]: urn:uuid:emily-uid-444
 ---
 
 #### Related
-- spouse: [[Emily]]
+- spouse [[Emily]]
 
 #Contact`);
       } else {
@@ -278,7 +278,7 @@ RELATED[friend]: urn:uuid:nonexistent-uid-999
 ---
 
 #### Related
-- friend: [[Nonexistent Person]]
+- friend [[Nonexistent Person]]
 
 #Contact`);
 

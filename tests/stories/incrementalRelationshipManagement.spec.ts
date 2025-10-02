@@ -57,7 +57,7 @@ RELATED[spouse]: name:Jane Doe
 John is a software developer.
 
 #### Related
-- spouse: [[Jane Doe]]
+- spouse [[Jane Doe]]
 
 #Contact`;
 
@@ -72,8 +72,8 @@ RELATED[spouse]: name:Jane Doe
 John is a software developer.
 
 #### Related
-- spouse: [[Jane Doe]]
-- parent: [[Bob Doe]]
+- spouse [[Jane Doe]]
+- parent [[Bob Doe]]
 
 #Contact`;
 
@@ -138,7 +138,7 @@ EMAIL: sarah@example.com
 Sarah is a project manager.
 
 #### Related
-- colleague: [[Mike Smith]]
+- colleague [[Mike Smith]]
 
 #Contact`;
 
@@ -154,8 +154,8 @@ RELATED[colleague]: name:Mike Smith
 Sarah is a project manager.
 
 #### Related
-- colleague: [[Mike Smith]]
-- friend: [[Emma Wilson]]
+- colleague [[Mike Smith]]
+- friend [[Emma Wilson]]
 
 #Contact`;
 
@@ -206,7 +206,7 @@ RELATED[friend]: name:Chris Green
 ---
 
 #### Related
-- friend: [[Chris Green]]
+- friend [[Chris Green]]
 
 #Contact`;
 
@@ -218,7 +218,7 @@ RELATED[friend]: name:Chris Green
 ---
 
 #### Related
-- colleague: [[Chris Green]]
+- colleague [[Chris Green]]
 
 #Contact`;
 
@@ -252,7 +252,7 @@ FN: Parent Contact
 ---
 
 #### Related
-- child: [[Child One]]
+- child [[Child One]]
 
 #Contact`;
 
@@ -264,8 +264,8 @@ RELATED[child]: name:Child One
 ---
 
 #### Related
-- child: [[Child One]]
-- child: [[Child Two]]
+- child [[Child One]]
+- child [[Child Two]]
 
 #Contact`;
 
@@ -278,9 +278,9 @@ RELATED[1:child]: name:Child Two
 ---
 
 #### Related
-- child: [[Child One]]
-- child: [[Child Two]]
-- child: [[Child Three]]
+- child [[Child One]]
+- child [[Child Two]]
+- child [[Child Three]]
 
 #Contact`;
 
@@ -341,9 +341,9 @@ RELATED[colleague]: name:Colleague Name
 ---
 
 #### Related
-- spouse: [[Partner Name]]
-- friend: [[Friend Name]]
-- colleague: [[Colleague Name]]
+- spouse [[Partner Name]]
+- friend [[Friend Name]]
+- colleague [[Colleague Name]]
 
 #Contact`;
 

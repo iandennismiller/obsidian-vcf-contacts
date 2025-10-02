@@ -84,16 +84,16 @@ FN: John Doe
       });
     });
 
-    it('should parse relationships with colon format (type: [[Name]]) for backward compatibility', async () => {
+    it('should parse relationships with colon format (type: [[Name]]) for backward compatibility (deprecated)', async () => {
       const content = `---
 UID: john-doe-123
 FN: John Doe
 ---
 
 #### Related
-- parent: [[Bob Doe]]
-- parent: [[Mary Doe]]
-- spouse: [[Jane Doe]]
+- parent [[Bob Doe]]
+- parent [[Mary Doe]]
+- spouse [[Jane Doe]]
 
 #Contact`;
 
@@ -122,7 +122,7 @@ UID: test-1
 ---
 
 ## related
-- spouse: [[Jane Doe]]
+- spouse [[Jane Doe]]
 
 #Contact`;
 
@@ -131,7 +131,7 @@ UID: test-2
 ---
 
 ### RELATED
-- friend: [[Bob Smith]]
+- friend [[Bob Smith]]
 
 #Contact`;
 
@@ -140,7 +140,7 @@ UID: test-3
 ---
 
 ###### ReLaTeD
-- colleague: [[Alice Jones]]
+- colleague [[Alice Jones]]
 
 #Contact`;
 
@@ -189,8 +189,8 @@ UID: john-doe-123
 ---
 
 #### Related
-- parent: [[Bob Doe]]
-- spouse: [[Jane Doe]]
+- parent [[Bob Doe]]
+- spouse [[Jane Doe]]
 
 #Contact`;
 
@@ -211,9 +211,9 @@ UID: john-doe-123
 ---
 
 #### Related
-- parent: [[Bob Doe]]
+- parent [[Bob Doe]]
 - invalid line without proper format
-- parent: [[Mary Doe]]
+- parent [[Mary Doe]]
 
 #Contact`;
 
@@ -452,7 +452,7 @@ UID: john-doe-123
 ---
 
 #### Related
-- parent: [[Old Parent]]
+- parent [[Old Parent]]
 
 #### Notes
 Some notes.
@@ -470,10 +470,10 @@ Some notes.
       await relationshipOperations.updateRelatedSectionInContent(newRelationships);
 
       expect(mockContactData.updateContent).toHaveBeenCalledWith(
-        expect.stringContaining('- parent: [[Bob Doe]]')
+        expect.stringContaining('- parent [[Bob Doe]]')
       );
       expect(mockContactData.updateContent).toHaveBeenCalledWith(
-        expect.stringContaining('- parent: [[Mary Doe]]')
+        expect.stringContaining('- parent [[Mary Doe]]')
       );
     });
 
@@ -497,7 +497,7 @@ Some notes.
       await relationshipOperations.updateRelatedSectionInContent(newRelationships);
 
       expect(mockContactData.updateContent).toHaveBeenCalledWith(
-        expect.stringContaining('#### Related\n- spouse: [[Jane Doe]]')
+        expect.stringContaining('#### Related\n- spouse [[Jane Doe]]')
       );
     });
 
@@ -507,7 +507,7 @@ UID: john-doe-123
 ---
 
 #### Related
-- parent: [[Bob Doe]]
+- parent [[Bob Doe]]
 
 #Contact`;
 
@@ -534,7 +534,7 @@ Important notes about John.
 - Meeting notes
 
 #### Related
-- spouse: [[Old Spouse]]
+- spouse [[Old Spouse]]
 
 #### Contact Info
 Email: john@example.com
@@ -553,7 +553,7 @@ Phone: 555-1234
 
       // Should update Related section
       expect(mockContactData.updateContent).toHaveBeenCalledWith(
-        expect.stringContaining('- spouse: [[Jane Doe]]')
+        expect.stringContaining('- spouse [[Jane Doe]]')
       );
 
       // Should preserve other sections

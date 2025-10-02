@@ -52,8 +52,8 @@ FN: John Doe
 ---
 
 #### Related
-- parent: [[Bob Doe]]
-- parent: [[Bob Doe]]
+- parent [[Bob Doe]]
+- parent [[Bob Doe]]
 
 #Contact`;
 
@@ -81,8 +81,8 @@ FN: John Doe
 ---
 
 #### Related
-- parent: [[Bob Doe]]
-- father: [[Bob Doe]]
+- parent [[Bob Doe]]
+- father [[Bob Doe]]
 
 #Contact`;
 
@@ -110,8 +110,8 @@ FN: Jane Doe
 ---
 
 #### Related
-- mother: [[Mary Smith]]
-- parent: [[Mary Smith]]
+- mother [[Mary Smith]]
+- parent [[Mary Smith]]
 
 #Contact`;
 
@@ -138,12 +138,12 @@ FN: Alice Jones
 ---
 
 #### Related
-- parent: [[Bob Jones]]
-- father: [[Bob Jones]]
-- parent: [[Mary Jones]]
-- mother: [[Mary Jones]]
-- sibling: [[Tom Jones]]
-- brother: [[Tom Jones]]
+- parent [[Bob Jones]]
+- father [[Bob Jones]]
+- parent [[Mary Jones]]
+- mother [[Mary Jones]]
+- sibling [[Tom Jones]]
+- brother [[Tom Jones]]
 
 #Contact`;
 
@@ -173,9 +173,9 @@ FN: Test User
 ---
 
 #### Related
-- parent: [[Bob Doe]]
-- parent: [[bob doe]]
-- parent: [[BOB DOE]]
+- parent [[Bob Doe]]
+- parent [[bob doe]]
+- parent [[BOB DOE]]
 
 #Contact`;
 
@@ -202,8 +202,8 @@ FN: Child User
 ---
 
 #### Related
-- father: [[Bob Doe]]
-- mother: [[Mary Doe]]
+- father [[Bob Doe]]
+- mother [[Mary Doe]]
 
 #Contact`;
 
@@ -230,8 +230,8 @@ FN: User Test
 ---
 
 #### Related
-- sister: [[Jane Doe]]
-- sibling: [[Jane Doe]]
+- sister [[Jane Doe]]
+- sibling [[Jane Doe]]
 
 #Contact`;
 
@@ -259,10 +259,10 @@ FN: Family User
 ---
 
 #### Related
-- parent: [[Bob Doe]]
-- parent: [[Bob Doe]]
-- mother: [[Mary Doe]]
-- parent: [[Mary Doe]]
+- parent [[Bob Doe]]
+- parent [[Bob Doe]]
+- mother [[Mary Doe]]
+- parent [[Mary Doe]]
 
 #Contact`;
 
@@ -279,8 +279,8 @@ FN: Family User
 
     expect(result.success).toBe(true);
     // After deduplication, should have:
-    // - parent: [[Bob Doe]] (kept first ungendered)
-    // - mother: [[Mary Doe]] (kept gendered over ungendered)
+    // - parent [[Bob Doe]] (kept first ungendered)
+    // - mother [[Mary Doe]] (kept gendered over ungendered)
     // In frontmatter as RELATED[parent] and RELATED[1:parent]
   });
 
@@ -294,9 +294,9 @@ FN: Sync Test
 ---
 
 #### Related
-- parent: [[Bob Doe]]
-- father: [[Bob Doe]]
-- parent: [[Mary Doe]]
+- parent [[Bob Doe]]
+- father [[Bob Doe]]
+- parent [[Mary Doe]]
 
 #Contact`;
 
@@ -329,9 +329,9 @@ FN: Multi Rel Test
 ---
 
 #### Related
-- friend: [[Bob Doe]]
-- parent: [[Bob Doe]]
-- father: [[Bob Doe]]
+- friend [[Bob Doe]]
+- parent [[Bob Doe]]
+- father [[Bob Doe]]
 
 #Contact`;
 

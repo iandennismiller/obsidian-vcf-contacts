@@ -82,7 +82,7 @@ These notes should not be exported to VCF.
 - 2023-08: Project kickoff
 
 #### Related
-- colleague: [[Jane Smith]]
+- colleague [[Jane Smith]]
 
 #Contact`;
 
@@ -183,7 +183,7 @@ EMAIL: obs@example.com
 - [x] Completed task
 
 #### Related
-- colleague: [[Jane Smith]]
+- colleague [[Jane Smith]]
 
 #Contact #important`;
 

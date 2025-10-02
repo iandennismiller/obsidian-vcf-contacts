@@ -53,9 +53,9 @@ RELATED[2:friend]: name:Friend Three
 ---
 
 #### Related
-- friend: [[Friend One]]
-- friend: [[Friend Two]]
-- friend: [[Friend Three]]
+- friend [[Friend One]]
+- friend [[Friend Two]]
+- friend [[Friend Three]]
 
 #Contact`;
 
@@ -87,8 +87,8 @@ RELATED[1:neighbor]: name:Across Street Neighbor
 ---
 
 #### Related
-- neighbor: [[Next Door Neighbor]]
-- neighbor: [[Across Street Neighbor]]
+- neighbor [[Next Door Neighbor]]
+- neighbor [[Across Street Neighbor]]
 
 #Contact`;
 
@@ -119,8 +119,8 @@ RELATED[1:classmate]: name:Classmate Two
 ---
 
 #### Related
-- classmate: [[Classmate One]]
-- classmate: [[Classmate Two]]
+- classmate [[Classmate One]]
+- classmate [[Classmate Two]]
 
 #Contact`;
 
@@ -152,9 +152,9 @@ RELATED[2:teammate]: name:Teammate Three
 ---
 
 #### Related
-- teammate: [[Teammate One]]
-- teammate: [[Teammate Two]]
-- teammate: [[Teammate Three]]
+- teammate [[Teammate One]]
+- teammate [[Teammate Two]]
+- teammate [[Teammate Three]]
 
 #Contact`;
 
@@ -188,10 +188,10 @@ RELATED[teammate]: name:Soccer Teammate
 ---
 
 #### Related
-- friend: [[Best Friend]]
-- neighbor: [[Friendly Neighbor]]
-- classmate: [[Old Classmate]]
-- teammate: [[Soccer Teammate]]
+- friend [[Best Friend]]
+- neighbor [[Friendly Neighbor]]
+- classmate [[Old Classmate]]
+- teammate [[Soccer Teammate]]
 
 #Contact`;
 
@@ -227,8 +227,8 @@ RELATED[1:roommate]: name:Former Roommate
 ---
 
 #### Related
-- roommate: [[Current Roommate]]
-- roommate: [[Former Roommate]]
+- roommate [[Current Roommate]]
+- roommate [[Former Roommate]]
 
 #Contact`;
 
@@ -259,8 +259,8 @@ RELATED[1:acquaintance]: name:Casual Contact Two
 ---
 
 #### Related
-- acquaintance: [[Casual Contact One]]
-- acquaintance: [[Casual Contact Two]]
+- acquaintance [[Casual Contact One]]
+- acquaintance [[Casual Contact Two]]
 
 #Contact`;
 
@@ -289,8 +289,8 @@ FN: Sync Social Contact
 ---
 
 #### Related
-- friend: [[New Friend]]
-- neighbor: [[New Neighbor]]
+- friend [[New Friend]]
+- neighbor [[New Neighbor]]
 
 #Contact`;
 

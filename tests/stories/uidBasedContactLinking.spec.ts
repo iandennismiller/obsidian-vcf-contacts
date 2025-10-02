@@ -60,7 +60,7 @@ RELATED[spouse]: urn:uuid:jane-doe-456
 ---
 
 #### Related
-- wife: [[Jane Doe]]
+- wife [[Jane Doe]]
 
 #Contact`;
 
@@ -111,7 +111,7 @@ RELATED[friend]: urn:uuid:related-456
 ---
 
 #### Related
-- friend: [[Old Related Name]]
+- friend [[Old Related Name]]
 
 #Contact`;
 
@@ -161,7 +161,7 @@ RELATED[friend]: urn:uuid:target-456
 ---
 
 #### Related
-- friend: [[Old Target Name]]
+- friend [[Old Target Name]]
 
 #Contact`;
 
@@ -215,7 +215,7 @@ RELATED[friend]: urn:uuid:correct-456
 ---
 
 #### Related
-- friend: [[Wrong Target Name]]
+- friend [[Wrong Target Name]]
 
 #Contact`;
 
@@ -272,7 +272,7 @@ FN: Name Only Contact
 ---
 
 #### Related
-- friend: [[Target By Name]]
+- friend [[Target By Name]]
 
 #Contact`;
 
@@ -321,7 +321,7 @@ FN: Upgrade Source
 ---
 
 #### Related
-- colleague: [[Upgrade Target]]
+- colleague [[Upgrade Target]]
 
 #Contact`;
 
@@ -409,7 +409,7 @@ RELATED[mentor]: urn:uuid:old-target-456
 ---
 
 #### Related
-- mentor: [[Integrity Target]]
+- mentor [[Integrity Target]]
 
 #Contact`;
 
@@ -490,10 +490,10 @@ RELATED[1:colleague]: name:Colleague Two
 ---
 
 #### Related
-- friend: [[Friend One]]
-- friend: [[Friend Two]]
-- colleague: [[Colleague One]]
-- colleague: [[Colleague Two]]
+- friend [[Friend One]]
+- friend [[Friend Two]]
+- colleague [[Colleague One]]
+- colleague [[Colleague Two]]
 
 #Contact`;
 

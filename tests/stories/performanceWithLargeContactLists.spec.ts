@@ -232,7 +232,7 @@ RELATED[colleague]: urn:uuid:${contacts[nextIndex].uid}
 ---
 
 #### Related
-- colleague: [[Network ${nextIndex}]]
+- colleague [[Network ${nextIndex}]]
 
 #Contact`);
     });
