@@ -16,8 +16,14 @@ const processSingleContact = async (contact: Contact, runType: RunType) => {
   // When multiple processors run concurrently with Promise.all(), they can
   // read stale data and overwrite each other's changes to the same file
   for (const processor of processors.values()) {
-    if (processor.runType === runType) {
-      const result = await processor.process(contact);
+    // When called with MANUAL run type, run all IMPROVEMENT processors
+    // regardless of their settings (user explicitly invoked them)
+    const shouldRun = runType === RunType.MANUAL 
+      ? processor.runType === RunType.IMPROVEMENT 
+      : processor.runType === runType;
+    
+    if (shouldRun) {
+      const result = await processor.process(contact, runType);
       if (result) {
         results.push(result);
       }
@@ -120,8 +126,8 @@ export class CuratorManager {
         return;
       }
 
-      // Run curator processors
-      const results = await this.process(contact, RunType.IMPROVEMENT);
+      // Run curator processors with MANUAL run type to bypass settings checks
+      const results = await this.process(contact, RunType.MANUAL);
       
       if (results.length === 0) {
         new Notice('No curator actions needed for this contact');
@@ -149,7 +155,8 @@ export class CuratorManager {
           const contacts = await this.contactManager.getFrontmatterFromFiles([file]);
           const contact = contacts[0];
           if (contact) {
-            const results = await this.process(contact, RunType.IMPROVEMENT);
+            // Use MANUAL run type for bulk operations to bypass settings checks
+            const results = await this.process(contact, RunType.MANUAL);
             totalActions += results.length;
           }
         } catch (error: any) {

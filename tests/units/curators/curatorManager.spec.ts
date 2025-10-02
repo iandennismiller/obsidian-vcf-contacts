@@ -117,7 +117,7 @@ describe('CuratorManager', () => {
       const results = await curatorManager.process(mockContact, RunType.IMPROVEMENT);
       
       expect(results).toBeInstanceOf(Array);
-      expect(mockProcessorWithResult.process).toHaveBeenCalledWith(mockContact);
+      expect(mockProcessorWithResult.process).toHaveBeenCalledWith(mockContact, RunType.IMPROVEMENT);
     });
 
     it('should process array of contacts', async () => {
@@ -153,8 +153,19 @@ describe('CuratorManager', () => {
       await curatorManager.process(mockContact, RunType.IMMEDIATELY);
       
       // Only mockProcessor (IMMEDIATELY) should be called
-      expect(mockProcessor.process).toHaveBeenCalledWith(mockContact);
+      expect(mockProcessor.process).toHaveBeenCalledWith(mockContact, RunType.IMMEDIATELY);
       expect(mockProcessorWithResult.process).not.toHaveBeenCalled();
+    });
+
+    it('should run IMPROVEMENT processors when called with MANUAL run type', async () => {
+      curatorManager.register(mockProcessor); // IMMEDIATELY
+      curatorManager.register(mockProcessorWithResult); // IMPROVEMENT
+      
+      await curatorManager.process(mockContact, RunType.MANUAL);
+      
+      // Only mockProcessorWithResult (IMPROVEMENT) should be called with MANUAL type
+      expect(mockProcessor.process).not.toHaveBeenCalled();
+      expect(mockProcessorWithResult.process).toHaveBeenCalledWith(mockContact, RunType.MANUAL);
     });
   });
 
@@ -356,7 +367,7 @@ describe('CuratorManager', () => {
       const results = await curatorService.process(mockContact, RunType.IMPROVEMENT);
       
       expect(results).toBeInstanceOf(Array);
-      expect(mockProcessorWithResult.process).toHaveBeenCalledWith(mockContact);
+      expect(mockProcessorWithResult.process).toHaveBeenCalledWith(mockContact, RunType.IMPROVEMENT);
     });
   });
 

@@ -1,0 +1,505 @@
+/**
+ * Contact Section operations that work directly with ContactData
+ * for parsing and generating the ## Contact section in markdown.
+ * 
+ * This module provides bidirectional sync between frontmatter contact fields
+ * (EMAIL, TEL, ADR, URL, etc.) and a human-readable Contact section in markdown.
+ */
+
+import { ContactData } from './contactData';
+
+/**
+ * Represents a parsed contact field from the Contact section
+ */
+export interface ParsedContactField {
+  /** Field type (EMAIL, TEL, ADR, URL) */
+  fieldType: string;
+  /** Field subtype/label (HOME, WORK, CELL, etc.) or numeric index */
+  fieldLabel: string;
+  /** Field value */
+  value: string;
+  /** For structured fields like ADR, the component (STREET, LOCALITY, etc.) */
+  component?: string;
+}
+
+/**
+ * Represents a grouped set of contact fields for display
+ */
+export interface ContactFieldGroup {
+  /** Field type (EMAIL, TEL, ADR, URL) */
+  fieldType: string;
+  /** Display icon/emoji for the field type */
+  icon: string;
+  /** Display name for the field type */
+  displayName: string;
+  /** Individual fields in this group */
+  fields: Array<{
+    label: string;
+    value: string;
+    isMultiLine?: boolean;
+  }>;
+}
+
+/**
+ * Template for parsing and formatting contact fields
+ */
+export interface FuzzyTemplate {
+  /** Field type this template applies to */
+  fieldType: string;
+  /** Template string for display (e.g., "{TYPE}: {VALUE}") */
+  displayTemplate: string;
+  /** Regex pattern for parsing */
+  parsePattern: RegExp;
+  /** Icon/emoji for visual indication */
+  icon?: string;
+  /** Display name */
+  displayName?: string;
+}
+
+/**
+ * Contact Section operations that work directly with ContactData
+ * to minimize data access overhead and improve cache locality.
+ */
+export class ContactSectionOperations {
+  private contactData: ContactData;
+  
+  // Default templates for common field types
+  private static readonly DEFAULT_TEMPLATES: Record<string, FuzzyTemplate> = {
+    EMAIL: {
+      fieldType: 'EMAIL',
+      displayTemplate: '- {TYPE}: {VALUE}',
+      parsePattern: /^-\s*([^:]+):\s*(.+)$/,
+      icon: '📧',
+      displayName: 'Email'
+    },
+    TEL: {
+      fieldType: 'TEL',
+      displayTemplate: '- {TYPE}: {VALUE}',
+      parsePattern: /^-\s*([^:]+):\s*(.+)$/,
+      icon: '📞',
+      displayName: 'Phone'
+    },
+    URL: {
+      fieldType: 'URL',
+      displayTemplate: '- {TYPE}: {VALUE}',
+      parsePattern: /^-\s*([^:]+):\s*(.+)$/,
+      icon: '🌐',
+      displayName: 'Website'
+    },
+    ADR: {
+      fieldType: 'ADR',
+      displayTemplate: '{STREET}\n{LOCALITY}, {REGION} {POSTAL}\n{COUNTRY}',
+      parsePattern: /^(.+)$/,
+      icon: '🏠',
+      displayName: 'Address'
+    }
+  };
+
+  constructor(contactData: ContactData) {
+    this.contactData = contactData;
+  }
+
+  // === Contact Section Parsing ===
+
+  /**
+   * Parse Contact section from markdown content
+   * Returns parsed contact fields that can be synced to frontmatter
+   */
+  async parseContactSection(): Promise<ParsedContactField[]> {
+    const content = await this.contactData.getContent();
+    const fields: ParsedContactField[] = [];
+
+    // Find the Contact section - case-insensitive and depth-agnostic
+    // Matches any heading level (##, ###, ####, etc.) with "Contact" in any case
+    const contactSectionMatch = content.match(/(^|\n)(#{2,})\s*contact\s*\n([\s\S]*?)(?=\n#{2,}\s|\n\n(?:#|$)|\n$)/i);
+    if (!contactSectionMatch) {
+      console.debug(`[ContactSectionOperations] No Contact section found in content`);
+      return fields;
+    }
+
+    const contactContent = contactSectionMatch[3];
+    console.debug(`[ContactSectionOperations] Found Contact section content: ${contactContent.substring(0, 200)}`);
+    
+    const lines = contactContent.split('\n');
+    let currentFieldType: string | null = null;
+    let currentLabel: string | null = null;
+    let addressBuffer: string[] = [];
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+
+      // Check for field type headers (e.g., "📧 Email", "Email", etc.)
+      // Only match known field type names to avoid false positives
+      const headerMatch = line.match(/^(?:[\p{Emoji}\uFE0F]+\s*)?(Email|Emails|Phone|Phones|Address|Addresses|Website|Websites|URL)s?$/ui);
+      if (headerMatch) {
+        // Flush any pending address
+        if (currentFieldType === 'ADR' && addressBuffer.length > 0) {
+          this.parseAddressBuffer(addressBuffer, currentLabel || '1', fields);
+          addressBuffer = [];
+        }
+
+        const headerText = headerMatch[1].toUpperCase();
+        // Map common names to field types
+        if (headerText === 'EMAIL' || headerText === 'EMAILS') {
+          currentFieldType = 'EMAIL';
+        } else if (headerText === 'PHONE' || headerText === 'PHONES') {
+          currentFieldType = 'TEL';
+        } else if (headerText === 'ADDRESS' || headerText === 'ADDRESSES') {
+          currentFieldType = 'ADR';
+        } else if (headerText === 'WEBSITE' || headerText === 'WEBSITES' || headerText === 'URL') {
+          currentFieldType = 'URL';
+        } else {
+          currentFieldType = null;
+        }
+        continue;
+      }
+
+      // Parse field lines based on current type
+      if (currentFieldType && currentFieldType !== 'ADR') {
+        // Parse simple fields (EMAIL, TEL, URL) with pattern "- Label: Value"
+        const fieldMatch = line.match(/^-\s*([^:]+):\s*(.+)$/);
+        if (fieldMatch) {
+          const [, label, value] = fieldMatch;
+          fields.push({
+            fieldType: currentFieldType,
+            fieldLabel: label.trim(),
+            value: value.trim()
+          });
+        } else {
+          // Try without label (just "- value")
+          const simpleMatch = line.match(/^-\s*(.+)$/);
+          if (simpleMatch) {
+            // Use numeric index for unlabeled fields
+            const existingCount = fields.filter(f => f.fieldType === currentFieldType).length;
+            fields.push({
+              fieldType: currentFieldType,
+              fieldLabel: String(existingCount + 1),
+              value: simpleMatch[1].trim()
+            });
+          }
+        }
+      } else if (currentFieldType === 'ADR') {
+        // Buffer address lines for multi-line parsing
+        if (line.startsWith('(') || line.match(/^\w+:/)) {
+          // Flush previous address
+          if (addressBuffer.length > 0) {
+            this.parseAddressBuffer(addressBuffer, currentLabel || '1', fields);
+            addressBuffer = [];
+          }
+          // Extract label if present
+          const labelMatch = line.match(/^\(([^)]+)\)/);
+          if (labelMatch) {
+            currentLabel = labelMatch[1];
+          }
+          // Don't add label line to buffer
+          continue;
+        } else {
+          addressBuffer.push(line);
+        }
+      }
+    }
+
+    // Flush any remaining address
+    if (currentFieldType === 'ADR' && addressBuffer.length > 0) {
+      this.parseAddressBuffer(addressBuffer, currentLabel || '1', fields);
+    }
+
+    console.debug(`[ContactSectionOperations] Parsed ${fields.length} contact fields`);
+    return fields;
+  }
+
+  /**
+   * Parse buffered address lines into structured address components
+   */
+  private parseAddressBuffer(lines: string[], label: string, fields: ParsedContactField[]): void {
+    if (lines.length === 0) return;
+
+    // Address parsing logic:
+    // - First line is always STREET
+    // - If 2 lines: second line is city/state/zip
+    // - If 3+ lines: second line is city/state/zip, last line is country
+    
+    if (lines.length >= 1) {
+      fields.push({
+        fieldType: 'ADR',
+        fieldLabel: label,
+        component: 'STREET',
+        value: lines[0]
+      });
+    }
+    
+    if (lines.length >= 2) {
+      // Determine which line contains city/state/zip
+      // If 3+ lines, it's the middle line (lines[1])
+      // If 2 lines, it's the last line (lines[1])
+      const cityLineIndex = lines.length >= 3 ? 1 : lines.length - 1;
+      const cityLine = lines[cityLineIndex];
+      
+      // Parse "City, State ZIP" format
+      const cityMatch = cityLine.match(/^([^,]+),?\s*([A-Z]{2})?\s*(\d{5}(?:-\d{4})?)?$/);
+      if (cityMatch) {
+        const [, locality, region, postal] = cityMatch;
+        if (locality) {
+          fields.push({
+            fieldType: 'ADR',
+            fieldLabel: label,
+            component: 'LOCALITY',
+            value: locality.trim()
+          });
+        }
+        if (region) {
+          fields.push({
+            fieldType: 'ADR',
+            fieldLabel: label,
+            component: 'REGION',
+            value: region.trim()
+          });
+        }
+        if (postal) {
+          fields.push({
+            fieldType: 'ADR',
+            fieldLabel: label,
+            component: 'POSTAL',
+            value: postal.trim()
+          });
+        }
+      } else {
+        // Fallback: treat as locality
+        fields.push({
+          fieldType: 'ADR',
+          fieldLabel: label,
+          component: 'LOCALITY',
+          value: cityLine
+        });
+      }
+    }
+    
+    if (lines.length >= 3) {
+      fields.push({
+        fieldType: 'ADR',
+        fieldLabel: label,
+        component: 'COUNTRY',
+        value: lines[lines.length - 1]
+      });
+    }
+  }
+
+  // === Contact Section Generation ===
+
+  /**
+   * Generate Contact section markdown from frontmatter fields
+   * Returns the markdown content for the Contact section
+   */
+  async generateContactSection(): Promise<string> {
+    const frontmatter = await this.contactData.getFrontmatter();
+    if (!frontmatter) return '';
+
+    const groups = this.groupContactFields(frontmatter);
+    if (groups.length === 0) return '';
+
+    let markdown = '## Contact\n\n';
+
+    for (const group of groups) {
+      markdown += `${group.icon} ${group.displayName}\n`;
+      for (const field of group.fields) {
+        if (field.isMultiLine) {
+          // Multi-line field (e.g., address)
+          markdown += `(${field.label})\n${field.value}\n\n`;
+        } else {
+          // Single-line field
+          markdown += `- ${field.label}: ${field.value}\n`;
+        }
+      }
+      markdown += '\n';
+    }
+
+    return markdown.trim();
+  }
+
+  /**
+   * Group frontmatter contact fields by type for organized display
+   */
+  private groupContactFields(frontmatter: Record<string, any>): ContactFieldGroup[] {
+    const groups: Map<string, ContactFieldGroup> = new Map();
+
+    // Define field order
+    const fieldOrder = ['EMAIL', 'TEL', 'ADR', 'URL'];
+
+    for (const [key, value] of Object.entries(frontmatter)) {
+      // Parse field type and label from key (e.g., "EMAIL[HOME]", "ADR[HOME].STREET")
+      const match = key.match(/^(EMAIL|TEL|ADR|URL)\[([^\]]+)\](?:\.(.+))?$/);
+      if (!match) continue;
+
+      const [, fieldType, label, component] = match;
+      const template = ContactSectionOperations.DEFAULT_TEMPLATES[fieldType];
+      if (!template) continue;
+
+      // Get or create group
+      if (!groups.has(fieldType)) {
+        groups.set(fieldType, {
+          fieldType,
+          icon: template.icon || '',
+          displayName: template.displayName || fieldType,
+          fields: []
+        });
+      }
+
+      const group = groups.get(fieldType)!;
+
+      if (fieldType === 'ADR') {
+        // Handle structured address fields
+        this.addAddressField(group, label, component, value);
+      } else {
+        // Handle simple fields
+        group.fields.push({
+          label,
+          value: String(value)
+        });
+      }
+    }
+
+    // Return groups in preferred order
+    return fieldOrder
+      .map(type => groups.get(type))
+      .filter((g): g is ContactFieldGroup => g !== undefined);
+  }
+
+  /**
+   * Add an address component to the address group
+   */
+  private addAddressField(group: ContactFieldGroup, label: string, component: string | undefined, value: any): void {
+    // Find or create address entry for this label
+    let addressField = group.fields.find(f => f.label === label);
+    if (!addressField) {
+      addressField = {
+        label,
+        value: '',
+        isMultiLine: true
+      };
+      group.fields.push(addressField);
+    }
+
+    // Build multi-line address format
+    const componentValues: Record<string, string> = {};
+    
+    // Parse existing value to extract components
+    if (addressField.value) {
+      const lines = addressField.value.split('\n');
+      if (lines[0]) componentValues.STREET = lines[0];
+      if (lines[1]) {
+        const cityLine = lines[1];
+        const parts = cityLine.split(',');
+        if (parts[0]) componentValues.LOCALITY = parts[0].trim();
+        if (parts[1]) {
+          const regionPostal = parts[1].trim().split(/\s+/);
+          if (regionPostal[0]) componentValues.REGION = regionPostal[0];
+          if (regionPostal[1]) componentValues.POSTAL = regionPostal[1];
+        }
+      }
+      if (lines[2]) componentValues.COUNTRY = lines[2];
+    }
+
+    // Update with new component value
+    if (component) {
+      componentValues[component] = String(value);
+    }
+
+    // Rebuild address string
+    const parts: string[] = [];
+    if (componentValues.STREET) parts.push(componentValues.STREET);
+    
+    const cityLine: string[] = [];
+    if (componentValues.LOCALITY) cityLine.push(componentValues.LOCALITY);
+    const regionPostal: string[] = [];
+    if (componentValues.REGION) regionPostal.push(componentValues.REGION);
+    if (componentValues.POSTAL) regionPostal.push(componentValues.POSTAL);
+    if (regionPostal.length > 0) {
+      cityLine.push(regionPostal.join(' '));
+    }
+    if (cityLine.length > 0) {
+      parts.push(cityLine.join(', '));
+    }
+    
+    if (componentValues.COUNTRY) parts.push(componentValues.COUNTRY);
+
+    addressField.value = parts.join('\n');
+  }
+
+  // === Contact Section Validation ===
+
+  /**
+   * Validate contact information
+   * Returns validation warnings without blocking operations
+   */
+  validateContactFields(fields: ParsedContactField[]): string[] {
+    const warnings: string[] = [];
+
+    for (const field of fields) {
+      switch (field.fieldType) {
+        case 'EMAIL':
+          if (!this.isValidEmail(field.value)) {
+            warnings.push(`Invalid email format: ${field.value}`);
+          }
+          break;
+        case 'TEL':
+          if (!this.isValidPhone(field.value)) {
+            warnings.push(`Invalid phone format: ${field.value}`);
+          }
+          break;
+        case 'URL':
+          if (!this.isValidURL(field.value)) {
+            warnings.push(`Invalid URL format: ${field.value}`);
+          }
+          break;
+      }
+    }
+
+    return warnings;
+  }
+
+  private isValidEmail(email: string): boolean {
+    // Basic email validation
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  }
+
+  private isValidPhone(phone: string): boolean {
+    // Flexible phone validation - just check for digits
+    return /\d/.test(phone);
+  }
+
+  private isValidURL(url: string): boolean {
+    // Basic URL validation
+    return /^https?:\/\/.+/.test(url);
+  }
+
+  // === Contact Section Update ===
+
+  /**
+   * Update the Contact section in markdown content
+   * Replaces existing Contact section or adds it before the final hashtags
+   */
+  async updateContactSectionInContent(contactSection: string): Promise<void> {
+    const content = await this.contactData.getContent();
+
+    // Check if Contact section exists
+    const contactSectionMatch = content.match(/(^|\n)(#{2,})\s*contact\s*\n[\s\S]*?(?=\n#{2,}\s|\n\n(?:#|$)|\n$)/i);
+    
+    let newContent: string;
+    if (contactSectionMatch) {
+      // Replace existing Contact section
+      newContent = content.replace(contactSectionMatch[0], `\n${contactSection}`);
+    } else {
+      // Add Contact section before final hashtags (match both single and double newlines)
+      const hashtagMatch = content.match(/\n+(#\w+.*?)$/);
+      if (hashtagMatch) {
+        newContent = content.replace(hashtagMatch[0], `\n\n${contactSection}\n\n${hashtagMatch[1]}`);
+      } else {
+        // Add at the end
+        newContent = `${content}\n\n${contactSection}`;
+      }
+    }
+
+    await this.contactData.updateContent(newContent);
+  }
+}

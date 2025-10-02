@@ -16,5 +16,5 @@ export interface CuratorProcessor {
   settingPropertyName: string;
   settingDescription: string;
   settingDefaultValue: boolean;
-  process(contact: Contact): Promise<CuratorQueItem | undefined>;
+  process(contact: Contact, calledWithRunType?: RunType): Promise<CuratorQueItem | undefined>;
 }
