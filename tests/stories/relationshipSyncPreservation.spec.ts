@@ -481,4 +481,128 @@ FN: Frank Miller
     expect(updatedContent).toContain('RELATED[spouse]');
     expect(updatedContent).toContain('frank-uid-678');
   });
+
+  it('should preserve both relationships when syncing in both directions', async () => {
+    // Complex scenario: multiple relationships in both locations, some overlapping, some unique
+    
+    const helenFile = { basename: 'helen-garcia', path: 'Contacts/helen-garcia.md' } as TFile;
+    const ivanFile = { basename: 'ivan-petrov', path: 'Contacts/ivan-petrov.md' } as TFile;
+    const juliaFile = { basename: 'julia-wong', path: 'Contacts/julia-wong.md' } as TFile;
+    const kevinFile = { basename: 'kevin-singh', path: 'Contacts/kevin-singh.md' } as TFile;
+
+    mockContactFiles.set(helenFile.path, helenFile);
+    mockContactFiles.set(ivanFile.path, ivanFile);
+    mockContactFiles.set(juliaFile.path, juliaFile);
+    mockContactFiles.set(kevinFile.path, kevinFile);
+
+    // Helen has:
+    // - Related list: friend Ivan, colleague Julia
+    // - Frontmatter: colleague Julia (overlaps), neighbor Kevin (unique to frontmatter)
+    const helenContent = `---
+UID: helen-uid-111
+FN: Helen Garcia
+RELATED[colleague]: urn:uuid:julia-uid-333
+RELATED[neighbor]: urn:uuid:kevin-uid-444
+REV: 20240101T120000Z
+---
+
+#### Related
+- friend: [[Ivan Petrov]]
+- colleague: [[Julia Wong]]
+
+#Contact`;
+
+    const ivanContent = `---
+UID: ivan-uid-222
+FN: Ivan Petrov
+---
+
+#Contact`;
+
+    const juliaContent = `---
+UID: julia-uid-333
+FN: Julia Wong
+---
+
+#Contact`;
+
+    const kevinContent = `---
+UID: kevin-uid-444
+FN: Kevin Singh
+---
+
+#Contact`;
+
+    const fileContents: Map<string, string> = new Map([
+      [helenFile.path, helenContent],
+      [ivanFile.path, ivanContent],
+      [juliaFile.path, juliaContent],
+      [kevinFile.path, kevinContent]
+    ]);
+
+    mockApp.vault!.read = vi.fn().mockImplementation((file: TFile) => {
+      const content = fileContents.get(file.path);
+      if (content !== undefined) return Promise.resolve(content);
+      return Promise.reject(new Error('File not found'));
+    });
+
+    mockApp.metadataCache!.getFileCache = vi.fn().mockImplementation((file: TFile) => {
+      const content = fileContents.get(file.path);
+      if (!content) return null;
+      
+      const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
+      if (frontmatterMatch) {
+        try {
+          const yaml = frontmatterMatch[1];
+          const frontmatter: any = {};
+          const lines = yaml.split('\n');
+          lines.forEach(line => {
+            const match = line.match(/^([^:]+?):\s*(.+)$/);
+            if (match) {
+              frontmatter[match[1].trim()] = match[2].trim();
+            }
+          });
+          return { frontmatter };
+        } catch (error) {
+          return null;
+        }
+      }
+      return null;
+    });
+
+    let updatedContent = '';
+    mockApp.vault!.modify = vi.fn().mockImplementation(async (file: TFile, newContent: string) => {
+      updatedContent = newContent;
+      fileContents.set(file.path, newContent);
+      return Promise.resolve();
+    });
+
+    const helenContact: Contact = {
+      file: helenFile,
+      UID: 'helen-uid-111',
+      FN: 'Helen Garcia'
+    };
+
+    // Run frontmatter processor first - should add Kevin to Related list
+    const fmResult = await RelatedFrontMatterProcessor.process(helenContact);
+    expect(fmResult).toBeDefined();
+    
+    // Run list processor - should add Ivan to frontmatter
+    const listResult = await RelatedListProcessor.process(helenContact);
+    expect(listResult).toBeDefined();
+    
+    // Verify all three relationships exist in both locations
+    // Related list should have: friend Ivan, colleague Julia, neighbor Kevin
+    expect(updatedContent).toContain('- friend: [[Ivan Petrov]]');
+    expect(updatedContent).toContain('- colleague: [[Julia Wong]]');
+    expect(updatedContent).toContain('- neighbor: [[Kevin Singh]]');
+    
+    // Frontmatter should have: friend Ivan, colleague Julia, neighbor Kevin
+    expect(updatedContent).toContain('RELATED[friend]');
+    expect(updatedContent).toContain('ivan-uid-222');
+    expect(updatedContent).toContain('RELATED[colleague]');
+    expect(updatedContent).toContain('julia-uid-333');
+    expect(updatedContent).toContain('RELATED[neighbor]');
+    expect(updatedContent).toContain('kevin-uid-444');
+  });
 });
