@@ -56,8 +56,9 @@ export class ContactData {
    */
   async updateContent(newContent: string): Promise<void> {
     await this.app.vault.modify(this.file, newContent);
-    this._content = newContent;
-    // Invalidate caches that depend on content
+    // Invalidate all caches to force fresh reads from vault
+    // This prevents race conditions where cached content is stale
+    this._content = null;
     this._frontmatter = null;
     this._parsedRelationships = null;
     this._markdownSections = null;
@@ -188,7 +189,11 @@ export class ContactData {
   private async saveFrontmatter(frontmatter: Record<string, any>): Promise<void> {
     const content = await this.getContent();
     // Use Obsidian's stringifyYaml to properly handle complex structures
-    const frontmatterYaml = stringifyYaml(frontmatter);
+    let frontmatterYaml = stringifyYaml(frontmatter);
+    // Ensure frontmatter YAML ends with a newline
+    if (!frontmatterYaml.endsWith('\n')) {
+      frontmatterYaml += '\n';
+    }
     
     const hasExistingFrontmatter = content.startsWith('---\n');
     let newContent: string;

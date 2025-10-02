@@ -103,28 +103,48 @@ FN: Bob Jones
 
 #Contact`;
 
+    // Track file content as it's modified
+    const fileContents: Map<string, string> = new Map([
+      [johnFile.path, johnContent],
+      [janeFile.path, janeContent],
+      [bobFile.path, bobContent]
+    ]);
+
     mockApp.vault!.read = vi.fn().mockImplementation((file: TFile) => {
-      if (file.path === johnFile.path) {
-        return Promise.resolve(johnContent);
-      } else if (file.path === janeFile.path) {
-        return Promise.resolve(janeContent);
-      } else if (file.path === bobFile.path) {
-        return Promise.resolve(bobContent);
+      const content = fileContents.get(file.path);
+      console.log(`[TEST] vault.read called for ${file.path}, found: ${content !== undefined}, length: ${content?.length || 0}`);
+      if (content !== undefined) {
+        return Promise.resolve(content);
       }
       return Promise.reject(new Error('File not found'));
     });
 
     mockApp.metadataCache!.getFileCache = vi.fn().mockImplementation((file: TFile) => {
-      if (file.path === johnFile.path) {
-        return {
-          frontmatter: {
-            UID: 'john-uid-123',
-            FN: 'John Doe',
-            REV: '20240101T120000Z'
-            // NOTE: No RELATED fields - this is the key test scenario
-          }
-        };
-      } else if (file.path === janeFile.path) {
+      // Read current content from fileContents map and parse frontmatter
+      const content = fileContents.get(file.path);
+      if (!content) return null;
+      
+      const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
+      if (frontmatterMatch) {
+        try {
+          const yaml = frontmatterMatch[1];
+          const frontmatter: any = {};
+          const lines = yaml.split('\n');
+          lines.forEach(line => {
+            const match = line.match(/^([^:]+?):\s*(.+)$/);
+            if (match) {
+              frontmatter[match[1].trim()] = match[2].trim();
+            }
+          });
+          console.log(`[TEST] metadataCache.getFileCache for ${file.path}, keys: ${Object.keys(frontmatter).join(', ')}`);
+          return { frontmatter };
+        } catch (error) {
+          return null;
+        }
+      }
+      
+      // Fallback to static values for other files
+      if (file.path === janeFile.path) {
         return {
           frontmatter: {
             UID: 'jane-uid-456',
@@ -145,20 +165,32 @@ FN: Bob Jones
     // Track frontmatter updates
     let updatedFrontmatter: Record<string, any> = {};
     let updatedContent = '';
+    let modifyCallCount = 0;
     mockApp.vault!.modify = vi.fn().mockImplementation(async (file: TFile, newContent: string) => {
+      modifyCallCount++;
+      console.log(`[TEST] vault.modify called (#${modifyCallCount}) for ${file.path}, content length: ${newContent.length}`);
+      console.log(`[TEST] Full content: ${newContent}`);
       updatedContent = newContent;
+      // Update the file content map so subsequent reads get the new content
+      fileContents.set(file.path, newContent);
       // Parse the frontmatter from the updated content
       const frontmatterMatch = newContent.match(/^---\n([\s\S]*?)\n---/);
       if (frontmatterMatch) {
         const frontmatterText = frontmatterMatch[1];
+        console.log(`[TEST] Parsing frontmatter: ${frontmatterText.substring(0, 200)}`);
         const lines = frontmatterText.split('\n');
+        updatedFrontmatter = {}; // Reset for each modify call
         lines.forEach(line => {
           // Match key: value, handling brackets properly
           const match = line.match(/^([^:]+?(?:\[[^\]]*\])?):\s*(.+)$/);
           if (match) {
+            console.log(`[TEST] Parsed frontmatter line: ${match[1]} = ${match[2]}`);
             updatedFrontmatter[match[1]] = match[2];
           }
         });
+        console.log(`[TEST] Final updatedFrontmatter keys: ${Object.keys(updatedFrontmatter).join(', ')}`);
+      } else {
+        console.log(`[TEST] No frontmatter found in content - regex didn't match`);
       }
       return Promise.resolve();
     });
@@ -226,22 +258,49 @@ FN: Diana Evans
 
 #Contact`;
 
+    // Track file content as it's modified
+    const fileContents: Map<string, string> = new Map([
+      [aliceFile.path, aliceContent],
+      [charlieFile.path, charlieContent],
+      [dianaFile.path, dianaContent]
+    ]);
+
     mockApp.vault!.read = vi.fn().mockImplementation((file: TFile) => {
-      if (file.path === aliceFile.path) return Promise.resolve(aliceContent);
-      if (file.path === charlieFile.path) return Promise.resolve(charlieContent);
-      if (file.path === dianaFile.path) return Promise.resolve(dianaContent);
+      const content = fileContents.get(file.path);
+      if (content !== undefined) return Promise.resolve(content);
       return Promise.reject(new Error('File not found'));
     });
 
     mockApp.metadataCache!.getFileCache = vi.fn().mockImplementation((file: TFile) => {
+      // For Alice file, parse from current content
       if (file.path === aliceFile.path) {
+        const content = fileContents.get(file.path);
+        if (content) {
+          const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
+          if (frontmatterMatch) {
+            try {
+              const yaml = frontmatterMatch[1];
+              const frontmatter: any = {};
+              const lines = yaml.split('\n');
+              lines.forEach(line => {
+                const match = line.match(/^([^:]+?):\s*(.+)$/);
+                if (match) {
+                  frontmatter[match[1].trim()] = match[2].trim();
+                }
+              });
+              return { frontmatter };
+            } catch (error) {
+              // Fallback to static
+            }
+          }
+        }
+        // Fallback to static values
         return {
           frontmatter: {
             UID: 'alice-uid-111',
             FN: 'Alice Brown',
             'RELATED[colleague]': 'urn:uuid:charlie-uid-222',
             REV: '20240101T120000Z'
-            // Missing: friend relationship to Diana
           }
         };
       }
@@ -256,10 +315,13 @@ FN: Diana Evans
 
     let updatedFrontmatter: Record<string, any> = {};
     mockApp.vault!.modify = vi.fn().mockImplementation(async (file: TFile, newContent: string) => {
+      // Update the file content map so subsequent reads get the new content
+      fileContents.set(file.path, newContent);
       const frontmatterMatch = newContent.match(/^---\n([\s\S]*?)\n---/);
       if (frontmatterMatch) {
         const frontmatterText = frontmatterMatch[1];
         const lines = frontmatterText.split('\n');
+        updatedFrontmatter = {}; // Reset for each modify call
         lines.forEach(line => {
           // Match key: value, handling brackets properly
           const match = line.match(/^([^:]+?(?:\[[^\]]*\])?):\s*(.+)$/);
@@ -382,9 +444,15 @@ FN: Henry Kim
 
 #Contact`;
 
+    // Track file content as it's modified
+    const fileContents: Map<string, string> = new Map([
+      [graceFile.path, graceContent],
+      [henryFile.path, henryContent]
+    ]);
+
     mockApp.vault!.read = vi.fn().mockImplementation((file: TFile) => {
-      if (file.path === graceFile.path) return Promise.resolve(graceContent);
-      if (file.path === henryFile.path) return Promise.resolve(henryContent);
+      const content = fileContents.get(file.path);
+      if (content !== undefined) return Promise.resolve(content);
       return Promise.reject(new Error('File not found'));
     });
 
@@ -407,10 +475,13 @@ FN: Henry Kim
 
     let updatedFrontmatter: Record<string, any> = {};
     mockApp.vault!.modify = vi.fn().mockImplementation(async (file: TFile, newContent: string) => {
+      // Update the file content map so subsequent reads get the new content
+      fileContents.set(file.path, newContent);
       const frontmatterMatch = newContent.match(/^---\n([\s\S]*?)\n---/);
       if (frontmatterMatch) {
         const frontmatterText = frontmatterMatch[1];
         const lines = frontmatterText.split('\n');
+        updatedFrontmatter = {}; // Reset for each modify call
         lines.forEach(line => {
           // Match key: value, handling brackets properly
           const match = line.match(/^([^:]+?(?:\[[^\]]*\])?):\s*(.+)$/);
@@ -509,16 +580,44 @@ FN: Kelly White
 
 #Contact`;
 
+    // Track file content as it's modified
+    const fileContents: Map<string, string> = new Map([
+      [jasonFile.path, jasonContent],
+      [kellyFile.path, kellyContent]
+    ]);
+
     mockApp.vault!.read = vi.fn().mockImplementation((file: TFile) => {
-      if (file.path === jasonFile.path) return Promise.resolve(jasonContent);
-      if (file.path === kellyFile.path) return Promise.resolve(kellyContent);
+      const content = fileContents.get(file.path);
+      if (content !== undefined) return Promise.resolve(content);
       return Promise.reject(new Error('File not found'));
     });
 
     // The metadataCache will return the YAML as parsed by Obsidian
     // RELATED.friend becomes a nested structure
     mockApp.metadataCache!.getFileCache = vi.fn().mockImplementation((file: TFile) => {
+      // For Jason file, parse from current content
       if (file.path === jasonFile.path) {
+        const content = fileContents.get(file.path);
+        if (content) {
+          const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
+          if (frontmatterMatch) {
+            try {
+              const yaml = frontmatterMatch[1];
+              const frontmatter: any = {};
+              const lines = yaml.split('\n');
+              lines.forEach(line => {
+                const match = line.match(/^([^:]+?):\s*(.+)$/);
+                if (match) {
+                  frontmatter[match[1].trim()] = match[2].trim();
+                }
+              });
+              return { frontmatter };
+            } catch (error) {
+              // Fallback to static
+            }
+          }
+        }
+        // Fallback to static values (malformed frontmatter case)
         return {
           frontmatter: {
             UID: 'jason-uid-999',
@@ -539,10 +638,13 @@ FN: Kelly White
     let updatedContent = '';
     mockApp.vault!.modify = vi.fn().mockImplementation(async (file: TFile, newContent: string) => {
       updatedContent = newContent;
+      // Update the file content map so subsequent reads get the new content
+      fileContents.set(file.path, newContent);
       const frontmatterMatch = newContent.match(/^---\n([\s\S]*?)\n---/);
       if (frontmatterMatch) {
         const frontmatterText = frontmatterMatch[1];
         const lines = frontmatterText.split('\n');
+        updatedFrontmatter = {}; // Reset for each modify call
         lines.forEach(line => {
           // Match key: value, handling brackets properly
           const match = line.match(/^([^:]+?(?:\[[^\]]*\])?):\s*(.+)$/);
