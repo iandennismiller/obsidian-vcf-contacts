@@ -78,7 +78,7 @@ export function saveVcardFilePicker(data: string, obsidianFile?: TFile): void {
             new Notice(`\`Saved to your device's Files app under this app:\n${filename}\nOpen the Files app to share with other applications`);
           }
         } catch (e) {
-          console.log(e);
+          console.debug(e);
         }
       })();
 
@@ -91,7 +91,7 @@ export function saveVcardFilePicker(data: string, obsidianFile?: TFile): void {
     }
 
   } catch (err) {
-    console.log("Failed to share or save VCard", err);
+    console.debug("Failed to share or save VCard", err);
   }
 }
 

@@ -342,7 +342,7 @@ UID: test-123
     });
 
     it('should handle RELATED.friend with array value', async () => {
-      const consoleInfoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
+      const consoleDebugSpy = vi.spyOn(console, 'debug').mockImplementation(() => {});
       
       const frontmatter = {
         UID: 'john-doe-123',
@@ -360,18 +360,18 @@ UID: test-123
       expect(relationships[1].type).toBe('friend');
       expect(relationships[1].key).toBe('RELATED[1:friend]');
       expect(relationships[1].value).toBe('name:Bob Smith');
-      expect(consoleInfoSpy).toHaveBeenCalledWith(
+      expect(consoleDebugSpy).toHaveBeenCalledWith(
         expect.stringContaining('Auto-corrected malformed RELATED.friend[0] to RELATED[friend]')
       );
-      expect(consoleInfoSpy).toHaveBeenCalledWith(
+      expect(consoleDebugSpy).toHaveBeenCalledWith(
         expect.stringContaining('Auto-corrected malformed RELATED.friend[1] to RELATED[1:friend]')
       );
       
-      consoleInfoSpy.mockRestore();
+      consoleDebugSpy.mockRestore();
     });
 
     it('should handle RELATED object with array values', async () => {
-      const consoleInfoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
+      const consoleDebugSpy = vi.spyOn(console, 'debug').mockImplementation(() => {});
       
       const frontmatter = {
         UID: 'john-doe-123',
@@ -399,11 +399,11 @@ UID: test-123
       expect(relationships[2].key).toBe('RELATED[colleague]');
       expect(relationships[2].value).toBe('name:Alice Johnson');
       
-      consoleInfoSpy.mockRestore();
+      consoleDebugSpy.mockRestore();
     });
 
     it('should handle RELATED.friend with empty object', async () => {
-      const consoleInfoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
+      const consoleDebugSpy = vi.spyOn(console, 'debug').mockImplementation(() => {});
       
       const frontmatter = {
         UID: 'john-doe-123',
@@ -418,11 +418,11 @@ UID: test-123
       expect(relationships).toHaveLength(0);
       // Should not warn since empty object is valid, just produces no relationships
       
-      consoleInfoSpy.mockRestore();
+      consoleDebugSpy.mockRestore();
     });
 
     it('should auto-correct RELATED.friend with object containing string values', async () => {
-      const consoleInfoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
+      const consoleDebugSpy = vi.spyOn(console, 'debug').mockImplementation(() => {});
       
       const frontmatter = {
         UID: 'john-doe-123',
@@ -437,11 +437,11 @@ UID: test-123
       expect(relationships[0].type).toBe('friend.name');
       expect(relationships[0].key).toBe('RELATED[friend.name]');
       expect(relationships[0].value).toBe('name:Jane Doe');
-      expect(consoleInfoSpy).toHaveBeenCalledWith(
+      expect(consoleDebugSpy).toHaveBeenCalledWith(
         expect.stringContaining('Auto-corrected malformed RELATED.friend.name to RELATED[friend.name]')
       );
       
-      consoleInfoSpy.mockRestore();
+      consoleDebugSpy.mockRestore();
     });
   });
 

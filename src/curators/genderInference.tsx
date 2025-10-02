@@ -74,7 +74,7 @@ export const GenderInferenceProcessor: CuratorProcessor = {
           
           if (!relatedContact) {
             // Could not find the related contact file
-            console.log(
+            console.debug(
               `[GenderInferenceProcessor] Could not resolve contact: ${relationship.contactName}`
             );
             continue;
@@ -97,7 +97,7 @@ export const GenderInferenceProcessor: CuratorProcessor = {
             `${relationship.contactName} → ${inferredGender} (from relationship "${relationship.type}")`
           );
           
-          console.log(
+          console.debug(
             `[GenderInferenceProcessor] Inferred gender ${inferredGender} for ${relationship.contactName} based on relationship "${relationship.type}" from ${contact.file.basename}`
           );
           

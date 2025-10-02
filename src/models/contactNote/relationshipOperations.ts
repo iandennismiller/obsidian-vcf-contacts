@@ -35,18 +35,18 @@ export class RelationshipOperations {
     // Matches any heading level (##, ###, ####, etc.) with "Related" in any case
     const relatedSectionMatch = content.match(/(^|\n)(#{2,})\s*related\s*\n([\s\S]*?)(?=\n#{2,}\s|\n\n(?:#|$)|\n$)/i);
     if (!relatedSectionMatch) {
-      console.log(`[RelationshipOperations] No Related section found in content`);
+      console.debug(`[RelationshipOperations] No Related section found in content`);
       return relationships;
     }
 
     const relatedContent = relatedSectionMatch[3];
-    console.log(`[RelationshipOperations] Found Related section content: ${relatedContent.substring(0, 200)}`);
+    console.debug(`[RelationshipOperations] Found Related section content: ${relatedContent.substring(0, 200)}`);
     
     const lines = relatedContent.split('\n').filter(line => line.trim());
-    console.log(`[RelationshipOperations] Parsing ${lines.length} lines from Related section`);
+    console.debug(`[RelationshipOperations] Parsing ${lines.length} lines from Related section`);
 
     for (const line of lines) {
-      console.log(`[RelationshipOperations] Parsing line: "${line}"`);
+      console.debug(`[RelationshipOperations] Parsing line: "${line}"`);
       
       // Parse different formats (in order of preference):
       // 1. "- type [[Contact Name]]" (canonical format - no colon)
@@ -60,7 +60,7 @@ export class RelationshipOperations {
 
       if (match1) {
         const [, type, contactName] = match1;
-        console.log(`[RelationshipOperations]   Matched format 1 (type [[Name]] - canonical): ${type} -> ${contactName}`);
+        console.debug(`[RelationshipOperations]   Matched format 1 (type [[Name]] - canonical): ${type} -> ${contactName}`);
         relationships.push({
           type: type.trim(),
           contactName: contactName.trim(),
@@ -68,7 +68,7 @@ export class RelationshipOperations {
         });
       } else if (match2) {
         const [, type, contactName] = match2;
-        console.log(`[RelationshipOperations]   Matched format 2 (type: [[Name]] - alternative): ${type} -> ${contactName}`);
+        console.debug(`[RelationshipOperations]   Matched format 2 (type: [[Name]] - alternative): ${type} -> ${contactName}`);
         relationships.push({
           type: type.trim(),
           contactName: contactName.trim(),
@@ -76,7 +76,7 @@ export class RelationshipOperations {
         });
       } else if (match3) {
         const [, contactName, type] = match3;
-        console.log(`[RelationshipOperations]   Matched format 3 ([[Name]] (type)): ${type} -> ${contactName}`);
+        console.debug(`[RelationshipOperations]   Matched format 3 ([[Name]] (type)): ${type} -> ${contactName}`);
         relationships.push({
           type: type.trim(),
           contactName: contactName.trim(),
@@ -86,18 +86,18 @@ export class RelationshipOperations {
         // Format: "- type: Name" (plain text with colon, without brackets - fallback)
         // Only accept if it doesn't start with [[ (to avoid matching malformed bracket syntax)
         const [, type, contactName] = match4;
-        console.log(`[RelationshipOperations]   Matched format 4 (type: Name - plain text fallback): ${type} -> ${contactName}`);
+        console.debug(`[RelationshipOperations]   Matched format 4 (type: Name - plain text fallback): ${type} -> ${contactName}`);
         relationships.push({
           type: type.trim(),
           contactName: contactName.trim(),
           linkType: 'name'
         });
       } else {
-        console.log(`[RelationshipOperations]   No match for this line - skipping`);
+        console.debug(`[RelationshipOperations]   No match for this line - skipping`);
       }
     }
 
-    console.log(`[RelationshipOperations] Parsed ${relationships.length} relationships from Related section`);
+    console.debug(`[RelationshipOperations] Parsed ${relationships.length} relationships from Related section`);
     return relationships;
   }
 
@@ -130,7 +130,7 @@ export class RelationshipOperations {
                 parsedValue: parsedValue || undefined
               });
               
-              console.info(`[RelationshipOperations] Auto-corrected malformed RELATED.${nestedKey} to RELATED[${nestedKey}]`);
+              console.debug(`[RelationshipOperations] Auto-corrected malformed RELATED.${nestedKey} to RELATED[${nestedKey}]`);
             } else if (Array.isArray(nestedValue)) {
               // Handle arrays in RELATED object - convert to indexed format
               for (let i = 0; i < nestedValue.length; i++) {
@@ -146,7 +146,7 @@ export class RelationshipOperations {
                     parsedValue: parsedValue || undefined
                   });
                   
-                  console.info(`[RelationshipOperations] Auto-corrected malformed RELATED.${nestedKey}[${i}] to ${correctedKey}`);
+                  console.debug(`[RelationshipOperations] Auto-corrected malformed RELATED.${nestedKey}[${i}] to ${correctedKey}`);
                 }
               }
             }
@@ -172,7 +172,7 @@ export class RelationshipOperations {
                 parsedValue: parsedValue || undefined
               });
               
-              console.info(`[RelationshipOperations] Auto-corrected malformed ${key} to RELATED[${typePart}]`);
+              console.debug(`[RelationshipOperations] Auto-corrected malformed ${key} to RELATED[${typePart}]`);
               continue;
             } else if (Array.isArray(value)) {
               // Handle array of relationships - convert to indexed RELATED[n:type] format
@@ -190,7 +190,7 @@ export class RelationshipOperations {
                     parsedValue: parsedValue || undefined
                   });
                   
-                  console.info(`[RelationshipOperations] Auto-corrected malformed ${key}[${i}] to ${correctedKey}`);
+                  console.debug(`[RelationshipOperations] Auto-corrected malformed ${key}[${i}] to ${correctedKey}`);
                 }
               }
               continue;
@@ -211,7 +211,7 @@ export class RelationshipOperations {
                     parsedValue: parsedValue || undefined
                   });
                   
-                  console.info(`[RelationshipOperations] Auto-corrected malformed ${key}.${nestedKey} to RELATED[${combinedType}]`);
+                  console.debug(`[RelationshipOperations] Auto-corrected malformed ${key}.${nestedKey} to RELATED[${combinedType}]`);
                 }
               }
               continue;
@@ -347,7 +347,7 @@ export class RelationshipOperations {
         gender: gender
       };
     } catch (error: any) {
-      console.log(`[RelationshipOperations] Error resolving contact ${contactName}: ${error.message}`);
+      console.debug(`[RelationshipOperations] Error resolving contact ${contactName}: ${error.message}`);
       return null;
     }
   }

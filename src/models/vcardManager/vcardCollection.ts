@@ -132,7 +132,7 @@ export class VCardCollection {
       }
       return parsedEntries;
     } catch (error: any) {
-      console.log(`[VCardCollection] Error parsing VCF file ${filePath}: ${error.message}`);
+      console.debug(`[VCardCollection] Error parsing VCF file ${filePath}: ${error.message}`);
       return null;
     }
   }

@@ -378,13 +378,13 @@ export class ContactManager implements IContactManager {
       // Find the newly created file
       const newFile = await this.findContactFileByUID(record.UID);
       if (newFile) {
-        console.log(`[ContactManager] Created new contact: ${newFile.basename}`);
+        console.debug(`[ContactManager] Created new contact: ${newFile.basename}`);
         return newFile;
       }
       
       return null;
     } catch (error: any) {
-      console.log(`[ContactManager] Failed to create contact ${slug}: ${error.message}`);
+      console.debug(`[ContactManager] Failed to create contact ${slug}: ${error.message}`);
       return null;
     }
   }

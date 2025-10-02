@@ -59,14 +59,14 @@ export class SyncOperations {
       if (currentGender && !existingGender) {
         seen.set(contactKey, rel);
         inferredGender.set(rel.contactName, currentGender);
-        console.log(`[SyncOperations] De-duplication: Replacing "${existing.type}" with gendered "${rel.type}" for [[${rel.contactName}]]`);
+        console.debug(`[SyncOperations] De-duplication: Replacing "${existing.type}" with gendered "${rel.type}" for [[${rel.contactName}]]`);
       } else if (currentGender) {
         // Both are gendered, keep the first one but update inferred gender
         inferredGender.set(existing.contactName, existingGender!);
-        console.log(`[SyncOperations] De-duplication: Keeping "${existing.type}" (both gendered) for [[${existing.contactName}]]`);
+        console.debug(`[SyncOperations] De-duplication: Keeping "${existing.type}" (both gendered) for [[${existing.contactName}]]`);
       } else {
         // Both ungendered or existing is gendered, keep existing
-        console.log(`[SyncOperations] De-duplication: Keeping "${existing.type}" for [[${existing.contactName}]]`);
+        console.debug(`[SyncOperations] De-duplication: Keeping "${existing.type}" for [[${existing.contactName}]]`);
       }
     }
     
@@ -90,7 +90,7 @@ export class SyncOperations {
       const { deduplicated, inferredGender } = this.deduplicateRelationships(relationships);
       
       if (relationships.length !== deduplicated.length) {
-        console.log(`[SyncOperations] Deduplicated ${relationships.length} relationships to ${deduplicated.length}`);
+        console.debug(`[SyncOperations] Deduplicated ${relationships.length} relationships to ${deduplicated.length}`);
       }
       
       const frontmatterUpdates: Record<string, string> = {};
@@ -99,14 +99,14 @@ export class SyncOperations {
       // First, clear existing RELATED fields from frontmatter
       const frontmatter = await this.contactData.getFrontmatter();
       if (frontmatter) {
-        console.log(`[SyncOperations] Checking frontmatter keys for RELATED fields...`);
+        console.debug(`[SyncOperations] Checking frontmatter keys for RELATED fields...`);
         Object.keys(frontmatter).forEach(key => {
           if (key.startsWith('RELATED') || key === 'RELATED') {
-            console.log(`[SyncOperations]   Found key to delete: ${key} (type: ${typeof frontmatter[key]})`);
+            console.debug(`[SyncOperations]   Found key to delete: ${key} (type: ${typeof frontmatter[key]})`);
             frontmatterUpdates[key] = ''; // Mark for deletion
           }
         });
-        console.log(`[SyncOperations] Marked ${Object.keys(frontmatterUpdates).filter(k => frontmatterUpdates[k] === '').length} keys for deletion`);
+        console.debug(`[SyncOperations] Marked ${Object.keys(frontmatterUpdates).filter(k => frontmatterUpdates[k] === '').length} keys for deletion`);
       }
 
       // Process each deduplicated relationship
@@ -114,13 +114,13 @@ export class SyncOperations {
         try {
           // Convert to genderless type for storage in frontmatter
           const genderlessType = this.relationshipOps.convertToGenderlessType(relationship.type);
-          console.log(`[SyncOperations] Processing relationship: ${relationship.type} -> ${relationship.contactName}, genderless type: ${genderlessType}`);
+          console.debug(`[SyncOperations] Processing relationship: ${relationship.type} -> ${relationship.contactName}, genderless type: ${genderlessType}`);
           
           // Get or initialize index for this relationship type
           const currentIndex = typeIndices.get(genderlessType) || 0;
-          console.log(`[SyncOperations]   Current index for type '${genderlessType}': ${currentIndex}`);
+          console.debug(`[SyncOperations]   Current index for type '${genderlessType}': ${currentIndex}`);
           typeIndices.set(genderlessType, currentIndex + 1);
-          console.log(`[SyncOperations]   Updated index for type '${genderlessType}' to: ${currentIndex + 1}`);
+          console.debug(`[SyncOperations]   Updated index for type '${genderlessType}' to: ${currentIndex + 1}`);
           
           const resolvedContact = await this.relationshipOps.resolveContact(relationship.contactName);
           
@@ -135,7 +135,7 @@ export class SyncOperations {
               ? `RELATED[${genderlessType}]`
               : `RELATED[${currentIndex}:${genderlessType}]`;
             
-            console.log(`[SyncOperations]   Generated key: ${key}`);
+            console.debug(`[SyncOperations]   Generated key: ${key}`);
             frontmatterUpdates[key] = relatedValue;
           } else {
             // Keep unresolved relationships as name references
@@ -143,7 +143,7 @@ export class SyncOperations {
               ? `RELATED[${genderlessType}]`
               : `RELATED[${currentIndex}:${genderlessType}]`;
             
-            console.log(`[SyncOperations]   Generated key (unresolved): ${key}`);
+            console.debug(`[SyncOperations]   Generated key (unresolved): ${key}`);
             frontmatterUpdates[key] = `name:${relationship.contactName}`;
             
             errors.push(`Could not resolve contact: ${relationship.contactName}`);
@@ -156,21 +156,21 @@ export class SyncOperations {
       // Apply all frontmatter updates in one operation
       // Note: We need to pass empty values to delete malformed keys
       if (Object.keys(frontmatterUpdates).length > 0) {
-        console.log(`[SyncOperations] Applying ${Object.keys(frontmatterUpdates).length} frontmatter updates`);
+        console.debug(`[SyncOperations] Applying ${Object.keys(frontmatterUpdates).length} frontmatter updates`);
         Object.entries(frontmatterUpdates).forEach(([key, value]) => {
           if (value === '') {
-            console.log(`[SyncOperations]   Deleting: ${key}`);
+            console.debug(`[SyncOperations]   Deleting: ${key}`);
           } else {
-            console.log(`[SyncOperations]   Setting: ${key} = ${value}`);
+            console.debug(`[SyncOperations]   Setting: ${key} = ${value}`);
           }
         });
         await this.contactData.updateMultipleFrontmatterValues(frontmatterUpdates);
-        console.log(`[SyncOperations] Frontmatter updates applied successfully`);
+        console.debug(`[SyncOperations] Frontmatter updates applied successfully`);
       }
       
       // If we deduplicated, also update the Related section to match
       if (relationships.length !== deduplicated.length) {
-        console.log(`[SyncOperations] Updating Related section to reflect deduplicated relationships`);
+        console.debug(`[SyncOperations] Updating Related section to reflect deduplicated relationships`);
         await this.relationshipOps.updateRelatedSectionInContent(
           deduplicated.map(rel => ({
             type: rel.type,

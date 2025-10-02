@@ -19,7 +19,7 @@ export class VCardFileOperations {
         .filter(entry => entry.isFile() && entry.name.toLowerCase().endsWith('.vcf'))
         .map(entry => path.join(folderPath, entry.name));
     } catch (error: any) {
-      console.log(`[VCardFileOperations] Error listing VCF files: ${error.message}`);
+      console.debug(`[VCardFileOperations] Error listing VCF files: ${error.message}`);
       return [];
     }
   }
@@ -74,12 +74,12 @@ export class VCardFileOperations {
     try {
       const content = await fs.readFile(filePath, 'utf-8');
       if (!content) {
-        console.log(`[VCardFileOperations] Empty or unreadable VCF file: ${path.basename(filePath)}`);
+        console.debug(`[VCardFileOperations] Empty or unreadable VCF file: ${path.basename(filePath)}`);
         return null;
       }
       return content;
     } catch (error: any) {
-      console.log(`[VCardFileOperations] Error reading VCF file ${filePath}: ${error.message}`);
+      console.debug(`[VCardFileOperations] Error reading VCF file ${filePath}: ${error.message}`);
       return null;
     }
   }
@@ -92,7 +92,7 @@ export class VCardFileOperations {
       await fs.writeFile(filePath, content, 'utf-8');
       return true;
     } catch (error: any) {
-      console.log(`[VCardFileOperations] Error writing VCF file ${filePath}: ${error.message}`);
+      console.debug(`[VCardFileOperations] Error writing VCF file ${filePath}: ${error.message}`);
       return false;
     }
   }

@@ -91,7 +91,7 @@ export const VcardSyncPostProcessor: CuratorProcessor = {
         // No VCF exists - create it
         shouldWriteVCF = true;
         action = 'created';
-        console.log(`[VcardSyncPostProcessor] No VCF found for UID ${contactUID}, will create new VCF`);
+        console.debug(`[VcardSyncPostProcessor] No VCF found for UID ${contactUID}, will create new VCF`);
       } else {
         // VCF exists - check REV timestamps
         try {
@@ -113,7 +113,7 @@ export const VcardSyncPostProcessor: CuratorProcessor = {
                 // Either contact is newer or VCF has no REV
                 shouldWriteVCF = true;
                 action = 'updated';
-                console.log(
+                console.debug(
                   `[VcardSyncPostProcessor] Contact REV ${contactREV} is newer than VCF REV ${vcfREV || 'none'}, will update VCF`
                 );
               }
@@ -147,7 +147,7 @@ export const VcardSyncPostProcessor: CuratorProcessor = {
       // Queue VCard write instead of writing directly
       await vcardManager.queueVcardWrite(contactUID, vcfContent);
       
-      console.log(`[VcardSyncPostProcessor] Successfully queued ${action} VCard for ${contact.file.name} (UID: ${contactUID})`);
+      console.debug(`[VcardSyncPostProcessor] Successfully queued ${action} VCard for ${contact.file.name} (UID: ${contactUID})`);
       
       return Promise.resolve({
         name: this.name,

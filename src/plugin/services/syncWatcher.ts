@@ -83,7 +83,7 @@ export class SyncWatcher {
     const storageInfo = this.settings.vcfStorageMethod === 'single-vcf' 
       ? this.settings.vcfFilename 
       : this.settings.vcfWatchFolder;
-    console.log(`Starting VCF sync watcher (${this.settings.vcfStorageMethod}): ${storageInfo}`);
+    console.debug(`Starting VCF sync watcher (${this.settings.vcfStorageMethod}): ${storageInfo}`);
     
     // Initial scan
     if (this.settings.vcfStorageMethod === 'single-vcf') {
@@ -122,7 +122,7 @@ export class SyncWatcher {
       // Use the window clearInterval so tests that mock window are hit
       window.clearInterval(this.intervalId as unknown as number);
       this.intervalId = null;
-      console.log('Stopped VCF sync watcher');
+      console.debug('Stopped VCF sync watcher');
     }
     
     // Unsubscribe from settings changes
@@ -194,7 +194,7 @@ export class SyncWatcher {
         return;
       }
 
-      console.log(`Processing single VCF file: ${vcfFilePath}`);
+      console.debug(`Processing single VCF file: ${vcfFilePath}`);
 
       // Use VcardManager to process VCF contents (no UID filtering for single VCF)
       const parsedEntries = await this.vcardManager.readAndParseVCard(vcfFilePath);
@@ -214,7 +214,7 @@ export class SyncWatcher {
 
       // Trigger curator processors on all affected contacts
       if (contactsToProcess.length > 0) {
-        console.log(`Triggering processors on ${contactsToProcess.length} contacts from ${vcfFilePath}`);
+        console.debug(`Triggering processors on ${contactsToProcess.length} contacts from ${vcfFilePath}`);
         
         // Get contacts data for insight processing
         const contacts = await this.contactManager.getFrontmatterFromFiles(contactsToProcess);
@@ -234,7 +234,7 @@ export class SyncWatcher {
       });
 
     } catch (error: any) {
-      console.log(`Error scanning single VCF file: ${error.message}`);
+      console.debug(`Error scanning single VCF file: ${error.message}`);
     }
   }
 
@@ -261,7 +261,7 @@ export class SyncWatcher {
       }
 
     } catch (error: any) {
-      console.log(`Error scanning VCF folder: ${error.message}`);
+      console.debug(`Error scanning VCF folder: ${error.message}`);
     }
   }
 
@@ -290,7 +290,7 @@ export class SyncWatcher {
       }
 
       const filename = path.basename(filePath);
-      console.log(`Processing VCF file: ${filename}`);
+      console.debug(`Processing VCF file: ${filename}`);
 
       // Use VcardManager to process VCF contents
       const vcfEntries = await this.vcardManager.processVCFContents(filePath);
@@ -307,7 +307,7 @@ export class SyncWatcher {
 
       // Trigger curator processors on all affected contacts
       if (contactsToProcess.length > 0) {
-        console.log(`Triggering processors on ${contactsToProcess.length} contacts from ${filename}`);
+        console.debug(`Triggering processors on ${contactsToProcess.length} contacts from ${filename}`);
         
         // Get contacts data for insight processing
         const contacts = await this.contactManager.getFrontmatterFromFiles(contactsToProcess);
@@ -327,7 +327,7 @@ export class SyncWatcher {
       });
 
     } catch (error: any) {
-      console.log(`Error processing VCF file ${filePath}: ${error.message}`);
+      console.debug(`Error processing VCF file ${filePath}: ${error.message}`);
     }
   }
 }

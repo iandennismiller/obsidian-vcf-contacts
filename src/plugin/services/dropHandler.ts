@@ -19,7 +19,7 @@ export function setupVCFDropHandler(app: App, settings: ContactsPluginSettings):
       if (!file || !file.name.toLowerCase().endsWith('.vcf')) return;
 
       if (!settings.vcfWatchFolder) {
-        console.log('VCF drop ignored because vcfWatchFolder is not configured');
+        console.debug('VCF drop ignored because vcfWatchFolder is not configured');
         return;
       }
 
@@ -28,7 +28,7 @@ export function setupVCFDropHandler(app: App, settings: ContactsPluginSettings):
       try {
         content = await app.vault.read(file);
       } catch (err) {
-        console.log(`Failed to read dropped VCF ${file.path}: ${err.message}`);
+        console.debug(`Failed to read dropped VCF ${file.path}: ${err.message}`);
         return;
       }
 
@@ -80,7 +80,7 @@ export function setupVCFDropHandler(app: App, settings: ContactsPluginSettings):
               // No update needed - VCF matches existing contact
             }
           } catch (err) {
-            console.log(`Failed comparing/updating contact for UID ${record.UID}: ${err.message}`);
+            console.debug(`Failed comparing/updating contact for UID ${record.UID}: ${err.message}`);
           }
         } else {
           // Create new contact file
@@ -89,7 +89,7 @@ export function setupVCFDropHandler(app: App, settings: ContactsPluginSettings):
             await ContactManagerUtils.createContactFile(app, settings.contactsFolder, mdContent, filename);
             // Contact imported from dropped VCF
           } catch (err) {
-            console.log(`Failed to create contact from dropped VCF UID ${record.UID}: ${err.message}`);
+            console.debug(`Failed to create contact from dropped VCF UID ${record.UID}: ${err.message}`);
           }
         }
       }
@@ -115,7 +115,7 @@ export function setupVCFDropHandler(app: App, settings: ContactsPluginSettings):
           // Dropped VCF identical to existing VCF in watch folder
         }
       } catch (err) {
-        console.log(`Failed to copy dropped VCF into watch folder: ${err.message}`);
+        console.debug(`Failed to copy dropped VCF into watch folder: ${err.message}`);
         return;
       }
 
@@ -124,11 +124,11 @@ export function setupVCFDropHandler(app: App, settings: ContactsPluginSettings):
         await app.vault.delete(file);
         // Removed dropped VCF from vault
       } catch (err) {
-        console.log(`Failed to remove dropped VCF from vault: ${err.message}`);
+        console.debug(`Failed to remove dropped VCF from vault: ${err.message}`);
       }
 
     } catch (error: any) {
-      console.log(`Error handling dropped VCF file ${file?.path}: ${error.message}`);
+      console.debug(`Error handling dropped VCF file ${file?.path}: ${error.message}`);
     }
   };
 

@@ -196,7 +196,7 @@ export const RelatedOtherProcessor: CuratorProcessor = {
                   frontmatterUpdates[relationshipKey] = relationshipValue;
                   changesCount++;
                   
-                  console.log(
+                  console.debug(
                     `[RelatedOtherProcessor] Adding reciprocal relationship: ${thisContactName} -> ${reciprocalType} -> ${otherContactFile.basename}`
                   );
                 }

@@ -43,7 +43,7 @@ export default class ContactsPlugin extends Plugin {
 		try {
 			await this.contactManager.ensureContactDataConsistency();
 		} catch (error: any) {
-			console.log(`Error during contact data consistency check: ${error.message}`);
+			console.debug(`Error during contact data consistency check: ${error.message}`);
 		}
 
 		// Initialize VCard sync watcher

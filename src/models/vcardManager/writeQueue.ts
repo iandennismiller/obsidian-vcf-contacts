@@ -34,7 +34,7 @@ export class VCardWriteQueue {
       timestamp: Date.now()
     });
     
-    console.log(`[VCardWriteQueue] Queued VCard write for UID: ${uid} (queue size: ${this.writeQueue.size})`);
+    console.debug(`[VCardWriteQueue] Queued VCard write for UID: ${uid} (queue size: ${this.writeQueue.size})`);
     
     // Process the queue if not already processing
     if (!this.processingQueue) {
@@ -51,7 +51,7 @@ export class VCardWriteQueue {
     }
 
     this.processingQueue = true;
-    console.log(`[VCardWriteQueue] Processing write queue with ${this.writeQueue.size} items`);
+    console.debug(`[VCardWriteQueue] Processing write queue with ${this.writeQueue.size} items`);
 
     try {
       // Process all items in the queue
@@ -76,20 +76,20 @@ export class VCardWriteQueue {
           const success = await this.writeVCFFile(path.basename(targetPath), queueItem.vcardData);
           
           if (success) {
-            console.log(`[VCardWriteQueue] Successfully wrote VCard to: ${targetPath}`);
+            console.debug(`[VCardWriteQueue] Successfully wrote VCard to: ${targetPath}`);
             this.writeQueue.delete(uid);
           } else {
-            console.log(`[VCardWriteQueue] Failed to write VCard for UID: ${uid}`);
+            console.debug(`[VCardWriteQueue] Failed to write VCard for UID: ${uid}`);
           }
           
         } catch (error: any) {
-          console.log(`[VCardWriteQueue] Error writing VCard for UID ${uid}: ${error.message}`);
+          console.debug(`[VCardWriteQueue] Error writing VCard for UID ${uid}: ${error.message}`);
           this.writeQueue.delete(uid); // Remove failed items
         }
       }
       
     } catch (error: any) {
-      console.log(`[VCardWriteQueue] Error processing write queue: ${error.message}`);
+      console.debug(`[VCardWriteQueue] Error processing write queue: ${error.message}`);
     } finally {
       this.processingQueue = false;
       
@@ -115,6 +115,6 @@ export class VCardWriteQueue {
    */
   clear(): void {
     this.writeQueue.clear();
-    console.log(`[VCardWriteQueue] Write queue cleared`);
+    console.debug(`[VCardWriteQueue] Write queue cleared`);
   }
 }

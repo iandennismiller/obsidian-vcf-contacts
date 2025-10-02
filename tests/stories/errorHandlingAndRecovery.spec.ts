@@ -89,7 +89,7 @@ This contact is missing END:VCARD`;
     const vcfFilePath = '/restricted/contacts.vcf';
     
     // Mock file system permission error
-    vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.spyOn(console, 'debug').mockImplementation(() => {});
     
     const result = await VcardFile.fromFile(vcfFilePath);
     
@@ -97,7 +97,7 @@ This contact is missing END:VCARD`;
     expect(result).toBeNull();
     
     // Should log appropriate error message
-    expect(console.log).toHaveBeenCalledWith(
+    expect(console.debug).toHaveBeenCalledWith(
       expect.stringContaining('Error reading VCF file')
     );
   });

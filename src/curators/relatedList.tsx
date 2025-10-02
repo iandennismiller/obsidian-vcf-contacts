@@ -35,13 +35,13 @@ export const RelatedListProcessor: CuratorProcessor = {
   settingDefaultValue: true,
 
   async process(contact: Contact): Promise<CuratorQueItem | undefined> {
-    console.log(`[RelatedListProcessor] Starting process for contact: ${contact.file.basename}`);
+    console.debug(`[RelatedListProcessor] Starting process for contact: ${contact.file.basename}`);
     
     const activeProcessor = getSettings()[`${this.settingPropertyName}`] as boolean;
-    console.log(`[RelatedListProcessor] Processor enabled: ${activeProcessor}`);
+    console.debug(`[RelatedListProcessor] Processor enabled: ${activeProcessor}`);
     
     if (!activeProcessor) {
-      console.log(`[RelatedListProcessor] Processor disabled, returning early`);
+      console.debug(`[RelatedListProcessor] Processor disabled, returning early`);
       return Promise.resolve(undefined);
     }
 
@@ -53,11 +53,11 @@ export const RelatedListProcessor: CuratorProcessor = {
       // First check if there are Related section relationships
       const relatedSectionRelationships = await contactNote.parseRelatedSection();
       
-      console.log(`[RelatedListProcessor] Parsed ${relatedSectionRelationships.length} relationships from Related section`);
+      console.debug(`[RelatedListProcessor] Parsed ${relatedSectionRelationships.length} relationships from Related section`);
       
       if (relatedSectionRelationships.length === 0) {
         // No Related section relationships to sync
-        console.log(`[RelatedListProcessor] No relationships in Related section, returning early`);
+        console.debug(`[RelatedListProcessor] No relationships in Related section, returning early`);
         return Promise.resolve(undefined);
       }
       
@@ -65,14 +65,14 @@ export const RelatedListProcessor: CuratorProcessor = {
       const currentFrontmatterRelationships = await contactNote.parseFrontmatterRelationships();
       const currentFrontmatter = await contactNote.getFrontmatter() || {};
       
-      console.log(`[RelatedListProcessor] Found ${relatedSectionRelationships.length} relationships in Related section`);
+      console.debug(`[RelatedListProcessor] Found ${relatedSectionRelationships.length} relationships in Related section`);
       relatedSectionRelationships.forEach(rel => {
-        console.log(`[RelatedListProcessor]   Related section: ${rel.type} -> ${rel.contactName}`);
+        console.debug(`[RelatedListProcessor]   Related section: ${rel.type} -> ${rel.contactName}`);
       });
       
-      console.log(`[RelatedListProcessor] Found ${currentFrontmatterRelationships.length} relationships in frontmatter`);
+      console.debug(`[RelatedListProcessor] Found ${currentFrontmatterRelationships.length} relationships in frontmatter`);
       currentFrontmatterRelationships.forEach(rel => {
-        console.log(`[RelatedListProcessor]   Frontmatter: ${rel.type} -> ${rel.value} (parsedValue: ${rel.parsedValue ? rel.parsedValue.type + ':' + rel.parsedValue.value : 'undefined'})`);
+        console.debug(`[RelatedListProcessor]   Frontmatter: ${rel.type} -> ${rel.value} (parsedValue: ${rel.parsedValue ? rel.parsedValue.type + ':' + rel.parsedValue.value : 'undefined'})`);
       });
       
       // Check for duplicates in Related section
@@ -84,14 +84,14 @@ export const RelatedListProcessor: CuratorProcessor = {
         const key = `${genderlessType}:${rel.contactName.toLowerCase()}`;
         if (seenRelationships.has(key)) {
           hasDuplicates = true;
-          console.log(`[RelatedListProcessor] Duplicate detected: ${rel.type} -> ${rel.contactName}`);
+          console.debug(`[RelatedListProcessor] Duplicate detected: ${rel.type} -> ${rel.contactName}`);
         } else {
           seenRelationships.set(key, true);
         }
       }
       
       if (hasDuplicates) {
-        console.log(`[RelatedListProcessor] Duplicates found in Related section, triggering deduplication sync`);
+        console.debug(`[RelatedListProcessor] Duplicates found in Related section, triggering deduplication sync`);
         const syncResult = await contactNote.syncRelatedListToFrontmatter();
         
         if (!syncResult.success) {
@@ -100,7 +100,7 @@ export const RelatedListProcessor: CuratorProcessor = {
           return Promise.resolve(undefined);
         }
         
-        console.log(`[RelatedListProcessor] Deduplication sync completed successfully for ${contact.file.basename}`);
+        console.debug(`[RelatedListProcessor] Deduplication sync completed successfully for ${contact.file.basename}`);
         
         return Promise.resolve({
           name: this.name,
@@ -121,7 +121,7 @@ export const RelatedListProcessor: CuratorProcessor = {
         // Need to handle both name-based and UID-based frontmatter relationships
         let relationshipExists = false;
         
-        console.log(`[RelatedListProcessor] Checking if ${relRel.type} -> ${relRel.contactName} exists in frontmatter...`);
+        console.debug(`[RelatedListProcessor] Checking if ${relRel.type} -> ${relRel.contactName} exists in frontmatter...`);
         
         for (const fmRel of currentFrontmatterRelationships) {
           // Types must match (case-insensitive)
@@ -129,13 +129,13 @@ export const RelatedListProcessor: CuratorProcessor = {
             continue;
           }
           
-          console.log(`[RelatedListProcessor]   Comparing with frontmatter ${fmRel.type}: ${fmRel.value}`);
+          console.debug(`[RelatedListProcessor]   Comparing with frontmatter ${fmRel.type}: ${fmRel.value}`);
           
           // Check if frontmatter uses name-based reference
           if (fmRel.parsedValue && fmRel.parsedValue.type === 'name') {
-            console.log(`[RelatedListProcessor]     Parsed as name: ${fmRel.parsedValue.value}`);
+            console.debug(`[RelatedListProcessor]     Parsed as name: ${fmRel.parsedValue.value}`);
             if (fmRel.parsedValue.value === relRel.contactName) {
-              console.log(`[RelatedListProcessor]     MATCH! Relationship exists.`);
+              console.debug(`[RelatedListProcessor]     MATCH! Relationship exists.`);
               relationshipExists = true;
               break;
             }
@@ -145,9 +145,9 @@ export const RelatedListProcessor: CuratorProcessor = {
           if (fmRel.parsedValue && (fmRel.parsedValue.type === 'uid' || fmRel.parsedValue.type === 'uuid')) {
             try {
               const resolvedName = await contactNote.resolveContactNameByUID(fmRel.parsedValue.value);
-              console.log(`[RelatedListProcessor]     Parsed as UID, resolved to: ${resolvedName}`);
+              console.debug(`[RelatedListProcessor]     Parsed as UID, resolved to: ${resolvedName}`);
               if (resolvedName === relRel.contactName) {
-                console.log(`[RelatedListProcessor]     MATCH! Relationship exists.`);
+                console.debug(`[RelatedListProcessor]     MATCH! Relationship exists.`);
                 relationshipExists = true;
                 break;
               }
@@ -159,16 +159,16 @@ export const RelatedListProcessor: CuratorProcessor = {
           
           // If parsedValue is undefined, this frontmatter entry can't be matched
           if (!fmRel.parsedValue) {
-            console.log(`[RelatedListProcessor]     parsedValue is undefined, cannot match (malformed value)`);
+            console.debug(`[RelatedListProcessor]     parsedValue is undefined, cannot match (malformed value)`);
           }
         }
         
         if (!relationshipExists) {
-          console.log(`[RelatedListProcessor]   Result: MISSING from frontmatter`);
+          console.debug(`[RelatedListProcessor]   Result: MISSING from frontmatter`);
           missingCount++;
           missingRelationships.push(`${relRel.type} -> ${relRel.contactName}`);
         } else {
-          console.log(`[RelatedListProcessor]   Result: EXISTS in frontmatter`);
+          console.debug(`[RelatedListProcessor]   Result: EXISTS in frontmatter`);
         }
       }
       
@@ -178,8 +178,8 @@ export const RelatedListProcessor: CuratorProcessor = {
       }
       
       // Log what we're about to sync
-      console.log(`[RelatedListProcessor] About to sync ${missingCount} missing relationship(s) for ${contact.file.basename}`);
-      missingRelationships.forEach(rel => console.log(`[RelatedListProcessor]   - ${rel}`));
+      console.debug(`[RelatedListProcessor] About to sync ${missingCount} missing relationship(s) for ${contact.file.basename}`);
+      missingRelationships.forEach(rel => console.debug(`[RelatedListProcessor]   - ${rel}`));
       
       // Use the existing syncRelatedListToFrontmatter method
       const syncResult = await contactNote.syncRelatedListToFrontmatter();
@@ -190,7 +190,7 @@ export const RelatedListProcessor: CuratorProcessor = {
         return Promise.resolve(undefined);
       }
       
-      console.log(`[RelatedListProcessor] Sync completed successfully for ${contact.file.basename}`);
+      console.debug(`[RelatedListProcessor] Sync completed successfully for ${contact.file.basename}`);
       if (syncResult.errors.length > 0) {
         console.warn(`[RelatedListProcessor] Sync had warnings:`);
         syncResult.errors.forEach(error => console.warn(`[RelatedListProcessor]   - ${error}`));
@@ -200,12 +200,12 @@ export const RelatedListProcessor: CuratorProcessor = {
       if (missingCount > 0) {
         const revTimestamp = contactNote.generateRevTimestamp();
         await contactNote.updateFrontmatterValue('REV', revTimestamp);
-        console.log(`[RelatedListProcessor] Updated REV timestamp: ${revTimestamp}`);
+        console.debug(`[RelatedListProcessor] Updated REV timestamp: ${revTimestamp}`);
       }
       
       // Log the added relationships
       missingRelationships.forEach(rel => {
-        console.log(
+        console.debug(
           `[RelatedListProcessor] Added missing relationship to frontmatter: ${contact.file.basename} -> ${rel}`
         );
       });
