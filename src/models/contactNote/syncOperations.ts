@@ -29,15 +29,17 @@ export class SyncOperations {
     deduplicated: ParsedRelationship[];
     inferredGender: Map<string, Gender>;
   } {
-    const seen = new Map<string, ParsedRelationship>(); // key: contactName (lowercase)
+    const seen = new Map<string, ParsedRelationship>(); // key: genderlessType:contactName (lowercase)
     const inferredGender = new Map<string, Gender>();
     
     for (const rel of relationships) {
-      const contactKey = rel.contactName.toLowerCase();
+      // Convert to genderless type first to properly identify duplicates
+      const genderlessType = this.relationshipOps.convertToGenderlessType(rel.type);
+      const contactKey = `${genderlessType}:${rel.contactName.toLowerCase()}`;
       const existing = seen.get(contactKey);
       
       if (!existing) {
-        // First occurrence of this contact
+        // First occurrence of this relationship type for this contact
         seen.set(contactKey, rel);
         
         // Check if this is a gendered term and infer gender
@@ -48,33 +50,23 @@ export class SyncOperations {
         continue;
       }
       
-      // We have a duplicate - need to decide which to keep
-      const existingGenderless = this.relationshipOps.convertToGenderlessType(existing.type);
-      const currentGenderless = this.relationshipOps.convertToGenderlessType(rel.type);
+      // We have a duplicate of the same relationship type for the same contact
+      // Prefer the gendered version
+      const existingGender = this.relationshipOps.inferGenderFromRelationship(existing.type);
+      const currentGender = this.relationshipOps.inferGenderFromRelationship(rel.type);
       
-      // If they map to the same genderless type, prefer the gendered one
-      if (existingGenderless === currentGenderless) {
-        const existingGender = this.relationshipOps.inferGenderFromRelationship(existing.type);
-        const currentGender = this.relationshipOps.inferGenderFromRelationship(rel.type);
-        
-        // If current is gendered but existing is not, replace with current
-        if (currentGender && !existingGender) {
-          seen.set(contactKey, rel);
-          inferredGender.set(rel.contactName, currentGender);
-          console.log(`[SyncOperations] De-duplication: Replacing "${existing.type}" with gendered "${rel.type}" for [[${rel.contactName}]]`);
-        } else if (currentGender) {
-          // Both are gendered, keep the first one but update inferred gender
-          inferredGender.set(existing.contactName, existingGender!);
-          console.log(`[SyncOperations] De-duplication: Keeping "${existing.type}" (both gendered) for [[${existing.contactName}]]`);
-        } else {
-          // Both ungendered or existing is gendered, keep existing
-          console.log(`[SyncOperations] De-duplication: Keeping "${existing.type}" for [[${existing.contactName}]]`);
-        }
+      // If current is gendered but existing is not, replace with current
+      if (currentGender && !existingGender) {
+        seen.set(contactKey, rel);
+        inferredGender.set(rel.contactName, currentGender);
+        console.log(`[SyncOperations] De-duplication: Replacing "${existing.type}" with gendered "${rel.type}" for [[${rel.contactName}]]`);
+      } else if (currentGender) {
+        // Both are gendered, keep the first one but update inferred gender
+        inferredGender.set(existing.contactName, existingGender!);
+        console.log(`[SyncOperations] De-duplication: Keeping "${existing.type}" (both gendered) for [[${existing.contactName}]]`);
       } else {
-        // Different relationship types - this is a genuine separate relationship
-        // But we can only have one relationship per contact in the current implementation
-        // Keep the first one encountered
-        console.log(`[SyncOperations] Multiple relationship types for [[${rel.contactName}]]: "${existing.type}" and "${rel.type}" - keeping first`);
+        // Both ungendered or existing is gendered, keep existing
+        console.log(`[SyncOperations] De-duplication: Keeping "${existing.type}" for [[${existing.contactName}]]`);
       }
     }
     

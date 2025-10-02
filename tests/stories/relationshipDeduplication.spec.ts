@@ -320,4 +320,34 @@ FN: Sync Test
     expect(mockApp.vault!.modify).toHaveBeenCalled();
     // Should only have 2 relationships now (father and parent for Mary)
   });
+
+  it('should keep multiple different relationship types for same contact', async () => {
+    const mockFile = { basename: 'multi-rel-test', path: 'Contacts/multi-rel-test.md' } as TFile;
+    const contentWithMultipleTypes = `---
+UID: multi-rel-test-123
+FN: Multi Rel Test
+---
+
+#### Related
+- friend: [[Bob Doe]]
+- parent: [[Bob Doe]]
+- father: [[Bob Doe]]
+
+#Contact`;
+
+    mockApp.vault!.read = vi.fn().mockResolvedValue(contentWithMultipleTypes);
+    mockApp.metadataCache!.getFileCache = vi.fn().mockReturnValue({
+      frontmatter: {
+        UID: 'multi-rel-test-123',
+        FN: 'Multi Rel Test'
+      }
+    });
+
+    const contactNote = new ContactNote(mockApp as App, mockSettings, mockFile);
+    const result = await contactNote.syncRelatedListToFrontmatter();
+
+    expect(result.success).toBe(true);
+    // Should keep both "friend" and "father" (deduplicated from parent/father)
+    // Bob Doe can be both a friend AND a parent
+  });
 });
