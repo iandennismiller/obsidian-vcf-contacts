@@ -34,15 +34,22 @@ export const ContactToFrontMatterProcessor: CuratorProcessor = {
   settingDescription: "Automatically syncs Contact markdown section to contact frontmatter fields (EMAIL, TEL, ADR, URL)",
   settingDefaultValue: false,
 
-  async process(contact: Contact): Promise<CuratorQueItem | undefined> {
+  async process(contact: Contact, calledWithRunType?: RunType): Promise<CuratorQueItem | undefined> {
     console.debug(`[ContactToFrontMatterProcessor] Starting process for contact: ${contact.file.basename}`);
     
-    const activeProcessor = getSettings()[`${this.settingPropertyName}`] as boolean;
-    console.debug(`[ContactToFrontMatterProcessor] Processor enabled: ${activeProcessor}`);
+    // When called with MANUAL run type, skip settings check (user explicitly invoked)
+    const isManualInvocation = calledWithRunType === RunType.MANUAL;
     
-    if (!activeProcessor) {
-      console.debug(`[ContactToFrontMatterProcessor] Processor disabled, returning early`);
-      return Promise.resolve(undefined);
+    if (!isManualInvocation) {
+      const activeProcessor = getSettings()[`${this.settingPropertyName}`] as boolean;
+      console.debug(`[ContactToFrontMatterProcessor] Processor enabled: ${activeProcessor}`);
+      
+      if (!activeProcessor) {
+        console.debug(`[ContactToFrontMatterProcessor] Processor disabled, returning early`);
+        return Promise.resolve(undefined);
+      }
+    } else {
+      console.debug(`[ContactToFrontMatterProcessor] Manual invocation - bypassing settings check`);
     }
 
     const settings = getSettings();

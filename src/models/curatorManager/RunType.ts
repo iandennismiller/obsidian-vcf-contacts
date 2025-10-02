@@ -9,5 +9,6 @@
 export enum RunType {
   IMMEDIATELY = 'immediately',
   UPCOMING = 'upcoming',
-  IMPROVEMENT = 'improvement'
+  IMPROVEMENT = 'improvement',
+  MANUAL = 'manual'
 }
