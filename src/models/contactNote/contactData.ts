@@ -3,7 +3,7 @@
  * Groups all contact-related data in one place to minimize cache misses.
  */
 
-import { TFile, App, parseYaml } from 'obsidian';
+import { TFile, App, parseYaml, stringifyYaml } from 'obsidian';
 import { Gender } from './types';
 
 /**
@@ -187,9 +187,8 @@ export class ContactData {
 
   private async saveFrontmatter(frontmatter: Record<string, any>): Promise<void> {
     const content = await this.getContent();
-    const frontmatterYaml = Object.keys(frontmatter)
-      .map(key => `${key}: ${frontmatter[key]}`)
-      .join('\n');
+    // Use Obsidian's stringifyYaml to properly handle complex structures
+    const frontmatterYaml = stringifyYaml(frontmatter);
     
     const hasExistingFrontmatter = content.startsWith('---\n');
     let newContent: string;
@@ -197,12 +196,12 @@ export class ContactData {
     if (hasExistingFrontmatter) {
       const endIndex = content.indexOf('---\n', 4);
       if (endIndex !== -1) {
-        newContent = `---\n${frontmatterYaml}\n---\n${content.substring(endIndex + 4)}`;
+        newContent = `---\n${frontmatterYaml}---\n${content.substring(endIndex + 4)}`;
       } else {
-        newContent = `---\n${frontmatterYaml}\n---\n${content}`;
+        newContent = `---\n${frontmatterYaml}---\n${content}`;
       }
     } else {
-      newContent = `---\n${frontmatterYaml}\n---\n${content}`;
+      newContent = `---\n${frontmatterYaml}---\n${content}`;
     }
     
     await this.updateContent(newContent);
