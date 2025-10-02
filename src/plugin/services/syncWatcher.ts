@@ -7,6 +7,7 @@ import { ContactsPluginSettings } from 'src/plugin/settings';
 import { onSettingsChange } from "src/plugin/context/sharedSettingsContext";
 import { curatorService } from "src/models/curatorManager/curatorManager";
 import { RunType } from "src/models/curatorManager/RunType";
+import { waitForMetadataCache } from "./metadataCacheWaiter";
 
 /**
  * Information about a VCard file being tracked by the watcher
@@ -58,9 +59,10 @@ export class SyncWatcher {
    * 
    * This method:
    * 1. Validates settings and stops any existing watcher
-   * 2. Initializes the cache of existing contact UIDs
-   * 3. Performs an initial scan based on storage method
-   * 4. Starts polling for changes at the configured interval
+   * 2. Waits for metadata cache to be ready
+   * 3. Initializes the cache of existing contact UIDs
+   * 4. Performs an initial scan based on storage method
+   * 5. Starts polling for changes at the configured interval
    * 
    * @returns Promise that resolves when the watcher is fully started
    */
@@ -74,8 +76,9 @@ export class SyncWatcher {
     // Stop any existing watcher
     this.stop();
 
-    // Wait a bit for Obsidian to fully initialize the metadata cache
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Wait for metadata cache to be ready before proceeding
+    // This ensures we can properly detect contact files
+    await waitForMetadataCache(this.app);
 
     // Initialize existing UIDs from Obsidian contacts using ContactManager
     await this.contactManager.initializeCache();
