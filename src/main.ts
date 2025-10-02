@@ -5,6 +5,7 @@ import { setupVCFDropHandler } from 'src/plugin/services/dropHandler';
 import { setApp, clearApp } from "src/plugin/context/sharedAppContext";
 import { setSettings, clearSettings } from "src/plugin/context/sharedSettingsContext";
 import { CuratorManager, curatorService } from "./models/curatorManager/curatorManager";
+import { waitForMetadataCache } from "src/plugin/services/metadataCacheWaiter";
 
 import { ContactNote } from "./models/contactNote";
 import { ContactManager } from "./models/contactManager";
@@ -30,6 +31,10 @@ export default class ContactsPlugin extends Plugin {
 
 		// Note: Curator processors are registered in curatorRegistration.ts at module load time
 		// This ensures they're available when DEFAULT_SETTINGS is created
+
+		// Wait for metadata cache to be ready before initializing
+		// This runs async in the background and doesn't block Obsidian from loading
+		await waitForMetadataCache(this.app);
 
 		// Initialize ContactManager for automatic syncing
 		this.contactManager = new ContactManager(this.app, this.settings);

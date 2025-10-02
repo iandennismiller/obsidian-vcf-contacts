@@ -3,6 +3,11 @@ import { SyncWatcher } from '../../../src/plugin/services/syncWatcher';
 import type { ContactsPluginSettings } from 'src/plugin/settings';
 import type { App } from 'obsidian';
 
+// Mock metadataCacheWaiter
+vi.mock('../../../src/plugin/services/metadataCacheWaiter', () => ({
+  waitForMetadataCache: vi.fn().mockResolvedValue(undefined),
+}));
+
 // Mock timers
 vi.mock('timers', () => ({
   setTimeout: vi.fn((cb, ms) => {
