@@ -130,7 +130,7 @@ export class RelationshipOperations {
                 parsedValue: parsedValue || undefined
               });
               
-              console.info(`[RelationshipOperations] Auto-corrected malformed RELATED.${nestedKey} to RELATED[${nestedKey}]`);
+              console.debug(`[RelationshipOperations] Auto-corrected malformed RELATED.${nestedKey} to RELATED[${nestedKey}]`);
             } else if (Array.isArray(nestedValue)) {
               // Handle arrays in RELATED object - convert to indexed format
               for (let i = 0; i < nestedValue.length; i++) {
@@ -146,7 +146,7 @@ export class RelationshipOperations {
                     parsedValue: parsedValue || undefined
                   });
                   
-                  console.info(`[RelationshipOperations] Auto-corrected malformed RELATED.${nestedKey}[${i}] to ${correctedKey}`);
+                  console.debug(`[RelationshipOperations] Auto-corrected malformed RELATED.${nestedKey}[${i}] to ${correctedKey}`);
                 }
               }
             }
@@ -172,7 +172,7 @@ export class RelationshipOperations {
                 parsedValue: parsedValue || undefined
               });
               
-              console.info(`[RelationshipOperations] Auto-corrected malformed ${key} to RELATED[${typePart}]`);
+              console.debug(`[RelationshipOperations] Auto-corrected malformed ${key} to RELATED[${typePart}]`);
               continue;
             } else if (Array.isArray(value)) {
               // Handle array of relationships - convert to indexed RELATED[n:type] format
@@ -190,7 +190,7 @@ export class RelationshipOperations {
                     parsedValue: parsedValue || undefined
                   });
                   
-                  console.info(`[RelationshipOperations] Auto-corrected malformed ${key}[${i}] to ${correctedKey}`);
+                  console.debug(`[RelationshipOperations] Auto-corrected malformed ${key}[${i}] to ${correctedKey}`);
                 }
               }
               continue;
@@ -211,7 +211,7 @@ export class RelationshipOperations {
                     parsedValue: parsedValue || undefined
                   });
                   
-                  console.info(`[RelationshipOperations] Auto-corrected malformed ${key}.${nestedKey} to RELATED[${combinedType}]`);
+                  console.debug(`[RelationshipOperations] Auto-corrected malformed ${key}.${nestedKey} to RELATED[${combinedType}]`);
                 }
               }
               continue;
