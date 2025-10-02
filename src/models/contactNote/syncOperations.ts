@@ -99,11 +99,14 @@ export class SyncOperations {
       // First, clear existing RELATED fields from frontmatter
       const frontmatter = await this.contactData.getFrontmatter();
       if (frontmatter) {
+        console.log(`[SyncOperations] Checking frontmatter keys for RELATED fields...`);
         Object.keys(frontmatter).forEach(key => {
           if (key.startsWith('RELATED') || key === 'RELATED') {
+            console.log(`[SyncOperations]   Found key to delete: ${key} (type: ${typeof frontmatter[key]})`);
             frontmatterUpdates[key] = ''; // Mark for deletion
           }
         });
+        console.log(`[SyncOperations] Marked ${Object.keys(frontmatterUpdates).filter(k => frontmatterUpdates[k] === '').length} keys for deletion`);
       }
 
       // Process each deduplicated relationship

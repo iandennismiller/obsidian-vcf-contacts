@@ -137,32 +137,44 @@ export class ContactData {
    * Update multiple frontmatter values in one operation
    */
   async updateMultipleFrontmatterValues(updates: Record<string, string>, skipRevUpdate = false): Promise<void> {
+    console.log(`[ContactData] updateMultipleFrontmatterValues called with ${Object.keys(updates).length} updates`);
     const frontmatter = await this.getFrontmatter();
     if (!frontmatter) {
+      console.log(`[ContactData] No frontmatter found, returning`);
       return;
     }
+
+    console.log(`[ContactData] Current frontmatter keys: ${Object.keys(frontmatter).join(', ')}`);
 
     // Check if any values have actually changed
     let hasChanges = false;
     for (const [key, value] of Object.entries(updates)) {
-      if (frontmatter[key] !== value) {
+      const currentValue = frontmatter[key];
+      const valuesMatch = currentValue === value;
+      console.log(`[ContactData] Checking ${key}: current="${currentValue}", new="${value}", match=${valuesMatch}`);
+      if (!valuesMatch) {
         hasChanges = true;
-        break;
       }
     }
 
+    console.log(`[ContactData] hasChanges: ${hasChanges}`);
     if (!hasChanges) {
+      console.log(`[ContactData] No changes detected, returning`);
       return; // No changes needed
     }
 
     // Apply all updates
     for (const [key, value] of Object.entries(updates)) {
       if (value === '') {
+        console.log(`[ContactData] Deleting key: ${key}`);
         delete frontmatter[key];
       } else {
+        console.log(`[ContactData] Setting ${key} = ${value}`);
         frontmatter[key] = value;
       }
     }
+
+    console.log(`[ContactData] After updates, frontmatter keys: ${Object.keys(frontmatter).join(', ')}`);
 
     // Update REV timestamp unless skipRevUpdate is true
     if (!skipRevUpdate) {
@@ -170,6 +182,7 @@ export class ContactData {
     }
 
     await this.saveFrontmatter(frontmatter);
+    console.log(`[ContactData] Frontmatter saved successfully`);
   }
 
   private async saveFrontmatter(frontmatter: Record<string, any>): Promise<void> {
