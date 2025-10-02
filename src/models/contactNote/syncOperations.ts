@@ -111,10 +111,13 @@ export class SyncOperations {
         try {
           // Convert to genderless type for storage in frontmatter
           const genderlessType = this.relationshipOps.convertToGenderlessType(relationship.type);
+          console.log(`[SyncOperations] Processing relationship: ${relationship.type} -> ${relationship.contactName}, genderless type: ${genderlessType}`);
           
           // Get or initialize index for this relationship type
           const currentIndex = typeIndices.get(genderlessType) || 0;
+          console.log(`[SyncOperations]   Current index for type '${genderlessType}': ${currentIndex}`);
           typeIndices.set(genderlessType, currentIndex + 1);
+          console.log(`[SyncOperations]   Updated index for type '${genderlessType}' to: ${currentIndex + 1}`);
           
           const resolvedContact = await this.relationshipOps.resolveContact(relationship.contactName);
           
@@ -128,14 +131,16 @@ export class SyncOperations {
             const key = currentIndex === 0 
               ? `RELATED[${genderlessType}]`
               : `RELATED[${currentIndex}:${genderlessType}]`;
-              
+            
+            console.log(`[SyncOperations]   Generated key: ${key}`);
             frontmatterUpdates[key] = relatedValue;
           } else {
             // Keep unresolved relationships as name references
             const key = currentIndex === 0 
               ? `RELATED[${genderlessType}]`
               : `RELATED[${currentIndex}:${genderlessType}]`;
-              
+            
+            console.log(`[SyncOperations]   Generated key (unresolved): ${key}`);
             frontmatterUpdates[key] = `name:${relationship.contactName}`;
             
             errors.push(`Could not resolve contact: ${relationship.contactName}`);
