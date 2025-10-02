@@ -32,7 +32,7 @@ export const FrontMatterToContactProcessor: CuratorProcessor = {
   runType: RunType.IMPROVEMENT,
   settingPropertyName: "frontMatterToContactProcessor",
   settingDescription: "Automatically generates/updates Contact markdown section from frontmatter fields (EMAIL, TEL, ADR, URL)",
-  settingDefaultValue: false,
+  settingDefaultValue: true,
 
   async process(contact: Contact, calledWithRunType?: RunType): Promise<CuratorQueItem | undefined> {
     console.debug(`[FrontMatterToContactProcessor] Starting process for contact: ${contact.file.basename}`);
