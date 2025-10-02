@@ -144,7 +144,7 @@ export class MarkdownOperations {
             }
           }
           
-          relatedEntries.push(`- ${displayType}: [[${contactName}]]`);
+          relatedEntries.push(`- ${displayType} [[${contactName}]]`);
         }
       }
     });

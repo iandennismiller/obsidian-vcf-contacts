@@ -131,10 +131,10 @@ FN: Source Contact
 ---
 
 #### Related
-- friend: [[Existing Contact]]
-- colleague: [[Missing Contact]]
-- mentor: [[Another Missing]]
-- neighbor: [[Existing Contact]]
+- friend [[Existing Contact]]
+- colleague [[Missing Contact]]
+- mentor [[Another Missing]]
+- neighbor [[Existing Contact]]
 
 #Contact`;
 
@@ -558,7 +558,7 @@ EMAIL: valid@example.com
 ---
 
 #### Related
-- friend: [[Valid Contact]]
+- friend [[Valid Contact]]
 
 #Contact`,
         expectedIssues: 0
@@ -579,7 +579,7 @@ EMAIL: invalid-email
 ---
 
 #### Related
-- friend: [[Missing Person]]
+- friend [[Missing Person]]
 
 #Contact`,
         expectedIssues: 5 // Empty UID, invalid email, invalid phone, invalid date, broken link

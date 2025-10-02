@@ -203,9 +203,9 @@ REV: 20240101T120000Z
 ---
 
 #### Related
-- spouse: [[Jane Smith]]
-- friend: [[Bob Jones]]
-- sibling: [[Alice Brown]]
+- spouse [[Jane Smith]]
+- friend [[Bob Jones]]
+- sibling [[Alice Brown]]
 
 #Contact`;
 
@@ -319,7 +319,7 @@ REV: 20240101T120000Z
 ---
 
 #### Related
-- friend: [[Friend]]
+- friend [[Friend]]
 
 #Contact`);
 
@@ -393,11 +393,11 @@ REV: 20240101T120000Z
 ---
 
 #### Related
-- spouse: [[Spouse]]
-- sibling: [[Sibling]]
-- parent: [[Parent]]
-- friend: [[Friend1]]
-- friend: [[Friend2]]
+- spouse [[Spouse]]
+- sibling [[Sibling]]
+- parent [[Parent]]
+- friend [[Friend1]]
+- friend [[Friend2]]
 
 #Contact`);
 
@@ -468,10 +468,10 @@ REV: 20230101T120000Z
 ---
 
 #### Related
-- spouse: [[Spouse]]
-- friend: [[Old Friend]]
-- friend: [[New Friend]]
-- sibling: [[Sibling]]
+- spouse [[Spouse]]
+- friend [[Old Friend]]
+- friend [[New Friend]]
+- sibling [[Sibling]]
 
 #Contact`);
 
@@ -579,8 +579,8 @@ REV: 20230101T120000Z
 ---
 
 #### Related
-- spouse: [[Spouse]]
-- friend: [[Friend]]
+- spouse [[Spouse]]
+- friend [[Friend]]
 
 #Contact`);
 
@@ -642,8 +642,8 @@ REV: 20230101T120000Z
 ---
 
 #### Related
-- friend: [[Friend1]]
-- friend: [[Friend2]]
+- friend [[Friend1]]
+- friend [[Friend2]]
 
 #Contact`);
 
@@ -725,8 +725,8 @@ REV: 20230101T120000Z
 ---
 
 #### Related
-- friend: [[Friend]]
-- sibling: [[Sibling]]
+- friend [[Friend]]
+- sibling [[Sibling]]
 
 #Contact`);
 
@@ -807,8 +807,8 @@ REV: 20230101T120000Z
 ---
 
 #### Related
-- friend: [[Friend1]]
-- friend: [[Friend2]]
+- friend [[Friend1]]
+- friend [[Friend2]]
 
 #Contact`);
 
@@ -914,7 +914,7 @@ REV: 20230101T120000Z
 ---
 
 #### Related
-- friend: [[Friend]]
+- friend [[Friend]]
 
 #Contact`);
 

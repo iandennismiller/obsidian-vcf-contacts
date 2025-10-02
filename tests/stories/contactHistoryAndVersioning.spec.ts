@@ -392,7 +392,7 @@ REV: 20240215T120000Z
 ---
 
 #### Related
-- friend: [[Friend Contact]]
+- friend [[Friend Contact]]
 
 #Contact`;
 
@@ -405,8 +405,8 @@ REV: 20240215T125000Z
 ---
 
 #### Related
-- friend: [[Friend Contact]]
-- colleague: [[New Colleague]]
+- friend [[Friend Contact]]
+- colleague [[New Colleague]]
 
 #Contact`;
 

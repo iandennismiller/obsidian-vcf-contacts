@@ -218,8 +218,8 @@ RELATED[colleague]: name:Colleague Name
 ---
 
 #### Related
-- friend: [[Friend Name]]
-- colleague: [[Colleague Name]]
+- friend [[Friend Name]]
+- colleague [[Colleague Name]]
 
 #Contact`;
 

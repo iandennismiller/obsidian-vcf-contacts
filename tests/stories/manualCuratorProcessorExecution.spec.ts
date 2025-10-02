@@ -78,8 +78,8 @@ REV: 20240101T120000Z
 ---
 
 #### Related
-- spouse: [[Jane Smith]]
-- friend: [[Bob Jones]]
+- spouse [[Jane Smith]]
+- friend [[Bob Jones]]
 
 #Contact`;
 
@@ -242,8 +242,8 @@ REV: 20240101T120000Z
 ---
 
 #### Related
-- colleague: [[Charlie Davis]]
-- friend: [[Diana Evans]]
+- colleague [[Charlie Davis]]
+- friend [[Diana Evans]]
 
 #Contact`;
 
@@ -373,7 +373,7 @@ REV: 20240101T120000Z
 ---
 
 #### Related
-- spouse: [[Frank Miller]]
+- spouse [[Frank Miller]]
 
 #Contact`;
 
@@ -438,7 +438,7 @@ REV: ${oldRev}
 ---
 
 #### Related
-- colleague: [[Henry Kim]]
+- colleague [[Henry Kim]]
 
 #Contact`;
 
@@ -576,7 +576,7 @@ RELATED.friend:
 ---
 
 #### Related
-- friend: [[Kelly White]]
+- friend [[Kelly White]]
 
 #Contact`;
 

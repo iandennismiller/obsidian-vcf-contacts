@@ -52,8 +52,8 @@ RELATED[1:colleague]: name:Another Colleague
 ---
 
 #### Related
-- colleague: [[Colleague Name]]
-- colleague: [[Another Colleague]]
+- colleague [[Colleague Name]]
+- colleague [[Another Colleague]]
 
 #Contact`;
 
@@ -83,7 +83,7 @@ RELATED[boss]: name:Manager Name
 ---
 
 #### Related
-- boss: [[Manager Name]]
+- boss [[Manager Name]]
 
 #Contact`;
 
@@ -115,9 +115,9 @@ RELATED[2:employee]: name:Employee Three
 ---
 
 #### Related
-- employee: [[Employee One]]
-- employee: [[Employee Two]]
-- employee: [[Employee Three]]
+- employee [[Employee One]]
+- employee [[Employee Two]]
+- employee [[Employee Three]]
 
 #Contact`;
 
@@ -149,8 +149,8 @@ RELATED[1:client]: name:Another Client
 ---
 
 #### Related
-- client: [[Client Company]]
-- client: [[Another Client]]
+- client [[Client Company]]
+- client [[Another Client]]
 
 #Contact`;
 
@@ -181,8 +181,8 @@ RELATED[1:vendor]: name:Supplier Two
 ---
 
 #### Related
-- vendor: [[Supplier One]]
-- vendor: [[Supplier Two]]
+- vendor [[Supplier One]]
+- vendor [[Supplier Two]]
 
 #Contact`;
 
@@ -215,10 +215,10 @@ RELATED[vendor]: name:Supplier Name
 ---
 
 #### Related
-- colleague: [[Coworker Name]]
-- boss: [[Manager Name]]
-- client: [[Client Name]]
-- vendor: [[Supplier Name]]
+- colleague [[Coworker Name]]
+- boss [[Manager Name]]
+- client [[Client Name]]
+- vendor [[Supplier Name]]
 
 #Contact`;
 
@@ -254,8 +254,8 @@ RELATED[mentee]: name:Junior Person
 ---
 
 #### Related
-- mentor: [[Experienced Person]]
-- mentee: [[Junior Person]]
+- mentor [[Experienced Person]]
+- mentee [[Junior Person]]
 
 #Contact`;
 
@@ -285,8 +285,8 @@ FN: Sync Professional Contact
 ---
 
 #### Related
-- colleague: [[New Colleague]]
-- client: [[New Client]]
+- colleague [[New Colleague]]
+- client [[New Client]]
 
 #Contact`;
 

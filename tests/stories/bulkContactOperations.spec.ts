@@ -109,7 +109,7 @@ RELATED[spouse]: urn:uuid:jane-uid-456
 ---
 
 #### Related
-- spouse: [[Jane Smith]]
+- spouse [[Jane Smith]]
 
 #Contact`);
       } else {
@@ -120,7 +120,7 @@ RELATED[spouse]: urn:uuid:john-uid-123
 ---
 
 #### Related
-- spouse: [[John Doe]]
+- spouse [[John Doe]]
 
 #Contact`);
       }

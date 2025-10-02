@@ -365,7 +365,7 @@ export class RelationshipOperations {
     let newRelatedSection = '#### Related\n';
     if (relationships.length > 0) {
       for (const rel of relationships) {
-        newRelatedSection += `- ${rel.type}: [[${rel.contactName}]]\n`;
+        newRelatedSection += `- ${rel.type} [[${rel.contactName}]]\n`;
       }
     } else {
       newRelatedSection += '\n';

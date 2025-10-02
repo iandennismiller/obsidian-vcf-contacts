@@ -64,7 +64,7 @@ RELATED[parent]: urn:uuid:john-doe-123
 ---
 
 #### Related
-- parent: [[John Doe]]
+- parent [[John Doe]]
 
 #Contact`;
 
@@ -136,7 +136,7 @@ GENDER: F
 ---
 
 #### Related
-- brother: [[Bob Smith]]
+- brother [[Bob Smith]]
 
 #Contact`;
 
@@ -203,7 +203,7 @@ GENDER: M
 ---
 
 #### Related
-- wife: [[Mary Married]]
+- wife [[Mary Married]]
 
 #Contact`;
 
@@ -269,7 +269,7 @@ FN: Employee Jones
 ---
 
 #### Related
-- boss: [[Boss Wilson]]
+- boss [[Boss Wilson]]
 
 #Contact`;
 
@@ -333,7 +333,7 @@ GENDER: M
 ---
 
 #### Related
-- daughter: [[Jane Existing]]
+- daughter [[Jane Existing]]
 
 #Contact`;
 
@@ -344,7 +344,7 @@ GENDER: F
 ---
 
 #### Related
-- father: [[John Existing]]
+- father [[John Existing]]
 
 #Contact`;
 
@@ -402,7 +402,7 @@ GENDER: M
 ---
 
 #### Related
-- uncle: [[Uncle Bob]]
+- uncle [[Uncle Bob]]
 
 #Contact`;
 
@@ -469,7 +469,7 @@ GENDER: NB
 ---
 
 #### Related
-- parent: [[Parent Alex]]
+- parent [[Parent Alex]]
 
 #Contact`;
 
@@ -533,7 +533,7 @@ FN: Source Contact
 ---
 
 #### Related
-- friend: [[Missing Friend]]
+- friend [[Missing Friend]]
 
 #Contact`;
 
@@ -568,8 +568,8 @@ FN: Multi Rel
 ---
 
 #### Related
-- friend: [[Target Contact]]
-- colleague: [[Target Contact]]
+- friend [[Target Contact]]
+- colleague [[Target Contact]]
 
 #Contact`;
 

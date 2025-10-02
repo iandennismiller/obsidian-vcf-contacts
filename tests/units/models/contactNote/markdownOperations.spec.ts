@@ -135,8 +135,8 @@ describe('MarkdownOperations', () => {
       const result = markdownOps.mdRender(record, '#Contact');
 
       expect(result).toContain('#### Related');
-      expect(result).toContain('- spouse: [[Jane Doe]]');
-      expect(result).toContain('- child: [[Alice Doe]]');
+      expect(result).toContain('- spouse [[Jane Doe]]');
+      expect(result).toContain('- child [[Alice Doe]]');
     });
 
     it('should apply gender-based relationship terms when genderLookup provided', () => {
@@ -156,8 +156,8 @@ describe('MarkdownOperations', () => {
 
       const result = markdownOps.mdRender(record, '#Contact', genderLookup);
 
-      expect(result).toContain('- mother: [[Jane Doe]]');
-      expect(result).toContain('- father: [[Bob Doe]]');
+      expect(result).toContain('- mother [[Jane Doe]]');
+      expect(result).toContain('- father [[Bob Doe]]');
     });
 
     it('should handle RELATED fields with UUID values', () => {
@@ -170,7 +170,7 @@ describe('MarkdownOperations', () => {
 
       const result = markdownOps.mdRender(record, '#Contact');
 
-      expect(result).toContain('- spouse: [[jane-uid-123]]');
+      expect(result).toContain('- spouse [[jane-uid-123]]');
     });
 
     it('should handle RELATED fields with UID values', () => {
@@ -183,7 +183,7 @@ describe('MarkdownOperations', () => {
 
       const result = markdownOps.mdRender(record, '#Contact');
 
-      expect(result).toContain('- friend: [[friend-uid-456]]');
+      expect(result).toContain('- friend [[friend-uid-456]]');
     });
 
     it('should render empty Related section when no RELATED fields', () => {
@@ -218,10 +218,10 @@ describe('MarkdownOperations', () => {
 
       const result = markdownOps.mdRender(record, '#Contact', genderLookup);
 
-      expect(result).toContain('- daughter: [[Alice]]');
-      expect(result).toContain('- son: [[Bob]]');
-      expect(result).toContain('- sister: [[Carol]]');
-      expect(result).toContain('- brother: [[Dave]]');
+      expect(result).toContain('- daughter [[Alice]]');
+      expect(result).toContain('- son [[Bob]]');
+      expect(result).toContain('- sister [[Carol]]');
+      expect(result).toContain('- brother [[Dave]]');
     });
 
     it('should use default relationship term when gender is unknown', () => {
@@ -236,7 +236,7 @@ describe('MarkdownOperations', () => {
 
       const result = markdownOps.mdRender(record, '#Contact', genderLookup);
 
-      expect(result).toContain('- parent: [[Unknown Person]]');
+      expect(result).toContain('- parent [[Unknown Person]]');
     });
 
     it('should not apply gender terms for UUID/UID references', () => {
@@ -251,7 +251,7 @@ describe('MarkdownOperations', () => {
 
       const result = markdownOps.mdRender(record, '#Contact', genderLookup);
 
-      expect(result).toContain('- parent: [[parent-uid]]');
+      expect(result).toContain('- parent [[parent-uid]]');
       // Gender lookup should not be called for UUID references
       expect(genderLookup).not.toHaveBeenCalled();
     });
@@ -266,7 +266,7 @@ FN: John Doe
 This is a note.
 
 #### Related
-- spouse: [[Jane Doe]]
+- spouse [[Jane Doe]]
 
 #### Custom Section
 Some custom content.
@@ -280,7 +280,7 @@ Some custom content.
 
       expect(sections.size).toBe(3);
       expect(sections.get('Notes')).toBe('This is a note.');
-      expect(sections.get('Related')).toBe('- spouse: [[Jane Doe]]');
+      expect(sections.get('Related')).toBe('- spouse [[Jane Doe]]');
       // Section content may include trailing content until next section or end
       expect(sections.get('Custom Section')).toContain('Some custom content.');
     });
@@ -331,7 +331,7 @@ FN: John Doe
 Old note content.
 
 #### Related
-- spouse: [[Jane Doe]]
+- spouse [[Jane Doe]]
 
 #Contact
 `;
@@ -379,7 +379,7 @@ Some notes.
 
       vi.mocked(mockContactData.getContent).mockResolvedValue(content);
 
-      await markdownOps.updateMarkdownSection('Related', '- spouse: [[Jane]]');
+      await markdownOps.updateMarkdownSection('Related', '- spouse [[Jane]]');
 
       expect(mockContactData.updateContent).toHaveBeenCalled();
       const updatedContent = vi.mocked(mockContactData.updateContent).mock.calls[0][0];
@@ -400,11 +400,11 @@ Some notes.`;
 
       vi.mocked(mockContactData.getContent).mockResolvedValue(content);
 
-      await markdownOps.updateMarkdownSection('Related', '- spouse: [[Jane]]');
+      await markdownOps.updateMarkdownSection('Related', '- spouse [[Jane]]');
 
       expect(mockContactData.updateContent).toHaveBeenCalled();
       const updatedContent = vi.mocked(mockContactData.updateContent).mock.calls[0][0];
-      expect(updatedContent).toContain('#### Related\n- spouse: [[Jane]]');
+      expect(updatedContent).toContain('#### Related\n- spouse [[Jane]]');
     });
   });
 });

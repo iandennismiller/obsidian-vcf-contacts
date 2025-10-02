@@ -580,7 +580,7 @@ RELATED[spouse]: urn:uuid:spouse-uid
 ---
 
 #### Related
-- spouse: [[Jane Doe]]`);
+- spouse [[Jane Doe]]`);
       contactNote.invalidateCache();
 
       mockApp.metadataCache!.getFileCache = vi.fn().mockImplementation((file) => {
@@ -631,7 +631,7 @@ FN: John Doe
 ---
 
 #### Related
-- spouse: [[Jane Doe]]`);
+- spouse [[Jane Doe]]`);
       contactNote.invalidateCache();
 
       const result = await contactNote.getRelationships();
@@ -835,7 +835,7 @@ GENDER: M
 ---
 
 #### Related
-- spouse: [[Jane Doe]]`);
+- spouse [[Jane Doe]]`);
 
       const janeFile = {
         path: 'Contacts/jane-doe.md',
@@ -862,7 +862,7 @@ FN: John Doe
 ---
 
 #### Related
-- spouse: [[Non Existent]]`);
+- spouse [[Non Existent]]`);
       mockApp.metadataCache!.getFileCache = vi.fn().mockReturnValue({
         frontmatter: { UID: 'test-uid-123', FN: 'John Doe' }
       });

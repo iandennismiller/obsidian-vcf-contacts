@@ -56,8 +56,8 @@ EMAIL: john@example.com
 John is a software developer.
 
 #### Related
-- parent: [[Bob Doe]]
-- parent: [[Mary Doe]]
+- parent [[Bob Doe]]
+- parent [[Mary Doe]]
 
 #Contact`;
 
@@ -126,9 +126,9 @@ RELATED[parent]: name:Bob Doe
 John is a software developer.
 
 #### Related
-- parent: [[Bob Doe]]
-- parent: [[Mary Doe]]
-- sibling: [[Mike Doe]]
+- parent [[Bob Doe]]
+- parent [[Mary Doe]]
+- sibling [[Mike Doe]]
 
 #Contact`;
 
@@ -164,12 +164,12 @@ FN: John Doe
 Some notes about John.
 
 ###### Related
-- parent: [[Bob Doe]]
-- parent: [[Mary Doe]]  
-- sibling: [[Mike Doe]]
-- friend: [[Alice Smith]]
-- colleague: [[Tom Wilson]]
-- boss: [[Sarah Johnson]]
+- parent [[Bob Doe]]
+- parent [[Mary Doe]]  
+- sibling [[Mike Doe]]
+- friend [[Alice Smith]]
+- colleague [[Tom Wilson]]
+- boss [[Sarah Johnson]]
 
 #Contact`;
 
@@ -203,7 +203,7 @@ RELATED[parent]: name:Bob Doe
 ---
 
 #### Related
-- parent: [[Bob Doe]]
+- parent [[Bob Doe]]
 
 #Contact`;
 
