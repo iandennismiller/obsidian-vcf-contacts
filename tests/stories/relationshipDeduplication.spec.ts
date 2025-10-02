@@ -279,8 +279,8 @@ FN: Family User
 
     expect(result.success).toBe(true);
     // After deduplication, should have:
-    // - parent: [[Bob Doe]] (kept first ungendered)
-    // - mother: [[Mary Doe]] (kept gendered over ungendered)
+    // - parent [[Bob Doe]] (kept first ungendered)
+    // - mother [[Mary Doe]] (kept gendered over ungendered)
     // In frontmatter as RELATED[parent] and RELATED[1:parent]
   });
 
