@@ -102,9 +102,6 @@ export const RelatedListProcessor: CuratorProcessor = {
         
         console.log(`[RelatedListProcessor] Deduplication sync completed successfully for ${contact.file.basename}`);
         
-        // Update REV timestamp
-        await contactNote.updateRev();
-        
         return Promise.resolve({
           name: this.name,
           runType: this.runType,
