@@ -101,7 +101,7 @@ describe('VcardFile', () => {
     });
 
     it('should return null and log error if file read fails', async () => {
-      const consoleSpy = vi.spyOn(console, 'log');
+      const consoleSpy = vi.spyOn(console, 'debug');
       vi.mocked(fsPromises.readFile).mockRejectedValue(new Error('File not found'));
 
       const vcard = await VcardFile.fromFile('/path/to/missing.vcf');
@@ -263,7 +263,7 @@ describe('VcardFile', () => {
     });
 
     it('should return false and log error on write failure', async () => {
-      const consoleSpy = vi.spyOn(console, 'log');
+      const consoleSpy = vi.spyOn(console, 'debug');
       const vcard = new VcardFile('test data');
 
       vi.mocked(fsPromises.writeFile).mockRejectedValue(new Error('Write failed'));

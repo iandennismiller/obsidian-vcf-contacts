@@ -77,12 +77,12 @@ export class VcardFile {
     try {
       const content = await fs.readFile(filePath, 'utf-8');
       if (!content) {
-        console.log(`[VcardFile] Empty or unreadable VCF file: ${path.basename(filePath)}`);
+        console.debug(`[VcardFile] Empty or unreadable VCF file: ${path.basename(filePath)}`);
         return null;
       }
       return new VcardFile(content);
     } catch (error: any) {
-      console.log(`[VcardFile] Error reading VCF file ${filePath}: ${error.message}`);
+      console.debug(`[VcardFile] Error reading VCF file ${filePath}: ${error.message}`);
       return null;
     }
   }
@@ -191,7 +191,7 @@ export class VcardFile {
       await fs.writeFile(filePath, this.data, 'utf-8');
       return true;
     } catch (error: any) {
-      console.log(`[VcardFile] Error writing VCF file ${filePath}: ${error.message}`);
+      console.debug(`[VcardFile] Error writing VCF file ${filePath}: ${error.message}`);
       return false;
     }
   }

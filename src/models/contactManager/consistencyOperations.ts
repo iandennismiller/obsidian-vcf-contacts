@@ -27,17 +27,17 @@ export class ConsistencyOperations {
    * Groups consistency logic with data access for better cache locality
    */
   async ensureContactDataConsistency(maxIterations: number = 10): Promise<void> {
-    console.log('[ConsistencyOperations] Starting contact data consistency check...');
+    console.debug('[ConsistencyOperations] Starting contact data consistency check...');
     
     try {
       // Get all contact files
       const allContactFiles = this.managerData.getAllContactFiles();
       if (allContactFiles.length === 0) {
-        console.log('[ConsistencyOperations] No contacts found for consistency check');
+        console.debug('[ConsistencyOperations] No contacts found for consistency check');
         return;
       }
 
-      console.log(`[ConsistencyOperations] Processing ${allContactFiles.length} contacts for consistency`);
+      console.debug(`[ConsistencyOperations] Processing ${allContactFiles.length} contacts for consistency`);
 
       // Create initial task list with contacts and their REV timestamps
       let taskList = await this.createContactTaskListInternal(allContactFiles);
@@ -54,15 +54,15 @@ export class ConsistencyOperations {
         // Iteratively process contacts until no changes or max iterations
         while (hasChanges && iteration < maxIterations) {
           iteration++;
-          console.log(`[ConsistencyOperations] Consistency check iteration ${iteration}/${maxIterations}`);
+          console.debug(`[ConsistencyOperations] Consistency check iteration ${iteration}/${maxIterations}`);
 
           const changedContacts = await this.processTaskListForConsistency(taskList);
           
           if (changedContacts.length === 0) {
             hasChanges = false;
-            console.log(`[ConsistencyOperations] No changes detected in iteration ${iteration}, consistency achieved`);
+            console.debug(`[ConsistencyOperations] No changes detected in iteration ${iteration}, consistency achieved`);
           } else {
-            console.log(`[ConsistencyOperations] ${changedContacts.length} contacts changed in iteration ${iteration}`);
+            console.debug(`[ConsistencyOperations] ${changedContacts.length} contacts changed in iteration ${iteration}`);
             // Create new task list with only changed contacts
             taskList = await this.createContactTaskListInternal(changedContacts);
           }
@@ -70,7 +70,7 @@ export class ConsistencyOperations {
 
         // Check if we hit max iterations
         if (iteration >= maxIterations && hasChanges) {
-          console.log(`[ConsistencyOperations] WARNING: Consistency check stopped after ${maxIterations} iterations. Some contacts may still need processing.`);
+          console.debug(`[ConsistencyOperations] WARNING: Consistency check stopped after ${maxIterations} iterations. Some contacts may still need processing.`);
         }
 
       } finally {
@@ -80,16 +80,16 @@ export class ConsistencyOperations {
 
       // Finally, process all contacts one more time with just vcardSyncPostProcessor
       if (originalVcardSyncPostProcessorState) {
-        console.log('[ConsistencyOperations] Running final vcardSyncPostProcessor pass...');
+        console.debug('[ConsistencyOperations] Running final vcardSyncPostProcessor pass...');
         const allContacts = await this.getFrontmatterFromFiles(allContactFiles);
         await curatorService.process(allContacts, RunType.IMPROVEMENT);
-        console.log('[ConsistencyOperations] Final vcardSyncPostProcessor pass completed');
+        console.debug('[ConsistencyOperations] Final vcardSyncPostProcessor pass completed');
       }
 
-      console.log(`[ConsistencyOperations] Contact data consistency check completed after ${iteration} iterations`);
+      console.debug(`[ConsistencyOperations] Contact data consistency check completed after ${iteration} iterations`);
 
     } catch (error: any) {
-      console.log(`[ConsistencyOperations] Error during consistency check: ${error.message}`);
+      console.debug(`[ConsistencyOperations] Error during consistency check: ${error.message}`);
       // Don't throw - handle gracefully for error resilience
       return;
     }
@@ -117,7 +117,7 @@ export class ConsistencyOperations {
           taskList.set(uid, { file, originalRev });
         }
       } catch (error: any) {
-        console.log(`[ConsistencyOperations] Error reading contact ${file.basename}: ${error.message}`);
+        console.debug(`[ConsistencyOperations] Error reading contact ${file.basename}: ${error.message}`);
       }
     }
     
@@ -154,15 +154,15 @@ export class ConsistencyOperations {
           // Compare REV timestamps to detect changes
           if (currentRev !== taskItem.originalRev) {
             changedContacts.push(taskItem.file);
-            console.log(`[ConsistencyOperations] Contact ${taskItem.file.basename} REV changed: ${taskItem.originalRev} -> ${currentRev}`);
+            console.debug(`[ConsistencyOperations] Contact ${taskItem.file.basename} REV changed: ${taskItem.originalRev} -> ${currentRev}`);
           }
         } catch (error: any) {
-          console.log(`[ConsistencyOperations] Error checking REV for ${taskItem.file.basename}: ${error.message}`);
+          console.debug(`[ConsistencyOperations] Error checking REV for ${taskItem.file.basename}: ${error.message}`);
         }
       }
       
     } catch (error: any) {
-      console.log(`[ConsistencyOperations] Error processing task list: ${error.message}`);
+      console.debug(`[ConsistencyOperations] Error processing task list: ${error.message}`);
       throw error;
     }
     
@@ -268,7 +268,7 @@ export class ConsistencyOperations {
       const result = await curatorService.process(contacts, RunType.IMMEDIATELY);
       return result || [];
     } catch (error: any) {
-      console.log(`[ConsistencyOperations] Error processing contacts with curator: ${error.message}`);
+      console.debug(`[ConsistencyOperations] Error processing contacts with curator: ${error.message}`);
       return [];
     }
   }
@@ -288,7 +288,7 @@ export class ConsistencyOperations {
           data: frontMatter
         });
       } catch (error: any) {
-        console.log(`[ConsistencyOperations] Error extracting frontmatter from ${file.path}: ${error.message}`);
+        console.debug(`[ConsistencyOperations] Error extracting frontmatter from ${file.path}: ${error.message}`);
         contactsData.push({
           file: file,
           data: {}
@@ -317,7 +317,7 @@ export class ConsistencyOperations {
         
         taskList.push({ file, revTimestamp });
       } catch (error: any) {
-        console.log(`[ConsistencyOperations] Error reading contact ${file.basename}: ${error.message}`);
+        console.debug(`[ConsistencyOperations] Error reading contact ${file.basename}: ${error.message}`);
         taskList.push({ file, revTimestamp: 0 });
       }
     }

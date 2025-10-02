@@ -140,7 +140,7 @@ export const RelatedNamespaceUpgradeProcessor: CuratorProcessor = {
             `${relationship.type}: name:${contactName} → ${namespace}${resolvedContact.uid}`
           );
           
-          console.log(
+          console.debug(
             `[RelatedNamespaceUpgradeProcessor] Upgraded relationship in ${contact.file.basename}: ${relationship.type} from name:${contactName} to ${upgradedValue}`
           );
           
@@ -155,7 +155,7 @@ export const RelatedNamespaceUpgradeProcessor: CuratorProcessor = {
       if (upgradeCount > 0) {
         await contactNote.updateMultipleFrontmatterValues(frontmatterUpdates);
         
-        console.log(
+        console.debug(
           `[RelatedNamespaceUpgradeProcessor] Upgraded ${upgradeCount} relationship${upgradeCount !== 1 ? 's' : ''} in ${contact.file.basename}`
         );
         

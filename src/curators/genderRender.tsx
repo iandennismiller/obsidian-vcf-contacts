@@ -86,7 +86,7 @@ export const GenderRenderProcessor: CuratorProcessor = {
               `${relationship.type} [[${relationship.contactName}]] → ${genderedTerm} [[${relationship.contactName}]]`
             );
             
-            console.log(
+            console.debug(
               `[GenderRenderProcessor] Updated relationship term: "${relationship.type}" → "${genderedTerm}" for ${relationship.contactName} (gender: ${relatedContact.gender}) in ${contact.file.basename}`
             );
             
@@ -119,7 +119,7 @@ export const GenderRenderProcessor: CuratorProcessor = {
       if (changesCount > 0) {
         await contactNote.updateRelatedSectionInContent(updatedRelationships);
         
-        console.log(
+        console.debug(
           `[GenderRenderProcessor] Updated ${changesCount} relationship term${changesCount !== 1 ? 's' : ''} in Related section of ${contact.file.basename}`
         );
         

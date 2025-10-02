@@ -101,7 +101,7 @@ export const RelatedFrontMatterProcessor: CuratorProcessor = {
       
       // Log the added relationships
       missingRelationships.forEach(rel => {
-        console.log(
+        console.debug(
           `[RelatedFrontMatterProcessor] Added missing relationship to Related section: ${contact.file.basename} -> ${rel}`
         );
       });

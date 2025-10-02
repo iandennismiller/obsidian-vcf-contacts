@@ -233,7 +233,7 @@ export class VcardManager {
       return filesToProcess;
 
     } catch (error: any) {
-      console.log(`[VcardManager] Error scanning VCF folder: ${error.message}`);
+      console.debug(`[VcardManager] Error scanning VCF folder: ${error.message}`);
       return [];
     }
   }
@@ -272,7 +272,7 @@ export class VcardManager {
       return validEntries;
 
     } catch (error: any) {
-      console.log(`[VcardManager] Error processing VCF file ${filePath}: ${error.message}`);
+      console.debug(`[VcardManager] Error processing VCF file ${filePath}: ${error.message}`);
       return [];
     }
   }

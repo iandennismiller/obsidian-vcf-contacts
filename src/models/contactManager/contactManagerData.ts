@@ -59,14 +59,14 @@ export class ContactManagerData {
     this.contactFiles.clear();
 
     try {
-      console.log('[ContactManagerData] Building UID cache...');
+      console.debug('[ContactManagerData] Building UID cache...');
 
       const contactsFolder = this.getContactsFolder();
 
       // Check if the contacts folder exists
       const folder = this.app.vault.getAbstractFileByPath(contactsFolder);
       if (!folder) {
-        console.log(`[ContactManagerData] Contacts folder not found: ${contactsFolder}`);
+        console.debug(`[ContactManagerData] Contacts folder not found: ${contactsFolder}`);
         return;
       }
 
@@ -77,7 +77,7 @@ export class ContactManagerData {
         file.path.startsWith(contactsFolder)
       );
 
-      console.log(`[ContactManagerData] Found ${files.length} files in contacts folder`);
+      console.debug(`[ContactManagerData] Found ${files.length} files in contacts folder`);
       
       // Extract UIDs from each file and build cache
       for (const file of files) {
@@ -86,13 +86,13 @@ export class ContactManagerData {
         if (uid) {
           this.existingUIDs.add(uid);
           this.contactFiles.set(uid, file);
-          console.log(`[ContactManagerData] Cached UID "${uid}" -> ${file.path}`);
+          console.debug(`[ContactManagerData] Cached UID "${uid}" -> ${file.path}`);
         }
       }
 
-      console.log(`[ContactManagerData] Cache built with ${this.existingUIDs.size} UIDs`);
+      console.debug(`[ContactManagerData] Cache built with ${this.existingUIDs.size} UIDs`);
     } catch (error: any) {
-      console.log(`[ContactManagerData] Failed to build UID cache: ${error.message}`);
+      console.debug(`[ContactManagerData] Failed to build UID cache: ${error.message}`);
     }
   }
 
@@ -103,7 +103,7 @@ export class ContactManagerData {
     this.existingUIDs.clear();
     this.contactFiles.clear();
     this._contactFilesCache = null;
-    console.log('[ContactManagerData] Cache cleared');
+    console.debug('[ContactManagerData] Cache cleared');
   }
 
   /**
@@ -120,7 +120,7 @@ export class ContactManagerData {
     this.existingUIDs.add(uid);
     this.contactFiles.set(uid, file);
     this._contactFilesCache = null; // Invalidate cache
-    console.log(`[ContactManagerData] Added to cache: UID "${uid}" -> ${file.path}`);
+    console.debug(`[ContactManagerData] Added to cache: UID "${uid}" -> ${file.path}`);
   }
 
   /**
@@ -137,7 +137,7 @@ export class ContactManagerData {
     this.existingUIDs.delete(uid);
     this.contactFiles.delete(uid);
     this._contactFilesCache = null; // Invalidate cache
-    console.log(`[ContactManagerData] Removed from cache: UID "${uid}"`);
+    console.debug(`[ContactManagerData] Removed from cache: UID "${uid}"`);
   }
 
   /**
@@ -156,7 +156,7 @@ export class ContactManagerData {
     if (this.existingUIDs.has(uid)) {
       this.contactFiles.set(uid, newFile);
       this._contactFilesCache = null; // Invalidate cache
-      console.log(`[ContactManagerData] Updated cache for rename: UID "${uid}" -> ${newFile.path}`);
+      console.debug(`[ContactManagerData] Updated cache for rename: UID "${uid}" -> ${newFile.path}`);
     }
   }
 
@@ -260,7 +260,7 @@ export class ContactManagerData {
       const uid = cache?.frontmatter?.UID;
       
       if (uid) {
-        console.log(`[ContactManagerData] Extracted UID "${uid}" from ${file.path} via metadata cache`);
+        console.debug(`[ContactManagerData] Extracted UID "${uid}" from ${file.path} via metadata cache`);
         return uid;
       }
 
@@ -273,17 +273,17 @@ export class ContactManagerData {
           const uidMatch = frontmatterText.match(/^UID:\s*(.+)$/m);
           if (uidMatch) {
             const extractedUID = uidMatch[1].trim();
-            console.log(`[ContactManagerData] Extracted UID "${extractedUID}" from ${file.path} via file parsing`);
+            console.debug(`[ContactManagerData] Extracted UID "${extractedUID}" from ${file.path} via file parsing`);
             return extractedUID;
           }
         }
       } catch (readError) {
-        console.log(`[ContactManagerData] Error reading file for UID extraction: ${readError}`);
+        console.debug(`[ContactManagerData] Error reading file for UID extraction: ${readError}`);
       }
 
       return null;
     } catch (error: any) {
-      console.log(`[ContactManagerData] Error extracting UID from ${file.path}: ${error.message}`);
+      console.debug(`[ContactManagerData] Error extracting UID from ${file.path}: ${error.message}`);
       return null;
     }
   }
@@ -292,7 +292,7 @@ export class ContactManagerData {
    * Find contact file by UID - search operation grouped with cache access
    */
   async findContactFileByUID(uid: string, extractUIDCallback?: (file: TFile) => Promise<string | null>): Promise<TFile | null> {
-    console.log(`[ContactManagerData] Looking for contact with UID: "${uid}"`);
+    console.debug(`[ContactManagerData] Looking for contact with UID: "${uid}"`);
     
     // Use the callback if provided, otherwise use internal method
     const extractUID = extractUIDCallback || this.extractUIDFromFile.bind(this);
@@ -300,15 +300,15 @@ export class ContactManagerData {
     // First check the cached contactFiles map
     const cachedFile = this.getCachedFile(uid);
     if (cachedFile) {
-      console.log(`[ContactManagerData] Found cached file for UID "${uid}": ${cachedFile.path}`);
+      console.debug(`[ContactManagerData] Found cached file for UID "${uid}": ${cachedFile.path}`);
       // Verify the file still exists and has the correct UID
       const fileUID = await extractUID(cachedFile);
       
       if (fileUID === uid) {
-        console.log(`[ContactManagerData] Cache hit confirmed for UID "${uid}"`);
+        console.debug(`[ContactManagerData] Cache hit confirmed for UID "${uid}"`);
         return cachedFile;
       } else {
-        console.log(`[ContactManagerData] Cache stale for UID "${uid}", removing from cache`);
+        console.debug(`[ContactManagerData] Cache stale for UID "${uid}", removing from cache`);
         // Cache is stale, remove this entry
         this.removeFromCache(uid);
       }
@@ -316,30 +316,30 @@ export class ContactManagerData {
     
     // Fallback: scan all files in the contacts folder
     try {
-      console.log(`[ContactManagerData] Cache miss for UID "${uid}", scanning all files...`);
+      console.debug(`[ContactManagerData] Cache miss for UID "${uid}", scanning all files...`);
       
       const contactsFolder = this.getContactsFolder();
       const files = this.app.vault.getMarkdownFiles().filter(file => 
         file.path.startsWith(contactsFolder)
       );
       
-      console.log(`[ContactManagerData] Scanning ${files.length} files for UID "${uid}"`);
+      console.debug(`[ContactManagerData] Scanning ${files.length} files for UID "${uid}"`);
       
       for (const file of files) {
         const fileUID = await extractUID(file);
         
         if (fileUID === uid) {
-          console.log(`[ContactManagerData] Found match for UID "${uid}": ${file.path}`);
+          console.debug(`[ContactManagerData] Found match for UID "${uid}": ${file.path}`);
           // Add to cache for future lookups
           this.addToCache(uid, file);
           return file;
         }
       }
       
-      console.log(`[ContactManagerData] No contact found with UID "${uid}"`);
+      console.debug(`[ContactManagerData] No contact found with UID "${uid}"`);
       return null;
     } catch (error: any) {
-      console.log(`[ContactManagerData] Error finding contact file by UID: ${error.message}`);
+      console.debug(`[ContactManagerData] Error finding contact file by UID: ${error.message}`);
       return null;
     }
   }
@@ -417,7 +417,7 @@ export class ContactManagerData {
       this.handleActiveLeafChange(leaf);
     });
 
-    console.log('[ContactManagerData] Event listeners set up');
+    console.debug('[ContactManagerData] Event listeners set up');
   }
 
   /**
@@ -427,7 +427,7 @@ export class ContactManagerData {
     if (this.eventRef) {
       this.app.workspace.offref(this.eventRef);
       this.eventRef = null;
-      console.log('[ContactManagerData] Event listeners cleaned up');
+      console.debug('[ContactManagerData] Event listeners cleaned up');
     }
   }
 

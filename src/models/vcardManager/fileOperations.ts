@@ -22,7 +22,7 @@ export class VCardManagerFileOperations {
   async writeVCardFile(filename: string, content: string): Promise<string | null> {
     const watchFolder = this.getWatchFolder();
     if (!watchFolder) {
-      console.log(`[VCardManagerFileOperations] No watch folder configured for writing VCard file`);
+      console.debug(`[VCardManagerFileOperations] No watch folder configured for writing VCard file`);
       return null;
     }
 
@@ -45,7 +45,7 @@ export class VCardManagerFileOperations {
 
     const exists = await VCardFileOperations.folderExists(watchFolder);
     if (!exists) {
-      console.log(`[VCardManagerFileOperations] VCF watch folder does not exist: ${watchFolder}`);
+      console.debug(`[VCardManagerFileOperations] VCF watch folder does not exist: ${watchFolder}`);
     }
     
     return exists;

@@ -146,7 +146,7 @@ describe('VCardManagerFileOperations', () => {
     });
 
     it('should log when folder does not exist', async () => {
-      const consoleSpy = vi.spyOn(console, 'log');
+      const consoleSpy = vi.spyOn(console, 'debug');
       vi.mocked(VCardFileOperations.folderExists).mockResolvedValue(false);
 
       await fileOps.watchFolderExists();
