@@ -79,6 +79,7 @@ export class ContactData {
     if (this._frontmatter === null) {
       // Skip metadata cache if we just wrote to the file
       // because Obsidian's metadata cache updates asynchronously
+      // and may parse our quoted RELATED keys incorrectly
       if (!this._skipMetadataCache) {
         try {
           // Try metadata cache first (most efficient)
@@ -90,10 +91,9 @@ export class ContactData {
         } catch (error: any) {
           console.log(`[ContactData] Error accessing metadata cache for ${this.file.path}: ${error.message}`);
         }
-      } else {
-        // Reset flag after skipping metadata cache once
-        this._skipMetadataCache = false;
       }
+      // Note: We don't reset _skipMetadataCache here anymore
+      // It will be reset when invalidateAllCaches() is called
 
       try {
         // Fallback: parse from content
