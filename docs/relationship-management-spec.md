@@ -185,6 +185,25 @@ The plugin must establish a bidirectional mapping:
 
 The feature must not touch any other headings or other parts of the document—just the list under the Related heading.
 
+### Sync Operation Behavior
+
+When synchronizing relationships between the Related list and frontmatter:
+
+1. **Additive Syncing**: Sync operations should be **additive** (merging), not **destructive** (replacing)
+   - When syncing from Related list to frontmatter: Add missing relationships to frontmatter, preserve existing ones
+   - When syncing from frontmatter to Related list: Add missing relationships to Related list, preserve existing ones
+   - Never delete relationships from either location unless they are duplicates
+
+2. **Preservation**: Relationships should be preserved in both representations
+   - If a relationship exists in the Related list but not in frontmatter, add it to frontmatter
+   - If a relationship exists in frontmatter but not in the Related list, add it to the Related list
+   - Do not delete from one location just because it's missing from the other
+
+3. **Deduplication**: The only time relationships should be removed is during deduplication
+   - Remove exact duplicates (same type and contact)
+   - Remove redundant gendered/ungendered pairs (keep gendered version)
+   - Update both frontmatter and Related list to reflect deduplicated state
+
 ## Validation and Consistency
 
 ### Pre-Change Validation
