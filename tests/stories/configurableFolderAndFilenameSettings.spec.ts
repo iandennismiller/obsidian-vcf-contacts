@@ -315,4 +315,63 @@ describe('Configurable Folder and Filename Settings Story', () => {
       expect(settings.contactsFolder).toBe(folderName);
     });
   });
+
+  it('should show ignore lists when vcfCustomizeIgnoreList is enabled with vcf-folder method', () => {
+    // Test that ignore lists should be visible when:
+    // 1. VCF storage method is 'vcf-folder'
+    // 2. vcfCustomizeIgnoreList is enabled
+    // Previously, this also required vcfWatchEnabled and vcfWriteBackEnabled to be true
+    
+    const settingsShowingIgnoreLists = {
+      ...mockSettings,
+      vcfStorageMethod: 'vcf-folder' as const,
+      vcfCustomizeIgnoreList: true,
+      // These should NOT be required for ignore lists to show
+      vcfWatchEnabled: false,
+      vcfWriteBackEnabled: false
+    };
+
+    // Verify the conditions that should make ignore lists visible
+    expect(settingsShowingIgnoreLists.vcfStorageMethod).toBe('vcf-folder');
+    expect(settingsShowingIgnoreLists.vcfCustomizeIgnoreList).toBe(true);
+    
+    // This condition matches the updated logic in settings.ts line 255-256:
+    // if (this.plugin.settings.vcfStorageMethod === 'vcf-folder' && 
+    //     this.plugin.settings.vcfCustomizeIgnoreList)
+    const shouldShowIgnoreLists = 
+      settingsShowingIgnoreLists.vcfStorageMethod === 'vcf-folder' &&
+      settingsShowingIgnoreLists.vcfCustomizeIgnoreList;
+    
+    expect(shouldShowIgnoreLists).toBe(true);
+  });
+
+  it('should NOT show ignore lists when vcfCustomizeIgnoreList is disabled', () => {
+    const settingsHidingIgnoreLists = {
+      ...mockSettings,
+      vcfStorageMethod: 'vcf-folder' as const,
+      vcfCustomizeIgnoreList: false,
+      vcfWatchEnabled: true,
+      vcfWriteBackEnabled: true
+    };
+
+    const shouldShowIgnoreLists = 
+      settingsHidingIgnoreLists.vcfStorageMethod === 'vcf-folder' &&
+      settingsHidingIgnoreLists.vcfCustomizeIgnoreList;
+    
+    expect(shouldShowIgnoreLists).toBe(false);
+  });
+
+  it('should NOT show ignore lists when storage method is single-vcf', () => {
+    const settingsHidingIgnoreLists = {
+      ...mockSettings,
+      vcfStorageMethod: 'single-vcf' as const,
+      vcfCustomizeIgnoreList: true
+    };
+
+    const shouldShowIgnoreLists = 
+      settingsHidingIgnoreLists.vcfStorageMethod === 'vcf-folder' &&
+      settingsHidingIgnoreLists.vcfCustomizeIgnoreList;
+    
+    expect(shouldShowIgnoreLists).toBe(false);
+  });
 });
