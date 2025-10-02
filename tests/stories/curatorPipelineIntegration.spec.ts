@@ -444,4 +444,178 @@ REV: 20240101T120000Z
 
     console.log('\n[SUCCESS] All relationship types stored correctly!');
   });
+
+  it('should handle contacts with existing RELATED frontmatter and update correctly', async () => {
+    console.log('\n=== EXISTING RELATED FRONTMATTER TEST ===\n');
+
+    // This test simulates the runtime scenario where contacts already have
+    // RELATED fields in frontmatter before processing
+    const mainFile = { basename: 'existing-contact', path: 'Contacts/existing-contact.md', name: 'existing-contact.md' } as TFile;
+    const spouse = { basename: 'spouse', path: 'Contacts/spouse.md', name: 'spouse.md' } as TFile;
+    const oldFriend = { basename: 'old-friend', path: 'Contacts/old-friend.md', name: 'old-friend.md' } as TFile;
+    const newFriend = { basename: 'new-friend', path: 'Contacts/new-friend.md', name: 'new-friend.md' } as TFile;
+    const sibling = { basename: 'sibling', path: 'Contacts/sibling.md', name: 'sibling.md' } as TFile;
+
+    [mainFile, spouse, oldFriend, newFriend, sibling].forEach(f => mockContactFiles.set(f.path, f));
+
+    // Contact already has RELATED fields in frontmatter (potentially malformed or incomplete)
+    fileContents.set(mainFile.path, `---
+UID: existing-uid
+FN: Existing Contact
+REV: 20230101T120000Z
+"RELATED[spouse]": uid:spouse-uid
+"RELATED[friend]": uid:old-friend-uid
+---
+
+#### Related
+- spouse: [[Spouse]]
+- friend: [[Old Friend]]
+- friend: [[New Friend]]
+- sibling: [[Sibling]]
+
+#Contact`);
+
+    fileContents.set(spouse.path, `---\nUID: spouse-uid\nFN: Spouse\n---\n#Contact`);
+    fileContents.set(oldFriend.path, `---\nUID: old-friend-uid\nFN: Old Friend\n---\n#Contact`);
+    fileContents.set(newFriend.path, `---\nUID: new-friend-uid\nFN: New Friend\n---\n#Contact`);
+    fileContents.set(sibling.path, `---\nUID: sibling-uid\nFN: Sibling\n---\n#Contact`);
+
+    console.log('[SETUP] Contact with existing RELATED frontmatter created');
+    
+    const initialFrontmatter = extractFrontmatter(fileContents.get(mainFile.path)!);
+    console.log('[INITIAL-STATE] Existing frontmatter RELATED keys:');
+    Object.keys(initialFrontmatter).filter(k => k.startsWith('RELATED')).forEach(key => {
+      console.log(`  ${key}: ${initialFrontmatter[key]}`);
+    });
+
+    const initialRelated = extractRelatedSection(fileContents.get(mainFile.path)!);
+    console.log('[INITIAL-STATE] Related section items:');
+    initialRelated.forEach(rel => console.log(`  ${rel}`));
+
+    const mainContact: Contact = { file: mainFile, UID: 'existing-uid', FN: 'Existing Contact' };
+
+    console.log('\n[PROCESSING] Running RelatedListProcessor...');
+    const result = await RelatedListProcessor.process(mainContact);
+
+    // Check if processor detected missing relationships
+    if (result) {
+      console.log(`[PROCESSOR-RESULT] ${result.message}`);
+    } else {
+      console.log('[PROCESSOR-RESULT] No changes needed (all relationships already synced)');
+    }
+
+    // Analyze write history
+    console.log(`\n[WRITE-HISTORY] Total writes: ${writeHistory.length}`);
+    writeHistory.forEach((write, idx) => {
+      console.log(`\nWrite #${idx + 1} to ${write.file}:`);
+      const fm = extractFrontmatter(write.content);
+      const relatedKeys = Object.keys(fm).filter(k => k.startsWith('RELATED')).sort();
+      console.log(`  RELATED keys (${relatedKeys.length}): ${relatedKeys.join(', ')}`);
+      relatedKeys.forEach(key => {
+        console.log(`    ${key}: ${fm[key]}`);
+      });
+    });
+
+    // Check final state
+    const finalContent = fileContents.get(mainFile.path)!;
+    const finalFrontmatter = extractFrontmatter(finalContent);
+    const finalRelated = extractRelatedSection(finalContent);
+
+    console.log('\n[FINAL-STATE] Final frontmatter RELATED keys:');
+    const finalRelatedKeys = Object.keys(finalFrontmatter).filter(k => k.startsWith('RELATED')).sort();
+    finalRelatedKeys.forEach(key => {
+      console.log(`  ${key}: ${finalFrontmatter[key]}`);
+    });
+
+    console.log('[FINAL-STATE] Final Related section items:');
+    finalRelated.forEach(rel => console.log(`  ${rel}`));
+
+    // Verify all relationships from Related section are in frontmatter
+    expect(finalFrontmatter['RELATED[spouse]']).toBeDefined();
+    expect(finalFrontmatter['RELATED[spouse]']).toContain('spouse-uid');
+
+    // Should have 2 friend relationships
+    const friendKeys = finalRelatedKeys.filter(k => k.toLowerCase().includes('friend'));
+    console.log(`\n[VERIFICATION] Found ${friendKeys.length} friend-related keys: ${friendKeys.join(', ')}`);
+    expect(friendKeys.length).toBe(2);
+
+    // Should have sibling relationship
+    expect(finalFrontmatter['RELATED[sibling]']).toBeDefined();
+    expect(finalFrontmatter['RELATED[sibling]']).toContain('sibling-uid');
+
+    // Verify no malformed RELATED structure
+    expect(finalFrontmatter['RELATED']).toBeUndefined();
+
+    // Verify REV was updated (should be newer than initial)
+    expect(finalFrontmatter['REV']).toBeDefined();
+    if (result) {
+      // If changes were made, REV should be updated
+      expect(finalFrontmatter['REV']).not.toBe('20230101T120000Z');
+    }
+
+    // Check that we don't have duplicate or lost relationships
+    console.log(`\n[VERIFICATION] Total RELATED keys in final state: ${finalRelatedKeys.length}`);
+    expect(finalRelatedKeys.length).toBeGreaterThanOrEqual(4); // spouse, 2 friends, sibling
+
+    console.log('\n[SUCCESS] Existing RELATED frontmatter handled correctly!');
+  });
+
+  it('should not corrupt existing RELATED keys when adding new relationships', async () => {
+    console.log('\n=== EXISTING KEYS PRESERVATION TEST ===\n');
+
+    // Test that existing RELATED keys are preserved when new ones are added
+    const testFile = { basename: 'preservation-test', path: 'Contacts/preservation-test.md', name: 'preservation-test.md' } as TFile;
+    const spouse = { basename: 'spouse', path: 'Contacts/spouse.md', name: 'spouse.md' } as TFile;
+    const friend = { basename: 'friend', path: 'Contacts/friend.md', name: 'friend.md' } as TFile;
+
+    [testFile, spouse, friend].forEach(f => mockContactFiles.set(f.path, f));
+
+    // Contact has spouse in frontmatter but friend only in Related section
+    fileContents.set(testFile.path, `---
+UID: test-uid
+FN: Test Contact
+REV: 20230101T120000Z
+"RELATED[spouse]": uid:spouse-uid
+---
+
+#### Related
+- spouse: [[Spouse]]
+- friend: [[Friend]]
+
+#Contact`);
+
+    fileContents.set(spouse.path, `---\nUID: spouse-uid\nFN: Spouse\n---\n#Contact`);
+    fileContents.set(friend.path, `---\nUID: friend-uid\nFN: Friend\n---\n#Contact`);
+
+    const testContact: Contact = { file: testFile, UID: 'test-uid', FN: 'Test Contact' };
+
+    console.log('[SETUP] Contact with partial RELATED frontmatter');
+    const initialFrontmatter = extractFrontmatter(fileContents.get(testFile.path)!);
+    console.log('[INITIAL] Frontmatter has RELATED[spouse]:', initialFrontmatter['RELATED[spouse]']);
+
+    await RelatedListProcessor.process(testContact);
+
+    // Check all writes preserve existing spouse relationship
+    let spousePreserved = true;
+    writeHistory.forEach((write, idx) => {
+      const fm = extractFrontmatter(write.content);
+      if (!fm['RELATED[spouse]'] || !fm['RELATED[spouse]'].includes('spouse-uid')) {
+        console.log(`[WARNING] Write #${idx + 1} lost spouse relationship!`);
+        spousePreserved = false;
+      }
+    });
+
+    expect(spousePreserved).toBe(true);
+
+    // Final state should have both spouse and friend
+    const finalFrontmatter = extractFrontmatter(fileContents.get(testFile.path)!);
+    console.log('\n[FINAL] RELATED keys:', Object.keys(finalFrontmatter).filter(k => k.startsWith('RELATED')));
+    
+    expect(finalFrontmatter['RELATED[spouse]']).toBeDefined();
+    expect(finalFrontmatter['RELATED[spouse]']).toContain('spouse-uid');
+    expect(finalFrontmatter['RELATED[friend]']).toBeDefined();
+    expect(finalFrontmatter['RELATED[friend]']).toContain('friend-uid');
+
+    console.log('\n[SUCCESS] Existing keys preserved when adding new relationships!');
+  });
 });
