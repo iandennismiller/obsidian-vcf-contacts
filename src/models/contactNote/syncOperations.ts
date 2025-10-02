@@ -201,8 +201,12 @@ export class SyncOperations {
     try {
       const frontmatterRelationships = await this.relationshipOps.parseFrontmatterRelationships();
       const existingMarkdownRelationships = await this.relationshipOps.parseRelatedSection();
-      const markdownRelationships: { type: string; contactName: string }[] = [];
+      
+      // Start with existing markdown relationships to preserve them
+      const markdownRelationships: { type: string; contactName: string }[] = 
+        existingMarkdownRelationships.map(rel => ({ type: rel.type, contactName: rel.contactName }));
 
+      // Process frontmatter relationships and merge them in
       for (const fmRel of frontmatterRelationships) {
         try {
           if (fmRel.parsedValue) {
@@ -234,10 +238,21 @@ export class SyncOperations {
               }
             }
             
-            markdownRelationships.push({
-              type: fmRel.type,
-              contactName: contactName
+            // Check if this relationship already exists in markdown (by type and contact name)
+            const genderlessFmType = this.relationshipOps.convertToGenderlessType(fmRel.type);
+            const alreadyExists = markdownRelationships.some(rel => {
+              const genderlessMdType = this.relationshipOps.convertToGenderlessType(rel.type);
+              return genderlessMdType === genderlessFmType && 
+                     rel.contactName.toLowerCase() === contactName.toLowerCase();
             });
+            
+            if (!alreadyExists) {
+              // Add new relationship from frontmatter
+              markdownRelationships.push({
+                type: fmRel.type,
+                contactName: contactName
+              });
+            }
           } else {
             errors.push(`Could not parse RELATED value: ${fmRel.value}`);
           }
@@ -246,7 +261,7 @@ export class SyncOperations {
         }
       }
 
-      // Update the Related section in markdown
+      // Update the Related section in markdown with the merged relationships
       await this.relationshipOps.updateRelatedSectionInContent(markdownRelationships);
 
       return { success: true, errors, updatedRelationships };

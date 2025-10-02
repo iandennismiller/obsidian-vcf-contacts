@@ -42,6 +42,9 @@ This document outlines user stories and use cases for managing contacts and rela
 ### 11a. Relationship De-duplication
 **As a user**, when I have duplicate relationships in my Related list (including cases where the same relationship appears with both gendered and ungendered terms like "mother" and "parent"), I want the plugin to automatically de-duplicate them. When a relationship appears twice - once with a gendered term (like "mother", "father", "sister", "brother") and once with an ungendered term (like "parent", "sibling") - the plugin should keep only the gendered version and infer the contact's gender from it. The plugin should also remove exact duplicate relationships where the same relationship type and contact appear multiple times. This ensures my Related list and frontmatter stay clean and consistent without manual intervention.
 
+### 11b. Relationship Sync Preservation
+**As a user**, when I manually invoke contact processing and a relationship exists in the Related list but is missing from frontmatter, I expect the plugin to add the missing relationship to frontmatter, not delete it from the Related list. Similarly, when a relationship exists in frontmatter but is missing from the Related list, the plugin should add it to the Related list, not delete it from frontmatter. The sync operations should always be additive (merging), never destructive (replacing), ensuring that relationships are preserved across both representations.
+
 ## Contact Data Management Stories
 
 ### 12. Contact Creation from Template
