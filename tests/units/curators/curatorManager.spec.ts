@@ -32,18 +32,12 @@ vi.mock('obsidian', () => ({
 const mockProcessor = {
   name: 'TestProcessor',
   runType: RunType.IMMEDIATELY,
-  settingPropertyName: 'testProcessor',
-  settingDescription: 'Test processor for unit testing',
-  settingDefaultValue: true,
   process: vi.fn().mockResolvedValue(undefined)
 };
 
 const mockProcessorWithResult = {
   name: 'ProcessorWithResult',
   runType: RunType.IMPROVEMENT,
-  settingPropertyName: 'processorWithResult',
-  settingDescription: 'Processor that returns results',
-  settingDefaultValue: true,
   process: vi.fn().mockResolvedValue({
     name: 'ProcessorWithResult',
     runType: RunType.IMPROVEMENT,
@@ -81,28 +75,6 @@ describe('CuratorManager', () => {
         curatorManager.register(mockProcessor);
         curatorManager.register(mockProcessorWithResult);
       }).not.toThrow();
-    });
-
-    it('should provide settings for registered processors', () => {
-      curatorManager.register(mockProcessor);
-      const settings = curatorManager.settings();
-      
-      expect(settings).toBeInstanceOf(Array);
-      const testProcessorSetting = settings.find(s => s.name === 'TestProcessor');
-      expect(testProcessorSetting).toBeDefined();
-      expect(testProcessorSetting?.settingPropertyName).toBe('testProcessor');
-      expect(testProcessorSetting?.settingDescription).toBe('Test processor for unit testing');
-      expect(testProcessorSetting?.settingDefaultValue).toBe(true);
-      expect(testProcessorSetting?.runType).toBe(RunType.IMMEDIATELY);
-    });
-
-    it('should support different run types', () => {
-      curatorManager.register(mockProcessor); // IMMEDIATELY
-      curatorManager.register(mockProcessorWithResult); // IMPROVEMENT
-      
-      const settings = curatorManager.settings();
-      expect(settings.some(s => s.runType === RunType.IMMEDIATELY)).toBe(true);
-      expect(settings.some(s => s.runType === RunType.IMPROVEMENT)).toBe(true);
     });
   });
 
@@ -339,14 +311,11 @@ describe('CuratorManager', () => {
     it('should provide service methods', () => {
       expect(typeof curatorService.register).toBe('function');
       expect(typeof curatorService.process).toBe('function');
-      expect(typeof curatorService.settings).toBe('function');
+      expect(typeof curatorService._clearProcessors).toBe('function');
     });
 
     it('should register processors in service', () => {
       expect(() => curatorService.register(mockProcessor)).not.toThrow();
-      
-      const settings = curatorService.settings();
-      expect(settings.some(s => s.name === 'TestProcessor')).toBe(true);
     });
 
     it('should process contacts via service', async () => {
@@ -375,13 +344,6 @@ describe('CuratorManager', () => {
         { data: { FN: 'Test' }, file: { path: 'test.md' } } as any, 
         RunType.IMMEDIATELY
       )).rejects.toThrow('Processing failed');
-    });
-
-    it('should return empty settings when no processors registered', () => {
-      const newManager = new CuratorManager(mockApp, mockSettings, mockContactManager);
-      const settings = newManager.settings();
-      
-      expect(settings).toEqual([]);
     });
 
     it('should handle empty contact array', async () => {

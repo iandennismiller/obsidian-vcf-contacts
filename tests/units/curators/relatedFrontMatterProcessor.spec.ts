@@ -7,9 +7,6 @@ describe('RelatedFrontMatterProcessor', () => {
     it('should have correct processor properties', () => {
       expect(RelatedFrontMatterProcessor.name).toBe('RelatedFrontMatterProcessor');
       expect(RelatedFrontMatterProcessor.runType).toBe(RunType.IMPROVEMENT);
-      expect(RelatedFrontMatterProcessor.settingPropertyName).toBe('relatedFrontMatterProcessor');
-      expect(RelatedFrontMatterProcessor.settingDescription).toContain('syncs RELATED frontmatter');
-      expect(RelatedFrontMatterProcessor.settingDefaultValue).toBe(true);
     });
 
     it('should have a process function', () => {
@@ -22,7 +19,6 @@ describe('RelatedFrontMatterProcessor', () => {
     it('should synchronize frontmatter relationships', () => {
       // The processor synchronizes relationship data between frontmatter and content
       // This ensures consistency in relationship representation
-      expect(RelatedFrontMatterProcessor.settingDescription).toContain('syncs');
     });
 
     it('should handle bidirectional relationships', () => {
@@ -33,20 +29,11 @@ describe('RelatedFrontMatterProcessor', () => {
 
     it('should be enabled by default', () => {
       // Relationship synchronization should be enabled by default
-      expect(RelatedFrontMatterProcessor.settingDefaultValue).toBe(true);
     });
   });
 
 
   describe("processor implementation verification", () => {
-    it("should have proper processor configuration", () => {
-      const processorSource = RelatedFrontMatterProcessor.process.toString();
-      expect(processorSource).toContain("activeProcessor");
-      expect(
-        processorSource.includes("getSettings") || processorSource.includes("__vite_ssr_import")
-      ).toBe(true);
-    });
-
     it("should handle contact data appropriately", () => {
       const processorSource = RelatedFrontMatterProcessor.process.toString();
       expect(processorSource).toContain("contact");

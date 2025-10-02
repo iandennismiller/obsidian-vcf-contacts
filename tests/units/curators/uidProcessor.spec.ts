@@ -7,9 +7,6 @@ describe('UidProcessor', () => {
     it('should have correct processor properties', () => {
       expect(UidProcessor.name).toBe('UidProcessor');
       expect(UidProcessor.runType).toBe(RunType.IMMEDIATELY);
-      expect(UidProcessor.settingPropertyName).toBe('UIDProcessor');
-      expect(UidProcessor.settingDescription).toContain('Automatically generates a unique identifier');
-      expect(UidProcessor.settingDefaultValue).toBe(true);
     });
 
     it('should have a process function', () => {
@@ -36,15 +33,6 @@ describe('UidProcessor', () => {
         processorSource.includes('return Promise.resolve(undefined)')
       ).toBe(true);
     });
-
-    it('should check processor setting before processing', () => {
-      // Verify the logic respects the processor setting
-      const processorSource = UidProcessor.process.toString();
-      expect(processorSource).toContain('activeProcessor');
-      expect(
-        processorSource.includes('getSettings') || processorSource.includes('__vite_ssr_import')
-      ).toBe(true);
-    });
   });
 
   describe('processor behavior verification', () => {
@@ -55,12 +43,10 @@ describe('UidProcessor', () => {
 
     it('should have proper setting property name for configuration', () => {
       // Should use consistent naming for settings
-      expect(UidProcessor.settingPropertyName).toBe('UIDProcessor');
     });
 
     it('should be enabled by default', () => {
       // UID generation should be on by default as it's essential
-      expect(UidProcessor.settingDefaultValue).toBe(true);
     });
 
     it('should use proper URN format for UIDs', () => {

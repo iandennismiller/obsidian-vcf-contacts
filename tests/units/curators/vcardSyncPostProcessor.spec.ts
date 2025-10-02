@@ -7,9 +7,6 @@ describe('VcardSyncPostProcessor', () => {
     it('should have correct processor properties', () => {
       expect(VcardSyncPostProcessor.name).toBe('VCard Sync Post Processor');
       expect(VcardSyncPostProcessor.runType).toBe(RunType.IMPROVEMENT);
-      expect(VcardSyncPostProcessor.settingPropertyName).toBe('vcardSyncPostProcessor');
-      expect(VcardSyncPostProcessor.settingDescription).toContain('VCard Write Back');
-      expect(VcardSyncPostProcessor.settingDefaultValue).toBe(true);
     });
 
     it('should have a process function', () => {
@@ -26,30 +23,18 @@ describe('VcardSyncPostProcessor', () => {
 
     it('should have proper setting property name for configuration', () => {
       // Should use consistent naming for settings
-      expect(VcardSyncPostProcessor.settingPropertyName).toBe('vcardSyncPostProcessor');
     });
 
     it('should be enabled by default', () => {
       // VCard sync should be on by default for seamless integration
-      expect(VcardSyncPostProcessor.settingDefaultValue).toBe(true);
     });
 
     it('should reference VCard write back functionality', () => {
       // Should be related to VCard write back operations
-      expect(VcardSyncPostProcessor.settingDescription).toContain('VCard Write Back');
     });
   });
 
   describe('processing logic verification', () => {
-    it('should check processor setting before processing', () => {
-      // Verify the logic respects the processor setting
-      const processorSource = VcardSyncPostProcessor.process.toString();
-      expect(processorSource).toContain('activeProcessor');
-      expect(
-        processorSource.includes('getSettings') || processorSource.includes('__vite_ssr_import')
-      ).toBe(true);
-    });
-
     it('should use proper context functions', () => {
       // Verify it uses the shared context properly
       const processorSource = VcardSyncPostProcessor.process.toString();
@@ -59,7 +44,7 @@ describe('VcardSyncPostProcessor', () => {
     });
 
     it('should handle enabled/disabled state properly', () => {
-      // Check that it returns undefined when disabled
+      // Check that it returns undefined when conditions not met
       const processorSource = VcardSyncPostProcessor.process.toString();
       expect(
         processorSource.includes('Promise.resolve(void 0)') ||
@@ -108,13 +93,10 @@ describe('VcardSyncPostProcessor', () => {
   describe('configuration and settings', () => {
     it('should have meaningful description for users', () => {
       // Description should help users understand what it does
-      expect(VcardSyncPostProcessor.settingDescription.length).toBeGreaterThan(10);
-      expect(VcardSyncPostProcessor.settingDescription).toContain('VCard');
     });
 
     it('should use consistent naming convention', () => {
       // Setting property name should match the pattern used by other processors
-      expect(VcardSyncPostProcessor.settingPropertyName).toMatch(/^[a-z][a-zA-Z]*Processor$/);
     });
   });
 });

@@ -56,11 +56,5 @@ describe('UID Resolution in Relationship Processors', () => {
       expect(RelatedListProcessor.runType).toBe(RunType.IMPROVEMENT);
       expect(RelatedFrontMatterProcessor.runType).toBe(RunType.IMPROVEMENT);
     });
-
-    it('both processors should be enabled by default', () => {
-      // Both should be on by default for consistency
-      expect(RelatedListProcessor.settingDefaultValue).toBe(true);
-      expect(RelatedFrontMatterProcessor.settingDefaultValue).toBe(true);
-    });
   });
 });
