@@ -23,6 +23,10 @@ export class ContactData {
   // Derived data cache
   private _parsedRelationships: any[] | null = null;
   private _markdownSections: Map<string, string> | null = null;
+  
+  // Flag to skip metadata cache after a write operation
+  // because Obsidian's metadata cache updates asynchronously
+  private _skipMetadataCache: boolean = false;
 
   constructor(app: App, file: TFile) {
     this.app = app;
@@ -62,6 +66,8 @@ export class ContactData {
     this._frontmatter = null;
     this._parsedRelationships = null;
     this._markdownSections = null;
+    // Skip metadata cache on next read since it updates asynchronously
+    this._skipMetadataCache = true;
   }
 
   // === Frontmatter Operations (grouped with frontmatter data) ===
@@ -71,15 +77,22 @@ export class ContactData {
    */
   async getFrontmatter(): Promise<Record<string, any> | null> {
     if (this._frontmatter === null) {
-      try {
-        // Try metadata cache first (most efficient)
-        const cache = this.app.metadataCache.getFileCache(this.file);
-        if (cache?.frontmatter) {
-          this._frontmatter = cache.frontmatter;
-          return this._frontmatter;
+      // Skip metadata cache if we just wrote to the file
+      // because Obsidian's metadata cache updates asynchronously
+      if (!this._skipMetadataCache) {
+        try {
+          // Try metadata cache first (most efficient)
+          const cache = this.app.metadataCache.getFileCache(this.file);
+          if (cache?.frontmatter) {
+            this._frontmatter = cache.frontmatter;
+            return this._frontmatter;
+          }
+        } catch (error: any) {
+          console.log(`[ContactData] Error accessing metadata cache for ${this.file.path}: ${error.message}`);
         }
-      } catch (error: any) {
-        console.log(`[ContactData] Error accessing metadata cache for ${this.file.path}: ${error.message}`);
+      } else {
+        // Reset flag after skipping metadata cache once
+        this._skipMetadataCache = false;
       }
 
       try {
@@ -308,6 +321,7 @@ export class ContactData {
     this._displayName = null;
     this._parsedRelationships = null;
     this._markdownSections = null;
+    this._skipMetadataCache = false;
   }
 
   /**
