@@ -110,28 +110,58 @@ export class ContactsSettingTab extends PluginSettingTab {
           setSettings(this.plugin.settings);
         }));
 
-    curatorSetting.forEach((settingProps :CuratorSettingProperties) => {
-      const settingKey = settingProps.settingPropertyName;
-      const currentValue = this.plugin.settings[settingKey];
-
-      if (typeof currentValue === "boolean") {
-        new Setting(containerEl)
-          .setName(settingProps.name)
-          .setDesc(settingProps.settingDescription)
-          .addToggle(toggle =>
-            toggle
-              .setValue(currentValue)
-              .onChange(async (value) => {
-                this.plugin.settings[settingKey] = value;
-                await this.plugin.saveSettings();
-                setSettings(this.plugin.settings);
-              }));
-      }
-    })
-
-    // VCF Storage Configuration
-    const vcfStorageTitle = containerEl.createEl("h3", { text: "VCF Storage Configuration" });
+    // Sync Contacts Section
+    const vcfStorageTitle = containerEl.createEl("h3", { text: "Sync Contacts" });
     vcfStorageTitle.style.marginTop = "2em";
+
+    // VCF Watch Enabled Toggle (moved before storage method)
+    new Setting(containerEl)
+      .setName("Enable Contact Sync")
+      .setDesc("When enabled, the plugin will monitor for changes and trigger VCF sync processors. Controls both VCF Sync Pre Processor (import) and VCF Sync Post Processor (write-back).")
+      .addToggle(toggle =>
+        toggle
+          .setValue(this.plugin.settings.vcfWatchEnabled)
+          .onChange(async (value) => {
+            this.plugin.settings.vcfWatchEnabled = value;
+            await this.plugin.saveSettings();
+            setSettings(this.plugin.settings);
+            // Refresh the display to show/hide dependent settings
+            this.display();
+          }));
+
+    // Show folder watching sub-settings only when watching is enabled
+    if (this.plugin.settings.vcfWatchEnabled) {
+      // VCF Watch Polling Interval
+      new Setting(containerEl)
+        .setName("Polling Interval (seconds)")
+        .setDesc("How often to check for changes. Minimum 10 seconds.")
+        .addText(text => text
+          .setPlaceholder("30")
+          .setValue(String(this.plugin.settings.vcfWatchPollingInterval))
+          .onChange(async (value) => {
+            const numValue = parseInt(value, 10);
+            if (!isNaN(numValue) && numValue >= 10) {
+              this.plugin.settings.vcfWatchPollingInterval = numValue;
+              await this.plugin.saveSettings();
+              setSettings(this.plugin.settings);
+            }
+          }));
+
+      // VCF Write Back Toggle (only shown when folder watching is enabled)
+      new Setting(containerEl)
+        .setName("Enable VCF Write Back")
+        .setDesc("When enabled, the VCF Sync Post Processor will write changes from Obsidian contacts back to VCF files. Disable to prevent any modifications to VCF files.")
+        .addToggle(toggle =>
+          toggle
+            .setValue(this.plugin.settings.vcfWriteBackEnabled)
+            .onChange(async (value) => {
+              this.plugin.settings.vcfWriteBackEnabled = value;
+              await this.plugin.saveSettings();
+              setSettings(this.plugin.settings);
+              // Refresh the display to show/hide dependent settings
+              this.display();
+            }));
+    }
 
     // VCF Storage Method
     const storageMethodDesc = document.createDocumentFragment();
@@ -221,63 +251,8 @@ export class ContactsSettingTab extends PluginSettingTab {
             }));
     }
 
-    // VCF Folder Watching Settings
-    const vcfWatchingTitle = containerEl.createEl("h3", { text: "Sync Contacts" });
-    vcfWatchingTitle.style.marginTop = "2em";
-
-    // VCF Watch Enabled Toggle (always shown)
-    new Setting(containerEl)
-      .setName("Enable Contact Sync")
-      .setDesc("When enabled, the plugin will monitor for changes and trigger VCF sync processors. Controls both VCF Sync Pre Processor (import) and VCF Sync Post Processor (write-back).")
-      .addToggle(toggle =>
-        toggle
-          .setValue(this.plugin.settings.vcfWatchEnabled)
-          .onChange(async (value) => {
-            this.plugin.settings.vcfWatchEnabled = value;
-            await this.plugin.saveSettings();
-            setSettings(this.plugin.settings);
-            // Refresh the display to show/hide dependent settings
-            this.display();
-          }));
-
-    // Show folder watching sub-settings only when watching is enabled
-    if (this.plugin.settings.vcfWatchEnabled) {
-      // VCF Watch Polling Interval
-      new Setting(containerEl)
-        .setName("Polling Interval (seconds)")
-        .setDesc("How often to check for changes. Minimum 10 seconds.")
-        .addText(text => text
-          .setPlaceholder("30")
-          .setValue(String(this.plugin.settings.vcfWatchPollingInterval))
-          .onChange(async (value) => {
-            const numValue = parseInt(value, 10);
-            if (!isNaN(numValue) && numValue >= 10) {
-              this.plugin.settings.vcfWatchPollingInterval = numValue;
-              await this.plugin.saveSettings();
-              setSettings(this.plugin.settings);
-            }
-          }));
-
-      // VCF Write Back Toggle (only shown when folder watching is enabled)
-      new Setting(containerEl)
-        .setName("Enable VCF Write Back")
-        .setDesc("When enabled, the VCF Sync Post Processor will write changes from Obsidian contacts back to VCF files. Disable to prevent any modifications to VCF files.")
-        .addToggle(toggle =>
-          toggle
-            .setValue(this.plugin.settings.vcfWriteBackEnabled)
-            .onChange(async (value) => {
-              this.plugin.settings.vcfWriteBackEnabled = value;
-              await this.plugin.saveSettings();
-              setSettings(this.plugin.settings);
-              // Refresh the display to show/hide dependent settings
-              this.display();
-            }));
-    }
-
-    // Ignore Lists Section (only shown when VCF folder method, sync enabled, write back enabled, and customize ignore list is enabled)
+    // Ignore Lists Section (only shown when VCF folder method and customize ignore list is enabled)
     if (this.plugin.settings.vcfStorageMethod === 'vcf-folder' && 
-        this.plugin.settings.vcfWatchEnabled && 
-        this.plugin.settings.vcfWriteBackEnabled && 
         this.plugin.settings.vcfCustomizeIgnoreList) {
       const ignoreTitle = containerEl.createEl("h3", { text: "Ignore Lists" });
       ignoreTitle.style.marginTop = "2em";
