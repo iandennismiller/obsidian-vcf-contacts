@@ -201,8 +201,35 @@ export class ContactData {
 
   private async saveFrontmatter(frontmatter: Record<string, any>): Promise<void> {
     const content = await this.getContent();
-    // Use Obsidian's stringifyYaml to properly handle complex structures
-    let frontmatterYaml = stringifyYaml(frontmatter);
+    
+    // Separate RELATED fields from other frontmatter
+    // RELATED fields need special handling to ensure brackets are preserved
+    const relatedFields: Record<string, any> = {};
+    const otherFields: Record<string, any> = {};
+    
+    for (const [key, value] of Object.entries(frontmatter)) {
+      if (key.startsWith('RELATED')) {
+        relatedFields[key] = value;
+      } else {
+        otherFields[key] = value;
+      }
+    }
+    
+    // Use Obsidian's stringifyYaml for non-RELATED fields
+    let frontmatterYaml = stringifyYaml(otherFields);
+    
+    // Ensure there's a newline after other fields before adding RELATED fields
+    if (Object.keys(otherFields).length > 0 && !frontmatterYaml.endsWith('\n')) {
+      frontmatterYaml += '\n';
+    }
+    
+    // Manually add RELATED fields with properly quoted keys to preserve brackets
+    for (const [key, value] of Object.entries(relatedFields)) {
+      // Quote keys that contain brackets to preserve them in YAML
+      const quotedKey = key.includes('[') && key.includes(']') ? `"${key}"` : key;
+      frontmatterYaml += `${quotedKey}: ${value}\n`;
+    }
+    
     // Ensure frontmatter YAML ends with a newline
     if (!frontmatterYaml.endsWith('\n')) {
       frontmatterYaml += '\n';

@@ -181,11 +181,14 @@ FN: Bob Jones
         const lines = frontmatterText.split('\n');
         updatedFrontmatter = {}; // Reset for each modify call
         lines.forEach(line => {
-          // Match key: value, handling brackets properly
-          const match = line.match(/^([^:]+?(?:\[[^\]]*\])?):\s*(.+)$/);
+          // Match key: value, handling both regular keys and quoted keys (with brackets)
+          // Handles: key: value OR "key": value OR "key[bracket]": value
+          const match = line.match(/^"?([^":]+(?:\[[^\]]*\])?)"?:\s*(.+)$/);
           if (match) {
-            console.log(`[TEST] Parsed frontmatter line: ${match[1]} = ${match[2]}`);
-            updatedFrontmatter[match[1]] = match[2];
+            const key = match[1].trim();
+            const value = match[2].trim();
+            console.log(`[TEST] Parsed frontmatter line: ${key} = ${value}`);
+            updatedFrontmatter[key] = value;
           }
         });
         console.log(`[TEST] Final updatedFrontmatter keys: ${Object.keys(updatedFrontmatter).join(', ')}`);
@@ -323,10 +326,12 @@ FN: Diana Evans
         const lines = frontmatterText.split('\n');
         updatedFrontmatter = {}; // Reset for each modify call
         lines.forEach(line => {
-          // Match key: value, handling brackets properly
-          const match = line.match(/^([^:]+?(?:\[[^\]]*\])?):\s*(.+)$/);
+          // Match key: value, handling both regular keys and quoted keys (with brackets)
+          const match = line.match(/^"?([^":]+(?:\[[^\]]*\])?)"?:\s*(.+)$/);
           if (match) {
-            updatedFrontmatter[match[1]] = match[2];
+            const key = match[1].trim();
+            const value = match[2].trim();
+            updatedFrontmatter[key] = value;
           }
         });
       }
@@ -483,10 +488,12 @@ FN: Henry Kim
         const lines = frontmatterText.split('\n');
         updatedFrontmatter = {}; // Reset for each modify call
         lines.forEach(line => {
-          // Match key: value, handling brackets properly
-          const match = line.match(/^([^:]+?(?:\[[^\]]*\])?):\s*(.+)$/);
+          // Match key: value, handling both regular keys and quoted keys (with brackets)
+          const match = line.match(/^"?([^":]+(?:\[[^\]]*\])?)"?:\s*(.+)$/);
           if (match) {
-            updatedFrontmatter[match[1]] = match[2];
+            const key = match[1].trim();
+            const value = match[2].trim();
+            updatedFrontmatter[key] = value;
           }
         });
       }
@@ -646,10 +653,12 @@ FN: Kelly White
         const lines = frontmatterText.split('\n');
         updatedFrontmatter = {}; // Reset for each modify call
         lines.forEach(line => {
-          // Match key: value, handling brackets properly
-          const match = line.match(/^([^:]+?(?:\[[^\]]*\])?):\s*(.+)$/);
+          // Match key: value, handling both regular keys and quoted keys (with brackets)
+          const match = line.match(/^"?([^":]+(?:\[[^\]]*\])?)"?:\s*(.+)$/);
           if (match) {
-            updatedFrontmatter[match[1]] = match[2];
+            const key = match[1].trim();
+            const value = match[2].trim();
+            updatedFrontmatter[key] = value;
           }
         });
       }
