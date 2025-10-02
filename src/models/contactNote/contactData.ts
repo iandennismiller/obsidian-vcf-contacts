@@ -23,6 +23,10 @@ export class ContactData {
   // Derived data cache
   private _parsedRelationships: any[] | null = null;
   private _markdownSections: Map<string, string> | null = null;
+  
+  // Flag to skip metadata cache after a write operation
+  // because Obsidian's metadata cache updates asynchronously
+  private _skipMetadataCache: boolean = false;
 
   constructor(app: App, file: TFile) {
     this.app = app;
@@ -56,11 +60,14 @@ export class ContactData {
    */
   async updateContent(newContent: string): Promise<void> {
     await this.app.vault.modify(this.file, newContent);
-    this._content = newContent;
-    // Invalidate caches that depend on content
+    // Invalidate all caches to force fresh reads from vault
+    // This prevents race conditions where cached content is stale
+    this._content = null;
     this._frontmatter = null;
     this._parsedRelationships = null;
     this._markdownSections = null;
+    // Skip metadata cache on next read since it updates asynchronously
+    this._skipMetadataCache = true;
   }
 
   // === Frontmatter Operations (grouped with frontmatter data) ===
@@ -70,16 +77,23 @@ export class ContactData {
    */
   async getFrontmatter(): Promise<Record<string, any> | null> {
     if (this._frontmatter === null) {
-      try {
-        // Try metadata cache first (most efficient)
-        const cache = this.app.metadataCache.getFileCache(this.file);
-        if (cache?.frontmatter) {
-          this._frontmatter = cache.frontmatter;
-          return this._frontmatter;
+      // Skip metadata cache if we just wrote to the file
+      // because Obsidian's metadata cache updates asynchronously
+      // and may parse our quoted RELATED keys incorrectly
+      if (!this._skipMetadataCache) {
+        try {
+          // Try metadata cache first (most efficient)
+          const cache = this.app.metadataCache.getFileCache(this.file);
+          if (cache?.frontmatter) {
+            this._frontmatter = cache.frontmatter;
+            return this._frontmatter;
+          }
+        } catch (error: any) {
+          console.log(`[ContactData] Error accessing metadata cache for ${this.file.path}: ${error.message}`);
         }
-      } catch (error: any) {
-        console.log(`[ContactData] Error accessing metadata cache for ${this.file.path}: ${error.message}`);
       }
+      // Note: We don't reset _skipMetadataCache here anymore
+      // It will be reset when invalidateAllCaches() is called
 
       try {
         // Fallback: parse from content
@@ -187,8 +201,39 @@ export class ContactData {
 
   private async saveFrontmatter(frontmatter: Record<string, any>): Promise<void> {
     const content = await this.getContent();
-    // Use Obsidian's stringifyYaml to properly handle complex structures
-    const frontmatterYaml = stringifyYaml(frontmatter);
+    
+    // Separate RELATED fields from other frontmatter
+    // RELATED fields need special handling to ensure brackets are preserved
+    const relatedFields: Record<string, any> = {};
+    const otherFields: Record<string, any> = {};
+    
+    for (const [key, value] of Object.entries(frontmatter)) {
+      if (key.startsWith('RELATED')) {
+        relatedFields[key] = value;
+      } else {
+        otherFields[key] = value;
+      }
+    }
+    
+    // Use Obsidian's stringifyYaml for non-RELATED fields
+    let frontmatterYaml = stringifyYaml(otherFields);
+    
+    // Ensure there's a newline after other fields before adding RELATED fields
+    if (Object.keys(otherFields).length > 0 && !frontmatterYaml.endsWith('\n')) {
+      frontmatterYaml += '\n';
+    }
+    
+    // Manually add RELATED fields with properly quoted keys to preserve brackets
+    for (const [key, value] of Object.entries(relatedFields)) {
+      // Quote keys that contain brackets to preserve them in YAML
+      const quotedKey = key.includes('[') && key.includes(']') ? `"${key}"` : key;
+      frontmatterYaml += `${quotedKey}: ${value}\n`;
+    }
+    
+    // Ensure frontmatter YAML ends with a newline
+    if (!frontmatterYaml.endsWith('\n')) {
+      frontmatterYaml += '\n';
+    }
     
     const hasExistingFrontmatter = content.startsWith('---\n');
     let newContent: string;
@@ -303,6 +348,7 @@ export class ContactData {
     this._displayName = null;
     this._parsedRelationships = null;
     this._markdownSections = null;
+    this._skipMetadataCache = false;
   }
 
   /**

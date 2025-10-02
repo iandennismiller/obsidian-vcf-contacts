@@ -11,7 +11,7 @@ export default defineConfig({
     },
   },
   test: {
-    include: ['tests/demo-data/markdown-parsing.spec.ts'],
+    include: ['tests/**/*.spec.ts'],
     globals: true,
     environment: 'node',
     coverage: {
