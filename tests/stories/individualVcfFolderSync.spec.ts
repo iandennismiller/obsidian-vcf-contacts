@@ -17,15 +17,15 @@ describe('Individual VCF Files in Folder Sync Story', () => {
     mockSettings = {
       contactsFolder: 'Contacts',
       defaultHashtag: '#Contact',
-      vcfStorageMethod: 'vcf-folder',
-      vcfFilename: 'contacts.vcf',
-      vcfWatchFolder: '/test/vcf',
-      vcfWatchEnabled: true,
-      vcfWatchPollingInterval: 30,
-      vcfWriteBackEnabled: true,
-      vcfCustomizeIgnoreList: false,
-      vcfIgnoreFilenames: [],
-      vcfIgnoreUIDs: [],
+      vcardStorageMethod: 'vcard-folder',
+      vcardFilename: 'contacts.vcf',
+      vcardWatchFolder: '/test/vcf',
+      vcardWatchEnabled: true,
+      vcardWatchPollingInterval: 30,
+      vcardWriteBackEnabled: true,
+      vcardCustomizeIgnoreList: false,
+      vcardIgnoreFilenames: [],
+      vcardIgnoreUIDs: [],
       logLevel: 'INFO'
     };
 
@@ -33,7 +33,7 @@ describe('Individual VCF Files in Folder Sync Story', () => {
   });
 
   it('should use folder-based VCF storage when configured', () => {
-    expect(mockSettings.vcfStorageMethod).toBe('vcf-folder');
+    expect(mockSettings.vcardStorageMethod).toBe('vcard-folder');
     expect(vcfManager.getWatchFolder()).toBe('/test/vcf');
   });
 

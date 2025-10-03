@@ -5,9 +5,9 @@ import { VCardFileOperations } from '../../../../src/models/vcardFile/fileOperat
 // Mock VCardFileOperations
 vi.mock('../../../../src/models/vcardFile/fileOperations', () => ({
   VCardFileOperations: {
-    listVCFFiles: vi.fn(),
+    listVcardFiles: vi.fn(),
     getFileStats: vi.fn(),
-    readVCFFile: vi.fn(),
+    readVcardFile: vi.fn(),
     containsUID: vi.fn()
   }
 }));
@@ -36,12 +36,12 @@ describe('VCardCollection', () => {
     it('should list VCard files from watch folder', async () => {
       const mockFiles = ['/test/vcf/contact1.vcf', '/test/vcf/contact2.vcf'];
       
-      vi.mocked(VCardFileOperations.listVCFFiles).mockResolvedValue(mockFiles);
+      vi.mocked(VCardFileOperations.listVcardFiles).mockResolvedValue(mockFiles);
 
       const result = await vcardCollection.listVCardFiles();
 
       expect(result).toEqual(mockFiles);
-      expect(VCardFileOperations.listVCFFiles).toHaveBeenCalledWith('/test/vcf');
+      expect(VCardFileOperations.listVcardFiles).toHaveBeenCalledWith('/test/vcf');
     });
 
     it('should return empty array when no watch folder configured', async () => {
@@ -51,11 +51,11 @@ describe('VCardCollection', () => {
       const result = await vcardCollection.listVCardFiles();
 
       expect(result).toEqual([]);
-      expect(VCardFileOperations.listVCFFiles).not.toHaveBeenCalled();
+      expect(VCardFileOperations.listVcardFiles).not.toHaveBeenCalled();
     });
 
     it('should handle VCardFileOperations errors', async () => {
-      vi.mocked(VCardFileOperations.listVCFFiles).mockRejectedValue(new Error('File operation error'));
+      vi.mocked(VCardFileOperations.listVcardFiles).mockRejectedValue(new Error('File operation error'));
 
       // The method should throw since it doesn't handle errors internally
       await expect(vcardCollection.listVCardFiles()).rejects.toThrow('File operation error');
@@ -102,7 +102,7 @@ describe('VCardCollection', () => {
         mtimeMs: 1640995200000
       };
 
-      vi.mocked(VCardFileOperations.listVCFFiles).mockResolvedValue(mockFiles);
+      vi.mocked(VCardFileOperations.listVcardFiles).mockResolvedValue(mockFiles);
       vi.mocked(VCardFileOperations.getFileStats).mockResolvedValue(mockStats);
 
       const result = await vcardCollection.getAllVCardFiles();
@@ -115,7 +115,7 @@ describe('VCardCollection', () => {
     it('should filter out files with no stats', async () => {
       const mockFiles = ['/test/vcf/contact1.vcf', '/test/vcf/contact2.vcf'];
 
-      vi.mocked(VCardFileOperations.listVCFFiles).mockResolvedValue(mockFiles);
+      vi.mocked(VCardFileOperations.listVcardFiles).mockResolvedValue(mockFiles);
       vi.mocked(VCardFileOperations.getFileStats)
         .mockResolvedValueOnce({
           mtimeMs: 1640995200000
@@ -129,7 +129,7 @@ describe('VCardCollection', () => {
     });
 
     it('should handle empty file list', async () => {
-      vi.mocked(VCardFileOperations.listVCFFiles).mockResolvedValue([]);
+      vi.mocked(VCardFileOperations.listVcardFiles).mockResolvedValue([]);
 
       const result = await vcardCollection.getAllVCardFiles();
 
@@ -176,8 +176,8 @@ describe('VCardCollection', () => {
       const mockFiles = ['/test/vcf/contact1.vcf', '/test/vcf/contact2.vcf'];
       const mockContent = 'BEGIN:VCARD\nUID:test-uid-123\nFN:Test Contact\nEND:VCARD';
 
-      vi.mocked(VCardFileOperations.listVCFFiles).mockResolvedValue(mockFiles);
-      vi.mocked(VCardFileOperations.readVCFFile)
+      vi.mocked(VCardFileOperations.listVcardFiles).mockResolvedValue(mockFiles);
+      vi.mocked(VCardFileOperations.readVcardFile)
         .mockResolvedValueOnce('different content')
         .mockResolvedValueOnce(mockContent);
       vi.mocked(VCardFileOperations.containsUID)
@@ -192,8 +192,8 @@ describe('VCardCollection', () => {
     it('should return null when UID not found', async () => {
       const mockFiles = ['/test/vcf/contact1.vcf'];
 
-      vi.mocked(VCardFileOperations.listVCFFiles).mockResolvedValue(mockFiles);
-      vi.mocked(VCardFileOperations.readVCFFile).mockResolvedValue('content without uid');
+      vi.mocked(VCardFileOperations.listVcardFiles).mockResolvedValue(mockFiles);
+      vi.mocked(VCardFileOperations.readVcardFile).mockResolvedValue('content without uid');
       vi.mocked(VCardFileOperations.containsUID).mockReturnValue(false);
 
       const result = await vcardCollection.findVCardFileByUID('nonexistent-uid');
@@ -204,8 +204,8 @@ describe('VCardCollection', () => {
     it('should handle file read errors gracefully', async () => {
       const mockFiles = ['/test/vcf/contact1.vcf', '/test/vcf/contact2.vcf'];
 
-      vi.mocked(VCardFileOperations.listVCFFiles).mockResolvedValue(mockFiles);
-      vi.mocked(VCardFileOperations.readVCFFile)
+      vi.mocked(VCardFileOperations.listVcardFiles).mockResolvedValue(mockFiles);
+      vi.mocked(VCardFileOperations.readVcardFile)
         .mockRejectedValueOnce(new Error('Read error'))
         .mockResolvedValueOnce('content with uid');
       vi.mocked(VCardFileOperations.containsUID).mockReturnValue(true);
@@ -216,7 +216,7 @@ describe('VCardCollection', () => {
     });
 
     it('should return null when no files exist', async () => {
-      vi.mocked(VCardFileOperations.listVCFFiles).mockResolvedValue([]);
+      vi.mocked(VCardFileOperations.listVcardFiles).mockResolvedValue([]);
 
       const result = await vcardCollection.findVCardFileByUID('test-uid');
 
@@ -228,7 +228,7 @@ describe('VCardCollection', () => {
     it('should read and parse VCard file', async () => {
       const mockContent = 'BEGIN:VCARD\nUID:test-uid\nFN:Test Contact\nEND:VCARD';
 
-      vi.mocked(VCardFileOperations.readVCFFile).mockResolvedValue(mockContent);
+      vi.mocked(VCardFileOperations.readVcardFile).mockResolvedValue(mockContent);
 
       const result = await vcardCollection.readAndParseVCard('/test/vcf/contact.vcf');
 
@@ -238,7 +238,7 @@ describe('VCardCollection', () => {
     });
 
     it('should return null when file cannot be read', async () => {
-      vi.mocked(VCardFileOperations.readVCFFile).mockResolvedValue(null);
+      vi.mocked(VCardFileOperations.readVcardFile).mockResolvedValue(null);
 
       const result = await vcardCollection.readAndParseVCard('/test/vcf/nonexistent.vcf');
 
@@ -248,7 +248,7 @@ describe('VCardCollection', () => {
     it('should handle parsing errors gracefully', async () => {
       const mockContent = 'invalid vcard content';
 
-      vi.mocked(VCardFileOperations.readVCFFile).mockResolvedValue(mockContent);
+      vi.mocked(VCardFileOperations.readVcardFile).mockResolvedValue(mockContent);
 
       const result = await vcardCollection.readAndParseVCard('/test/vcf/invalid.vcf');
 
@@ -262,12 +262,12 @@ describe('VCardCollection', () => {
       mockGetWatchFolder = vi.fn(() => '/custom/path');
       vcardCollection = new VCardCollection(mockGetWatchFolder, mockShouldIgnoreFile);
 
-      vi.mocked(VCardFileOperations.listVCFFiles).mockResolvedValue([]);
+      vi.mocked(VCardFileOperations.listVcardFiles).mockResolvedValue([]);
 
       await vcardCollection.listVCardFiles();
 
       expect(mockGetWatchFolder).toHaveBeenCalled();
-      expect(VCardFileOperations.listVCFFiles).toHaveBeenCalledWith('/custom/path');
+      expect(VCardFileOperations.listVcardFiles).toHaveBeenCalledWith('/custom/path');
     });
 
     it('should use ignore file callback', () => {

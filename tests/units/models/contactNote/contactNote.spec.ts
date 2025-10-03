@@ -70,15 +70,15 @@ EMAIL: john@example.com
     mockSettings = {
       contactsFolder: 'Contacts',
       defaultHashtag: '#Contact',
-      vcfStorageMethod: 'vcf-folder',
-      vcfFilename: 'contacts.vcf',
-      vcfWatchFolder: '/test/vcf',
-      vcfWatchEnabled: true,
-      vcfWatchPollingInterval: 30,
-      vcfWriteBackEnabled: false,
-      vcfCustomizeIgnoreList: false,
-      vcfIgnoreFilenames: [],
-      vcfIgnoreUIDs: [],
+      vcardStorageMethod: 'vcard-folder',
+      vcardFilename: 'contacts.vcf',
+      vcardWatchFolder: '/test/vcf',
+      vcardWatchEnabled: true,
+      vcardWatchPollingInterval: 30,
+      vcardWriteBackEnabled: false,
+      vcardCustomizeIgnoreList: false,
+      vcardIgnoreFilenames: [],
+      vcardIgnoreUIDs: [],
       logLevel: 'INFO'
     };
 
@@ -421,12 +421,12 @@ EMAIL: john@example.com
   describe('shouldUpdateFromVCF', () => {
     it('should return false when REV is missing from contact', async () => {
       // The main contactNote has no REV field
-      const result = await contactNote.shouldUpdateFromVCF({ REV: '20240101T120000Z' });
+      const result = await contactNote.shouldUpdateFromVcard({ REV: '20240101T120000Z' });
       expect(result).toBe(false);
     });
 
     it('should return false when VCF REV is missing', async () => {
-      const result = await contactNote.shouldUpdateFromVCF({});
+      const result = await contactNote.shouldUpdateFromVcard({});
       expect(result).toBe(false);
     });
 

@@ -51,26 +51,26 @@ export class RevisionOperations {
   }
 
   /**
-   * Check if contact should be updated from VCF based on REV timestamp
+   * Check if contact should be updated from vcard based on REV timestamp
    */
-  async shouldUpdateFromVCF(record: Record<string, any>): Promise<boolean> {
+  async shouldUpdateFromVcard(record: Record<string, any>): Promise<boolean> {
     const frontmatter = await this.contactData.getFrontmatter();
     if (!frontmatter) return true;
 
     const contactRev = frontmatter.REV;
-    const vcfRev = record.REV;
+    const vcardRev = record.REV;
 
     // If either timestamp is missing, don't update (conservative approach)
-    if (!contactRev || !vcfRev) return false;
+    if (!contactRev || !vcardRev) return false;
 
     // Parse both timestamps using VCard format parser
     const contactDate = this.parseRevDate(contactRev);
-    const vcfDate = this.parseRevDate(vcfRev);
+    const vcardDate = this.parseRevDate(vcardRev);
 
     // If we can't parse either date, don't update
-    if (!contactDate || !vcfDate) return false;
+    if (!contactDate || !vcardDate) return false;
 
-    // Compare timestamps - allow update if VCF is newer
-    return vcfDate.getTime() > contactDate.getTime();
+    // Compare timestamps - allow update if vcard is newer
+    return vcardDate.getTime() > contactDate.getTime();
   }
 }

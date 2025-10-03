@@ -30,15 +30,15 @@ describe('Automatic VCF Monitoring Story', () => {
     mockSettings = {
       contactsFolder: 'Contacts',
       defaultHashtag: '#Contact',
-      vcfStorageMethod: 'vcf-folder',
-      vcfFilename: 'contacts.vcf',
-      vcfWatchFolder: '/test/vcf',
-      vcfWatchEnabled: true,
-      vcfWatchPollingInterval: 30,
-      vcfWriteBackEnabled: false,
-      vcfCustomizeIgnoreList: false,
-      vcfIgnoreFilenames: [],
-      vcfIgnoreUIDs: [],
+      vcardStorageMethod: 'vcard-folder',
+      vcardFilename: 'contacts.vcf',
+      vcardWatchFolder: '/test/vcf',
+      vcardWatchEnabled: true,
+      vcardWatchPollingInterval: 30,
+      vcardWriteBackEnabled: false,
+      vcardCustomizeIgnoreList: false,
+      vcardIgnoreFilenames: [],
+      vcardIgnoreUIDs: [],
       logLevel: 'INFO'
     };
 
@@ -46,9 +46,9 @@ describe('Automatic VCF Monitoring Story', () => {
   });
 
   it('should have VCF monitoring enabled when configured', () => {
-    expect(mockSettings.vcfWatchEnabled).toBe(true);
-    expect(mockSettings.vcfWatchFolder).toBe('/test/vcf');
-    expect(mockSettings.vcfWatchPollingInterval).toBe(30);
+    expect(mockSettings.vcardWatchEnabled).toBe(true);
+    expect(mockSettings.vcardWatchFolder).toBe('/test/vcf');
+    expect(mockSettings.vcardWatchPollingInterval).toBe(30);
     expect(vcardManager.isMonitoringEnabled()).toBe(true);
   });
 
@@ -156,9 +156,9 @@ END:VCARD`;
 
   it('should respect ignore list settings during monitoring', async () => {
     // Configure ignore list
-    mockSettings.vcfCustomizeIgnoreList = true;
-    mockSettings.vcfIgnoreFilenames = ['temp.vcf', 'backup.vcf'];
-    mockSettings.vcfIgnoreUIDs = ['ignored-uid-123'];
+    mockSettings.vcardCustomizeIgnoreList = true;
+    mockSettings.vcardIgnoreFilenames = ['temp.vcf', 'backup.vcf'];
+    mockSettings.vcardIgnoreUIDs = ['ignored-uid-123'];
 
     const ignoredByFilename = {
       path: '/test/vcf/temp.vcf',
@@ -191,7 +191,7 @@ END:VCARD`
     const testIntervals = [5, 30, 60, 300]; // seconds
 
     testIntervals.forEach(interval => {
-      mockSettings.vcfWatchPollingInterval = interval;
+      mockSettings.vcardWatchPollingInterval = interval;
       const vcManager = new VcardManager(mockSettings);
       
       expect(vcManager.getPollingInterval()).toBe(interval * 1000); // Should convert to milliseconds
@@ -235,7 +235,7 @@ END:VCARD`
     expect(vcardManager.isMonitoringEnabled()).toBe(true);
 
     // Disable monitoring
-    mockSettings.vcfWatchEnabled = false;
+    mockSettings.vcardWatchEnabled = false;
     const vcManager = new VcardManager(mockSettings);
     
     expect(vcManager.isMonitoringEnabled()).toBe(false);
@@ -264,7 +264,7 @@ END:VCARD`
 This is not a valid VCF file
 Missing BEGIN and END tags`;
 
-    const validationResult = await vcardManager.validateVcfContent(invalidVcfContent);
+    const validationResult = await vcardManager.validateVcardContent(invalidVcfContent);
     
     expect(validationResult.isValid).toBe(false);
     expect(validationResult.errors).toContain('Missing BEGIN:VCARD');

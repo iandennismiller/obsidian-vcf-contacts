@@ -67,9 +67,9 @@ export class SyncWatcher {
    * @returns Promise that resolves when the watcher is fully started
    */
   async start(): Promise<void> {
-    if (!this.settings.vcfWatchEnabled || 
-        (this.settings.vcfStorageMethod === 'vcf-folder' && !this.settings.vcfWatchFolder) ||
-        (this.settings.vcfStorageMethod === 'single-vcf' && !this.settings.vcfFilename)) {
+    if (!this.settings.vcardWatchEnabled || 
+        (this.settings.vcardStorageMethod === 'vcard-folder' && !this.settings.vcardWatchFolder) ||
+        (this.settings.vcardStorageMethod === 'single-vcard' && !this.settings.vcardFilename)) {
       return;
     }
 
@@ -83,28 +83,28 @@ export class SyncWatcher {
     // Initialize existing UIDs from Obsidian contacts using ContactManager
     await this.contactManager.initializeCache();
 
-    const storageInfo = this.settings.vcfStorageMethod === 'single-vcf' 
-      ? this.settings.vcfFilename 
-      : this.settings.vcfWatchFolder;
-    console.debug(`Starting VCF sync watcher (${this.settings.vcfStorageMethod}): ${storageInfo}`);
+    const storageInfo = this.settings.vcardStorageMethod === 'single-vcard' 
+      ? this.settings.vcardFilename 
+      : this.settings.vcardWatchFolder;
+    console.debug(`Starting vcard sync watcher (${this.settings.vcardStorageMethod}): ${storageInfo}`);
     
     // Initial scan
-    if (this.settings.vcfStorageMethod === 'single-vcf') {
-      await this.scanSingleVCF();
+    if (this.settings.vcardStorageMethod === 'single-vcard') {
+      await this.scanSingleVcard();
     } else {
-      await this.scanVCFFolder();
+      await this.scanVcardFolder();
     }
 
     // Set up polling
     this.intervalId = window.setInterval(
       () => {
-        if (this.settings.vcfStorageMethod === 'single-vcf') {
-          this.scanSingleVCF();
+        if (this.settings.vcardStorageMethod === 'single-vcard') {
+          this.scanSingleVcard();
         } else {
-          this.scanVCFFolder();
+          this.scanVcardFolder();
         }
       },
-      this.settings.vcfWatchPollingInterval * 1000
+      this.settings.vcardWatchPollingInterval * 1000
     );
     
     // Listen for settings changes to update watcher
@@ -114,7 +114,7 @@ export class SyncWatcher {
   }
 
   /**
-   * Stops the VCF sync watcher service.
+   * Stops the vcard sync watcher service.
    * 
    * Cleans up:
    * - Clears the polling interval
@@ -125,7 +125,7 @@ export class SyncWatcher {
       // Use the window clearInterval so tests that mock window are hit
       window.clearInterval(this.intervalId as unknown as number);
       this.intervalId = null;
-      console.debug('Stopped VCF sync watcher');
+      console.debug('Stopped vcard sync watcher');
     }
     
     // Unsubscribe from settings changes
@@ -142,8 +142,8 @@ export class SyncWatcher {
    * is needed based on changes to:
    * - Watch enabled status
    * - Storage method
-   * - Watch folder path (VCF folder mode)
-   * - VCF filename (single VCF mode)
+   * - Watch folder path (vcard folder mode)
+   * - vcard filename (single vcard mode)
    * - Polling interval
    * 
    * @param newSettings - The updated plugin settings
@@ -151,11 +151,11 @@ export class SyncWatcher {
    */
   async updateSettings(newSettings: ContactsPluginSettings): Promise<void> {
     const shouldRestart = 
-      this.settings.vcfWatchEnabled !== newSettings.vcfWatchEnabled ||
-      this.settings.vcfStorageMethod !== newSettings.vcfStorageMethod ||
-      this.settings.vcfWatchFolder !== newSettings.vcfWatchFolder ||
-      this.settings.vcfFilename !== newSettings.vcfFilename ||
-      this.settings.vcfWatchPollingInterval !== newSettings.vcfWatchPollingInterval;
+      this.settings.vcardWatchEnabled !== newSettings.vcardWatchEnabled ||
+      this.settings.vcardStorageMethod !== newSettings.vcardStorageMethod ||
+      this.settings.vcardWatchFolder !== newSettings.vcardWatchFolder ||
+      this.settings.vcardFilename !== newSettings.vcardFilename ||
+      this.settings.vcardWatchPollingInterval !== newSettings.vcardWatchPollingInterval;
 
     this.settings = newSettings;
 
@@ -170,54 +170,54 @@ export class SyncWatcher {
   }
 
   /**
-   * Scans a single VCF file for changes and processes any modified contacts.
+   * Scans a single vcard file for changes and processes any modified contacts.
    * 
-   * This method now delegates the VCF processing logic to the appropriate
+   * This method now delegates the vcard processing logic to the appropriate
    * manager classes for better separation of concerns.
    * 
    * @returns Promise that resolves when the scan is complete
    */
-  private async scanSingleVCF(): Promise<void> {
+  private async scanSingleVcard(): Promise<void> {
     try {
-      const vcfFilePath = this.settings.vcfFilename;
-      if (!vcfFilePath) {
+      const vcardFilePath = this.settings.vcardFilename;
+      if (!vcardFilePath) {
         return;
       }
 
-      // Get file info for the single VCF file
-      const fileInfo = await this.vcardManager.getVCardFileInfo(vcfFilePath);
+      // Get file info for the single vcard file
+      const fileInfo = await this.vcardManager.getVCardFileInfo(vcardFilePath);
       if (!fileInfo) {
         return;
       }
 
-      const known = this.knownFiles.get(vcfFilePath);
+      const known = this.knownFiles.get(vcardFilePath);
       
       // Skip if file hasn't changed
       if (known && known.lastModified >= fileInfo.lastModified) {
         return;
       }
 
-      console.debug(`Processing single VCF file: ${vcfFilePath}`);
+      console.debug(`Processing single vcard file: ${vcardFilePath}`);
 
-      // Use VcardManager to process VCF contents (no UID filtering for single VCF)
-      const parsedEntries = await this.vcardManager.readAndParseVCard(vcfFilePath);
+      // Use VcardManager to process vcard contents (no UID filtering for single vcard)
+      const parsedEntries = await this.vcardManager.readAndParseVCard(vcardFilePath);
       if (!parsedEntries) {
         return;
       }
 
       // Filter to only valid entries (those with slug and UID)
-      const vcfEntries = parsedEntries.filter(([slug, record]: [string, any]) => slug && record.UID);
+      const vcardEntries = parsedEntries.filter(([slug, record]: [string, any]) => slug && record.UID);
 
       // Use ContactManager to process contact records and create/update contacts
-      const contactsToProcess = await this.contactManager.processVCFContacts(
-        vcfEntries, 
+      const contactsToProcess = await this.contactManager.processVcardContacts(
+        vcardEntries, 
         this.app, 
         this.settings
       );
 
       // Trigger curator processors on all affected contacts
       if (contactsToProcess.length > 0) {
-        console.debug(`Triggering processors on ${contactsToProcess.length} contacts from ${vcfFilePath}`);
+        console.debug(`Triggering processors on ${contactsToProcess.length} contacts from ${vcardFilePath}`);
         
         // Get contacts data for insight processing
         const contacts = await this.contactManager.getFrontmatterFromFiles(contactsToProcess);
@@ -226,33 +226,33 @@ export class SyncWatcher {
         await curatorService.process(contacts, RunType.IMMEDIATELY);
 
         // Show notification for processed contacts
-        new Notice(`VCF Sync: Processed ${contactsToProcess.length} contact(s) from ${vcfFilePath}`);
+        new Notice(`vcard Sync: Processed ${contactsToProcess.length} contact(s) from ${vcardFilePath}`);
       }
 
-      // Update tracking for this VCF file
-      this.knownFiles.set(vcfFilePath, {
-        path: vcfFilePath,
+      // Update tracking for this vcard file
+      this.knownFiles.set(vcardFilePath, {
+        path: vcardFilePath,
         lastModified: fileInfo.lastModified,
-        uid: "" // Single VCF files contain multiple UIDs
+        uid: "" // Single vcard files contain multiple UIDs
       });
 
     } catch (error: any) {
-      console.debug(`Error scanning single VCF file: ${error.message}`);
+      console.debug(`Error scanning single vcard file: ${error.message}`);
     }
   }
 
   /**
-   * Scans the configured VCF folder for changes and processes any modified files.
+   * Scans the configured vcard folder for changes and processes any modified files.
    * 
    * This method now delegates the scanning logic to VcardManager for better
    * separation of concerns and code reuse.
    * 
    * @returns Promise that resolves when the scan is complete
    */
-  private async scanVCFFolder(): Promise<void> {
+  private async scanVcardFolder(): Promise<void> {
     try {
       // Use VcardManager to scan folder and get files that need processing
-      const filesToProcess = await this.vcardManager.scanVCFFolder(this.knownFiles);
+      const filesToProcess = await this.vcardManager.scanVcardFolder(this.knownFiles);
       
       if (filesToProcess.length === 0) {
         return;
@@ -260,24 +260,24 @@ export class SyncWatcher {
 
       // Process each file that needs updating
       for (const filePath of filesToProcess) {
-        await this.processVCFFile(filePath);
+        await this.processVcardFile(filePath);
       }
 
     } catch (error: any) {
-      console.debug(`Error scanning VCF folder: ${error.message}`);
+      console.debug(`Error scanning vcard folder: ${error.message}`);
     }
   }
 
   /**
-   * Processes a single VCF file for changes and triggers curator processors.
+   * Processes a single vcard file for changes and triggers curator processors.
    * 
-   * This method now delegates the VCF processing logic to the appropriate
+   * This method now delegates the vcard processing logic to the appropriate
    * manager classes for better separation of concerns.
    * 
-   * @param filePath - Full path to the VCF file to process
+   * @param filePath - Full path to the vcard file to process
    * @returns Promise that resolves when file processing is complete
    */
-  private async processVCFFile(filePath: string): Promise<void> {
+  private async processVcardFile(filePath: string): Promise<void> {
     try {
       // Get file stats using VcardManager
       const fileInfo = await this.vcardManager.getVCardFileInfo(filePath);
@@ -293,17 +293,17 @@ export class SyncWatcher {
       }
 
       const filename = path.basename(filePath);
-      console.debug(`Processing VCF file: ${filename}`);
+      console.debug(`Processing vcard file: ${filename}`);
 
-      // Use VcardManager to process VCF contents
-      const vcfEntries = await this.vcardManager.processVCFContents(filePath);
-      if (vcfEntries.length === 0) {
+      // Use VcardManager to process vcard contents
+      const vcardEntries = await this.vcardManager.processVcardContents(filePath);
+      if (vcardEntries.length === 0) {
         return;
       }
 
       // Use ContactManager to process contact records and create/update contacts
-      const contactsToProcess = await this.contactManager.processVCFContacts(
-        vcfEntries, 
+      const contactsToProcess = await this.contactManager.processVcardContacts(
+        vcardEntries, 
         this.app, 
         this.settings
       );

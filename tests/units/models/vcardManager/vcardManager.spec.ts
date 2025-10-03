@@ -47,15 +47,15 @@ describe('VcardManager', () => {
     mockSettings = {
       contactsFolder: 'Contacts',
       defaultHashtag: '#Contact',
-      vcfStorageMethod: 'vcf-folder',
-      vcfFilename: 'contacts.vcf',
-      vcfWatchFolder: '/test/vcf',
-      vcfWatchEnabled: true,
-      vcfWatchPollingInterval: 30,
-      vcfWriteBackEnabled: true,
-      vcfCustomizeIgnoreList: false,
-      vcfIgnoreFilenames: [],
-      vcfIgnoreUIDs: [],
+      vcardStorageMethod: 'vcard-folder',
+      vcardFilename: 'contacts.vcf',
+      vcardWatchFolder: '/test/vcf',
+      vcardWatchEnabled: true,
+      vcardWatchPollingInterval: 30,
+      vcardWriteBackEnabled: true,
+      vcardCustomizeIgnoreList: false,
+      vcardIgnoreFilenames: [],
+      vcardIgnoreUIDs: [],
       logLevel: 'INFO'
     };
 
@@ -80,7 +80,7 @@ describe('VcardManager', () => {
     it('should update settings reference', () => {
       const newSettings = {
         ...mockSettings,
-        vcfWatchFolder: '/new/path'
+        vcardWatchFolder: '/new/path'
       };
 
       vcardManager.updateSettings(newSettings);
@@ -95,7 +95,7 @@ describe('VcardManager', () => {
     });
 
     it('should return empty string when no watch folder set', () => {
-      const emptySettings = { ...mockSettings, vcfWatchFolder: '' };
+      const emptySettings = { ...mockSettings, vcardWatchFolder: '' };
       vcardManager.updateSettings(emptySettings);
       
       expect(vcardManager.getWatchFolder()).toBe('');
@@ -110,8 +110,8 @@ describe('VcardManager', () => {
     it('should return true for files in ignore list', () => {
       const settingsWithIgnore = {
         ...mockSettings,
-        vcfCustomizeIgnoreList: true,
-        vcfIgnoreFilenames: ['ignored.vcf']
+        vcardCustomizeIgnoreList: true,
+        vcardIgnoreFilenames: ['ignored.vcf']
       };
       vcardManager.updateSettings(settingsWithIgnore);
       
@@ -121,8 +121,8 @@ describe('VcardManager', () => {
     it('should handle path normalization', () => {
       const settingsWithIgnore = {
         ...mockSettings,
-        vcfCustomizeIgnoreList: true,
-        vcfIgnoreFilenames: ['contact.vcf']
+        vcardCustomizeIgnoreList: true,
+        vcardIgnoreFilenames: ['contact.vcf']
       };
       vcardManager.updateSettings(settingsWithIgnore);
       
@@ -138,8 +138,8 @@ describe('VcardManager', () => {
     it('should return true for UIDs in ignore list', () => {
       const settingsWithIgnore = {
         ...mockSettings,
-        vcfCustomizeIgnoreList: true,
-        vcfIgnoreUIDs: ['ignored-uid-123']
+        vcardCustomizeIgnoreList: true,
+        vcardIgnoreUIDs: ['ignored-uid-123']
       };
       vcardManager.updateSettings(settingsWithIgnore);
       
@@ -254,7 +254,7 @@ describe('VcardManager', () => {
     it('should return empty array when folder does not exist', async () => {
       (vcardManager as any).fileOps.watchFolderExists.mockResolvedValue(false);
 
-      const result = await vcardManager.scanVCFFolder(new Map());
+      const result = await vcardManager.scanVcardFolder(new Map());
 
       expect(result).toEqual([]);
     });
@@ -263,7 +263,7 @@ describe('VcardManager', () => {
       (vcardManager as any).fileOps.watchFolderExists.mockResolvedValue(true);
       (vcardManager as any).collection.listVCardFiles.mockResolvedValue([]);
 
-      const result = await vcardManager.scanVCFFolder(new Map());
+      const result = await vcardManager.scanVcardFolder(new Map());
 
       expect(result).toEqual([]);
     });
@@ -282,7 +282,7 @@ describe('VcardManager', () => {
         ['/test/vcf/existing.vcf', { path: '/test/vcf/existing.vcf', lastModified: 1000 }]
       ]);
 
-      const result = await vcardManager.scanVCFFolder(knownFiles);
+      const result = await vcardManager.scanVcardFolder(knownFiles);
 
       expect(result).toContain('/test/vcf/new.vcf');
       expect(result).not.toContain('/test/vcf/existing.vcf');
@@ -300,7 +300,7 @@ describe('VcardManager', () => {
         ['/test/vcf/modified.vcf', { path: '/test/vcf/modified.vcf', lastModified: 1000 }]
       ]);
 
-      const result = await vcardManager.scanVCFFolder(knownFiles);
+      const result = await vcardManager.scanVcardFolder(knownFiles);
 
       expect(result).toContain('/test/vcf/modified.vcf');
     });
@@ -308,7 +308,7 @@ describe('VcardManager', () => {
     it('should filter ignored files', async () => {
       const settingsWithIgnore = {
         ...mockSettings,
-        vcfIgnoreFilenames: ['ignored.vcf']
+        vcardIgnoreFilenames: ['ignored.vcf']
       };
       vcardManager.updateSettings(settingsWithIgnore);
 
@@ -322,7 +322,7 @@ describe('VcardManager', () => {
         lastModified: 1000
       });
 
-      const result = await vcardManager.scanVCFFolder(new Map());
+      const result = await vcardManager.scanVcardFolder(new Map());
 
       expect(result).toContain('/test/vcf/normal.vcf');
       expect(result).not.toContain('/test/vcf/ignored.vcf');
@@ -338,7 +338,7 @@ describe('VcardManager', () => {
         .mockResolvedValueOnce({ path: '/test/vcf/valid.vcf', lastModified: 1000 })
         .mockResolvedValueOnce(null);
 
-      const result = await vcardManager.scanVCFFolder(new Map());
+      const result = await vcardManager.scanVcardFolder(new Map());
 
       expect(result).toContain('/test/vcf/valid.vcf');
       expect(result).not.toContain('/test/vcf/invalid.vcf');
@@ -347,7 +347,7 @@ describe('VcardManager', () => {
     it('should handle errors gracefully', async () => {
       (vcardManager as any).fileOps.watchFolderExists.mockRejectedValue(new Error('Scan error'));
 
-      const result = await vcardManager.scanVCFFolder(new Map());
+      const result = await vcardManager.scanVcardFolder(new Map());
 
       expect(result).toEqual([]);
     });
@@ -357,7 +357,7 @@ describe('VcardManager', () => {
     it('should return empty array when parsing fails', async () => {
       (vcardManager as any).collection.readAndParseVCard.mockResolvedValue(null);
 
-      const result = await vcardManager.processVCFContents('/test/file.vcf');
+      const result = await vcardManager.processVcardContents('/test/file.vcf');
 
       expect(result).toEqual([]);
     });
@@ -369,7 +369,7 @@ describe('VcardManager', () => {
         ['slug', { FN: 'No UID' }]
       ]);
 
-      const result = await vcardManager.processVCFContents('/test/file.vcf');
+      const result = await vcardManager.processVcardContents('/test/file.vcf');
 
       expect(result).toHaveLength(1);
       expect(result[0][0]).toBe('valid-slug');
@@ -379,7 +379,7 @@ describe('VcardManager', () => {
     it('should filter out ignored UIDs', async () => {
       const settingsWithIgnore = {
         ...mockSettings,
-        vcfIgnoreUIDs: ['ignored-uid']
+        vcardIgnoreUIDs: ['ignored-uid']
       };
       vcardManager.updateSettings(settingsWithIgnore);
 
@@ -388,7 +388,7 @@ describe('VcardManager', () => {
         ['ignored-slug', { UID: 'ignored-uid', FN: 'Ignored' }]
       ]);
 
-      const result = await vcardManager.processVCFContents('/test/file.vcf');
+      const result = await vcardManager.processVcardContents('/test/file.vcf');
 
       expect(result).toHaveLength(1);
       expect(result[0][1].UID).toBe('valid-uid');
@@ -397,7 +397,7 @@ describe('VcardManager', () => {
     it('should handle errors gracefully', async () => {
       (vcardManager as any).collection.readAndParseVCard.mockRejectedValue(new Error('Parse error'));
 
-      const result = await vcardManager.processVCFContents('/test/file.vcf');
+      const result = await vcardManager.processVcardContents('/test/file.vcf');
 
       expect(result).toEqual([]);
     });
@@ -409,7 +409,7 @@ describe('VcardManager', () => {
     });
 
     it('should return false when monitoring is disabled', () => {
-      const disabledSettings = { ...mockSettings, vcfWatchEnabled: false };
+      const disabledSettings = { ...mockSettings, vcardWatchEnabled: false };
       vcardManager.updateSettings(disabledSettings);
 
       expect(vcardManager.isMonitoringEnabled()).toBe(false);
@@ -424,7 +424,7 @@ describe('VcardManager', () => {
     });
 
     it('should return default 5000ms when not set', () => {
-      const settingsWithoutInterval = { ...mockSettings, vcfWatchPollingInterval: 0 };
+      const settingsWithoutInterval = { ...mockSettings, vcardWatchPollingInterval: 0 };
       vcardManager.updateSettings(settingsWithoutInterval);
 
       const result = vcardManager.getPollingInterval();
@@ -437,7 +437,7 @@ describe('VcardManager', () => {
     it('should validate valid VCF content', async () => {
       const validContent = 'BEGIN:VCARD\nVERSION:3.0\nFN:John Doe\nEND:VCARD';
 
-      const result = await vcardManager.validateVcfContent(validContent);
+      const result = await vcardManager.validateVcardContent(validContent);
 
       expect(result.isValid).toBe(true);
       expect(result.errors).toEqual([]);
@@ -446,7 +446,7 @@ describe('VcardManager', () => {
     it('should detect missing BEGIN:VCARD', async () => {
       const invalidContent = 'VERSION:3.0\nFN:John Doe\nEND:VCARD';
 
-      const result = await vcardManager.validateVcfContent(invalidContent);
+      const result = await vcardManager.validateVcardContent(invalidContent);
 
       expect(result.isValid).toBe(false);
       expect(result.errors).toContain('Missing BEGIN:VCARD');
@@ -455,7 +455,7 @@ describe('VcardManager', () => {
     it('should detect missing END:VCARD', async () => {
       const invalidContent = 'BEGIN:VCARD\nVERSION:3.0\nFN:John Doe';
 
-      const result = await vcardManager.validateVcfContent(invalidContent);
+      const result = await vcardManager.validateVcardContent(invalidContent);
 
       expect(result.isValid).toBe(false);
       expect(result.errors).toContain('Missing END:VCARD');
@@ -464,7 +464,7 @@ describe('VcardManager', () => {
     it('should detect missing VERSION field', async () => {
       const invalidContent = 'BEGIN:VCARD\nFN:John Doe\nEND:VCARD';
 
-      const result = await vcardManager.validateVcfContent(invalidContent);
+      const result = await vcardManager.validateVcardContent(invalidContent);
 
       expect(result.isValid).toBe(false);
       expect(result.errors).toContain('Missing VERSION field');
@@ -567,7 +567,7 @@ describe('VcardManager', () => {
     it('should return ignore action for ignored files', async () => {
       const settingsWithIgnore = {
         ...mockSettings,
-        vcfIgnoreFilenames: ['ignored.vcf']
+        vcardIgnoreFilenames: ['ignored.vcf']
       };
       vcardManager.updateSettings(settingsWithIgnore);
 
@@ -597,7 +597,7 @@ describe('VcardManager', () => {
 
       const settingsWithIgnore = {
         ...mockSettings,
-        vcfIgnoreUIDs: ['ignored-uid']
+        vcardIgnoreUIDs: ['ignored-uid']
       };
       vcardManager.updateSettings(settingsWithIgnore);
 
@@ -648,7 +648,7 @@ describe('VcardManager', () => {
     it('should return ignore action for ignored files', async () => {
       const settingsWithIgnore = {
         ...mockSettings,
-        vcfIgnoreFilenames: ['ignored.vcf']
+        vcardIgnoreFilenames: ['ignored.vcf']
       };
       vcardManager.updateSettings(settingsWithIgnore);
 
@@ -670,7 +670,7 @@ describe('VcardManager', () => {
 
       const settingsWithIgnore = {
         ...mockSettings,
-        vcfIgnoreUIDs: ['ignored-uid']
+        vcardIgnoreUIDs: ['ignored-uid']
       };
       vcardManager.updateSettings(settingsWithIgnore);
 

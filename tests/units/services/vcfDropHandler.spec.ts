@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { setupVCFDropHandler } from '../../../src/plugin/services/dropHandler';
+import { setupVcardDropHandler } from '../../../src/plugin/services/dropHandler';
 import type { ContactsPluginSettings } from 'src/plugin/settings';
 import type { App, TFile } from 'obsidian';
 
@@ -52,7 +52,7 @@ class MockTFile {
   }
 }
 
-describe('vcfDropHandler', () => {
+describe('vcardDropHandler', () => {
   let app: Partial<App> & { vault: any; metadataCache: any };
   let settings: ContactsPluginSettings;
   let createdFiles: Record<string, string> = {};
@@ -96,15 +96,15 @@ describe('vcfDropHandler', () => {
     settings = {
       contactsFolder: 'Contacts',
       defaultHashtag: '',
-      vcfStorageMethod: 'vcf-folder',
-      vcfFilename: 'contacts.vcf',
-      vcfWatchFolder: '/tmp/vcfwatch',
-      vcfWatchEnabled: false,
-      vcfWatchPollingInterval: 30,
-      vcfWriteBackEnabled: false,
-      vcfCustomizeIgnoreList: false,
-      vcfIgnoreFilenames: [],
-      vcfIgnoreUIDs: [],
+      vcardStorageMethod: 'vcard-folder',
+      vcardFilename: 'contacts.vcf',
+      vcardWatchFolder: '/tmp/vcfwatch',
+      vcardWatchEnabled: false,
+      vcardWatchPollingInterval: 30,
+      vcardWriteBackEnabled: false,
+      vcardCustomizeIgnoreList: false,
+      vcardIgnoreFilenames: [],
+      vcardIgnoreUIDs: [],
       enableSync: true,
       logLevel: 'DEBUG',
     };
@@ -125,7 +125,7 @@ describe('vcfDropHandler', () => {
       app.vault.on = on;
       app.vault.off = off;
 
-      const cleanup = setupVCFDropHandler(app as unknown as App, settings);
+      const cleanup = setupVcardDropHandler(app as unknown as App, settings);
       expect(on).toHaveBeenCalledWith('create', expect.any(Function));
       expect(typeof cleanup).toBe('function');
       
@@ -146,7 +146,7 @@ describe('vcfDropHandler', () => {
         }
       });
 
-      const cleanup = setupVCFDropHandler(app as unknown as App, settings);
+      const cleanup = setupVcardDropHandler(app as unknown as App, settings);
       expect(listeners.has('create')).toBe(true);
       
       cleanup();
@@ -162,7 +162,7 @@ describe('vcfDropHandler', () => {
         handler = cb;
       });
 
-      setupVCFDropHandler(app as unknown as App, settings);
+      setupVcardDropHandler(app as unknown as App, settings);
       
       const nonVcfFile = new MockTFile('notes/note.txt') as unknown as TFile;
       app.vault._files.set(nonVcfFile.path, 'Some text content');
@@ -184,7 +184,7 @@ describe('vcfDropHandler', () => {
           handler = cb;
         });
 
-        setupVCFDropHandler(app as unknown as App, settings);
+        setupVcardDropHandler(app as unknown as App, settings);
         
         const vcfFile = new MockTFile(`vault/${fileName}`) as unknown as TFile;
         const vcfContent = 'BEGIN:VCARD\nVERSION:4.0\nUID:test-123\nFN:Test\nEND:VCARD\n';
@@ -202,14 +202,14 @@ describe('vcfDropHandler', () => {
     });
 
     it('ignores vcf drop when no watch folder configured', async () => {
-      settings.vcfWatchFolder = '';
+      settings.vcardWatchFolder = '';
       
       let handler: Function | null = null;
       app.vault.on = vi.fn((event: string, cb: any) => {
         handler = cb;
       });
 
-      setupVCFDropHandler(app as unknown as App, settings);
+      setupVcardDropHandler(app as unknown as App, settings);
       
       const vcfFile = new MockTFile('vault/test.vcf') as unknown as TFile;
       app.vault._files.set(vcfFile.path, 'BEGIN:VCARD\nVERSION:4.0\nEND:VCARD\n');
@@ -229,7 +229,7 @@ describe('vcfDropHandler', () => {
         handler = cb;
       });
 
-      setupVCFDropHandler(app as unknown as App, settings);
+      setupVcardDropHandler(app as unknown as App, settings);
       
       const vcfFile = new MockTFile('vault/test.vcf') as unknown as TFile;
       // Don't add file to vault._files to simulate read error
@@ -245,7 +245,7 @@ describe('vcfDropHandler', () => {
         handler = cb;
       });
 
-      setupVCFDropHandler(app as unknown as App, settings);
+      setupVcardDropHandler(app as unknown as App, settings);
       
       const vcfFile = new MockTFile('vault/test.vcf') as unknown as TFile;
       app.vault._files.set(vcfFile.path, 'BEGIN:VCARD\nVERSION:4.0\nUID:test\nEND:VCARD\n');
@@ -265,7 +265,7 @@ describe('vcfDropHandler', () => {
       
       app.vault.delete = vi.fn().mockRejectedValue(new Error('Delete failed'));
 
-      setupVCFDropHandler(app as unknown as App, settings);
+      setupVcardDropHandler(app as unknown as App, settings);
       
       const vcfFile = new MockTFile('vault/test.vcf') as unknown as TFile;
       app.vault._files.set(vcfFile.path, 'BEGIN:VCARD\nVERSION:4.0\nUID:test\nEND:VCARD\n');
@@ -283,7 +283,7 @@ describe('vcfDropHandler', () => {
         handler = cb;
       });
 
-      setupVCFDropHandler(app as unknown as App, settings);
+      setupVcardDropHandler(app as unknown as App, settings);
       
       // Should not throw
       await expect(handler!(null)).resolves.not.toThrow();
@@ -299,7 +299,7 @@ describe('vcfDropHandler', () => {
         handler = cb;
       });
 
-      setupVCFDropHandler(app as unknown as App, settings);
+      setupVcardDropHandler(app as unknown as App, settings);
       
       const vcfFile = new MockTFile('vault/contact.vcf') as unknown as TFile;
       const vcfContent = 'BEGIN:VCARD\nVERSION:4.0\nUID:test-uid\nFN:John Doe\nEND:VCARD\n';
@@ -324,7 +324,7 @@ describe('vcfDropHandler', () => {
         handler = cb;
       });
 
-      setupVCFDropHandler(app as unknown as App, settings);
+      setupVcardDropHandler(app as unknown as App, settings);
       
       const vcfFile = new MockTFile('vault/contact.vcf') as unknown as TFile;
       const vcfContent = 'BEGIN:VCARD\nVERSION:4.0\nUID:test-uid\nFN:John Doe\nEND:VCARD\n';
@@ -347,7 +347,7 @@ describe('vcfDropHandler', () => {
         handler = cb;
       });
 
-      setupVCFDropHandler(app as unknown as App, settings);
+      setupVcardDropHandler(app as unknown as App, settings);
       
       const vcfFile = new MockTFile('vault/contact.vcf') as unknown as TFile;
       const newContent = 'BEGIN:VCARD\nVERSION:4.0\nUID:test-uid\nFN:John Doe Updated\nEND:VCARD\n';
@@ -377,7 +377,7 @@ describe('vcfDropHandler', () => {
       
       const deleteSpy = vi.spyOn(app.vault, 'delete');
 
-      setupVCFDropHandler(app as unknown as App, settings);
+      setupVcardDropHandler(app as unknown as App, settings);
       
       const vcfFile = new MockTFile('vault/contact.vcf') as unknown as TFile;
       app.vault._files.set(vcfFile.path, 'BEGIN:VCARD\nVERSION:4.0\nUID:test\nEND:VCARD\n');
@@ -400,7 +400,7 @@ describe('vcfDropHandler', () => {
         handler = cb;
       });
 
-      setupVCFDropHandler(app as unknown as App, settings);
+      setupVcardDropHandler(app as unknown as App, settings);
       
       const vcfFile = new MockTFile('vault/contact.vcf') as unknown as TFile;
       app.vault._files.set(vcfFile.path, 'BEGIN:VCARD\nVERSION:4.0\nUID:test-uid\nFN:Test User\nEND:VCARD\n');
@@ -436,7 +436,7 @@ describe('vcfDropHandler', () => {
       const readSpy = vi.spyOn(app.vault, 'read');
       const modifySpy = vi.spyOn(app.vault, 'modify');
       
-      setupVCFDropHandler(app as unknown as App, settings);
+      setupVcardDropHandler(app as unknown as App, settings);
       
       const vcfFile = new MockTFile('vault/contact.vcf') as unknown as TFile;
       const vcfContent = 'BEGIN:VCARD\nVERSION:4.0\nUID:existing-uid\nFN:New Name\nEND:VCARD\n';
@@ -473,7 +473,7 @@ describe('vcfDropHandler', () => {
       
       const renameSpy = vi.spyOn(app.vault, 'rename').mockResolvedValue(undefined as any);
       
-      setupVCFDropHandler(app as unknown as App, settings);
+      setupVcardDropHandler(app as unknown as App, settings);
       
       const vcfFile = new MockTFile('vault/contact.vcf') as unknown as TFile;
       // Use a slug that's different from the existing filename
@@ -513,7 +513,7 @@ describe('vcfDropHandler', () => {
       app.vault.rename = vi.fn().mockRejectedValue(new Error('Rename not allowed'));
       const modifySpy = vi.spyOn(app.vault, 'modify').mockResolvedValue(undefined as any);
       
-      setupVCFDropHandler(app as unknown as App, settings);
+      setupVcardDropHandler(app as unknown as App, settings);
       
       const vcfFile = new MockTFile('vault/contact.vcf') as unknown as TFile;
       const vcfContent = 'BEGIN:VCARD\nVERSION:4.0\nUID:rename-fail-uid\nFN:New Name\nEND:VCARD\n';
@@ -544,7 +544,7 @@ describe('vcfDropHandler', () => {
       
       const modifySpy = vi.spyOn(app.vault, 'modify');
       
-      setupVCFDropHandler(app as unknown as App, settings);
+      setupVcardDropHandler(app as unknown as App, settings);
       
       const vcfFile = new MockTFile('vault/contact.vcf') as unknown as TFile;
       const vcfContent = 'BEGIN:VCARD\nVERSION:4.0\nUID:same-uid\nFN:Same Name\nEND:VCARD\n';
@@ -577,7 +577,7 @@ describe('vcfDropHandler', () => {
       // Make read fail
       app.vault.read = vi.fn().mockRejectedValue(new Error('Read failed'));
       
-      setupVCFDropHandler(app as unknown as App, settings);
+      setupVcardDropHandler(app as unknown as App, settings);
       
       const vcfFile = new MockTFile('vault/contact.vcf') as unknown as TFile;
       const vcfContent = 'BEGIN:VCARD\nVERSION:4.0\nUID:error-uid\nFN:Test\nEND:VCARD\n';
@@ -604,7 +604,7 @@ describe('vcfDropHandler', () => {
       // Make createContactFile fail
       vi.mocked(ContactManagerUtils.createContactFile).mockRejectedValue(new Error('Create failed'));
       
-      setupVCFDropHandler(app as unknown as App, settings);
+      setupVcardDropHandler(app as unknown as App, settings);
       
       const vcfFile = new MockTFile('vault/contact.vcf') as unknown as TFile;
       const vcfContent = 'BEGIN:VCARD\nVERSION:4.0\nUID:new-uid\nFN:New Contact\nEND:VCARD\n';
@@ -632,7 +632,7 @@ describe('vcfDropHandler', () => {
       
       vi.mocked(ContactManagerUtils.createContactFile).mockResolvedValue(undefined);
       
-      setupVCFDropHandler(app as unknown as App, settings);
+      setupVcardDropHandler(app as unknown as App, settings);
       
       const vcfFile = new MockTFile('vault/contact.vcf') as unknown as TFile;
       const vcfContent = 'BEGIN:VCARD\nVERSION:4.0\nUID:search-error\nFN:Test\nEND:VCARD\n';

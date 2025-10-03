@@ -11,15 +11,15 @@ import "src/curatorRegistration";
 export interface ContactsPluginSettings {
   contactsFolder: string;
   defaultHashtag: string;
-  vcfStorageMethod: 'single-vcf' | 'vcf-folder';
-  vcfFilename: string;
-  vcfWatchFolder: string;
-  vcfWatchEnabled: boolean;
-  vcfWatchPollingInterval: number;
-  vcfWriteBackEnabled: boolean;
-  vcfCustomizeIgnoreList: boolean;
-  vcfIgnoreFilenames: string[];
-  vcfIgnoreUIDs: string[];
+  vcardStorageMethod: 'single-vcard' | 'vcard-folder';
+  vcardFilename: string;
+  vcardWatchFolder: string;
+  vcardWatchEnabled: boolean;
+  vcardWatchPollingInterval: number;
+  vcardWriteBackEnabled: boolean;
+  vcardCustomizeIgnoreList: boolean;
+  vcardIgnoreFilenames: string[];
+  vcardIgnoreUIDs: string[];
   // Contact Section Template Settings
   contactSectionTemplate: string;
   // Contact Section Sync Settings
@@ -36,15 +36,15 @@ const curatorSettingDefaults = curatorSetting.reduce((acc:Record<string, string|
 export const DEFAULT_SETTINGS: ContactsPluginSettings = {
   contactsFolder: "",
   defaultHashtag: "",
-  vcfStorageMethod: 'vcf-folder',
-  vcfFilename: "contacts.vcf",
-  vcfWatchFolder: "",
-  vcfWatchEnabled: false,
-  vcfWatchPollingInterval: 30,
-  vcfWriteBackEnabled: false,
-  vcfCustomizeIgnoreList: false,
-  vcfIgnoreFilenames: [],
-  vcfIgnoreUIDs: [],
+  vcardStorageMethod: 'vcard-folder',
+  vcardFilename: "contacts.vcf",
+  vcardWatchFolder: "",
+  vcardWatchEnabled: false,
+  vcardWatchPollingInterval: 30,
+  vcardWriteBackEnabled: false,
+  vcardCustomizeIgnoreList: false,
+  vcardIgnoreFilenames: [],
+  vcardIgnoreUIDs: [],
   // Contact Section Template Default
   contactSectionTemplate: `## Contact
 
@@ -144,18 +144,18 @@ export class ContactsSettingTab extends PluginSettingTab {
         }));
 
     // Sync Contacts Section
-    const vcfStorageTitle = containerEl.createEl("h3", { text: "Sync Contacts" });
-    vcfStorageTitle.style.marginTop = "2em";
+    const vcardStorageTitle = containerEl.createEl("h3", { text: "Sync Contacts" });
+    vcardStorageTitle.style.marginTop = "2em";
 
-    // VCF Watch Enabled Toggle (moved before storage method)
+    // vcard Watch Enabled Toggle (moved before storage method)
     new Setting(containerEl)
       .setName("Enable Contact Sync")
-      .setDesc("When enabled, the plugin will monitor for changes and trigger VCF sync processors. Controls both VCF Sync Pre Processor (import) and VCF Sync Post Processor (write-back).")
+      .setDesc("When enabled, the plugin will monitor for changes and trigger vcard sync processors. Controls both vcard Sync Pre Processor (import) and vcard Sync Post Processor (write-back).")
       .addToggle(toggle =>
         toggle
-          .setValue(this.plugin.settings.vcfWatchEnabled)
+          .setValue(this.plugin.settings.vcardWatchEnabled)
           .onChange(async (value) => {
-            this.plugin.settings.vcfWatchEnabled = value;
+            this.plugin.settings.vcardWatchEnabled = value;
             await this.plugin.saveSettings();
             setSettings(this.plugin.settings);
             // Refresh the display to show/hide dependent settings
@@ -163,32 +163,32 @@ export class ContactsSettingTab extends PluginSettingTab {
           }));
 
     // Show folder watching sub-settings only when watching is enabled
-    if (this.plugin.settings.vcfWatchEnabled) {
-      // VCF Watch Polling Interval
+    if (this.plugin.settings.vcardWatchEnabled) {
+      // vcard Watch Polling Interval
       new Setting(containerEl)
         .setName("Polling Interval (seconds)")
         .setDesc("How often to check for changes. Minimum 10 seconds.")
         .addText(text => text
           .setPlaceholder("30")
-          .setValue(String(this.plugin.settings.vcfWatchPollingInterval))
+          .setValue(String(this.plugin.settings.vcardWatchPollingInterval))
           .onChange(async (value) => {
             const numValue = parseInt(value, 10);
             if (!isNaN(numValue) && numValue >= 10) {
-              this.plugin.settings.vcfWatchPollingInterval = numValue;
+              this.plugin.settings.vcardWatchPollingInterval = numValue;
               await this.plugin.saveSettings();
               setSettings(this.plugin.settings);
             }
           }));
 
-      // VCF Write Back Toggle (only shown when folder watching is enabled)
+      // vcard Write Back Toggle (only shown when folder watching is enabled)
       new Setting(containerEl)
-        .setName("Enable VCF Write Back")
-        .setDesc("When enabled, the VCF Sync Post Processor will write changes from Obsidian contacts back to VCF files. Disable to prevent any modifications to VCF files.")
+        .setName("Enable vcard Write Back")
+        .setDesc("When enabled, the vcard Sync Post Processor will write changes from Obsidian contacts back to vcard files. Disable to prevent any modifications to vcard files.")
         .addToggle(toggle =>
           toggle
-            .setValue(this.plugin.settings.vcfWriteBackEnabled)
+            .setValue(this.plugin.settings.vcardWriteBackEnabled)
             .onChange(async (value) => {
-              this.plugin.settings.vcfWriteBackEnabled = value;
+              this.plugin.settings.vcardWriteBackEnabled = value;
               await this.plugin.saveSettings();
               setSettings(this.plugin.settings);
               // Refresh the display to show/hide dependent settings
@@ -196,28 +196,28 @@ export class ContactsSettingTab extends PluginSettingTab {
             }));
     }
 
-    // VCF Storage Method
+    // vcard Storage Method
     const storageMethodDesc = document.createDocumentFragment();
     storageMethodDesc.append(
       "Choose how vCard files are stored:",
       storageMethodDesc.createEl("br"),
-      storageMethodDesc.createEl("strong", { text: "Single VCF: " }),
+      storageMethodDesc.createEl("strong", { text: "Single vcard: " }),
       "All contacts in one vCard file",
       storageMethodDesc.createEl("br"),
-      storageMethodDesc.createEl("strong", { text: "VCF Folder: " }),
+      storageMethodDesc.createEl("strong", { text: "vcard Folder: " }),
       "Separate vCard file for each contact"
     );
 
     new Setting(containerEl)
-      .setName("VCF Storage Method")
+      .setName("vcard Storage Method")
       .setDesc(storageMethodDesc)
       .addDropdown(dropdown => {
         dropdown
-          .addOption('single-vcf', 'Single VCF')
-          .addOption('vcf-folder', 'VCF Folder')
-          .setValue(this.plugin.settings.vcfStorageMethod)
-          .onChange(async (value: 'single-vcf' | 'vcf-folder') => {
-            this.plugin.settings.vcfStorageMethod = value;
+          .addOption('single-vcard', 'Single vcard')
+          .addOption('vcard-folder', 'vcard Folder')
+          .setValue(this.plugin.settings.vcardStorageMethod)
+          .onChange(async (value: 'single-vcard' | 'vcard-folder') => {
+            this.plugin.settings.vcardStorageMethod = value;
             await this.plugin.saveSettings();
             setSettings(this.plugin.settings);
             // Refresh the display to show/hide dependent settings
@@ -225,58 +225,58 @@ export class ContactsSettingTab extends PluginSettingTab {
           });
       });
 
-    // VCF Filename (only shown for single VCF method)
-    if (this.plugin.settings.vcfStorageMethod === 'single-vcf') {
-      const vcfFilenameDesc = document.createDocumentFragment();
-      vcfFilenameDesc.append(
-        "Name of the single VCF file that will contain all contacts.",
-        vcfFilenameDesc.createEl("br"),
+    // vcard Filename (only shown for single vcard method)
+    if (this.plugin.settings.vcardStorageMethod === 'single-vcard') {
+      const vcardFilenameDesc = document.createDocumentFragment();
+      vcardFilenameDesc.append(
+        "Name of the single vcard file that will contain all contacts.",
+        vcardFilenameDesc.createEl("br"),
         "Include the .vcf extension."
       );
 
       new Setting(containerEl)
-        .setName("VCF Filename")
-        .setDesc(vcfFilenameDesc)
+        .setName("vcard Filename")
+        .setDesc(vcardFilenameDesc)
         .addText(text => text
           .setPlaceholder("contacts.vcf")
-          .setValue(this.plugin.settings.vcfFilename)
+          .setValue(this.plugin.settings.vcardFilename)
           .onChange(async (value) => {
-            this.plugin.settings.vcfFilename = value;
+            this.plugin.settings.vcardFilename = value;
             await this.plugin.saveSettings();
             setSettings(this.plugin.settings);
           }));
     }
 
-    // VCF Folder Settings (only shown for VCF folder method)
-    if (this.plugin.settings.vcfStorageMethod === 'vcf-folder') {
-      const vcfFolderDesc = document.createDocumentFragment();
-      vcfFolderDesc.append(
-        "Folder path where individual VCF files will be stored.",
-        vcfFolderDesc.createEl("br"),
+    // vcard Folder Settings (only shown for vcard folder method)
+    if (this.plugin.settings.vcardStorageMethod === 'vcard-folder') {
+      const vcardFolderDesc = document.createDocumentFragment();
+      vcardFolderDesc.append(
+        "Folder path where individual vcard files will be stored.",
+        vcardFolderDesc.createEl("br"),
         "Each contact will have its own .vcf file in this folder."
       );
 
       new Setting(containerEl)
-        .setName("VCF Folder")
-        .setDesc(vcfFolderDesc)
+        .setName("vcard Folder")
+        .setDesc(vcardFolderDesc)
         .addText(text => text
           .setPlaceholder("Example: /Users/username/Documents/Contacts")
-          .setValue(this.plugin.settings.vcfWatchFolder)
+          .setValue(this.plugin.settings.vcardWatchFolder)
           .onChange(async (value) => {
-            this.plugin.settings.vcfWatchFolder = value;
+            this.plugin.settings.vcardWatchFolder = value;
             await this.plugin.saveSettings();
             setSettings(this.plugin.settings);
           }));
 
-      // Customize Ignore List toggle (only for VCF folder method)
+      // Customize Ignore List toggle (only for vcard folder method)
       new Setting(containerEl)
         .setName("Customize Ignore List")
         .setDesc("Enable customization of files and UIDs to ignore during sync.")
         .addToggle(toggle =>
           toggle
-            .setValue(this.plugin.settings.vcfCustomizeIgnoreList)
+            .setValue(this.plugin.settings.vcardCustomizeIgnoreList)
             .onChange(async (value) => {
-              this.plugin.settings.vcfCustomizeIgnoreList = value;
+              this.plugin.settings.vcardCustomizeIgnoreList = value;
               await this.plugin.saveSettings();
               setSettings(this.plugin.settings);
               // Refresh the display to show/hide ignore list settings
@@ -284,29 +284,29 @@ export class ContactsSettingTab extends PluginSettingTab {
             }));
     }
 
-    // Ignore Lists Section (only shown when VCF folder method and customize ignore list is enabled)
-    if (this.plugin.settings.vcfStorageMethod === 'vcf-folder' && 
-        this.plugin.settings.vcfCustomizeIgnoreList) {
+    // Ignore Lists Section (only shown when vcard folder method and customize ignore list is enabled)
+    if (this.plugin.settings.vcardStorageMethod === 'vcard-folder' && 
+        this.plugin.settings.vcardCustomizeIgnoreList) {
       const ignoreTitle = containerEl.createEl("h3", { text: "Ignore Lists" });
       ignoreTitle.style.marginTop = "2em";
 
       // Ignored Filenames
       const ignoreFilenamesDesc = document.createDocumentFragment();
       ignoreFilenamesDesc.append(
-        "VCF filenames to ignore during sync (one per line).",
+        "vcard filenames to ignore during sync (one per line).",
         ignoreFilenamesDesc.createEl("br"),
         "Use this for known malformed files or files controlled by CardDAV services."
       );
 
       new Setting(containerEl)
-        .setName("Ignored VCF Filenames")
+        .setName("Ignored vcard Filenames")
         .setDesc(ignoreFilenamesDesc)
         .addTextArea(textArea => {
           textArea
             .setPlaceholder("filename1.vcf\nfilename2.vcf")
-            .setValue(this.plugin.settings.vcfIgnoreFilenames.join('\n'))
+            .setValue(this.plugin.settings.vcardIgnoreFilenames.join('\n'))
             .onChange(async (value) => {
-              this.plugin.settings.vcfIgnoreFilenames = value
+              this.plugin.settings.vcardIgnoreFilenames = value
                 .split('\n')
                 .map(line => line.trim())
                 .filter(line => line.length > 0);
@@ -331,9 +331,9 @@ export class ContactsSettingTab extends PluginSettingTab {
         .addTextArea(textArea => {
           textArea
             .setPlaceholder("UID-1234-5678\nUID-ABCD-EFGH")
-            .setValue(this.plugin.settings.vcfIgnoreUIDs.join('\n'))
+            .setValue(this.plugin.settings.vcardIgnoreUIDs.join('\n'))
             .onChange(async (value) => {
-              this.plugin.settings.vcfIgnoreUIDs = value
+              this.plugin.settings.vcardIgnoreUIDs = value
                 .split('\n')
                 .map(line => line.trim())
                 .filter(line => line.length > 0);

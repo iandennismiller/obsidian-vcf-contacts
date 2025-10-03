@@ -8,18 +8,18 @@ import { ContactsPluginSettings } from 'src/plugin/settings';
 
 /**
  * Sets up a vault 'create' listener that handles .vcf files dropped into the vault.
- * Copies the dropped VCF into the configured watch folder, imports/updates contacts
+ * Copies the dropped vcard into the configured watch folder, imports/updates contacts
  * in the contacts folder, and deletes the original file from the vault.
  *
  * Returns a cleanup function to remove the listener.
  */
-export function setupVCFDropHandler(app: App, settings: ContactsPluginSettings): () => void {
+export function setupVcardDropHandler(app: App, settings: ContactsPluginSettings): () => void {
   const onCreate = async (file: TFile) => {
     try {
       if (!file || !file.name.toLowerCase().endsWith('.vcf')) return;
 
-      if (!settings.vcfWatchFolder) {
-        console.debug('VCF drop ignored because vcfWatchFolder is not configured');
+      if (!settings.vcardWatchFolder) {
+        console.debug('vcard drop ignored because vcardWatchFolder is not configured');
         return;
       }
 
@@ -28,7 +28,7 @@ export function setupVCFDropHandler(app: App, settings: ContactsPluginSettings):
       try {
         content = await app.vault.read(file);
       } catch (err) {
-        console.debug(`Failed to read dropped VCF ${file.path}: ${err.message}`);
+        console.debug(`Failed to read dropped vcard ${file.path}: ${err.message}`);
         return;
       }
 
@@ -77,7 +77,7 @@ export function setupVCFDropHandler(app: App, settings: ContactsPluginSettings):
               // Modify with new content
               await app.vault.modify(existingContact, mdContent);
             } else {
-              // No update needed - VCF matches existing contact
+              // No update needed - vcard matches existing contact
             }
           } catch (err) {
             console.debug(`Failed comparing/updating contact for UID ${record.UID}: ${err.message}`);
@@ -87,17 +87,17 @@ export function setupVCFDropHandler(app: App, settings: ContactsPluginSettings):
           try {
             const filename = (slug || 'contact') + '.md';
             await ContactManagerUtils.createContactFile(app, settings.contactsFolder, mdContent, filename);
-            // Contact imported from dropped VCF
+            // Contact imported from dropped vcard
           } catch (err) {
-            console.debug(`Failed to create contact from dropped VCF UID ${record.UID}: ${err.message}`);
+            console.debug(`Failed to create contact from dropped vcard UID ${record.UID}: ${err.message}`);
           }
         }
       }
 
-      // Write the VCF file into the configured watch folder (overwrite if necessary)
+      // Write the vcard file into the configured watch folder (overwrite if necessary)
       try {
         const filename = path.basename(file.path);
-        const targetPath = path.join(settings.vcfWatchFolder, filename);
+        const targetPath = path.join(settings.vcardWatchFolder, filename);
 
         // If target exists and content differs, overwrite; otherwise write new file
         let write = true;
@@ -110,25 +110,25 @@ export function setupVCFDropHandler(app: App, settings: ContactsPluginSettings):
 
         if (write) {
           await fs.writeFile(targetPath, content, 'utf-8');
-          // Copied dropped VCF to watch folder
+          // Copied dropped vcard to watch folder
         } else {
-          // Dropped VCF identical to existing VCF in watch folder
+          // Dropped vcard identical to existing vcard in watch folder
         }
       } catch (err) {
-        console.debug(`Failed to copy dropped VCF into watch folder: ${err.message}`);
+        console.debug(`Failed to copy dropped vcard into watch folder: ${err.message}`);
         return;
       }
 
-      // Remove original VCF from the vault
+      // Remove original vcard from the vault
       try {
         await app.vault.delete(file);
-        // Removed dropped VCF from vault
+        // Removed dropped vcard from vault
       } catch (err) {
-        console.debug(`Failed to remove dropped VCF from vault: ${err.message}`);
+        console.debug(`Failed to remove dropped vcard from vault: ${err.message}`);
       }
 
     } catch (error: any) {
-      console.debug(`Error handling dropped VCF file ${file?.path}: ${error.message}`);
+      console.debug(`Error handling dropped vcard file ${file?.path}: ${error.message}`);
     }
   };
 

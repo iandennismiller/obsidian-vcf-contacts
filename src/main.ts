@@ -1,7 +1,7 @@
 import { Plugin, Notice } from 'obsidian';
 import { VcardFile } from "./models/vcardFile";
 import { SyncWatcher } from "src/plugin/services/syncWatcher";
-import { setupVCFDropHandler } from 'src/plugin/services/dropHandler';
+import { setupVcardDropHandler } from 'src/plugin/services/dropHandler';
 import { setApp, clearApp } from "src/plugin/context/sharedAppContext";
 import { setSettings, clearSettings } from "src/plugin/context/sharedSettingsContext";
 import { CuratorManager, curatorService } from "./models/curatorManager/curatorManager";
@@ -18,7 +18,7 @@ import { ContactsPluginSettings } from  './plugin/settings';
 export default class ContactsPlugin extends Plugin {
 	settings: ContactsPluginSettings;
 	private syncWatcher: SyncWatcher | null = null;
-	private vcfDropCleanup: (() => void) | null = null;
+	private vcardDropCleanup: (() => void) | null = null;
 	private contactManager: ContactManager | null = null;
 	private curatorManager: CuratorManager | null = null;
 
@@ -71,8 +71,8 @@ export default class ContactsPlugin extends Plugin {
 			this.syncWatcher = new SyncWatcher(this.app, this.settings);
 			await this.syncWatcher.start();
 
-			// Initialize VCF drop handler (watch for .vcf files created in the vault)
-			this.vcfDropCleanup = setupVCFDropHandler(this.app, this.settings);
+			// Initialize vcard drop handler (watch for .vcf files created in the vault)
+			this.vcardDropCleanup = setupVcardDropHandler(this.app, this.settings);
 
 			// Register curator processor commands
 			if (this.curatorManager) {
@@ -100,16 +100,16 @@ export default class ContactsPlugin extends Plugin {
 		// Clean up settings context
 		clearSettings();
 
-		// Clean up VCF sync watcher
+		// Clean up VCard sync watcher
 		if (this.syncWatcher) {
 			this.syncWatcher.stop();
 			this.syncWatcher = null;
 		}
 
-		// Clean up VCF drop handler
-		if (this.vcfDropCleanup) {
-			this.vcfDropCleanup();
-			this.vcfDropCleanup = null;
+		// Clean up vcard drop handler
+		if (this.vcardDropCleanup) {
+			this.vcardDropCleanup();
+			this.vcardDropCleanup = null;
 		}
 	}
 

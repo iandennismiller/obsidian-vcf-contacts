@@ -38,9 +38,9 @@ export const VcardSyncPreProcessor: CuratorProcessor = {
 
   async process(contact:Contact): Promise<CuratorQueItem | undefined> {
     const activeProcessor = getSettings()[`${this.settingPropertyName}`] as boolean;
-    const vcfWatchEnabled = getSettings().vcfWatchEnabled;
+    const vcardWatchEnabled = getSettings().vcardWatchEnabled;
     
-    if (!activeProcessor || !vcfWatchEnabled || !contact.data["UID"]) {
+    if (!activeProcessor || !vcardWatchEnabled || !contact.data["UID"]) {
       return Promise.resolve(undefined);
     }
 
@@ -48,45 +48,45 @@ export const VcardSyncPreProcessor: CuratorProcessor = {
     const vcardManager = new VcardManager(settings);
     
     try {
-      // Check if VCF folder exists
+      // Check if vcard folder exists
       const watchFolderExists = await vcardManager.watchFolderExists();
       if (!watchFolderExists) {
         return Promise.resolve(undefined);
       }
 
-      // Find VCF file matching this contact's UID
-      const vcfFilePath = await vcardManager.findVCardFileByUID(contact.data["UID"]);
-      if (!vcfFilePath) {
+      // Find vcard file matching this contact's UID
+      const vcardFilePath = await vcardManager.findVCardFileByUID(contact.data["UID"]);
+      if (!vcardFilePath) {
         return Promise.resolve(undefined);
       }
 
       // Skip ignored files
-      if (vcardManager.shouldIgnoreFile(vcfFilePath)) {
+      if (vcardManager.shouldIgnoreFile(vcardFilePath)) {
         return Promise.resolve(undefined);
       }
 
-      // Read and parse the VCF file
-      const parsedEntries = await vcardManager.readAndParseVCard(vcfFilePath);
+      // Read and parse the vcard file
+      const parsedEntries = await vcardManager.readAndParseVCard(vcardFilePath);
       if (!parsedEntries || parsedEntries.length === 0) {
         return Promise.resolve(undefined);
       }
 
       // Find the matching entry (should be the first one since we found by UID)
-      const vcfRecord = parsedEntries.find(([slug, record]: [string, any]) => record.UID === contact.data["UID"]);
-      if (!vcfRecord) {
+      const vcardRecord = parsedEntries.find(([slug, record]: [string, any]) => record.UID === contact.data["UID"]);
+      if (!vcardRecord) {
         return Promise.resolve(undefined);
       }
 
-      const [slug, record] = vcfRecord;
+      const [slug, record] = vcardRecord;
       const contactNote = new ContactNote(getApp(), settings, contact.file);
       
       // Check if we should update based on revision timestamps
-      const shouldUpdate = await contactNote.shouldUpdateFromVCF(record);
+      const shouldUpdate = await contactNote.shouldUpdateFromVcard(record);
       if (!shouldUpdate) {
         return Promise.resolve(undefined);
       }
 
-      // Use mdRender to process the VCF data into proper frontmatter format
+      // Use mdRender to process the vcard data into proper frontmatter format
       const renderedMarkdown = contactNote.mdRender(record, '');
       
       // Extract frontmatter from the rendered markdown

@@ -308,25 +308,25 @@ export class ContactManager implements IContactManager {
   // ============================================================================
 
   /**
-   * Processes VCF contact records and creates/updates contacts as needed.
+   * Processes vcard contact records and creates/updates contacts as needed.
    * 
    * This method handles the contact creation and processing logic that was
-   * previously duplicated in syncWatcher. It takes parsed VCF records and
+   * previously duplicated in syncWatcher. It takes parsed vcard records and
    * either finds existing contacts or creates new ones.
    * 
-   * @param vcfEntries - Array of [slug, record] tuples from VCF parsing
+   * @param vcardEntries - Array of [slug, record] tuples from vcard parsing
    * @param app - Obsidian App instance for file operations
    * @param settings - Plugin settings for contact creation
    * @returns Promise resolving to array of TFile objects that need processing
    */
-  async processVCFContacts(
-    vcfEntries: Array<[string, any]>, 
+  async processVcardContacts(
+    vcardEntries: Array<[string, any]>, 
     app: import('obsidian').App, 
     settings: ContactsPluginSettings
   ): Promise<import('obsidian').TFile[]> {
     const contactsToProcess: import('obsidian').TFile[] = [];
 
-    for (const [slug, record] of vcfEntries) {
+    for (const [slug, record] of vcardEntries) {
       if (slug && record.UID) {
         const existingFile = await this.findContactFileByUID(record.UID);
         
@@ -335,7 +335,7 @@ export class ContactManager implements IContactManager {
           contactsToProcess.push(existingFile);
         } else {
           // New contact - create it and add to processing list
-          const newFile = await this.createContactFromVCF(slug, record, app, settings);
+          const newFile = await this.createContactFromVcard(slug, record, app, settings);
           if (newFile) {
             contactsToProcess.push(newFile);
           }
@@ -347,18 +347,18 @@ export class ContactManager implements IContactManager {
   }
 
   /**
-   * Creates a new contact file from VCF record data.
+   * Creates a new contact file from vcard record data.
    * 
    * This method encapsulates the contact creation logic that was previously
    * duplicated in syncWatcher. It handles markdown generation and file creation.
    * 
    * @param slug - URL-friendly identifier for the contact
-   * @param record - VCF record data
+   * @param record - vcard record data
    * @param app - Obsidian App instance for file operations  
    * @param settings - Plugin settings for contact creation
    * @returns Promise resolving to created TFile or null if creation failed
    */
-  async createContactFromVCF(
+  async createContactFromVcard(
     slug: string, 
     record: any, 
     app: import('obsidian').App, 

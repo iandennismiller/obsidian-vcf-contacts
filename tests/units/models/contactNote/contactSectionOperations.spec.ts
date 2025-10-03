@@ -31,15 +31,15 @@ describe('ContactSectionOperations', () => {
     mockSettings = {
       contactsFolder: "",
       defaultHashtag: "",
-      vcfStorageMethod: 'vcf-folder',
-      vcfFilename: "contacts.vcf",
-      vcfWatchFolder: "",
-      vcfWatchEnabled: false,
-      vcfWatchPollingInterval: 30,
-      vcfWriteBackEnabled: false,
-      vcfCustomizeIgnoreList: false,
-      vcfIgnoreFilenames: [],
-      vcfIgnoreUIDs: [],
+      vcardStorageMethod: 'vcard-folder',
+      vcardFilename: "contacts.vcf",
+      vcardWatchFolder: "",
+      vcardWatchEnabled: false,
+      vcardWatchPollingInterval: 30,
+      vcardWriteBackEnabled: false,
+      vcardCustomizeIgnoreList: false,
+      vcardIgnoreFilenames: [],
+      vcardIgnoreUIDs: [],
       contactSectionTemplate: `## Contact
 
 {{#EMAIL-}}

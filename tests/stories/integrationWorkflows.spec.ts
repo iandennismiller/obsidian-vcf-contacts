@@ -31,15 +31,15 @@ describe('Integration Workflows Story', () => {
     mockSettings = {
       contactsFolder: 'Contacts',
       defaultHashtag: '#Contact',
-      vcfStorageMethod: 'vcf-folder',
-      vcfFilename: 'contacts.vcf',
-      vcfWatchFolder: '/test/vcf',
-      vcfWatchEnabled: true,
-      vcfWatchPollingInterval: 30,
-      vcfWriteBackEnabled: true,
-      vcfCustomizeIgnoreList: false,
-      vcfIgnoreFilenames: [],
-      vcfIgnoreUIDs: [],
+      vcardStorageMethod: 'vcard-folder',
+      vcardFilename: 'contacts.vcf',
+      vcardWatchFolder: '/test/vcf',
+      vcardWatchEnabled: true,
+      vcardWatchPollingInterval: 30,
+      vcardWriteBackEnabled: true,
+      vcardCustomizeIgnoreList: false,
+      vcardIgnoreFilenames: [],
+      vcardIgnoreUIDs: [],
       logLevel: 'INFO'
     };
   });

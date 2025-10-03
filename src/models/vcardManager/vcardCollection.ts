@@ -35,7 +35,7 @@ export class VCardCollection {
       return [];
     }
 
-    return VCardFileOperations.listVCFFiles(watchFolder);
+    return VCardFileOperations.listVcardFiles(watchFolder);
   }
 
   /**
@@ -93,11 +93,11 @@ export class VCardCollection {
    * @returns Promise resolving to the file path or null if not found
    */
   async findVCardFileByUID(uid: string): Promise<string | null> {
-    const vcfFiles = await this.listVCardFiles();
+    const vcardFiles = await this.listVCardFiles();
     
-    for (const filePath of vcfFiles) {
+    for (const filePath of vcardFiles) {
       try {
-        const content = await VCardFileOperations.readVCFFile(filePath);
+        const content = await VCardFileOperations.readVcardFile(filePath);
         if (content && VCardFileOperations.containsUID(content, uid)) {
           return filePath;
         }
@@ -116,7 +116,7 @@ export class VCardCollection {
    * @returns Promise resolving to parsed VCard content or null if error
    */
   async readAndParseVCard(filePath: string): Promise<Array<[string, VCardForObsidianRecord]> | null> {
-    const content = await VCardFileOperations.readVCFFile(filePath);
+    const content = await VCardFileOperations.readVcardFile(filePath);
     if (!content) {
       return null;
     }
@@ -132,7 +132,7 @@ export class VCardCollection {
       }
       return parsedEntries;
     } catch (error: any) {
-      console.debug(`[VCardCollection] Error parsing VCF file ${filePath}: ${error.message}`);
+      console.debug(`[VCardCollection] Error parsing vcard file ${filePath}: ${error.message}`);
       return null;
     }
   }

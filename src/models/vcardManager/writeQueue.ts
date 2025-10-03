@@ -10,8 +10,8 @@ export class VCardWriteQueue {
 
   constructor(
     private getWatchFolder: () => string,
-    private findVCFFileByUID: (uid: string) => Promise<string | null>,
-    private writeVCFFile: (filename: string, content: string) => Promise<string | null>
+    private findVcardFileByUID: (uid: string) => Promise<string | null>,
+    private writeVcardFile: (filename: string, content: string) => Promise<string | null>
   ) {}
 
   /**
@@ -60,7 +60,7 @@ export class VCardWriteQueue {
       for (const [uid, queueItem] of queueEntries) {
         try {
           // Find existing VCard file by UID
-          const existingPath = await this.findVCFFileByUID(uid);
+          const existingPath = await this.findVcardFileByUID(uid);
           let targetPath: string;
 
           if (existingPath) {
@@ -73,7 +73,7 @@ export class VCardWriteQueue {
           }
 
           // Write VCard data to file
-          const success = await this.writeVCFFile(path.basename(targetPath), queueItem.vcardData);
+          const success = await this.writeVcardFile(path.basename(targetPath), queueItem.vcardData);
           
           if (success) {
             console.debug(`[VCardWriteQueue] Successfully wrote VCard to: ${targetPath}`);

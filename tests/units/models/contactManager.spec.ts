@@ -25,15 +25,15 @@ describe('ContactManager', () => {
     mockSettings = {
       contactsFolder: 'Contacts',
       defaultHashtag: '#Contact',
-      vcfStorageMethod: 'vcf-folder',
-      vcfFilename: 'contacts.vcf',
-      vcfWatchFolder: '/test/vcf',
-      vcfWatchEnabled: true,
-      vcfWatchPollingInterval: 30,
-      vcfWriteBackEnabled: false,
-      vcfCustomizeIgnoreList: false,
-      vcfIgnoreFilenames: [],
-      vcfIgnoreUIDs: [],
+      vcardStorageMethod: 'vcard-folder',
+      vcardFilename: 'contacts.vcf',
+      vcardWatchFolder: '/test/vcf',
+      vcardWatchEnabled: true,
+      vcardWatchPollingInterval: 30,
+      vcardWriteBackEnabled: false,
+      vcardCustomizeIgnoreList: false,
+      vcardIgnoreFilenames: [],
+      vcardIgnoreUIDs: [],
       logLevel: 'DEBUG'
     };
 
@@ -604,7 +604,7 @@ This is a contact file.`;
       // Mock finding existing contact
       vi.spyOn(contactManager, 'findContactFileByUID').mockResolvedValue(mockFile);
 
-      const result = await contactManager.processVCFContacts(vcfEntries, mockApp as any, mockSettings);
+      const result = await contactManager.processVcardContacts(vcfEntries, mockApp as any, mockSettings);
 
       expect(result).toHaveLength(1);
       expect(result[0]).toBe(mockFile);
@@ -622,7 +622,7 @@ This is a contact file.`;
         .mockResolvedValueOnce(null)  // First call: no existing contact
         .mockResolvedValueOnce(newFile);  // Second call: newly created file
 
-      const result = await contactManager.processVCFContacts(vcfEntries, mockApp as any, mockSettings);
+      const result = await contactManager.processVcardContacts(vcfEntries, mockApp as any, mockSettings);
 
       expect(result).toHaveLength(1);
       expect(result[0]).toBe(newFile);
@@ -633,7 +633,7 @@ This is a contact file.`;
         ['no-uid', { FN: 'No UID Contact' }]
       ];
 
-      const result = await contactManager.processVCFContacts(vcfEntries, mockApp as any, mockSettings);
+      const result = await contactManager.processVcardContacts(vcfEntries, mockApp as any, mockSettings);
 
       expect(result).toHaveLength(0);
     });
@@ -643,7 +643,7 @@ This is a contact file.`;
         [undefined as any, { UID: 'has-uid', FN: 'No Slug' }]
       ];
 
-      const result = await contactManager.processVCFContacts(vcfEntries, mockApp as any, mockSettings);
+      const result = await contactManager.processVcardContacts(vcfEntries, mockApp as any, mockSettings);
 
       expect(result).toHaveLength(0);
     });
@@ -663,7 +663,7 @@ This is a contact file.`;
         .mockResolvedValueOnce(null)          // new-uid not found
         .mockResolvedValueOnce(newFile);      // new-uid after creation
 
-      const result = await contactManager.processVCFContacts(vcfEntries, mockApp as any, mockSettings);
+      const result = await contactManager.processVcardContacts(vcfEntries, mockApp as any, mockSettings);
 
       expect(result).toHaveLength(2);
       expect(result).toContain(existingFile);
@@ -678,7 +678,7 @@ This is a contact file.`;
       // Mock no existing contact and creation failure
       vi.spyOn(contactManager, 'findContactFileByUID').mockResolvedValue(null);
 
-      const result = await contactManager.processVCFContacts(vcfEntries, mockApp as any, mockSettings);
+      const result = await contactManager.processVcardContacts(vcfEntries, mockApp as any, mockSettings);
 
       // Should return empty array if contact creation fails
       expect(result).toHaveLength(0);
@@ -693,7 +693,7 @@ This is a contact file.`;
       // Mock finding the newly created file
       vi.spyOn(contactManager, 'findContactFileByUID').mockResolvedValue(newFile);
 
-      const result = await contactManager.createContactFromVCF('new-contact', record, mockApp as any, mockSettings);
+      const result = await contactManager.createContactFromVcard('new-contact', record, mockApp as any, mockSettings);
 
       expect(result).toBe(newFile);
     });
@@ -704,7 +704,7 @@ This is a contact file.`;
       // Mock not finding the created file
       vi.spyOn(contactManager, 'findContactFileByUID').mockResolvedValue(null);
 
-      const result = await contactManager.createContactFromVCF('missing', record, mockApp as any, mockSettings);
+      const result = await contactManager.createContactFromVcard('missing', record, mockApp as any, mockSettings);
 
       expect(result).toBeNull();
     });
@@ -715,7 +715,7 @@ This is a contact file.`;
       // Mock error during creation
       vi.spyOn(contactManager, 'findContactFileByUID').mockRejectedValue(new Error('Creation failed'));
 
-      const result = await contactManager.createContactFromVCF('error', record, mockApp as any, mockSettings);
+      const result = await contactManager.createContactFromVcard('error', record, mockApp as any, mockSettings);
 
       expect(result).toBeNull();
     });

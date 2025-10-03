@@ -11,7 +11,7 @@ vi.mock('../../src/plugin/services/syncWatcher', () => ({
   }))
 }));
 vi.mock('../../src/plugin/services/dropHandler', () => ({
-  setupVCFDropHandler: vi.fn().mockReturnValue(vi.fn())
+  setupVcardDropHandler: vi.fn().mockReturnValue(vi.fn())
 }));
 vi.mock('../../src/plugin/context/sharedAppContext', () => ({
   setApp: vi.fn(),
@@ -151,7 +151,7 @@ describe('ContactsPlugin (main.ts)', () => {
 
   describe('Settings Management', () => {
     it('should load settings from storage', async () => {
-      const mockData = { contactsFolder: 'Contacts', vcfWatchEnabled: true };
+      const mockData = { contactsFolder: 'Contacts', vcardWatchEnabled: true };
       plugin.loadData = vi.fn().mockResolvedValue(mockData);
       
       await plugin.loadSettings();
@@ -197,7 +197,7 @@ describe('ContactsPlugin (main.ts)', () => {
       const cleanupListenersSpy = vi.fn();
       
       (plugin as any).syncWatcher = { stop: stopSpy };
-      (plugin as any).vcfDropCleanup = cleanupSpy;
+      (plugin as any).vcardDropCleanup = cleanupSpy;
       (plugin as any).contactManager = { cleanupEventListeners: cleanupListenersSpy };
       
       plugin.onunload();
@@ -210,14 +210,14 @@ describe('ContactsPlugin (main.ts)', () => {
 
     it('should set cleanup properties to null on unload', () => {
       (plugin as any).syncWatcher = { stop: vi.fn() };
-      (plugin as any).vcfDropCleanup = vi.fn();
+      (plugin as any).vcardDropCleanup = vi.fn();
       (plugin as any).contactManager = { cleanupEventListeners: vi.fn() };
       (plugin as any).curatorManager = {};
       
       plugin.onunload();
       
       expect((plugin as any).syncWatcher).toBeNull();
-      expect((plugin as any).vcfDropCleanup).toBeNull();
+      expect((plugin as any).vcardDropCleanup).toBeNull();
       expect((plugin as any).contactManager).toBeNull();
       expect((plugin as any).curatorManager).toBeNull();
     });
@@ -236,8 +236,8 @@ describe('ContactsPlugin (main.ts)', () => {
       expect(() => plugin.onunload()).not.toThrow();
     });
 
-    it('should handle missing vcfDropCleanup gracefully on unload', () => {
-      (plugin as any).vcfDropCleanup = null;
+    it('should handle missing vcardDropCleanup gracefully on unload', () => {
+      (plugin as any).vcardDropCleanup = null;
       
       expect(() => plugin.onunload()).not.toThrow();
     });

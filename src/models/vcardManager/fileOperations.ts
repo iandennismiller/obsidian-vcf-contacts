@@ -27,7 +27,7 @@ export class VCardManagerFileOperations {
     }
 
     const fullPath = path.join(watchFolder, filename);
-    const success = await VCardFileOperations.writeVCFFile(fullPath, content);
+    const success = await VCardFileOperations.writeVcardFile(fullPath, content);
     
     return success ? fullPath : null;
   }
@@ -58,6 +58,6 @@ export class VCardManagerFileOperations {
    * @returns Sanitized VCard filename
    */
   generateVCardFilename(contactName: string): string {
-    return VCardFileOperations.generateVCFFilename(contactName);
+    return VCardFileOperations.generateVcardFilename(contactName);
   }
 }

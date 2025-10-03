@@ -114,15 +114,15 @@ describe('SyncWatcher', () => {
 
     settings = {
       contactsFolder: 'Contacts',
-      vcfWatchEnabled: true,
-      vcfStorageMethod: 'vcf-folder',
-      vcfWatchFolder: '/test/vcf',
-      vcfFilename: 'contacts.vcf',
-      vcfWatchPollingInterval: 30,
-      vcfWriteBackEnabled: false,
-      vcfCustomizeIgnoreList: false,
-      vcfIgnoreFilenames: [],
-      vcfIgnoreUIDs: [],
+      vcardWatchEnabled: true,
+      vcardStorageMethod: 'vcard-folder',
+      vcardWatchFolder: '/test/vcf',
+      vcardFilename: 'contacts.vcf',
+      vcardWatchPollingInterval: 30,
+      vcardWriteBackEnabled: false,
+      vcardCustomizeIgnoreList: false,
+      vcardIgnoreFilenames: [],
+      vcardIgnoreUIDs: [],
     } as any;
   });
 
@@ -149,7 +149,7 @@ describe('SyncWatcher', () => {
 
   describe('start()', () => {
     it('should not start when watch is disabled', async () => {
-      settings.vcfWatchEnabled = false;
+      settings.vcardWatchEnabled = false;
       syncWatcher = new SyncWatcher(app as App, settings);
       
       await syncWatcher.start();
@@ -157,9 +157,9 @@ describe('SyncWatcher', () => {
       expect(mockSetInterval).not.toHaveBeenCalled();
     });
 
-    it('should not start when vcfWatchFolder is missing for vcf-folder mode', async () => {
-      settings.vcfStorageMethod = 'vcf-folder';
-      settings.vcfWatchFolder = '';
+    it('should not start when vcardWatchFolder is missing for vcf-folder mode', async () => {
+      settings.vcardStorageMethod = 'vcard-folder';
+      settings.vcardWatchFolder = '';
       syncWatcher = new SyncWatcher(app as App, settings);
       
       await syncWatcher.start();
@@ -167,9 +167,9 @@ describe('SyncWatcher', () => {
       expect(mockSetInterval).not.toHaveBeenCalled();
     });
 
-    it('should not start when vcfFilename is missing for single-vcf mode', async () => {
-      settings.vcfStorageMethod = 'single-vcf';
-      settings.vcfFilename = '';
+    it('should not start when vcardFilename is missing for single-vcf mode', async () => {
+      settings.vcardStorageMethod = 'single-vcard';
+      settings.vcardFilename = '';
       syncWatcher = new SyncWatcher(app as App, settings);
       
       await syncWatcher.start();
@@ -188,13 +188,13 @@ describe('SyncWatcher', () => {
       // Should have called setInterval
       expect(mockSetInterval).toHaveBeenCalledWith(
         expect.any(Function),
-        settings.vcfWatchPollingInterval * 1000
+        settings.vcardWatchPollingInterval * 1000
       );
     });
 
     it('should start polling for single-vcf mode', async () => {
-      settings.vcfStorageMethod = 'single-vcf';
-      settings.vcfFilename = 'contacts.vcf';
+      settings.vcardStorageMethod = 'single-vcard';
+      settings.vcardFilename = 'contacts.vcf';
       syncWatcher = new SyncWatcher(app as App, settings);
       
       await syncWatcher.start();
@@ -204,7 +204,7 @@ describe('SyncWatcher', () => {
       
       expect(mockSetInterval).toHaveBeenCalledWith(
         expect.any(Function),
-        settings.vcfWatchPollingInterval * 1000
+        settings.vcardWatchPollingInterval * 1000
       );
     });
 
@@ -286,8 +286,8 @@ describe('SyncWatcher', () => {
       syncWatcher = new SyncWatcher(app as App, settings);
     });
 
-    it('should restart when vcfWatchEnabled changes', async () => {
-      const newSettings = { ...settings, vcfWatchEnabled: false };
+    it('should restart when vcardWatchEnabled changes', async () => {
+      const newSettings = { ...settings, vcardWatchEnabled: false };
       
       await syncWatcher.start();
       
@@ -302,7 +302,7 @@ describe('SyncWatcher', () => {
       expect(mockClearInterval).toHaveBeenCalled();
     });
 
-    it('should restart when vcfStorageMethod changes', async () => {
+    it('should restart when vcardStorageMethod changes', async () => {
       await syncWatcher.start();
       
       // Give async operations a chance to complete
@@ -310,13 +310,13 @@ describe('SyncWatcher', () => {
       
       vi.clearAllMocks();
       
-      const newSettings = { ...settings, vcfStorageMethod: 'single-vcf' as any };
+      const newSettings = { ...settings, vcardStorageMethod: 'single-vcard' as any };
       await syncWatcher.updateSettings(newSettings);
       
       expect(mockClearInterval).toHaveBeenCalled();
     });
 
-    it('should restart when vcfWatchFolder changes', async () => {
+    it('should restart when vcardWatchFolder changes', async () => {
       await syncWatcher.start();
       
       // Give async operations a chance to complete
@@ -324,13 +324,13 @@ describe('SyncWatcher', () => {
       
       vi.clearAllMocks();
       
-      const newSettings = { ...settings, vcfWatchFolder: '/new/folder' };
+      const newSettings = { ...settings, vcardWatchFolder: '/new/folder' };
       await syncWatcher.updateSettings(newSettings);
       
       expect(mockClearInterval).toHaveBeenCalled();
     });
 
-    it('should restart when vcfFilename changes', async () => {
+    it('should restart when vcardFilename changes', async () => {
       await syncWatcher.start();
       
       // Give async operations a chance to complete
@@ -338,13 +338,13 @@ describe('SyncWatcher', () => {
       
       vi.clearAllMocks();
       
-      const newSettings = { ...settings, vcfFilename: 'newfile.vcf' };
+      const newSettings = { ...settings, vcardFilename: 'newfile.vcf' };
       await syncWatcher.updateSettings(newSettings);
       
       expect(mockClearInterval).toHaveBeenCalled();
     });
 
-    it('should restart when vcfWatchPollingInterval changes', async () => {
+    it('should restart when vcardWatchPollingInterval changes', async () => {
       await syncWatcher.start();
       
       // Give async operations a chance to complete
@@ -352,7 +352,7 @@ describe('SyncWatcher', () => {
       
       vi.clearAllMocks();
       
-      const newSettings = { ...settings, vcfWatchPollingInterval: 60 };
+      const newSettings = { ...settings, vcardWatchPollingInterval: 60 };
       await syncWatcher.updateSettings(newSettings);
       
       expect(mockClearInterval).toHaveBeenCalled();
@@ -479,8 +479,8 @@ describe('SyncWatcher', () => {
 
     describe('scanSingleVCF', () => {
       it('should process single VCF file when changed', async () => {
-        settings.vcfStorageMethod = 'single-vcf';
-        settings.vcfFilename = '/test/contacts.vcf';
+        settings.vcardStorageMethod = 'single-vcard';
+        settings.vcardFilename = '/test/contacts.vcf';
         syncWatcher = new SyncWatcher(app as App, settings);
         
         await syncWatcher.start();
@@ -494,8 +494,8 @@ describe('SyncWatcher', () => {
       });
 
       it('should skip processing if file has not changed', async () => {
-        settings.vcfStorageMethod = 'single-vcf';
-        settings.vcfFilename = '/test/contacts.vcf';
+        settings.vcardStorageMethod = 'single-vcard';
+        settings.vcardFilename = '/test/contacts.vcf';
         syncWatcher = new SyncWatcher(app as App, settings);
         
         const { VcardManager } = await import('../../../src/models/vcardManager');
@@ -529,8 +529,8 @@ describe('SyncWatcher', () => {
       });
 
       it('should handle null parsed entries', async () => {
-        settings.vcfStorageMethod = 'single-vcf';
-        settings.vcfFilename = '/test/contacts.vcf';
+        settings.vcardStorageMethod = 'single-vcard';
+        settings.vcardFilename = '/test/contacts.vcf';
         
         const { VcardManager } = await import('../../../src/models/vcardManager');
         vi.mocked(VcardManager).mockImplementation(() => ({
@@ -550,8 +550,8 @@ describe('SyncWatcher', () => {
       });
 
       it('should filter out entries without UID', async () => {
-        settings.vcfStorageMethod = 'single-vcf';
-        settings.vcfFilename = '/test/contacts.vcf';
+        settings.vcardStorageMethod = 'single-vcard';
+        settings.vcardFilename = '/test/contacts.vcf';
         
         const { VcardManager } = await import('../../../src/models/vcardManager');
         const { ContactManager } = await import('../../../src/models/contactManager');
@@ -592,8 +592,8 @@ describe('SyncWatcher', () => {
       });
 
       it('should call curator service when contacts are processed', async () => {
-        settings.vcfStorageMethod = 'single-vcf';
-        settings.vcfFilename = '/test/contacts.vcf';
+        settings.vcardStorageMethod = 'single-vcard';
+        settings.vcardFilename = '/test/contacts.vcf';
         
         const { ContactManager } = await import('../../../src/models/contactManager');
         const { VcardManager } = await import('../../../src/models/vcardManager');
@@ -631,8 +631,8 @@ describe('SyncWatcher', () => {
       });
 
       it('should handle errors during single VCF scan', async () => {
-        settings.vcfStorageMethod = 'single-vcf';
-        settings.vcfFilename = '/test/contacts.vcf';
+        settings.vcardStorageMethod = 'single-vcard';
+        settings.vcardFilename = '/test/contacts.vcf';
         
         const { VcardManager } = await import('../../../src/models/vcardManager');
         vi.mocked(VcardManager).mockImplementation(() => ({
@@ -649,8 +649,8 @@ describe('SyncWatcher', () => {
 
     describe('scanVCFFolder', () => {
       it('should process multiple VCF files in folder', async () => {
-        settings.vcfStorageMethod = 'vcf-folder';
-        settings.vcfWatchFolder = '/test/vcf';
+        settings.vcardStorageMethod = 'vcard-folder';
+        settings.vcardWatchFolder = '/test/vcf';
         syncWatcher = new SyncWatcher(app as App, settings);
         
         await syncWatcher.start();
@@ -658,12 +658,12 @@ describe('SyncWatcher', () => {
         
         // VcardManager should scan the folder
         const vcardManager = (syncWatcher as any).vcardManager;
-        expect(vcardManager.scanVCFFolder).toHaveBeenCalled();
+        expect(vcardManager.scanVcardFolder).toHaveBeenCalled();
       });
 
       it('should skip when no files need processing', async () => {
-        settings.vcfStorageMethod = 'vcf-folder';
-        settings.vcfWatchFolder = '/test/vcf';
+        settings.vcardStorageMethod = 'vcard-folder';
+        settings.vcardWatchFolder = '/test/vcf';
         
         const { VcardManager } = await import('../../../src/models/vcardManager');
         vi.mocked(VcardManager).mockImplementation(() => ({
@@ -679,12 +679,12 @@ describe('SyncWatcher', () => {
         
         // processVCFContents should not be called
         const vcardManager = (syncWatcher as any).vcardManager;
-        expect(vcardManager.processVCFContents).not.toHaveBeenCalled();
+        expect(vcardManager.processVcardContents).not.toHaveBeenCalled();
       });
 
       it('should handle errors during folder scan', async () => {
-        settings.vcfStorageMethod = 'vcf-folder';
-        settings.vcfWatchFolder = '/test/vcf';
+        settings.vcardStorageMethod = 'vcard-folder';
+        settings.vcardWatchFolder = '/test/vcf';
         
         const { VcardManager } = await import('../../../src/models/vcardManager');
         vi.mocked(VcardManager).mockImplementation(() => ({
@@ -701,8 +701,8 @@ describe('SyncWatcher', () => {
 
     describe('processVCFFile', () => {
       it('should process VCF file and update tracking', async () => {
-        settings.vcfStorageMethod = 'vcf-folder';
-        settings.vcfWatchFolder = '/test/vcf';
+        settings.vcardStorageMethod = 'vcard-folder';
+        settings.vcardWatchFolder = '/test/vcf';
         syncWatcher = new SyncWatcher(app as App, settings);
         
         await syncWatcher.start();
@@ -714,8 +714,8 @@ describe('SyncWatcher', () => {
       });
 
       it('should skip file if not changed', async () => {
-        settings.vcfStorageMethod = 'vcf-folder';
-        settings.vcfWatchFolder = '/test/vcf';
+        settings.vcardStorageMethod = 'vcard-folder';
+        settings.vcardWatchFolder = '/test/vcf';
         
         const { VcardManager } = await import('../../../src/models/vcardManager');
         const mockProcessContents = vi.fn();
@@ -748,8 +748,8 @@ describe('SyncWatcher', () => {
       });
 
       it('should skip when VCF has no entries', async () => {
-        settings.vcfStorageMethod = 'vcf-folder';
-        settings.vcfWatchFolder = '/test/vcf';
+        settings.vcardStorageMethod = 'vcard-folder';
+        settings.vcardWatchFolder = '/test/vcf';
         
         const { VcardManager } = await import('../../../src/models/vcardManager');
         const { ContactManager } = await import('../../../src/models/contactManager');
@@ -781,8 +781,8 @@ describe('SyncWatcher', () => {
       });
 
       it('should handle errors during file processing', async () => {
-        settings.vcfStorageMethod = 'vcf-folder';
-        settings.vcfWatchFolder = '/test/vcf';
+        settings.vcardStorageMethod = 'vcard-folder';
+        settings.vcardWatchFolder = '/test/vcf';
         
         const { VcardManager } = await import('../../../src/models/vcardManager');
         vi.mocked(VcardManager).mockImplementation(() => ({
@@ -798,8 +798,8 @@ describe('SyncWatcher', () => {
       });
 
       it('should show notification when contacts are processed', async () => {
-        settings.vcfStorageMethod = 'vcf-folder';
-        settings.vcfWatchFolder = '/test/vcf';
+        settings.vcardStorageMethod = 'vcard-folder';
+        settings.vcardWatchFolder = '/test/vcf';
         
         const { Notice } = await import('obsidian');
         

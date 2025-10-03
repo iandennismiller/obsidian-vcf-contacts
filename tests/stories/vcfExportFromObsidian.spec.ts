@@ -29,15 +29,15 @@ describe('VCF Export from Obsidian Story', () => {
     mockSettings = {
       contactsFolder: 'Contacts',
       defaultHashtag: '#Contact',
-      vcfStorageMethod: 'single-vcf',
-      vcfFilename: 'exported-contacts.vcf',
-      vcfWatchFolder: '/test/vcf',
-      vcfWatchEnabled: false,
-      vcfWatchPollingInterval: 30,
-      vcfWriteBackEnabled: true,
-      vcfCustomizeIgnoreList: false,
-      vcfIgnoreFilenames: [],
-      vcfIgnoreUIDs: [],
+      vcardStorageMethod: 'single-vcard',
+      vcardFilename: 'exported-contacts.vcf',
+      vcardWatchFolder: '/test/vcf',
+      vcardWatchEnabled: false,
+      vcardWatchPollingInterval: 30,
+      vcardWriteBackEnabled: true,
+      vcardCustomizeIgnoreList: false,
+      vcardIgnoreFilenames: [],
+      vcardIgnoreUIDs: [],
       logLevel: 'INFO'
     };
   });
