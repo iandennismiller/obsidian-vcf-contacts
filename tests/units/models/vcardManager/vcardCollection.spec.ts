@@ -5,9 +5,9 @@ import { VCardFileOperations } from '../../../../src/models/vcardFile/fileOperat
 // Mock VCardFileOperations
 vi.mock('../../../../src/models/vcardFile/fileOperations', () => ({
   VCardFileOperations: {
-    listVCFFiles: vi.fn(),
+    listVcardFiles: vi.fn(),
     getFileStats: vi.fn(),
-    readVCFFile: vi.fn(),
+    readVcardFile: vi.fn(),
     containsUID: vi.fn()
   }
 }));

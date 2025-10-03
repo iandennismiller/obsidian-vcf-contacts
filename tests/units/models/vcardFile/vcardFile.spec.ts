@@ -38,13 +38,13 @@ vi.mock('../../../../src/models/vcardFile/generation', () => ({
 
 vi.mock('../../../../src/models/vcardFile/fileOperations', () => ({
   VCardFileOperations: {
-    listVCFFiles: vi.fn(),
+    listVcardFiles: vi.fn(),
     getFileStats: vi.fn(),
     folderExists: vi.fn(),
     containsUID: vi.fn(),
-    generateVCFFilename: vi.fn(),
-    readVCFFile: vi.fn(),
-    writeVCFFile: vi.fn()
+    generateVcardFilename: vi.fn(),
+    readVcardFile: vi.fn(),
+    writeVcardFile: vi.fn()
   }
 }));
 

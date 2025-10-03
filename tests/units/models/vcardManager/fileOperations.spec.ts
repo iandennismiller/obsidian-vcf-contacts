@@ -5,9 +5,9 @@ import { VCardFileOperations } from '../../../../src/models/vcardFile/fileOperat
 // Mock the VCardFileOperations module
 vi.mock('../../../../src/models/vcardFile/fileOperations', () => ({
   VCardFileOperations: {
-    writeVCFFile: vi.fn(),
+    writeVcardFile: vi.fn(),
     folderExists: vi.fn(),
-    generateVCFFilename: vi.fn()
+    generateVcardFilename: vi.fn()
   }
 }));
 
