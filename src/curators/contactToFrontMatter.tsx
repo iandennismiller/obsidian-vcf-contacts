@@ -5,6 +5,8 @@ import { getSettings } from "src/plugin/context/sharedSettingsContext";
 import { CuratorProcessor } from "src/models/curatorManager/CuratorProcessor";
 import { CuratorQueItem } from "src/models/curatorManager/CuratorQueItem";
 import { RunType } from "src/models/curatorManager/RunType";
+import { UpdateContactModal, FieldChange } from "src/plugin/ui/modals/updateContactModal";
+import { normalizeFieldValue } from "src/models/contactNote/fieldPatternDetection";
 
 const renderGroup = (queItems: CuratorQueItem[]): JSX.Element => {
   return (
@@ -79,7 +81,13 @@ export const ContactToFrontMatterProcessor: CuratorProcessor = {
       
       // Check what needs to be synced
       const updates: Record<string, string> = {};
+      const changes: FieldChange[] = [];
       let changeCount = 0;
+      
+      // Track existing contact field keys for deletion detection
+      const existingContactKeys = new Set(
+        Object.keys(currentFrontmatter).filter(key => /^(EMAIL|TEL|ADR|URL)\[/.test(key))
+      );
       
       for (const field of contactFields) {
         let frontmatterKey: string;
@@ -92,31 +100,97 @@ export const ContactToFrontMatterProcessor: CuratorProcessor = {
           frontmatterKey = `${field.fieldType}[${field.fieldLabel}]`;
         }
         
+        // Normalize the value based on field type
+        const normalizedValue = normalizeFieldValue(field.value, field.fieldType);
+        
+        // Remove from deletion tracking
+        existingContactKeys.delete(frontmatterKey);
+        
         // Check if value differs from current frontmatter
-        if (currentFrontmatter[frontmatterKey] !== field.value) {
-          updates[frontmatterKey] = field.value;
+        const currentValue = currentFrontmatter[frontmatterKey];
+        if (currentValue !== normalizedValue) {
+          updates[frontmatterKey] = normalizedValue;
           changeCount++;
-          console.debug(`[ContactToFrontMatterProcessor] Will update ${frontmatterKey}: ${field.value}`);
+          
+          // Track change type for confirmation modal
+          if (currentValue === undefined) {
+            changes.push({
+              key: frontmatterKey,
+              newValue: normalizedValue,
+              changeType: 'added'
+            });
+          } else {
+            changes.push({
+              key: frontmatterKey,
+              oldValue: currentValue,
+              newValue: normalizedValue,
+              changeType: 'modified'
+            });
+          }
+          
+          console.debug(`[ContactToFrontMatterProcessor] Will update ${frontmatterKey}: ${normalizedValue}`);
         }
       }
+      
+      // Handle deletions - fields in frontmatter but not in Contact section
+      // Note: We only delete if explicitly removed from Contact section, not if section is incomplete
+      // To avoid data loss, we require Contact section to be "complete" before deleting fields
+      // For now, we skip deletion to be safe
+      // TODO: Future enhancement - detect if Contact section is complete/authoritative
+      
       
       if (changeCount === 0) {
         console.debug(`[ContactToFrontMatterProcessor] No changes needed, Contact section matches frontmatter`);
         return Promise.resolve(undefined);
       }
       
-      // Update frontmatter
-      console.debug(`[ContactToFrontMatterProcessor] Updating ${changeCount} frontmatter fields`);
-      await contactNote.updateMultipleFrontmatterValues(updates, true); // true = update REV
+      // Check if confirmation is required
+      const requireConfirmation = settings.contactSectionSyncConfirmation;
       
-      return Promise.resolve({
-        name: this.name,
-        runType: this.runType,
-        file: contact.file,
-        message: `Synced ${changeCount} contact field${changeCount > 1 ? 's' : ''} from Contact section to frontmatter in ${contact.file.name}`,
-        render,
-        renderGroup
-      });
+      if (requireConfirmation && !isManualInvocation) {
+        // Show confirmation modal
+        console.debug(`[ContactToFrontMatterProcessor] Showing confirmation modal for ${changeCount} changes`);
+        
+        return new Promise<CuratorQueItem | undefined>((resolve) => {
+          const modal = new UpdateContactModal(
+            app,
+            changes,
+            async () => {
+              // User confirmed - apply changes
+              console.debug(`[ContactToFrontMatterProcessor] User confirmed - updating ${changeCount} frontmatter fields`);
+              await contactNote.updateMultipleFrontmatterValues(updates, true); // true = update REV
+              
+              resolve({
+                name: this.name,
+                runType: this.runType,
+                file: contact.file,
+                message: `Synced ${changeCount} contact field${changeCount > 1 ? 's' : ''} from Contact section to frontmatter in ${contact.file.name}`,
+                render,
+                renderGroup
+              });
+            },
+            () => {
+              // User cancelled
+              console.debug(`[ContactToFrontMatterProcessor] User cancelled sync`);
+              resolve(undefined);
+            }
+          );
+          modal.open();
+        });
+      } else {
+        // No confirmation needed or manual invocation - apply directly
+        console.debug(`[ContactToFrontMatterProcessor] Updating ${changeCount} frontmatter fields without confirmation`);
+        await contactNote.updateMultipleFrontmatterValues(updates, true); // true = update REV
+        
+        return Promise.resolve({
+          name: this.name,
+          runType: this.runType,
+          file: contact.file,
+          message: `Synced ${changeCount} contact field${changeCount > 1 ? 's' : ''} from Contact section to frontmatter in ${contact.file.name}`,
+          render,
+          renderGroup
+        });
+      }
       
     } catch (error: any) {
       console.error(`[ContactToFrontMatterProcessor] Error processing contact ${contact.file.name}:`);
