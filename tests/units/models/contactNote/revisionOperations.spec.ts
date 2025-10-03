@@ -81,7 +81,7 @@ describe('ContactNote - Revision Utils', () => {
 
       mockApp.metadataCache!.getFileCache = vi.fn().mockReturnValue(mockCache);
 
-      const shouldUpdate = await contactNote.shouldUpdateFromVCF(vcfRecord);
+      const shouldUpdate = await contactNote.shouldUpdateFromVcard(vcfRecord);
       expect(shouldUpdate).toBe(true);
     });
 
@@ -95,7 +95,7 @@ describe('ContactNote - Revision Utils', () => {
 
       mockApp.metadataCache!.getFileCache = vi.fn().mockReturnValue(mockCache);
 
-      const shouldUpdate = await contactNote.shouldUpdateFromVCF(vcfRecord);
+      const shouldUpdate = await contactNote.shouldUpdateFromVcard(vcfRecord);
       expect(shouldUpdate).toBe(false);
     });
 
@@ -115,7 +115,7 @@ describe('ContactNote - Revision Utils', () => {
 
       mockApp.metadataCache!.getFileCache = vi.fn().mockReturnValue(mockCache);
 
-      const shouldUpdate = await contactNote.shouldUpdateFromVCF(vcfWithLaterMinute);
+      const shouldUpdate = await contactNote.shouldUpdateFromVcard(vcfWithLaterMinute);
       expect(shouldUpdate).toBe(true);
     });
   });
@@ -141,7 +141,7 @@ describe('ContactNote - Revision Utils', () => {
 
       mockApp.metadataCache!.getFileCache = vi.fn().mockReturnValue(mockCache);
 
-      const shouldUpdate = await contactNote.shouldUpdateFromVCF(vcfRecord);
+      const shouldUpdate = await contactNote.shouldUpdateFromVcard(vcfRecord);
       expect(shouldUpdate).toBe(false);
     });
 
@@ -161,7 +161,7 @@ describe('ContactNote - Revision Utils', () => {
 
       mockApp.metadataCache!.getFileCache = vi.fn().mockReturnValue(mockCache);
 
-      const shouldUpdate = await contactNote.shouldUpdateFromVCF(vcfWithoutRev);
+      const shouldUpdate = await contactNote.shouldUpdateFromVcard(vcfWithoutRev);
       expect(shouldUpdate).toBe(false);
     });
 
@@ -181,7 +181,7 @@ describe('ContactNote - Revision Utils', () => {
 
       mockApp.metadataCache!.getFileCache = vi.fn().mockReturnValue(mockCache);
 
-      const shouldUpdate = await contactNote.shouldUpdateFromVCF(vcfWithInvalidRev);
+      const shouldUpdate = await contactNote.shouldUpdateFromVcard(vcfWithInvalidRev);
       expect(shouldUpdate).toBe(false);
     });
 
@@ -201,7 +201,7 @@ describe('ContactNote - Revision Utils', () => {
 
       mockApp.metadataCache!.getFileCache = vi.fn().mockReturnValue(mockCache);
 
-      const shouldUpdate = await contactNote.shouldUpdateFromVCF(vcfWithValidRev);
+      const shouldUpdate = await contactNote.shouldUpdateFromVcard(vcfWithValidRev);
       expect(shouldUpdate).toBe(false);
     });
   });

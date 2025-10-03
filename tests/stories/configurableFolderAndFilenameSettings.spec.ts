@@ -6,15 +6,15 @@ import type { ContactsPluginSettings } from 'src/plugin/settings';
 const DEFAULT_SETTINGS: ContactsPluginSettings = {
   contactsFolder: '',
   defaultHashtag: '',
-  vcfStorageMethod: 'vcf-folder',
-  vcfFilename: 'contacts.vcf',
-  vcfWatchFolder: '',
-  vcfWatchEnabled: false,
-  vcfWatchPollingInterval: 30,
-  vcfWriteBackEnabled: false,
-  vcfCustomizeIgnoreList: false,
-  vcfIgnoreFilenames: [],
-  vcfIgnoreUIDs: [],
+  vcardStorageMethod: 'vcard-folder',
+  vcardFilename: 'contacts.vcf',
+  vcardWatchFolder: '',
+  vcardWatchEnabled: false,
+  vcardWatchPollingInterval: 30,
+  vcardWriteBackEnabled: false,
+  vcardCustomizeIgnoreList: false,
+  vcardIgnoreFilenames: [],
+  vcardIgnoreUIDs: [],
   logLevel: 'INFO'
 };
 
@@ -45,15 +45,15 @@ describe('Configurable Folder and Filename Settings Story', () => {
     mockSettings = {
       contactsFolder: 'Contacts',
       defaultHashtag: '#Contact',
-      vcfStorageMethod: 'vcf-folder',
-      vcfFilename: 'contacts.vcf',
-      vcfWatchFolder: '/test/vcf',
-      vcfWatchEnabled: false,
-      vcfWatchPollingInterval: 30,
-      vcfWriteBackEnabled: false,
-      vcfCustomizeIgnoreList: false,
-      vcfIgnoreFilenames: [],
-      vcfIgnoreUIDs: [],
+      vcardStorageMethod: 'vcard-folder',
+      vcardFilename: 'contacts.vcf',
+      vcardWatchFolder: '/test/vcf',
+      vcardWatchEnabled: false,
+      vcardWatchPollingInterval: 30,
+      vcardWriteBackEnabled: false,
+      vcardCustomizeIgnoreList: false,
+      vcardIgnoreFilenames: [],
+      vcardIgnoreUIDs: [],
       logLevel: 'INFO'
     };
   });
@@ -73,38 +73,38 @@ describe('Configurable Folder and Filename Settings Story', () => {
     const customFilename = 'my-custom-contacts.vcf';
     const settingsWithCustomFilename = {
       ...mockSettings,
-      vcfFilename: customFilename
+      vcardFilename: customFilename
     };
 
-    expect(settingsWithCustomFilename.vcfFilename).toBe(customFilename);
-    expect(settingsWithCustomFilename.vcfFilename).not.toBe(DEFAULT_SETTINGS.vcfFilename);
+    expect(settingsWithCustomFilename.vcardFilename).toBe(customFilename);
+    expect(settingsWithCustomFilename.vcardFilename).not.toBe(DEFAULT_SETTINGS.vcardFilename);
   });
 
   it('should respect custom VCF watch folder setting', () => {
     const customWatchFolder = '/Users/me/MyVCFFolder';
     const settingsWithCustomWatch = {
       ...mockSettings,
-      vcfWatchFolder: customWatchFolder
+      vcardWatchFolder: customWatchFolder
     };
 
-    expect(settingsWithCustomWatch.vcfWatchFolder).toBe(customWatchFolder);
+    expect(settingsWithCustomWatch.vcardWatchFolder).toBe(customWatchFolder);
   });
 
   it('should support different VCF storage methods', () => {
     const singleVcfSettings: ContactsPluginSettings = {
       ...mockSettings,
-      vcfStorageMethod: 'single-vcf',
-      vcfFilename: 'all-contacts.vcf'
+      vcardStorageMethod: 'single-vcard',
+      vcardFilename: 'all-contacts.vcf'
     };
 
     const folderVcfSettings: ContactsPluginSettings = {
       ...mockSettings,
-      vcfStorageMethod: 'vcf-folder',
-      vcfWatchFolder: '/path/to/vcf/folder'
+      vcardStorageMethod: 'vcard-folder',
+      vcardWatchFolder: '/path/to/vcf/folder'
     };
 
-    expect(singleVcfSettings.vcfStorageMethod).toBe('single-vcf');
-    expect(folderVcfSettings.vcfStorageMethod).toBe('vcf-folder');
+    expect(singleVcfSettings.vcardStorageMethod).toBe('single-vcard');
+    expect(folderVcfSettings.vcardStorageMethod).toBe('vcard-folder');
   });
 
   it('should handle nested folder paths for contacts', () => {
@@ -136,10 +136,10 @@ describe('Configurable Folder and Filename Settings Story', () => {
     absolutePaths.forEach(absPath => {
       const settings = {
         ...mockSettings,
-        vcfWatchFolder: absPath
+        vcardWatchFolder: absPath
       };
 
-      expect(settings.vcfWatchFolder).toBe(absPath);
+      expect(settings.vcardWatchFolder).toBe(absPath);
     });
   });
 
@@ -155,12 +155,12 @@ describe('Configurable Folder and Filename Settings Story', () => {
     differentFilenames.forEach(filename => {
       const settings = {
         ...mockSettings,
-        vcfStorageMethod: 'single-vcf' as const,
-        vcfFilename: filename
+        vcardStorageMethod: 'single-vcard' as const,
+        vcardFilename: filename
       };
 
-      expect(settings.vcfFilename).toBe(filename);
-      expect(settings.vcfFilename).toMatch(/\.vcf$/);
+      expect(settings.vcardFilename).toBe(filename);
+      expect(settings.vcardFilename).toMatch(/\.vcf$/);
     });
   });
 
@@ -168,8 +168,8 @@ describe('Configurable Folder and Filename Settings Story', () => {
     const initialSettings = {
       ...mockSettings,
       contactsFolder: 'MyContacts',
-      vcfFilename: 'my-vcf.vcf',
-      vcfWatchFolder: '/my/vcf/path'
+      vcardFilename: 'my-vcf.vcf',
+      vcardWatchFolder: '/my/vcf/path'
     };
 
     // Simulate settings being saved and loaded
@@ -177,8 +177,8 @@ describe('Configurable Folder and Filename Settings Story', () => {
     const loadedSettings = JSON.parse(JSON.stringify(savedSettings));
 
     expect(loadedSettings.contactsFolder).toBe(initialSettings.contactsFolder);
-    expect(loadedSettings.vcfFilename).toBe(initialSettings.vcfFilename);
-    expect(loadedSettings.vcfWatchFolder).toBe(initialSettings.vcfWatchFolder);
+    expect(loadedSettings.vcardFilename).toBe(initialSettings.vcardFilename);
+    expect(loadedSettings.vcardWatchFolder).toBe(initialSettings.vcardWatchFolder);
   });
 
   it('should handle empty folder paths gracefully', () => {
@@ -214,16 +214,16 @@ describe('Configurable Folder and Filename Settings Story', () => {
   it('should allow VCF watch folder to be disabled', () => {
     const settingsWithWatchDisabled = {
       ...mockSettings,
-      vcfWatchEnabled: false
+      vcardWatchEnabled: false
     };
 
     const settingsWithWatchEnabled = {
       ...mockSettings,
-      vcfWatchEnabled: true
+      vcardWatchEnabled: true
     };
 
-    expect(settingsWithWatchDisabled.vcfWatchEnabled).toBe(false);
-    expect(settingsWithWatchEnabled.vcfWatchEnabled).toBe(true);
+    expect(settingsWithWatchDisabled.vcardWatchEnabled).toBe(false);
+    expect(settingsWithWatchEnabled.vcardWatchEnabled).toBe(true);
   });
 
   it('should support configurable polling interval', () => {
@@ -232,11 +232,11 @@ describe('Configurable Folder and Filename Settings Story', () => {
     pollingIntervals.forEach(interval => {
       const settings = {
         ...mockSettings,
-        vcfWatchPollingInterval: interval
+        vcardWatchPollingInterval: interval
       };
 
-      expect(settings.vcfWatchPollingInterval).toBe(interval);
-      expect(settings.vcfWatchPollingInterval).toBeGreaterThan(0);
+      expect(settings.vcardWatchPollingInterval).toBe(interval);
+      expect(settings.vcardWatchPollingInterval).toBeGreaterThan(0);
     });
   });
 
@@ -244,58 +244,58 @@ describe('Configurable Folder and Filename Settings Story', () => {
     const settings: ContactsPluginSettings = {
       contactsFolder: 'TestFolder',
       defaultHashtag: '#Test',
-      vcfStorageMethod: 'vcf-folder',
-      vcfFilename: 'test.vcf',
-      vcfWatchFolder: '/test/path',
-      vcfWatchEnabled: true,
-      vcfWatchPollingInterval: 60,
-      vcfWriteBackEnabled: true,
-      vcfCustomizeIgnoreList: true,
-      vcfIgnoreFilenames: ['ignore1.vcf', 'ignore2.vcf'],
-      vcfIgnoreUIDs: ['uid1', 'uid2'],
+      vcardStorageMethod: 'vcard-folder',
+      vcardFilename: 'test.vcf',
+      vcardWatchFolder: '/test/path',
+      vcardWatchEnabled: true,
+      vcardWatchPollingInterval: 60,
+      vcardWriteBackEnabled: true,
+      vcardCustomizeIgnoreList: true,
+      vcardIgnoreFilenames: ['ignore1.vcf', 'ignore2.vcf'],
+      vcardIgnoreUIDs: ['uid1', 'uid2'],
       logLevel: 'DEBUG'
     };
 
     expect(typeof settings.contactsFolder).toBe('string');
     expect(typeof settings.defaultHashtag).toBe('string');
-    expect(typeof settings.vcfStorageMethod).toBe('string');
-    expect(typeof settings.vcfFilename).toBe('string');
-    expect(typeof settings.vcfWatchFolder).toBe('string');
-    expect(typeof settings.vcfWatchEnabled).toBe('boolean');
-    expect(typeof settings.vcfWatchPollingInterval).toBe('number');
-    expect(typeof settings.vcfWriteBackEnabled).toBe('boolean');
-    expect(typeof settings.vcfCustomizeIgnoreList).toBe('boolean');
-    expect(Array.isArray(settings.vcfIgnoreFilenames)).toBe(true);
-    expect(Array.isArray(settings.vcfIgnoreUIDs)).toBe(true);
+    expect(typeof settings.vcardStorageMethod).toBe('string');
+    expect(typeof settings.vcardFilename).toBe('string');
+    expect(typeof settings.vcardWatchFolder).toBe('string');
+    expect(typeof settings.vcardWatchEnabled).toBe('boolean');
+    expect(typeof settings.vcardWatchPollingInterval).toBe('number');
+    expect(typeof settings.vcardWriteBackEnabled).toBe('boolean');
+    expect(typeof settings.vcardCustomizeIgnoreList).toBe('boolean');
+    expect(Array.isArray(settings.vcardIgnoreFilenames)).toBe(true);
+    expect(Array.isArray(settings.vcardIgnoreUIDs)).toBe(true);
   });
 
   it('should support ignore lists for VCF files and UIDs', () => {
     const settingsWithIgnoreLists = {
       ...mockSettings,
-      vcfCustomizeIgnoreList: true,
-      vcfIgnoreFilenames: ['system.vcf', 'temp.vcf'],
-      vcfIgnoreUIDs: ['system-uid-1', 'temp-uid-2']
+      vcardCustomizeIgnoreList: true,
+      vcardIgnoreFilenames: ['system.vcf', 'temp.vcf'],
+      vcardIgnoreUIDs: ['system-uid-1', 'temp-uid-2']
     };
 
-    expect(settingsWithIgnoreLists.vcfIgnoreFilenames).toHaveLength(2);
-    expect(settingsWithIgnoreLists.vcfIgnoreUIDs).toHaveLength(2);
-    expect(settingsWithIgnoreLists.vcfIgnoreFilenames).toContain('system.vcf');
-    expect(settingsWithIgnoreLists.vcfIgnoreUIDs).toContain('system-uid-1');
+    expect(settingsWithIgnoreLists.vcardIgnoreFilenames).toHaveLength(2);
+    expect(settingsWithIgnoreLists.vcardIgnoreUIDs).toHaveLength(2);
+    expect(settingsWithIgnoreLists.vcardIgnoreFilenames).toContain('system.vcf');
+    expect(settingsWithIgnoreLists.vcardIgnoreUIDs).toContain('system-uid-1');
   });
 
   it('should allow VCF write-back to be configured', () => {
     const writeBackEnabled = {
       ...mockSettings,
-      vcfWriteBackEnabled: true
+      vcardWriteBackEnabled: true
     };
 
     const writeBackDisabled = {
       ...mockSettings,
-      vcfWriteBackEnabled: false
+      vcardWriteBackEnabled: false
     };
 
-    expect(writeBackEnabled.vcfWriteBackEnabled).toBe(true);
-    expect(writeBackDisabled.vcfWriteBackEnabled).toBe(false);
+    expect(writeBackEnabled.vcardWriteBackEnabled).toBe(true);
+    expect(writeBackDisabled.vcardWriteBackEnabled).toBe(false);
   });
 
   it('should handle special characters in folder names', () => {
@@ -316,47 +316,47 @@ describe('Configurable Folder and Filename Settings Story', () => {
     });
   });
 
-  it('should show ignore lists when vcfCustomizeIgnoreList is enabled with vcf-folder method', () => {
+  it('should show ignore lists when vcardCustomizeIgnoreList is enabled with vcf-folder method', () => {
     // Test that ignore lists should be visible when:
-    // 1. VCF storage method is 'vcf-folder'
-    // 2. vcfCustomizeIgnoreList is enabled
-    // Previously, this also required vcfWatchEnabled and vcfWriteBackEnabled to be true
+    // 1. VCF storage method is 'vcard-folder'
+    // 2. vcardCustomizeIgnoreList is enabled
+    // Previously, this also required vcardWatchEnabled and vcardWriteBackEnabled to be true
     
     const settingsShowingIgnoreLists = {
       ...mockSettings,
-      vcfStorageMethod: 'vcf-folder' as const,
-      vcfCustomizeIgnoreList: true,
+      vcardStorageMethod: 'vcard-folder' as const,
+      vcardCustomizeIgnoreList: true,
       // These should NOT be required for ignore lists to show
-      vcfWatchEnabled: false,
-      vcfWriteBackEnabled: false
+      vcardWatchEnabled: false,
+      vcardWriteBackEnabled: false
     };
 
     // Verify the conditions that should make ignore lists visible
-    expect(settingsShowingIgnoreLists.vcfStorageMethod).toBe('vcf-folder');
-    expect(settingsShowingIgnoreLists.vcfCustomizeIgnoreList).toBe(true);
+    expect(settingsShowingIgnoreLists.vcardStorageMethod).toBe('vcard-folder');
+    expect(settingsShowingIgnoreLists.vcardCustomizeIgnoreList).toBe(true);
     
     // This condition matches the updated logic in settings.ts line 255-256:
-    // if (this.plugin.settings.vcfStorageMethod === 'vcf-folder' && 
-    //     this.plugin.settings.vcfCustomizeIgnoreList)
+    // if (this.plugin.settings.vcardStorageMethod === 'vcard-folder' && 
+    //     this.plugin.settings.vcardCustomizeIgnoreList)
     const shouldShowIgnoreLists = 
-      settingsShowingIgnoreLists.vcfStorageMethod === 'vcf-folder' &&
-      settingsShowingIgnoreLists.vcfCustomizeIgnoreList;
+      settingsShowingIgnoreLists.vcardStorageMethod === 'vcard-folder' &&
+      settingsShowingIgnoreLists.vcardCustomizeIgnoreList;
     
     expect(shouldShowIgnoreLists).toBe(true);
   });
 
-  it('should NOT show ignore lists when vcfCustomizeIgnoreList is disabled', () => {
+  it('should NOT show ignore lists when vcardCustomizeIgnoreList is disabled', () => {
     const settingsHidingIgnoreLists = {
       ...mockSettings,
-      vcfStorageMethod: 'vcf-folder' as const,
-      vcfCustomizeIgnoreList: false,
-      vcfWatchEnabled: true,
-      vcfWriteBackEnabled: true
+      vcardStorageMethod: 'vcard-folder' as const,
+      vcardCustomizeIgnoreList: false,
+      vcardWatchEnabled: true,
+      vcardWriteBackEnabled: true
     };
 
     const shouldShowIgnoreLists = 
-      settingsHidingIgnoreLists.vcfStorageMethod === 'vcf-folder' &&
-      settingsHidingIgnoreLists.vcfCustomizeIgnoreList;
+      settingsHidingIgnoreLists.vcardStorageMethod === 'vcard-folder' &&
+      settingsHidingIgnoreLists.vcardCustomizeIgnoreList;
     
     expect(shouldShowIgnoreLists).toBe(false);
   });
@@ -364,13 +364,13 @@ describe('Configurable Folder and Filename Settings Story', () => {
   it('should NOT show ignore lists when storage method is single-vcf', () => {
     const settingsHidingIgnoreLists = {
       ...mockSettings,
-      vcfStorageMethod: 'single-vcf' as const,
-      vcfCustomizeIgnoreList: true
+      vcardStorageMethod: 'single-vcard' as const,
+      vcardCustomizeIgnoreList: true
     };
 
     const shouldShowIgnoreLists = 
-      settingsHidingIgnoreLists.vcfStorageMethod === 'vcf-folder' &&
-      settingsHidingIgnoreLists.vcfCustomizeIgnoreList;
+      settingsHidingIgnoreLists.vcardStorageMethod === 'vcard-folder' &&
+      settingsHidingIgnoreLists.vcardCustomizeIgnoreList;
     
     expect(shouldShowIgnoreLists).toBe(false);
   });

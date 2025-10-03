@@ -29,7 +29,7 @@ describe('VCardFileOperations', () => {
 
       mockedFs.readdir.mockResolvedValue(mockEntries as any);
 
-      const result = await VCardFileOperations.listVCFFiles('/test/folder');
+      const result = await VCardFileOperations.listVcardFiles('/test/folder');
 
       expect(result).toHaveLength(2);
       expect(result).toEqual([
@@ -41,7 +41,7 @@ describe('VCardFileOperations', () => {
     it('should handle directory read errors gracefully', async () => {
       mockedFs.readdir.mockRejectedValue(new Error('Directory not found'));
 
-      const result = await VCardFileOperations.listVCFFiles('/nonexistent');
+      const result = await VCardFileOperations.listVcardFiles('/nonexistent');
 
       expect(result).toEqual([]);
     });
@@ -54,7 +54,7 @@ describe('VCardFileOperations', () => {
       ];
       mockedFs.readdir.mockResolvedValue(mockEntries as any);
 
-      const result = await VCardFileOperations.listVCFFiles('/test/folder');
+      const result = await VCardFileOperations.listVcardFiles('/test/folder');
 
       expect(result).toHaveLength(2);
       expect(result).toEqual([
@@ -66,20 +66,20 @@ describe('VCardFileOperations', () => {
 
   describe('generateVCFFilename', () => {
     it('should generate valid VCF filenames', () => {
-      expect(VCardFileOperations.generateVCFFilename('John Doe')).toBe('John_Doe.vcf');
-      expect(VCardFileOperations.generateVCFFilename('Mary Jane Smith')).toBe('Mary_Jane_Smith.vcf');
-      expect(VCardFileOperations.generateVCFFilename('Dr. Robert Wilson Jr.')).toBe('Dr__Robert_Wilson_Jr_.vcf');
+      expect(VCardFileOperations.generateVcardFilename('John Doe')).toBe('John_Doe.vcf');
+      expect(VCardFileOperations.generateVcardFilename('Mary Jane Smith')).toBe('Mary_Jane_Smith.vcf');
+      expect(VCardFileOperations.generateVcardFilename('Dr. Robert Wilson Jr.')).toBe('Dr__Robert_Wilson_Jr_.vcf');
     });
 
     it('should handle special characters', () => {
-      expect(VCardFileOperations.generateVCFFilename("O'Brien, Patrick")).toBe('O_Brien__Patrick.vcf');
-      expect(VCardFileOperations.generateVCFFilename('José García-López')).toBe('Jos__Garc_a-L_pez.vcf');
+      expect(VCardFileOperations.generateVcardFilename("O'Brien, Patrick")).toBe('O_Brien__Patrick.vcf');
+      expect(VCardFileOperations.generateVcardFilename('José García-López')).toBe('Jos__Garc_a-L_pez.vcf');
     });
 
     it('should handle empty or invalid names', () => {
-      expect(VCardFileOperations.generateVCFFilename('')).toBe('.vcf');
-      expect(VCardFileOperations.generateVCFFilename('   ')).toBe('___.vcf');
-      expect(VCardFileOperations.generateVCFFilename('!@#$%')).toBe('_____.vcf');
+      expect(VCardFileOperations.generateVcardFilename('')).toBe('.vcf');
+      expect(VCardFileOperations.generateVcardFilename('   ')).toBe('___.vcf');
+      expect(VCardFileOperations.generateVcardFilename('!@#$%')).toBe('_____.vcf');
     });
   });
 
@@ -88,7 +88,7 @@ describe('VCardFileOperations', () => {
       mockedFs.writeFile.mockResolvedValue(undefined);
 
       const content = 'BEGIN:VCARD\nVERSION:4.0\nFN:John Doe\nEND:VCARD';
-      const result = await VCardFileOperations.writeVCFFile('/test/john.vcf', content);
+      const result = await VCardFileOperations.writeVcardFile('/test/john.vcf', content);
 
       expect(result).toBe(true);
       expect(mockedFs.writeFile).toHaveBeenCalledWith('/test/john.vcf', content, 'utf-8');
@@ -98,7 +98,7 @@ describe('VCardFileOperations', () => {
       mockedFs.writeFile.mockRejectedValue(new Error('Permission denied'));
 
       const content = 'BEGIN:VCARD\nVERSION:4.0\nFN:John Doe\nEND:VCARD';
-      const result = await VCardFileOperations.writeVCFFile('/test/john.vcf', content);
+      const result = await VCardFileOperations.writeVcardFile('/test/john.vcf', content);
 
       expect(result).toBe(false);
     });
@@ -109,7 +109,7 @@ describe('VCardFileOperations', () => {
       const mockContent = 'BEGIN:VCARD\nVERSION:4.0\nFN:John Doe\nEND:VCARD';
       mockedFs.readFile.mockResolvedValue(mockContent);
 
-      const result = await VCardFileOperations.readVCFFile('/test/john.vcf');
+      const result = await VCardFileOperations.readVcardFile('/test/john.vcf');
 
       expect(result).toBe(mockContent);
       expect(mockedFs.readFile).toHaveBeenCalledWith('/test/john.vcf', 'utf-8');
@@ -118,7 +118,7 @@ describe('VCardFileOperations', () => {
     it('should handle read errors gracefully', async () => {
       mockedFs.readFile.mockRejectedValue(new Error('File not found'));
 
-      const result = await VCardFileOperations.readVCFFile('/test/nonexistent.vcf');
+      const result = await VCardFileOperations.readVcardFile('/test/nonexistent.vcf');
 
       expect(result).toBe(null);
     });

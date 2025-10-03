@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { App, TFile } from 'obsidian';
-import { setupVCFDropHandler } from '../../src/plugin/services/dropHandler';
+import { setupVcardDropHandler } from '../../src/plugin/services/dropHandler';
 import { ContactsPluginSettings } from 'src/plugin/settings';
 
 /**
@@ -33,21 +33,21 @@ describe('VCF File Drop Import Story', () => {
     mockSettings = {
       contactsFolder: 'Contacts',
       defaultHashtag: '#Contact',
-      vcfStorageMethod: 'vcf-folder',
-      vcfFilename: 'contacts.vcf',
-      vcfWatchFolder: '/test/vcf',
-      vcfWatchEnabled: true,
-      vcfWatchPollingInterval: 30,
-      vcfWriteBackEnabled: false,
-      vcfCustomizeIgnoreList: false,
-      vcfIgnoreFilenames: [],
-      vcfIgnoreUIDs: [],
+      vcardStorageMethod: 'vcard-folder',
+      vcardFilename: 'contacts.vcf',
+      vcardWatchFolder: '/test/vcf',
+      vcardWatchEnabled: true,
+      vcardWatchPollingInterval: 30,
+      vcardWriteBackEnabled: false,
+      vcardCustomizeIgnoreList: false,
+      vcardIgnoreFilenames: [],
+      vcardIgnoreUIDs: [],
       logLevel: 'INFO'
     };
   });
 
   it('should set up VCF drop handler successfully', () => {
-    const cleanup = setupVCFDropHandler(mockApp as App, mockSettings);
+    const cleanup = setupVcardDropHandler(mockApp as App, mockSettings);
     
     expect(typeof cleanup).toBe('function');
     expect(mockApp.vault!.on).toHaveBeenCalledWith('create', expect.any(Function));
@@ -199,7 +199,7 @@ END:VCARD`;
   });
 
   it('should cleanup VCF drop handler when called', () => {
-    const cleanup = setupVCFDropHandler(mockApp as App, mockSettings);
+    const cleanup = setupVcardDropHandler(mockApp as App, mockSettings);
     
     // Mock the off method to track cleanup
     const offSpy = vi.spyOn(mockApp.vault!, 'off');

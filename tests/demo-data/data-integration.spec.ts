@@ -256,7 +256,7 @@ END:VCARD`;
       ];
 
       testNames.forEach(name => {
-        const filename = VcardFile.generateVCFFilename(name);
+        const filename = VcardFile.generateVcardFilename(name);
         expect(filename).toBeDefined();
         expect(filename).toMatch(/\.(vcf)$/);
         expect(filename.length).toBeGreaterThan(4); // At least name + .vcf

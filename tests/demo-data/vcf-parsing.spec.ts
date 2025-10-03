@@ -166,7 +166,7 @@ describe('Demo VCF Data Parsing', () => {
       ];
 
       testCases.forEach(({ name, expected }) => {
-        const filename = VcardFile.generateVCFFilename(name);
+        const filename = VcardFile.generateVcardFilename(name);
         expect(filename).toBe(expected);
       });
     });

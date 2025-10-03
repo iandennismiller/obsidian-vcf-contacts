@@ -13,15 +13,15 @@ import { afterEach,describe, expect, it, vi } from 'vitest';
 const mockSettings: ContactsPluginSettings = {
   contactsFolder: 'Contacts',
   defaultHashtag: '',
-  vcfStorageMethod: 'vcf-folder',
-  vcfFilename: 'contacts.vcf',
-  vcfWatchFolder: '',
-  vcfWatchEnabled: false,
-  vcfWatchPollingInterval: 30,
-  vcfWriteBackEnabled: false,
-  vcfCustomizeIgnoreList: false,
-  vcfIgnoreFilenames: [],
-  vcfIgnoreUIDs: [],
+  vcardStorageMethod: 'vcard-folder',
+  vcardFilename: 'contacts.vcf',
+  vcardWatchFolder: '',
+  vcardWatchEnabled: false,
+  vcardWatchPollingInterval: 30,
+  vcardWriteBackEnabled: false,
+  vcardCustomizeIgnoreList: false,
+  vcardIgnoreFilenames: [],
+  vcardIgnoreUIDs: [],
   enableSync: true,
   logLevel: 'INFO',
 };
@@ -91,15 +91,15 @@ describe('sharedSettingsContext', () => {
     const listener = vi.fn();
     onSettingsChange(listener);
 
-    updateSettings({ vcfWatchFolder: '/new/path' });
+    updateSettings({ vcardWatchFolder: '/new/path' });
 
     const updated = getSettings();
-    expect(updated.vcfWatchFolder).toBe('/new/path');
+    expect(updated.vcardWatchFolder).toBe('/new/path');
     expect(updated.contactsFolder).toBe('Contacts'); // Other fields should be preserved
     expect(listener).toHaveBeenCalledWith(updated);
   });
 
   it('throws when updating settings that are not set', () => {
-    expect(() => updateSettings({ vcfWatchFolder: '/path' })).toThrow('Plugin context has not been set.');
+    expect(() => updateSettings({ vcardWatchFolder: '/path' })).toThrow('Plugin context has not been set.');
   });
 });

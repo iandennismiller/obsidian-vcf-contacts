@@ -52,11 +52,11 @@ describe('VCardManagerFileOperations', () => {
       const filename = 'john-doe.vcf';
       const content = 'BEGIN:VCARD\nVERSION:4.0\nUID:test-123\nFN:John Doe\nEND:VCARD';
 
-      vi.mocked(VCardFileOperations.writeVCFFile).mockResolvedValue(true);
+      vi.mocked(VCardFileOperations.writeVcardFile).mockResolvedValue(true);
 
       const result = await fileOps.writeVCardFile(filename, content);
 
-      expect(VCardFileOperations.writeVCFFile).toHaveBeenCalledWith(
+      expect(VCardFileOperations.writeVcardFile).toHaveBeenCalledWith(
         '/test/vcf/folder/john-doe.vcf',
         content
       );
@@ -67,7 +67,7 @@ describe('VCardManagerFileOperations', () => {
       const filename = 'failed.vcf';
       const content = 'BEGIN:VCARD\nVERSION:4.0\nEND:VCARD';
 
-      vi.mocked(VCardFileOperations.writeVCFFile).mockResolvedValue(false);
+      vi.mocked(VCardFileOperations.writeVcardFile).mockResolvedValue(false);
 
       const result = await fileOps.writeVCardFile(filename, content);
 
@@ -80,7 +80,7 @@ describe('VCardManagerFileOperations', () => {
       const result = await fileOps.writeVCardFile('test.vcf', 'content');
 
       expect(result).toBeNull();
-      expect(VCardFileOperations.writeVCFFile).not.toHaveBeenCalled();
+      expect(VCardFileOperations.writeVcardFile).not.toHaveBeenCalled();
     });
 
     it('should return null when watch folder is null', async () => {
@@ -89,7 +89,7 @@ describe('VCardManagerFileOperations', () => {
       const result = await fileOps.writeVCardFile('test.vcf', 'content');
 
       expect(result).toBeNull();
-      expect(VCardFileOperations.writeVCFFile).not.toHaveBeenCalled();
+      expect(VCardFileOperations.writeVcardFile).not.toHaveBeenCalled();
     });
 
     it('should handle different filenames correctly', async () => {
@@ -100,7 +100,7 @@ describe('VCardManagerFileOperations', () => {
         'UPPERCASE.vcf'
       ];
 
-      vi.mocked(VCardFileOperations.writeVCFFile).mockResolvedValue(true);
+      vi.mocked(VCardFileOperations.writeVcardFile).mockResolvedValue(true);
 
       for (const filename of testCases) {
         const result = await fileOps.writeVCardFile(filename, 'content');
@@ -162,11 +162,11 @@ describe('VCardManagerFileOperations', () => {
       const contactName = 'John Doe';
       const expectedFilename = 'john-doe.vcf';
 
-      vi.mocked(VCardFileOperations.generateVCFFilename).mockReturnValue(expectedFilename);
+      vi.mocked(VCardFileOperations.generateVcardFilename).mockReturnValue(expectedFilename);
 
       const filename = fileOps.generateVCardFilename(contactName);
 
-      expect(VCardFileOperations.generateVCFFilename).toHaveBeenCalledWith(contactName);
+      expect(VCardFileOperations.generateVcardFilename).toHaveBeenCalledWith(contactName);
       expect(filename).toBe(expectedFilename);
     });
 
@@ -179,7 +179,7 @@ describe('VCardManagerFileOperations', () => {
       ];
 
       for (const testCase of testCases) {
-        vi.mocked(VCardFileOperations.generateVCFFilename).mockReturnValue(testCase.output);
+        vi.mocked(VCardFileOperations.generateVcardFilename).mockReturnValue(testCase.output);
 
         const filename = fileOps.generateVCardFilename(testCase.input);
 
@@ -191,7 +191,7 @@ describe('VCardManagerFileOperations', () => {
       const emptyName = '';
       const fallbackFilename = 'contact.vcf';
 
-      vi.mocked(VCardFileOperations.generateVCFFilename).mockReturnValue(fallbackFilename);
+      vi.mocked(VCardFileOperations.generateVcardFilename).mockReturnValue(fallbackFilename);
 
       const filename = fileOps.generateVCardFilename(emptyName);
 
@@ -203,7 +203,7 @@ describe('VCardManagerFileOperations', () => {
 
       fileOps.generateVCardFilename(contactName);
 
-      expect(VCardFileOperations.generateVCFFilename).toHaveBeenCalledWith(contactName);
+      expect(VCardFileOperations.generateVcardFilename).toHaveBeenCalledWith(contactName);
     });
   });
 
@@ -212,7 +212,7 @@ describe('VCardManagerFileOperations', () => {
       const customFolder = '/custom/path/to/vcf';
       mockGetWatchFolder.mockReturnValue(customFolder);
 
-      vi.mocked(VCardFileOperations.writeVCFFile).mockResolvedValue(true);
+      vi.mocked(VCardFileOperations.writeVcardFile).mockResolvedValue(true);
 
       const result = await fileOps.writeVCardFile('test.vcf', 'content');
 
@@ -229,11 +229,11 @@ describe('VCardManagerFileOperations', () => {
         mockShouldIgnoreUID
       );
 
-      vi.mocked(VCardFileOperations.writeVCFFile).mockResolvedValue(true);
+      vi.mocked(VCardFileOperations.writeVcardFile).mockResolvedValue(true);
 
       // First write
       await dynamicFileOps.writeVCardFile('test.vcf', 'content');
-      expect(VCardFileOperations.writeVCFFile).toHaveBeenCalledWith(
+      expect(VCardFileOperations.writeVcardFile).toHaveBeenCalledWith(
         '/folder1/test.vcf',
         'content'
       );
@@ -243,7 +243,7 @@ describe('VCardManagerFileOperations', () => {
 
       // Second write
       await dynamicFileOps.writeVCardFile('test.vcf', 'content');
-      expect(VCardFileOperations.writeVCFFile).toHaveBeenCalledWith(
+      expect(VCardFileOperations.writeVcardFile).toHaveBeenCalledWith(
         '/folder2/test.vcf',
         'content'
       );
@@ -251,8 +251,8 @@ describe('VCardManagerFileOperations', () => {
   });
 
   describe('error handling', () => {
-    it('should handle errors from VCardFileOperations.writeVCFFile', async () => {
-      vi.mocked(VCardFileOperations.writeVCFFile).mockRejectedValue(
+    it('should handle errors from VCardFileOperations.writeVcardFile', async () => {
+      vi.mocked(VCardFileOperations.writeVcardFile).mockRejectedValue(
         new Error('File system error')
       );
 
