@@ -357,6 +357,7 @@ export class RelationshipOperations {
   /**
    * Update Related section in markdown content
    * Groups content modification with relationship operations
+   * If Contact exists after Related, moves Contact to before Related first
    */
   async updateRelatedSectionInContent(relationships: { type: string; contactName: string }[]): Promise<void> {
     const content = await this.contactData.getContent();
@@ -373,14 +374,46 @@ export class RelationshipOperations {
 
     // Replace existing Related section or add new one - case-insensitive and depth-agnostic
     const relatedSectionMatch = content.match(/(^|\n)(#{2,})\s*related\s*\n([\s\S]*?)(?=\n#{2,}\s|\n\n(?:#|$)|\n$)/i);
+    // Check if Contact section exists
+    const contactSectionMatch = content.match(/(^|\n)(#{2,})\s*contact\s*\n[\s\S]*?(?=\n#{2,}\s|\n\n(?:#|$)|\n$)/i);
+    
     let newContent: string;
     
     if (relatedSectionMatch) {
-      // Replace existing section, preserving the heading structure
-      newContent = content.replace(relatedSectionMatch[0], '\n' + newRelatedSection.trim());
+      // Related section exists
+      if (contactSectionMatch) {
+        // Both sections exist - check if Contact is after Related
+        const contactIndex = content.indexOf(contactSectionMatch[0]);
+        const relatedIndex = content.indexOf(relatedSectionMatch[0]);
+        
+        if (contactIndex > relatedIndex) {
+          // Contact is AFTER Related - need to fix the ordering
+          // 1. Remove Contact from its current location
+          const contentWithoutContact = content.replace(contactSectionMatch[0], '');
+          // 2. Find Related in the content without Contact
+          const relatedMatchInNewContent = contentWithoutContact.match(/(^|\n)(#{2,})\s*related\s*\n([\s\S]*?)(?=\n#{2,}\s|\n\n(?:#|$)|\n$)/i);
+          if (relatedMatchInNewContent) {
+            const relatedIndexInNewContent = contentWithoutContact.indexOf(relatedMatchInNewContent[0]);
+            // 3. Insert Contact before Related
+            const contentWithContactMoved = contentWithoutContact.substring(0, relatedIndexInNewContent) + 
+                                           contactSectionMatch[0] + '\n' + 
+                                           contentWithoutContact.substring(relatedIndexInNewContent);
+            // 4. Now replace Related section in the reordered content
+            newContent = contentWithContactMoved.replace(relatedMatchInNewContent[0], '\n' + newRelatedSection.trim());
+          } else {
+            // Fallback: just replace Related in place
+            newContent = content.replace(relatedSectionMatch[0], '\n' + newRelatedSection.trim());
+          }
+        } else {
+          // Contact is already before Related - just replace Related in place
+          newContent = content.replace(relatedSectionMatch[0], '\n' + newRelatedSection.trim());
+        }
+      } else {
+        // Only Related exists - replace in place
+        newContent = content.replace(relatedSectionMatch[0], '\n' + newRelatedSection.trim());
+      }
     } else {
-      // Check if Contact section exists - Related should come after Contact
-      const contactSectionMatch = content.match(/(^|\n)(#{2,})\s*contact\s*\n[\s\S]*?(?=\n#{2,}\s|\n\n(?:#|$)|\n$)/i);
+      // Related section doesn't exist - add it
       if (contactSectionMatch) {
         // Insert Related section after Contact section
         const contactEndIndex = content.indexOf(contactSectionMatch[0]) + contactSectionMatch[0].length;

@@ -336,4 +336,108 @@ Notes here.
     const hashtagIndex = updatedContent.indexOf('#Contact');
     expect(contactIndex).toBeLessThan(hashtagIndex);
   });
+
+  it('should fix ordering when Contact exists after Related by moving Contact before Related', async () => {
+    const mockFile = { basename: 'john-doe', path: 'Contacts/john-doe.md' } as TFile;
+    
+    // Content with Contact AFTER Related (wrong order)
+    const initialContent = `---
+UID: john-doe-123
+FN: John Doe
+EMAIL[HOME]: john@home.com
+EMAIL[WORK]: john@work.com
+---
+
+#### Related
+- friend [[Jane Doe]]
+
+## Contact
+
+📧 Email
+- Home: john@home.com
+
+#Contact`;
+
+    mockApp.vault!.read = vi.fn().mockResolvedValue(initialContent);
+    mockApp.metadataCache!.getFileCache = vi.fn().mockReturnValue({
+      frontmatter: {
+        UID: 'john-doe-123',
+        FN: 'John Doe',
+        'EMAIL[HOME]': 'john@home.com',
+        'EMAIL[WORK]': 'john@work.com'
+      }
+    });
+
+    const contactNote = new ContactNote(mockApp as App, mockSettings, mockFile);
+    const contactSection = await contactNote.generateContactSection();
+    
+    // Update Contact section - should detect wrong order and fix it
+    await contactNote.updateContactSectionInContent(contactSection);
+    
+    // Get the updated content
+    const modifyCall = mockApp.vault!.modify as any;
+    expect(modifyCall).toHaveBeenCalled();
+    const updatedContent = modifyCall.mock.calls[0][1];
+    
+    // Verify Contact now appears before Related
+    const contactIndex = updatedContent.indexOf('## Contact');
+    const relatedIndex = updatedContent.indexOf('#### Related');
+    
+    expect(contactIndex).toBeGreaterThan(-1); // Contact exists
+    expect(relatedIndex).toBeGreaterThan(-1); // Related exists
+    expect(contactIndex).toBeLessThan(relatedIndex); // Contact before Related (fixed!)
+    expect(updatedContent).toContain('john@work.com'); // Work email was added
+  });
+
+  it('should fix ordering when updating Related and Contact is after Related', async () => {
+    const mockFile = { basename: 'john-doe', path: 'Contacts/john-doe.md' } as TFile;
+    
+    // Content with Contact AFTER Related (wrong order)
+    const initialContent = `---
+UID: john-doe-123
+FN: John Doe
+EMAIL[HOME]: john@home.com
+---
+
+#### Related
+- friend [[Jane Doe]]
+
+## Contact
+
+📧 Email
+- Home: john@home.com
+
+#Contact`;
+
+    mockApp.vault!.read = vi.fn().mockResolvedValue(initialContent);
+    mockApp.metadataCache!.getFileCache = vi.fn().mockReturnValue({
+      frontmatter: {
+        UID: 'john-doe-123',
+        FN: 'John Doe',
+        'EMAIL[HOME]': 'john@home.com'
+      }
+    });
+
+    const contactNote = new ContactNote(mockApp as App, mockSettings, mockFile);
+    
+    // Update Related section - should detect wrong order and fix it
+    await contactNote.updateRelatedSectionInContent([
+      { type: 'friend', contactName: 'Jane Doe' },
+      { type: 'colleague', contactName: 'Bob Smith' }
+    ]);
+    
+    // Get the updated content
+    const modifyCall = mockApp.vault!.modify as any;
+    expect(modifyCall).toHaveBeenCalled();
+    const updatedContent = modifyCall.mock.calls[0][1];
+    
+    // Verify Contact now appears before Related
+    const contactIndex = updatedContent.indexOf('## Contact');
+    const relatedIndex = updatedContent.indexOf('#### Related');
+    
+    expect(contactIndex).toBeGreaterThan(-1); // Contact exists
+    expect(relatedIndex).toBeGreaterThan(-1); // Related exists
+    expect(contactIndex).toBeLessThan(relatedIndex); // Contact before Related (fixed!)
+    expect(updatedContent).toContain('colleague [[Bob Smith]]'); // New relationship was added
+  });
 });
