@@ -39,7 +39,35 @@ describe('Contact Before Related Section Ordering Story', () => {
       vcfCustomizeIgnoreList: false,
       vcfIgnoreFilenames: [],
       vcfIgnoreUIDs: [],
-      logLevel: 'INFO'
+      logLevel: 'INFO',
+      // Add Contact Section Template for tests that use generateContactSection()
+      contactSectionTemplate: `## Contact
+
+{{#EMAIL-}}
+📧 Email
+{{#FIRST}}{{LABEL}} {{VALUE}}{{/FIRST}}
+
+{{/EMAIL-}}
+{{#TEL-}}
+📞 Phone
+{{#FIRST}}{{LABEL}} {{VALUE}}{{/FIRST}}
+
+{{/TEL-}}
+{{#ADR-}}
+🏠 Address
+{{#FIRST}}({{LABEL}})
+{{STREET}}
+{{LOCALITY}}, {{REGION}} {{POSTAL}}
+{{COUNTRY}}
+
+{{/FIRST}}
+{{/ADR-}}
+{{#URL-}}
+🌐 Website
+{{#FIRST}}{{LABEL}} {{VALUE}}{{/FIRST}}
+
+{{/URL-}}`,
+      contactSectionSyncConfirmation: true
     };
   });
 

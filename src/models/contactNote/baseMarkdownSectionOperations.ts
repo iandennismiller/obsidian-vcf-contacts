@@ -242,8 +242,8 @@ export abstract class BaseMarkdownSectionOperations {
     const headingMarker = '#'.repeat(level);
     const newSection = `${headingMarker} ${sectionName}\n${sectionContent}\n\n`;
     
-    // Add section before trailing hashtags
-    const tagMatch = content.match(/\n(#\w.*?)$/);
+    // Add section before trailing hashtags (handle trailing whitespace)
+    const tagMatch = content.match(/\n(#\w[^\n]*)\s*$/);
     if (tagMatch) {
       const insertIndex = content.lastIndexOf(tagMatch[1]);
       return content.substring(0, insertIndex) + newSection + tagMatch[1] + '\n';
