@@ -6,6 +6,7 @@
 import { TFile, App } from 'obsidian';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 import { Gender } from './types';
+import { normalizeFieldValue } from './fieldPatternDetection';
 
 /**
  * Centralized contact data storage that keeps related data together
@@ -149,6 +150,44 @@ export class ContactData {
   }
 
   /**
+   * Extract field type from a frontmatter key
+   * Examples:
+   * - "TEL[WORK]" -> "TEL"
+   * - "EMAIL[HOME]" -> "EMAIL"
+   * - "ADR[HOME].STREET" -> "ADR" (but we don't normalize ADR components)
+   * - "URL" -> "URL"
+   */
+  private extractFieldType(key: string): string | null {
+    // Match keys like EMAIL, TEL, URL, ADR with or without brackets
+    const match = key.match(/^(EMAIL|TEL|URL|ADR)(\[|\.)?/);
+    return match ? match[1] : null;
+  }
+
+  /**
+   * Compare two values for a given field type, normalizing both before comparison
+   * This ensures that "555-555-5555" and "+1-555-555-5555" are considered equal
+   */
+  private valuesAreEqual(currentValue: any, newValue: string, fieldType: string | null): boolean {
+    // If current value doesn't exist, they're not equal
+    if (currentValue === undefined || currentValue === null) {
+      return false;
+    }
+
+    // Convert current value to string
+    const currentStr = String(currentValue);
+    
+    // If we have a field type that supports normalization, normalize both values
+    if (fieldType && (fieldType === 'TEL' || fieldType === 'EMAIL' || fieldType === 'URL')) {
+      const normalizedCurrent = normalizeFieldValue(currentStr, fieldType);
+      const normalizedNew = normalizeFieldValue(newValue, fieldType);
+      return normalizedCurrent === normalizedNew;
+    }
+    
+    // For other field types, do direct string comparison
+    return currentStr === newValue;
+  }
+
+  /**
    * Update multiple frontmatter values in one operation
    */
   async updateMultipleFrontmatterValues(updates: Record<string, string>, skipRevUpdate = false): Promise<void> {
@@ -165,7 +204,8 @@ export class ContactData {
     let hasChanges = false;
     for (const [key, value] of Object.entries(updates)) {
       const currentValue = frontmatter[key];
-      const valuesMatch = currentValue === value;
+      const fieldType = this.extractFieldType(key);
+      const valuesMatch = this.valuesAreEqual(currentValue, value, fieldType);
       console.debug(`[ContactData] Checking ${key}: current="${currentValue}", new="${value}", match=${valuesMatch}`);
       if (!valuesMatch) {
         hasChanges = true;

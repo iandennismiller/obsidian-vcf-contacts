@@ -103,8 +103,14 @@ export function normalizePhoneNumber(value: string): string {
   // Remove all formatting
   const cleaned = value.replace(/[\s\-\(\)\.]/g, '');
   
-  // If it starts with +, keep it as international format
+  // If it starts with +, keep it as international format but normalize it
   if (cleaned.startsWith('+')) {
+    // Check if it's a US number (+1 followed by 10 digits)
+    if (cleaned.length === 12 && cleaned.startsWith('+1') && /^\+1\d{10}$/.test(cleaned)) {
+      // Format as +1-XXX-XXX-XXXX
+      return `+1-${cleaned.slice(2, 5)}-${cleaned.slice(5, 8)}-${cleaned.slice(8)}`;
+    }
+    // Otherwise return cleaned international format without dashes
     return cleaned;
   }
   
@@ -115,7 +121,7 @@ export function normalizePhoneNumber(value: string): string {
   
   // If it's 11 digits starting with 1, format as +1-XXX-XXX-XXXX
   if (cleaned.length === 11 && cleaned.startsWith('1') && /^\d{11}$/.test(cleaned)) {
-    return `+${cleaned.slice(0, 1)}-${cleaned.slice(1, 4)}-${cleaned.slice(4, 7)}-${cleaned.slice(7)}`;
+    return `+1-${cleaned.slice(1, 4)}-${cleaned.slice(4, 7)}-${cleaned.slice(7)}`;
   }
   
   // Otherwise return the cleaned version with + prefix if it's international
