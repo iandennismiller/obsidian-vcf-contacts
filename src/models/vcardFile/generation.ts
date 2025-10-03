@@ -3,14 +3,16 @@ import { VCardToStringError, VCardToStringReply, StructuredFields } from './type
 import { getApp } from "../../plugin/context/sharedAppContext";
 import { ContactManagerUtils } from "../contactManager/contactManagerUtils";
 import { parseKey } from "../contactNote";
+import { generateVcardFromFrontmatter, obsidianFrontmatterToVcard4 } from './vcard4Adapter';
 
 /**
  * VCard generation operations
- * Handles generating VCard data from various sources
+ * Now delegates to vcard4 library for RFC 6350 compliant generation
  */
 export class VCardGenerator {
   /**
    * Create VCard data from Obsidian contact files
+   * Uses vcard4 library for generation
    */
   static async fromObsidianFiles(contactFiles: TFile[], app?: App): Promise<VCardToStringReply> {
     const vCards: string[] = [];
@@ -22,7 +24,7 @@ export class VCardGenerator {
         if (singleVcard) {
           vCards.push(singleVcard);
         }
-      } catch (err) {
+      } catch (err: any) {
         vCardsErrors.push({"status": "error", "file": file.basename + '.md', "message": err.message});
       }
     });
@@ -35,6 +37,7 @@ export class VCardGenerator {
 
   /**
    * Create an empty VCard with default fields
+   * Uses vcard4 library for generation
    */
   static async createEmpty(): Promise<string> {
     const vCardObject: Record<string, any> = {
@@ -62,8 +65,8 @@ export class VCardGenerator {
     };
     
     const namedObject = await ContactManagerUtils.ensureHasName(vCardObject);
-    // Convert the object back to VCF format
-    return VCardGenerator.objectToVcf(namedObject);
+    // Convert the object back to VCF format using vcard4
+    return generateVcardFromFrontmatter(namedObject);
   }
 
   private static generateVCardFromFile(file: TFile, app?: App): string | null {
@@ -81,115 +84,23 @@ export class VCardGenerator {
       throw new Error('Missing required fields (UID or FN).');
     }
 
-    const entries = Object.entries(frontMatter) as Array<[string, string]>;
-    const singleLineFields: Array<[string, string]> = [];
-    const structuredFields: Array<[string, string]> = [];
-
-    entries.forEach(([key, value]) => {
-      const keyObj = parseKey(key);
-
-      // Check if this is a structured field by looking for subkey/dot notation
-      if (['ADR', 'N'].includes(keyObj.key) && key.includes('.')) {
-        structuredFields.push([key, value]);
-      } else {
-        singleLineFields.push([key, value]);
-      }
-    });
-
-    const fnExists = singleLineFields.some(([key, _]) => key === 'FN');
-    if (!fnExists) {
-      singleLineFields.push(['FN', file.basename]);
+    // Add FN from filename if not present
+    const frontMatterWithFN = { ...frontMatter };
+    if (!hasFN) {
+      frontMatterWithFN.FN = file.basename;
     }
 
-    const structuredLines = VCardGenerator.renderStructuredLines(structuredFields);
-    const singleLines = singleLineFields.map(VCardGenerator.renderSingleKey);
-    
-    // Ensure VERSION is included and comes first
-    const versionLine = 'VERSION:4.0';
-    const hasVersion = singleLines.some(line => line.startsWith('VERSION:'));
-    
-    let lines: string[] = [];
-    if (!hasVersion) {
-      lines.push(versionLine);
-    }
-    lines = lines.concat(structuredLines).concat(singleLines);
-
-    return `BEGIN:VCARD\n${lines.join("\n")}\nEND:VCARD`;
+    // Use vcard4 for generation
+    return generateVcardFromFrontmatter(frontMatterWithFN);
   }
 
-  private static renderStructuredLines(structuredFields: [string, string][]): string[] {
-    const fields = Object.fromEntries(structuredFields);
-    const partialKeys = structuredFields
-      .map(([key]) => key.includes('.') ? key.split('.')[0] : null)
-      .filter((item): item is string => item !== null);
-    const uniqueKeys = [...new Set(partialKeys)];
-
-    const structuredLines = uniqueKeys.map((key) => {
-      const keyObj = parseKey(key);
-      const type = keyObj.type ? `;TYPE=${keyObj.type}` : '';
-      switch (keyObj.key) {
-        case 'N': {
-          return `N${type}:${StructuredFields.N.map(field => fields[key + '.' + field] || "").join(";")}`;
-        }
-        case 'ADR': {
-          return `ADR${type}:${StructuredFields.ADR.map(field => fields[key + '.' + field] || "").join(";")}`;
-        }
-        default: {
-          return '';
-        }
-      }
-    });
-
-    return structuredLines.filter((line) => line !== '');
-  }
-
-  private static renderSingleKey([key, value]: [string, string]): string {
-    const keyObj = parseKey(key);
-    const type = keyObj.type ? `;TYPE=${keyObj.type}` : '';
-    return `${keyObj.key}${type}:${value}`;
-  }
-
+  /**
+   * Convert vCard object to VCF string
+   * Uses vcard4 library for generation
+   * 
+   * @deprecated Use generateVcardFromFrontmatter from vcard4Adapter instead
+   */
   static objectToVcf(vCardObject: Record<string, any>): string {
-    const entries = Object.entries(vCardObject) as Array<[string, string]>;
-    const singleLineFields: Array<[string, string]> = [];
-    const structuredFields: Array<[string, string]> = [];
-
-    entries.forEach(([key, value]) => {
-      const keyObj = parseKey(key);
-
-      // Check if this is a structured field by looking for subkey/dot notation
-      if (['ADR', 'N'].includes(keyObj.key) && key.includes('.')) {
-        structuredFields.push([key, value]);
-      } else {
-        singleLineFields.push([key, value]);
-      }
-    });
-
-    // Sort single line fields for deterministic ordering
-    // First by key, then by value (per spec)
-    singleLineFields.sort((a, b) => {
-      // Compare keys first
-      if (a[0] < b[0]) return -1;
-      if (a[0] > b[0]) return 1;
-      // If keys are equal, compare values
-      if (a[1] < b[1]) return -1;
-      if (a[1] > b[1]) return 1;
-      return 0;
-    });
-
-    const structuredLines = VCardGenerator.renderStructuredLines(structuredFields);
-    const singleLines = singleLineFields.map(VCardGenerator.renderSingleKey);
-    
-    // Ensure VERSION is included and comes first
-    const versionLine = 'VERSION:4.0';
-    const hasVersion = singleLines.some(line => line.startsWith('VERSION:'));
-    
-    let lines: string[] = [];
-    if (!hasVersion) {
-      lines.push(versionLine);
-    }
-    lines = lines.concat(structuredLines).concat(singleLines);
-
-    return `BEGIN:VCARD\n${lines.join("\n")}\nEND:VCARD`;
+    return generateVcardFromFrontmatter(vCardObject);
   }
 }
