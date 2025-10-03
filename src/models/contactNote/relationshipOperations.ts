@@ -363,7 +363,7 @@ export class RelationshipOperations {
     const content = await this.contactData.getContent();
     
     // Generate new Related section
-    let newRelatedSection = '#### Related\n';
+    let newRelatedSection = '## Related\n';
     if (relationships.length > 0) {
       for (const rel of relationships) {
         newRelatedSection += `- ${rel.type} [[${rel.contactName}]]\n`;
