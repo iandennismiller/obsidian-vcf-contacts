@@ -188,6 +188,27 @@ export class ContactData {
   }
 
   /**
+   * Find an existing frontmatter key that matches the given key, ignoring case
+   * Returns the actual key from frontmatter or null if not found
+   */
+  private findFrontmatterKey(frontmatter: Record<string, any>, searchKey: string): string | null {
+    // First try exact match
+    if (searchKey in frontmatter) {
+      return searchKey;
+    }
+    
+    // Try case-insensitive match for contact fields
+    const searchKeyLower = searchKey.toLowerCase();
+    for (const key of Object.keys(frontmatter)) {
+      if (key.toLowerCase() === searchKeyLower) {
+        return key;
+      }
+    }
+    
+    return null;
+  }
+
+  /**
    * Update multiple frontmatter values in one operation
    */
   async updateMultipleFrontmatterValues(updates: Record<string, string>, skipRevUpdate = false): Promise<void> {
@@ -202,8 +223,18 @@ export class ContactData {
 
     // Check if any values have actually changed
     let hasChanges = false;
+    const keyMapping: Record<string, string> = {}; // Maps update keys to actual frontmatter keys
+    
     for (const [key, value] of Object.entries(updates)) {
-      const currentValue = frontmatter[key];
+      // Find the actual key in frontmatter (case-insensitive)
+      const actualKey = this.findFrontmatterKey(frontmatter, key);
+      if (actualKey) {
+        keyMapping[key] = actualKey;
+      } else {
+        keyMapping[key] = key; // New key, use as-is
+      }
+      
+      const currentValue = actualKey ? frontmatter[actualKey] : undefined;
       const fieldType = this.extractFieldType(key);
       const valuesMatch = this.valuesAreEqual(currentValue, value, fieldType);
       console.debug(`[ContactData] Checking ${key}: current="${currentValue}", new="${value}", match=${valuesMatch}`);
@@ -220,6 +251,14 @@ export class ContactData {
 
     // Apply all updates
     for (const [key, value] of Object.entries(updates)) {
+      const actualKey = keyMapping[key];
+      
+      // If the actual key is different from the new key (case difference), remove the old one
+      if (actualKey !== key && actualKey in frontmatter) {
+        console.debug(`[ContactData] Removing old key with different case: ${actualKey}`);
+        delete frontmatter[actualKey];
+      }
+      
       if (value === '') {
         console.debug(`[ContactData] Deleting key: ${key}`);
         delete frontmatter[key];
