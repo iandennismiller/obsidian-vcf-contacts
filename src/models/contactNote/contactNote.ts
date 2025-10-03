@@ -547,10 +547,10 @@ export class ContactNote {
   }
 
   /**
-   * Check if contact should be updated from VCF based on REV timestamp
+   * Check if contact should be updated from vcard based on REV timestamp
    */
-  async shouldUpdateFromVCF(record: Record<string, any>): Promise<boolean> {
-    return this.revisionOps.shouldUpdateFromVCF(record);
+  async shouldUpdateFromVcard(record: Record<string, any>): Promise<boolean> {
+    return this.revisionOps.shouldUpdateFromVcard(record);
   }
 
   // === Contact Section Operations ===
