@@ -116,6 +116,8 @@ Obsidian front matter is YAML-like but strictly key-value (not hierarchical). Ar
 - The next friendship is added with the key `RELATED[1:friend]`
 - A 3-element set would include `RELATED[2:friend]` ... and so on
 
+**Technical Note**: The plugin uses the [yaml](https://www.npmjs.com/package/yaml) library for all YAML parsing and generation operations. The yaml library handles the parsing and serialization of these bracket-notation keys as flat key-value pairs, while custom code manages the semantic interpretation and generation of the indexing pattern.
+
 ### Deterministic Ordering
 
 When a set of relationships is mapped onto front matter:

@@ -286,6 +286,8 @@ When no kind is specified, fields use bare keys for the first field, then indexe
 
 Contact list items map to frontmatter keys using this format:
 
+**Technical Note**: The plugin uses the [yaml](https://www.npmjs.com/package/yaml) library for all YAML parsing and generation operations. The yaml library handles the parsing and serialization of these custom key formats as flat key-value pairs, while custom code manages the contact-specific key generation logic.
+
 **With kind:**
 ```yaml
 EMAIL[WORK]: contact@example.com

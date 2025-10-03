@@ -100,6 +100,7 @@ The plugin uses a processor-based architecture for data operations (`src/curator
 7. **Library Integration**: 
    - **Markdown**: Uses [marked](https://www.npmjs.com/package/marked) library for standard markdown parsing/rendering, with custom handling only for Obsidian-specific features (wiki-links) and contact data semantics
    - **vCard**: Uses [vcard4](https://www.npmjs.com/package/vcard4) library for all vCard 4.0 parsing/generation per RFC 6350, with custom code only for Obsidian frontmatter mapping
+   - **YAML**: Uses [yaml](https://www.npmjs.com/package/yaml) library for all YAML parsing/generation, with custom code only for Obsidian constraints (flat structure, custom key formats)
 
 ### Markdown Processing Architecture
 
@@ -205,6 +206,83 @@ This architecture:
 - **Supports extensions**: Automatic support for vCard 4.0 extensions
 - **Future-proof**: Can leverage vcard4 updates and new vCard features
 - **Multiple formats**: Can generate XML vCard (RFC 6351) and jCard (RFC 7095) if needed
+
+### YAML Processing Architecture
+
+As of version 2.3.0, the plugin uses the [yaml](https://www.npmjs.com/package/yaml) library for all YAML parsing and generation operations. This migration eliminates custom YAML parsing/generation utilities and provides robust, YAML 1.2-compliant handling.
+
+#### YAML Integration Layer
+
+The YAML processing is integrated throughout the codebase wherever frontmatter is parsed or generated:
+
+**Core Usage:**
+- `ContactData` (`contactData.ts`): Uses yaml library for frontmatter parsing and generation
+- `ContactNote` (`contactNote.ts`): Delegates YAML operations to yaml library
+- Test utilities: Uses yaml library instead of manual parsing
+
+**What yaml Library Handles:**
+- **Full YAML 1.2 Compliance**: Complete YAML specification implementation
+- **Parsing**: Reading and parsing YAML strings into JavaScript objects
+- **Generation**: Creating valid YAML output from JavaScript objects
+- **Type Preservation**: Maintaining proper types (strings, numbers, booleans, null)
+- **Comment Handling**: Preserving comments when possible
+- **Multi-line Strings**: Proper handling of multi-line string values
+- **Special Characters**: Automatic escaping and quoting as needed per YAML spec
+- **Anchors and Aliases**: Full support for YAML references
+- **Custom Tags**: Support for YAML tags if needed
+
+**Custom Integration Code (Obsidian-Specific):**
+- **Flat Structure Enforcement**: Ensures frontmatter remains flat (non-nested) as required by Obsidian
+- **Custom Key Format Handling**: Manages vCard-style keys with brackets and dots (`EMAIL[WORK]`, `ADR[HOME].STREET`, `RELATED[friend]`)
+- **Custom Indexing Logic**: Implements array indexing pattern (`RELATED[1:friend]`, `EMAIL[1]`)
+- **Frontmatter Boundary Detection**: Identifies YAML frontmatter delimiters (`---`) in markdown
+
+#### yaml Usage Pattern
+
+```typescript
+import { parse, stringify } from 'yaml';
+
+// Parsing YAML frontmatter
+const frontmatterContent = extractFrontmatter(markdownContent);
+const frontmatter = parse(frontmatterContent);
+// frontmatter is a JavaScript object with all parsed fields
+
+// Generating YAML frontmatter
+const frontmatter = {
+  UID: 'uuid-123',
+  FN: 'John Doe',
+  'EMAIL[WORK]': 'john@example.com',
+  'RELATED[friend]': 'urn:uuid:jane-456'
+};
+const yamlContent = stringify(frontmatter);
+// yamlContent is valid YAML string
+```
+
+#### Benefits of yaml Integration
+
+This architecture:
+- **Eliminates custom parsing**: All YAML parsing edge cases handled by yaml library
+- **Ensures spec compliance**: Full YAML 1.2 implementation guaranteed
+- **Improves reliability**: Battle-tested library with comprehensive test coverage
+- **Reduces maintenance**: Delegates YAML format concerns to maintained library
+- **Better type handling**: Automatic type inference and preservation
+- **Future-proof**: Can leverage yaml library updates and features
+- **Consistent behavior**: Same YAML handling as other YAML-based tools
+
+#### Obsidian Constraints
+
+**Important**: Obsidian's frontmatter has specific constraints:
+1. **Flat Structure**: Keys and values may not be nested; all keys must be at the root level
+2. **String Keys**: All keys are strings (though values can be various types)
+3. **No Complex Types**: Arrays are represented through custom indexing patterns
+
+The plugin maintains these constraints through custom key formatting:
+- Single values: `EMAIL: john@example.com`
+- First of multiple: `RELATED[friend]: urn:uuid:jane-456`
+- Additional values: `RELATED[1:friend]: urn:uuid:bob-789`
+- Dotted subfields: `ADR[HOME].STREET: 123 Main St`
+
+The yaml library handles parsing and generating these as flat key-value pairs, while custom code manages the semantic interpretation of the bracket and dot notation.
 
 ## Development Setup
 

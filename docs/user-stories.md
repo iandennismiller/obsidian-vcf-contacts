@@ -4,7 +4,7 @@ This document outlines user stories and use cases for managing contacts and rela
 
 ## Architecture: Library Integration
 
-**Technical Foundation**: The plugin leverages two key libraries to provide robust, standards-compliant functionality:
+**Technical Foundation**: The plugin leverages three key libraries to provide robust, standards-compliant functionality:
 
 ### Markdown Processing: [marked](https://www.npmjs.com/package/marked)
 
@@ -61,7 +61,39 @@ This means:
 - Structured field parsing (N, ADR, GENDER) is handled by vcard4
 - Custom code focuses only on Obsidian-specific integration (frontmatter, relationships, file sync)
 
-**User Benefit**: More reliable markdown and vCard handling with fewer edge cases, better standards compliance, and improved compatibility with external contact management systems.
+### YAML Processing: [yaml](https://www.npmjs.com/package/yaml)
+
+The plugin uses the yaml library for all YAML parsing, generation, and manipulation operations. This architectural decision provides:
+
+- **Full YAML 1.2 Compliance**: Complete implementation of YAML specification
+- **Reduced Complexity**: Eliminates custom YAML parsing/generation utilities and edge case handling
+- **Better Standards Compliance**: Follows YAML 1.2 spec exactly
+- **Improved Reliability**: Leverages a battle-tested, spec-compliant parser and generator
+- **Lower Maintenance**: Delegates YAML format concerns to a well-maintained library
+- **Robust Error Handling**: Detailed error messages for malformed YAML
+
+**Scope of yaml Library Usage**: The yaml library handles:
+1. **YAML Parsing**: Reading and parsing YAML frontmatter into JavaScript objects
+2. **YAML Generation**: Creating valid YAML output from JavaScript objects
+3. **Type Preservation**: Maintaining proper types (strings, numbers, booleans, null)
+4. **Comment Handling**: Preserving comments when possible
+5. **Multi-line Strings**: Proper handling of multi-line string values
+6. **Special Characters**: Escaping and quoting as needed per YAML spec
+
+**Scope of Custom Integration**: Custom code is limited to:
+1. **Obsidian Constraint Handling**: Ensuring frontmatter keys remain flat (non-nested) as required by Obsidian
+2. **Custom Indexing**: Managing bracket notation for arrays (`RELATED[friend]`, `RELATED[1:friend]`, etc.)
+3. **Key Format Preservation**: Maintaining vCard-style keys with brackets and dots (`EMAIL[WORK]`, `ADR[HOME].STREET`)
+4. **Frontmatter Extraction**: Identifying frontmatter boundaries in markdown files
+
+This means:
+- All YAML parsing is handled by yaml library
+- All YAML generation is handled by yaml library
+- Type conversion and validation is handled by yaml library
+- Special character escaping is handled by yaml library
+- Custom code focuses only on Obsidian-specific constraints (flat structure, custom key formats)
+
+**User Benefit**: More reliable YAML handling with fewer edge cases, better standards compliance, and improved compatibility with other tools that use YAML.
 
 ## VCF File Management Stories
 

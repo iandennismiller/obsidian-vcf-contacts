@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { App, TFile } from 'obsidian';
+import { parse as parseYaml } from 'yaml';
 import { ContactsPluginSettings } from 'src/plugin/settings';
 import { Contact } from '../../src/models';
 import { setApp, clearApp } from 'src/plugin/context/sharedAppContext';
@@ -119,30 +120,7 @@ describe('Curator Pipeline Integration', () => {
   function extractFrontmatter(content: string): Record<string, any> {
     const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
     if (!frontmatterMatch) return {};
-
-    const yaml = frontmatterMatch[1];
-    const frontmatter: any = {};
-    const lines = yaml.split('\n');
-    lines.forEach(line => {
-      // Match quoted keys with brackets: "key": value
-      // Or unquoted keys: key: value
-      const quotedMatch = line.match(/^"([^"]+)":\s*(.+)$/);
-      if (quotedMatch) {
-        const key = quotedMatch[1].trim();
-        const value = quotedMatch[2].trim();
-        frontmatter[key] = value;
-        return;
-      }
-      
-      // Fallback for unquoted keys
-      const unquotedMatch = line.match(/^([^:]+):\s*(.+)$/);
-      if (unquotedMatch) {
-        const key = unquotedMatch[1].trim();
-        const value = unquotedMatch[2].trim();
-        frontmatter[key] = value;
-      }
-    });
-    return frontmatter;
+    return parseYaml(frontmatterMatch[1]) ?? {};
   }
 
   /**

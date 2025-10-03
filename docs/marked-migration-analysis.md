@@ -233,7 +233,8 @@ function extractSection(content: string, sectionName: string): string | null {
 
 ```typescript
 // markdownOperations.ts, line 46
-return `---\n${stringifyYaml(frontmatter)}---\n#### Notes\n${myNote}\n${relatedSection}\n\n${hashtags} ${additionalTags}\n`;
+return `---\n${frontmatterYaml}---\n#### Notes\n${myNote}\n${relatedSection}\n\n${hashtags} ${additionalTags}\n`;
+// Note: frontmatterYaml is generated using yaml.stringify() from the yaml library
 
 // markdownOperations.ts, line 153
 return '## Related\n';
@@ -495,7 +496,7 @@ Lines 120-181 contain manual frontmatter and section extraction:
  */
 function extractFrontmatter(content: string): Record<string, any> {
   const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
-  // Manual YAML parsing...
+  // Use yaml.parse() from yaml library instead of manual parsing
 }
 
 /**
@@ -503,12 +504,12 @@ function extractFrontmatter(content: string): Record<string, any> {
  */
 function extractRelatedSection(content: string): string[] {
   const relatedMatch = content.match(/#### Related\n([\s\S]*?)(?:\n#{2,}|\n\n#|$)/i);
-  // Manual list parsing...
+  // Use marked library for section extraction instead of manual regex
 }
 ```
 
 **Recommendation:**
-After migration, these helpers could use marked-based extraction utilities, reducing duplication and improving reliability.
+After migration, these helpers should use the yaml library for frontmatter parsing and marked-based extraction utilities for section extraction, reducing duplication and improving reliability.
 
 ---
 
@@ -680,7 +681,7 @@ After migration, these helpers could use marked-based extraction utilities, redu
 
 - **Obsidian wiki-links:** `[[Contact Name]]` syntax
 - **Obsidian tags:** `#tag` syntax (though standard markdown also uses `#` for headings)
-- **Frontmatter:** YAML frontmatter parsing (use existing Obsidian API)
+- **Frontmatter:** YAML frontmatter parsing (use yaml library's parse() function)
 - **Domain semantics:** Email/phone/URL detection, relationship types
 
 ### Marked Extensions Available
