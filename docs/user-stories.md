@@ -653,11 +653,7 @@ The plugin should:
 
 **Detection Examples:**
 
-- `- work contact@example.com`
-  - Detects as: EMAIL
-  - Kind: work
-  - Frontmatter: `EMAIL[WORK]: contact@example.com`
-  - Display: `📧 work contact@example.com`
+All examples from the user input above produce the following results:
 
 - `- home 555-555-5555`
   - Detects as: TEL (phone)
@@ -665,17 +661,41 @@ The plugin should:
   - Frontmatter: `TEL[HOME]: +1-555-555-5555` (normalized)
   - Display: `📞 home +1-555-555-5555`
 
+- `- contact@example.com`
+  - Detects as: EMAIL
+  - Kind: null (no prefix)
+  - Frontmatter: `EMAIL: contact@example.com`
+  - Display: `📧 contact@example.com`
+
+- `- work contact@example.com`
+  - Detects as: EMAIL
+  - Kind: work
+  - Frontmatter: `EMAIL[WORK]: contact@example.com`
+  - Display: `📧 work contact@example.com`
+
+- `- 123 Some street`
+  - Detects as: ADR (address)
+  - Kind: null (no prefix)
+  - Frontmatter: `ADR.STREET: 123 Some street`
+  - Display: `🏠 123 Some street`
+
+- `- 123 Some street, Town`
+  - Detects as: ADR (address)
+  - Kind: null (no prefix)
+  - Frontmatter: `ADR.STREET: 123 Some street`, `ADR.LOCALITY: Town`
+  - Display: `🏠 123 Some street, Town`
+
+- `- http://example.com`
+  - Detects as: URL
+  - Kind: null (no prefix)
+  - Frontmatter: `URL: http://example.com`
+  - Display: `🌐 http://example.com`
+
 - `- personal http://example.com`
   - Detects as: URL
   - Kind: personal
   - Frontmatter: `URL[PERSONAL]: http://example.com`
   - Display: `🌐 personal http://example.com`
-
-- `- 123 Some street, Town`
-  - Detects as: ADR (address)
-  - Kind: none (first address is bare)
-  - Frontmatter: `ADR.STREET: 123 Some street`, `ADR.LOCALITY: Town`
-  - Display: `🏠 123 Some street, Town`
 
 **Supported Kinds:**
 
@@ -687,21 +707,56 @@ The "kind" prefix is optional and can be any label the user wants:
 
 If no kind is specified, fields use bare keys for the first field (e.g., `EMAIL`, `TEL`), then indexed for subsequent fields (e.g., `EMAIL[1]`, `EMAIL[2]`).
 
-**General Parsing Method:**
+**Implementation Details:**
 
-1. For each list item starting with `-`:
-   - Remove the list marker and trim whitespace
-   - Use `identifyFieldType()` to determine field type (EMAIL, TEL, URL, ADR)
-   - If type detected, try to extract kind prefix from beginning of line
-   - Split into kind and value components
-   - Create appropriate frontmatter key: `FIELDTYPE[KIND]` or `FIELDTYPE[INDEX]`
-   - Normalize value if needed (e.g., phone numbers to international format)
+The plugin provides a general-purpose parsing method and field-specific parsers:
 
-2. Use separate parsing methods for each field type:
-   - **parseEmailLine()**: Extract kind and email from line
-   - **parsePhoneLine()**: Extract kind, parse and normalize phone number
-   - **parseUrlLine()**: Extract kind, ensure protocol is present
-   - **parseAddressLine()**: Handle multi-line addresses with components
+**Core Function:**
+- **`parseContactListItem(line: string): ParsedContactLine`**
+  - General parser that auto-detects field type and extracts optional kind prefix
+  - Returns: `{ fieldType: 'EMAIL' | 'TEL' | 'URL' | 'ADR' | null, kind: string | null, value: string }`
+  - Handles list markers (strips `-` prefix automatically)
+  - Uses smart detection logic (see below)
+
+**Field-Specific Parsers:**
+- **`parseEmailLine(line: string): { kind: string | null; value: string }`**
+  - Parses email lines with optional kind prefix
+  - Normalizes email to lowercase
+  - Returns empty if line is not an email
+
+- **`parsePhoneLine(line: string): { kind: string | null; value: string }`**
+  - Parses phone lines with optional kind prefix
+  - Normalizes phone numbers to international format (e.g., `+1-555-123-4567`)
+  - Returns empty if line is not a phone number
+
+- **`parseUrlLine(line: string): { kind: string | null; value: string }`**
+  - Parses URL lines with optional kind prefix
+  - Normalizes URLs by adding protocol if missing (defaults to `https://`)
+  - Returns empty if line is not a URL
+
+- **`parseAddressLine(line: string): { kind: string | null; value: string }`**
+  - Parses address lines with optional kind prefix
+  - Extracts kind only when value starts with a digit (typical for addresses)
+  - Returns empty if line is not an address
+
+**Smart Detection Logic:**
+
+The parser uses a priority-based approach for reliable field type detection:
+
+1. **Check whole line first**: If the entire line matches EMAIL/TEL/URL pattern → no kind prefix
+   - Example: `contact@example.com` → EMAIL with no kind
+
+2. **Try removing first word**: If removing the first word reveals EMAIL/TEL/URL → first word is the kind
+   - Example: `work contact@example.com` → EMAIL with kind "work"
+   - Example: `home 555-555-5555` → TEL with kind "home"
+
+3. **Address handling**: For addresses (ADR), extract kind only if:
+   - First word is alphabetic (potential kind label)
+   - AND value part starts with a digit (typical for addresses like "123 Main St")
+   - Example: `home 123 Main St` → ADR with kind "home"
+   - Example: `some random text` → ADR with no kind (whole line is value)
+
+4. **Fallback**: Unidentifiable text is treated as address (ADR) type
 
 **Benefits:**
 
@@ -711,11 +766,14 @@ If no kind is specified, fields use bare keys for the first field (e.g., `EMAIL`
 - Auto-detection reduces errors
 - Parser is forgiving of formatting variations
 - Consistent with markdown list conventions
+- Separate methods allow custom processing per field type
+- Normalization ensures consistent data format
 
 **Integration:**
 
 This parsing method works within the existing Contact Section Sync feature:
-- ContactToFrontMatterProcessor uses this parsing
-- FrontMatterToContactProcessor generates this format
+- ContactToFrontMatterProcessor uses `parseContactListItem()` for parsing
+- FrontMatterToContactProcessor generates this format for display
 - Bidirectional sync maintains consistency
 - Works alongside other Contact section formats
+- All functions exported from `src/models/contactNote` module
