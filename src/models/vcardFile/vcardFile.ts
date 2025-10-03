@@ -225,21 +225,21 @@ export class VcardFile {
   // ============================================================================
 
   /**
-   * Lists all VCF files in the specified folder.
+   * Lists all vcard files in the specified folder.
    * 
-   * @deprecated Use VCardFileOperations.listVCFFiles() directly
-   * @param {string} folderPath - Path to search for VCF files
-   * @returns {Promise<string[]>} Array of full file paths to VCF files
+   * @deprecated Use VCardFileOperations.listVcardFiles() directly
+   * @param {string} folderPath - Path to search for vcard files
+   * @returns {Promise<string[]>} Array of full file paths to vcard files
    */
-  static async listVCFFiles(folderPath: string): Promise<string[]> {
-    return VCardFileOperations.listVCFFiles(folderPath);
+  static async listVcardFiles(folderPath: string): Promise<string[]> {
+    return VCardFileOperations.listVcardFiles(folderPath);
   }
 
   /**
-   * Gets file statistics for a VCF file.
+   * Gets file statistics for a vcard file.
    * 
    * @deprecated Use VCardFileOperations.getFileStats() directly
-   * @param {string} filePath - Path to the VCF file
+   * @param {string} filePath - Path to the vcard file
    * @returns {Promise<{ mtimeMs: number } | null>} File stats or null if error
    */
   static async getFileStats(filePath: string): Promise<{ mtimeMs: number } | null> {
@@ -258,10 +258,10 @@ export class VcardFile {
   }
 
   /**
-   * Searches for a UID within VCF file content.
+   * Searches for a UID within vcard file content.
    * 
    * @deprecated Use VCardFileOperations.containsUID() directly
-   * @param {string} content - VCF file content to search
+   * @param {string} content - vcard file content to search
    * @param {string} uid - UID to search for
    * @returns {boolean} True if UID is found in content
    */
@@ -270,37 +270,37 @@ export class VcardFile {
   }
 
   /**
-   * Generates a sanitized filename for a VCF file.
+   * Generates a sanitized filename for a vcard file.
    * 
-   * @deprecated Use VCardFileOperations.generateVCFFilename() directly
+   * @deprecated Use VCardFileOperations.generateVcardFilename() directly
    * @param {string} contactName - Contact name to base filename on
    * @returns {string} Sanitized filename with .vcf extension
    */
-  static generateVCFFilename(contactName: string): string {
-    return VCardFileOperations.generateVCFFilename(contactName);
+  static generateVcardFilename(contactName: string): string {
+    return VCardFileOperations.generateVcardFilename(contactName);
   }
 
   /**
-   * Reads VCF file content from disk.
+   * Reads vcard file content from disk.
    * 
-   * @deprecated Use VCardFileOperations.readVCFFile() directly
-   * @param {string} filePath - Path to VCF file
+   * @deprecated Use VCardFileOperations.readVcardFile() directly
+   * @param {string} filePath - Path to vcard file
    * @returns {Promise<string | null>} File content or null if error
    */
-  static async readVCFFile(filePath: string): Promise<string | null> {
-    return VCardFileOperations.readVCFFile(filePath);
+  static async readVcardFile(filePath: string): Promise<string | null> {
+    return VCardFileOperations.readVcardFile(filePath);
   }
 
   /**
-   * Writes content to a VCF file.
+   * Writes content to a vcard file.
    * 
-   * @deprecated Use VCardFileOperations.writeVCFFile() directly
+   * @deprecated Use VCardFileOperations.writeVcardFile() directly
    * @param {string} filePath - Path where to write the file
-   * @param {string} content - VCF content to write
+   * @param {string} content - vcard content to write
    * @returns {Promise<boolean>} True if write was successful
    */
-  static async writeVCFFile(filePath: string, content: string): Promise<boolean> {
-    return VCardFileOperations.writeVCFFile(filePath, content);
+  static async writeVcardFile(filePath: string, content: string): Promise<boolean> {
+    return VCardFileOperations.writeVcardFile(filePath, content);
   }
 
   /**

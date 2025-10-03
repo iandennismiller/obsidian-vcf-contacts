@@ -54,17 +54,17 @@ export class VcardManager {
   }
 
   /**
-   * Checks if a VCF file should be ignored based on filename
+   * Checks if a vcard file should be ignored based on filename
    * 
-   * @param filePath - Full path to the VCF file
+   * @param filePath - Full path to the vcard file
    * @returns true if the file should be ignored
    */
   shouldIgnoreFile(filePath: string): boolean {
     const filename = path.basename(filePath);
-    const shouldIgnore = this.settings.vcfIgnoreFilenames.includes(filename);
+    const shouldIgnore = this.settings.vcardIgnoreFilenames.includes(filename);
     
     if (shouldIgnore) {
-      // Skipping ignored VCF file
+      // Skipping ignored vcard file
     }
     
     return shouldIgnore;
@@ -77,7 +77,7 @@ export class VcardManager {
    * @returns true if the UID should be ignored
    */
   shouldIgnoreUID(uid: string): boolean {
-    const shouldIgnore = this.settings.vcfIgnoreUIDs.includes(uid);
+    const shouldIgnore = this.settings.vcardIgnoreUIDs.includes(uid);
     
     if (shouldIgnore) {
       // Skipping ignored UID
@@ -192,7 +192,7 @@ export class VcardManager {
    * @param knownFiles - Map of known file states for change detection
    * @returns Promise resolving to array of file paths that need processing
    */
-  async scanVCFFolder(knownFiles: Map<string, VCardFileInfo>): Promise<string[]> {
+  async scanVcardFolder(knownFiles: Map<string, VCardFileInfo>): Promise<string[]> {
     try {
       // Check if folder exists
       const folderExists = await this.watchFolderExists();
@@ -233,22 +233,22 @@ export class VcardManager {
       return filesToProcess;
 
     } catch (error: any) {
-      console.debug(`[VcardManager] Error scanning VCF folder: ${error.message}`);
+      console.debug(`[VcardManager] Error scanning vcard folder: ${error.message}`);
       return [];
     }
   }
 
   /**
-   * Processes VCF file contents and returns contact records that need processing.
+   * Processes vcard file contents and returns contact records that need processing.
    * 
-   * This method handles the core VCF processing logic that was previously
-   * duplicated in syncWatcher. It reads, parses, and filters VCF content
+   * This method handles the core vcard processing logic that was previously
+   * duplicated in syncWatcher. It reads, parses, and filters vcard content
    * based on ignore settings.
    * 
-   * @param {string} filePath - Path to the VCF file to process
+   * @param {string} filePath - Path to the vcard file to process
    * @returns {Promise<Array>} Promise resolving to array of [slug, record] tuples for valid contacts
    */
-  async processVCFContents(filePath: string): Promise<Array<[string, VCardForObsidianRecord]>> {
+  async processVcardContents(filePath: string): Promise<Array<[string, VCardForObsidianRecord]>> {
     try {
       // Read and parse VCF content
       const parsedEntries = await this.readAndParseVCard(filePath);
@@ -272,20 +272,20 @@ export class VcardManager {
       return validEntries;
 
     } catch (error: any) {
-      console.debug(`[VcardManager] Error processing VCF file ${filePath}: ${error.message}`);
+      console.debug(`[VcardManager] Error processing vcard file ${filePath}: ${error.message}`);
       return [];
     }
   }
 
   /**
-   * Check if VCF monitoring is enabled based on settings
+   * Check if vcard monitoring is enabled based on settings
    */
   isMonitoringEnabled(): boolean {
-    return this.settings.vcfWatchEnabled === true;
+    return this.settings.vcardWatchEnabled === true;
   }
 
   /**
-   * Process a newly added VCF file in the watch folder
+   * Process a newly added vcard file in the watch folder
    */
   async processNewFile(filePath: string, content: string): Promise<{ processed: boolean; action: string; contactUID?: string; error?: string }> {
     try {
@@ -293,10 +293,10 @@ export class VcardManager {
         return { processed: false, action: 'ignore', error: 'File ignored by configuration' };
       }
 
-      // Validate VCF content first
-      const validation = await this.validateVcfContent(content);
+      // Validate vcard content first
+      const validation = await this.validateVcardContent(content);
       if (!validation.isValid) {
-        return { processed: false, action: 'error', error: 'Invalid VCF content: ' + validation.errors.join(', ') };
+        return { processed: false, action: 'error', error: 'Invalid vcard content: ' + validation.errors.join(', ') };
       }
 
       // Parse VCF content directly
@@ -323,7 +323,7 @@ export class VcardManager {
   }
 
   /**
-   * Process a modified VCF file in the watch folder
+   * Process a modified vcard file in the watch folder
    */
   async processModifiedFile(filePath: string, content: string): Promise<{ processed: boolean; action: string; contactUID?: string; error?: string; hasNewer?: boolean }> {
     try {
@@ -346,10 +346,10 @@ export class VcardManager {
       }
 
       const firstContactUID = entries[0]?.[1]?.UID;
-      const vcfRev = entries[0]?.[1]?.REV;
+      const vcardRev = entries[0]?.[1]?.REV;
       
-      // Check if VCF has newer revision - assume true for now since we'd need to query existing contact
-      const hasNewer = vcfRev ? true : undefined;
+      // Check if vcard has newer revision - assume true for now since we'd need to query existing contact
+      const hasNewer = vcardRev ? true : undefined;
 
       return { processed: true, action: 'update', contactUID: firstContactUID, hasNewer };
     } catch (error: any) {
@@ -358,7 +358,7 @@ export class VcardManager {
   }
 
   /**
-   * Process a deleted VCF file from the watch folder
+   * Process a deleted vcard file from the watch folder
    */
   async processDeletedFile(filePath: string, uid?: string): Promise<{ processed: boolean; action: string; contactUID?: string }> {
     // File has been deleted from filesystem - acknowledge it
@@ -366,16 +366,16 @@ export class VcardManager {
   }
 
   /**
-   * Get the polling interval for VCF monitoring
+   * Get the polling interval for vcard monitoring
    */
   getPollingInterval(): number {
-    return this.settings.vcfWatchPollingInterval ? this.settings.vcfWatchPollingInterval * 1000 : 5000; // Convert seconds to milliseconds, default 5 seconds
+    return this.settings.vcardWatchPollingInterval ? this.settings.vcardWatchPollingInterval * 1000 : 5000; // Convert seconds to milliseconds, default 5 seconds
   }
 
   /**
-   * Validate VCF content for syntax errors
+   * Validate vcard content for syntax errors
    */
-  async validateVcfContent(content: string): Promise<{ isValid: boolean; errors: string[] }> {
+  async validateVcardContent(content: string): Promise<{ isValid: boolean; errors: string[] }> {
     const errors: string[] = [];
 
     try {

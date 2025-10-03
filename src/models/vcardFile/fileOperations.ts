@@ -7,9 +7,9 @@ import * as path from 'path';
  */
 export class VCardFileOperations {
   /**
-   * Lists all VCF files in the specified folder
+   * Lists all vcard files in the specified folder
    */
-  static async listVCFFiles(folderPath: string): Promise<string[]> {
+  static async listVcardFiles(folderPath: string): Promise<string[]> {
     try {
       const entries = await fs.readdir(folderPath, { withFileTypes: true });
       if (!entries || !Array.isArray(entries)) {
@@ -19,13 +19,13 @@ export class VCardFileOperations {
         .filter(entry => entry.isFile() && entry.name.toLowerCase().endsWith('.vcf'))
         .map(entry => path.join(folderPath, entry.name));
     } catch (error: any) {
-      console.debug(`[VCardFileOperations] Error listing VCF files: ${error.message}`);
+      console.debug(`[VCardFileOperations] Error listing vcard files: ${error.message}`);
       return [];
     }
   }
 
   /**
-   * Gets file statistics for a VCF file
+   * Gets file statistics for a vcard file
    */
   static async getFileStats(filePath: string): Promise<{ mtimeMs: number } | null> {
     try {
@@ -53,46 +53,46 @@ export class VCardFileOperations {
   }
 
   /**
-   * Searches for a UID within VCF file content
+   * Searches for a UID within vcard file content
    */
   static containsUID(content: string, uid: string): boolean {
     return content.includes(`UID:${uid}`);
   }
 
   /**
-   * Generates a sanitized filename for a VCF file based on contact name
+   * Generates a sanitized filename for a vcard file based on contact name
    */
-  static generateVCFFilename(contactName: string): string {
+  static generateVcardFilename(contactName: string): string {
     const sanitizedName = contactName.replace(/[^a-zA-Z0-9-_]/g, '_');
     return `${sanitizedName}.vcf`;
   }
 
   /**
-   * Reads VCF file content
+   * Reads vcard file content
    */
-  static async readVCFFile(filePath: string): Promise<string | null> {
+  static async readVcardFile(filePath: string): Promise<string | null> {
     try {
       const content = await fs.readFile(filePath, 'utf-8');
       if (!content) {
-        console.debug(`[VCardFileOperations] Empty or unreadable VCF file: ${path.basename(filePath)}`);
+        console.debug(`[VCardFileOperations] Empty or unreadable vcard file: ${path.basename(filePath)}`);
         return null;
       }
       return content;
     } catch (error: any) {
-      console.debug(`[VCardFileOperations] Error reading VCF file ${filePath}: ${error.message}`);
+      console.debug(`[VCardFileOperations] Error reading vcard file ${filePath}: ${error.message}`);
       return null;
     }
   }
 
   /**
-   * Writes content to a VCF file
+   * Writes content to a vcard file
    */
-  static async writeVCFFile(filePath: string, content: string): Promise<boolean> {
+  static async writeVcardFile(filePath: string, content: string): Promise<boolean> {
     try {
       await fs.writeFile(filePath, content, 'utf-8');
       return true;
     } catch (error: any) {
-      console.debug(`[VCardFileOperations] Error writing VCF file ${filePath}: ${error.message}`);
+      console.debug(`[VCardFileOperations] Error writing vcard file ${filePath}: ${error.message}`);
       return false;
     }
   }
