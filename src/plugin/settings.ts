@@ -22,6 +22,8 @@ export interface ContactsPluginSettings {
   vcfIgnoreUIDs: string[];
   // Contact Section Template Settings
   contactSectionTemplate: string;
+  // Contact Section Sync Settings
+  contactSectionSyncConfirmation: boolean;
   [key: string]: string|boolean|number|string[];
 }
 
@@ -70,6 +72,8 @@ export const DEFAULT_SETTINGS: ContactsPluginSettings = {
 {{#FIRST}}{{LABEL}} {{VALUE}}{{/FIRST}}
 
 {{/URL-}}`,
+  // Contact Section Sync Default
+  contactSectionSyncConfirmation: true,
   ...curatorSettingDefaults
 }
 
@@ -344,6 +348,19 @@ export class ContactsSettingTab extends PluginSettingTab {
     // Contact Section Template
     const contactTemplateTitle = containerEl.createEl("h3", { text: "Contact Section Template" });
     contactTemplateTitle.style.marginTop = "2em";
+
+    // Contact Section Sync Confirmation
+    new Setting(containerEl)
+      .setName("Confirm before syncing Contact section to frontmatter")
+      .setDesc("When enabled, shows a confirmation dialog listing which fields will be synced from the Contact section to frontmatter before applying changes.")
+      .addToggle(toggle =>
+        toggle
+          .setValue(this.plugin.settings.contactSectionSyncConfirmation)
+          .onChange(async (value) => {
+            this.plugin.settings.contactSectionSyncConfirmation = value;
+            await this.plugin.saveSettings();
+            setSettings(this.plugin.settings);
+          }));
 
     const contactTemplateDesc = document.createDocumentFragment();
     contactTemplateDesc.append(

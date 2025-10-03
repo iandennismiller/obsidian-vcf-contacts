@@ -8,6 +8,7 @@
 
 import { ContactData } from './contactData';
 import { ContactsPluginSettings } from 'src/plugin/settings';
+import { identifyFieldType } from './fieldPatternDetection';
 
 /**
  * Represents a parsed contact field from the Contact section
@@ -174,27 +175,28 @@ export class ContactSectionOperations {
       // Parse field lines based on current type
       if (currentFieldType && currentFieldType !== 'ADR') {
         // Parse simple fields (EMAIL, TEL, URL)
-        // Try new format first: "Label value" (no dash, no colon)
-        const newFormatMatch = line.match(/^([A-Za-z]+)\s+(.+)$/);
-        if (newFormatMatch) {
-          const [, label, value] = newFormatMatch;
+        
+        // Try old format first: "- Label: Value" or "Label: Value"
+        const colonMatch = line.match(/^-?\s*([^:]+):\s*(.+)$/);
+        if (colonMatch) {
+          const [, label, value] = colonMatch;
           fields.push({
             fieldType: currentFieldType,
             fieldLabel: label.trim(),
             value: value.trim()
           });
         } else {
-          // Try old format: "- Label: Value"
-          const oldFormatMatch = line.match(/^-\s*([^:]+):\s*(.+)$/);
-          if (oldFormatMatch) {
-            const [, label, value] = oldFormatMatch;
+          // Try new format: "Label value" (space-separated, no colon)
+          const spaceMatch = line.match(/^([A-Za-z]+)\s+(.+)$/);
+          if (spaceMatch) {
+            const [, label, value] = spaceMatch;
             fields.push({
               fieldType: currentFieldType,
               fieldLabel: label.trim(),
               value: value.trim()
             });
           } else {
-            // Try without label (just "- value")
+            // Try without label (just "- value" or bare value)
             const simpleMatch = line.match(/^-\s*(.+)$/);
             if (simpleMatch) {
               // Use numeric index for unlabeled fields
@@ -203,6 +205,15 @@ export class ContactSectionOperations {
                 fieldType: currentFieldType,
                 fieldLabel: String(existingCount + 1),
                 value: simpleMatch[1].trim()
+              });
+            } else if (!line.startsWith('(') && !line.startsWith('#')) {
+              // Bare value without any prefix
+              // This handles cases where user just types the value
+              const existingCount = fields.filter(f => f.fieldType === currentFieldType).length;
+              fields.push({
+                fieldType: currentFieldType,
+                fieldLabel: String(existingCount + 1),
+                value: line.trim()
               });
             }
           }
@@ -231,6 +242,56 @@ export class ContactSectionOperations {
     // Flush any remaining address
     if (currentFieldType === 'ADR' && addressBuffer.length > 0) {
       this.parseAddressBuffer(addressBuffer, currentLabel || '1', fields);
+    }
+
+    // Auto-detect untagged fields using pattern detection
+    // This helps when users add contact info without proper section headers
+    const lines2 = contactContent.split('\n');
+    for (let i = 0; i < lines2.length; i++) {
+      const line = lines2[i].trim();
+      if (!line) continue;
+      
+      // Skip lines we've already processed (headers and prefixed lines)
+      if (line.match(/^(?:[\p{Emoji}\uFE0F]+\s*)?(Email|Emails|Phone|Phones|Address|Addresses|Website|Websites|URL)s?$/ui)) {
+        continue;
+      }
+      
+      // Skip lines that start with dash (already parsed above)
+      if (line.startsWith('-')) {
+        continue;
+      }
+      
+      // Skip lines with label: value format (already parsed above)
+      // But allow URLs with protocol (https://example.com)
+      const hasLabelColonFormat = line.match(/^[A-Za-z]+\s*:\s+[^\/]/);
+      if (hasLabelColonFormat) {
+        continue;
+      }
+      
+      // Skip lines that are part of addresses
+      if (line.startsWith('(')) {
+        continue;
+      }
+      
+      // Try to identify field type from the value
+      const detectedType = identifyFieldType(line);
+      if (detectedType) {
+        // Check if we already parsed this field
+        const alreadyParsed = fields.some(f => 
+          f.value === line.trim()
+        );
+        
+        if (!alreadyParsed) {
+          // Add auto-detected field
+          const existingCount = fields.filter(f => f.fieldType === detectedType).length;
+          fields.push({
+            fieldType: detectedType,
+            fieldLabel: String(existingCount + 1),
+            value: line.trim()
+          });
+          console.debug(`[ContactSectionOperations] Auto-detected ${detectedType}: ${line.trim()}`);
+        }
+      }
     }
 
     console.debug(`[ContactSectionOperations] Parsed ${fields.length} contact fields`);
