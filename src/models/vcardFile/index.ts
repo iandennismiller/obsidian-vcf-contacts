@@ -36,21 +36,6 @@ export {
 } from './fileOperations';
 
 // ============================================================================
-// vcard4 Adapter Functions
-// ============================================================================
-
-export {
-  /** Convert vcard4 parsed object to Obsidian frontmatter */
-  vcard4ToObsidianFrontmatter,
-  /** Convert Obsidian frontmatter to vcard4 VCARD object */
-  obsidianFrontmatterToVcard4,
-  /** Parse vCard using vcard4 library */
-  parseVcardWithVcard4,
-  /** Generate vCard string from frontmatter using vcard4 */
-  generateVcardFromFrontmatter
-} from './vcard4Adapter';
-
-// ============================================================================
 // Types and Interfaces
 // ============================================================================
 
