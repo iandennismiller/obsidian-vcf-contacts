@@ -9,7 +9,7 @@
 import { marked } from 'marked';
 import { ContactData } from './contactData';
 import { ContactsPluginSettings } from 'src/plugin/settings';
-import { identifyFieldType } from './fieldPatternDetection';
+import { identifyFieldType, parseContactListItem } from './fieldPatternDetection';
 import { BaseMarkdownSectionOperations } from './baseMarkdownSectionOperations';
 import { SECTION_NAMES, FIELD_DISPLAY } from './markdownConstants';
 
@@ -261,41 +261,39 @@ export class ContactSectionOperations extends BaseMarkdownSectionOperations {
         continue;
       }
       
-      // Skip lines that start with dash (already parsed above)
-      if (line.startsWith('-')) {
+      // Auto-detection for lines not in a typed section
+      // Skip lines that are part of addresses or comments
+      if (line.startsWith('(') || line.startsWith('#')) {
         continue;
       }
       
-      // Skip lines with label: value format (already parsed above)
-      // But allow URLs with protocol (https://example.com)
-      const hasLabelColonFormat = line.match(/^[A-Za-z]+\s*:\s+[^\/]/);
-      if (hasLabelColonFormat) {
-        continue;
-      }
+      // Use the new parseContactListItem function to detect and parse the line
+      const parsed = parseContactListItem(line);
       
-      // Skip lines that are part of addresses
-      if (line.startsWith('(')) {
-        continue;
-      }
-      
-      // Try to identify field type from the value
-      const detectedType = identifyFieldType(line);
-      if (detectedType) {
+      if (parsed.fieldType) {
         // Check if we already parsed this field
         const alreadyParsed = fields.some(f => 
-          f.value === line.trim()
+          f.value === parsed.value || f.value === line.trim()
         );
         
         if (!alreadyParsed) {
-          // Add auto-detected field
-          // First field has no index (bare), subsequent fields use 1, 2, 3...
-          const existingCount = fields.filter(f => f.fieldType === detectedType).length;
+          // Determine the field label
+          let fieldLabel: string;
+          if (parsed.kind) {
+            // Has explicit kind from parsing
+            fieldLabel = parsed.kind;
+          } else {
+            // No kind - use bare for first, indexed for subsequent
+            const existingCount = fields.filter(f => f.fieldType === parsed.fieldType).length;
+            fieldLabel = existingCount === 0 ? '' : String(existingCount);
+          }
+          
           fields.push({
-            fieldType: detectedType,
-            fieldLabel: existingCount === 0 ? '' : String(existingCount),
-            value: line.trim()
+            fieldType: parsed.fieldType,
+            fieldLabel: fieldLabel,
+            value: parsed.value
           });
-          console.debug(`[ContactSectionOperations] Auto-detected ${detectedType}: ${line.trim()}`);
+          console.debug(`[ContactSectionOperations] Auto-detected ${parsed.fieldType}: ${parsed.value}`);
         }
       }
     }
