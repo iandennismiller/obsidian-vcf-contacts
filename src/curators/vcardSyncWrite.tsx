@@ -145,7 +145,7 @@ export const VcardSyncPostProcessor: CuratorProcessor = {
       }
       
       // Queue VCard write instead of writing directly
-      await vcardManager.queueVcardWrite(contactUID, vcfContent);
+      await vcardManager.queueVcardWrite(contactUID, vcardContent);
       
       console.debug(`[VcardSyncPostProcessor] Successfully queued ${action} VCard for ${contact.file.name} (UID: ${contactUID})`);
       

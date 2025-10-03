@@ -47,10 +47,10 @@ export class VcardManager {
   }
 
   /**
-   * Get the VCF watch folder path from settings
+   * Get the vcard watch folder path from settings
    */
   getWatchFolder(): string {
-    return this.settings.vcfWatchFolder || '';
+    return this.settings.vcardWatchFolder || '';
   }
 
   /**
