@@ -99,6 +99,19 @@ export class ContactSectionOperations {
     this.contactData = contactData;
   }
 
+  /**
+   * Format a field label for display
+   * - Removes numeric index prefix (e.g., "1:WORK" -> "WORK")
+   * - Converts to title case (e.g., "WORK" -> "Work")
+   */
+  private formatFieldLabel(label: string): string {
+    // Remove numeric index prefix if present (e.g., "1:WORK" -> "WORK")
+    const withoutIndex = label.replace(/^\d+:/, '');
+    
+    // Convert to title case
+    return withoutIndex.charAt(0).toUpperCase() + withoutIndex.slice(1).toLowerCase();
+  }
+
   // === Contact Section Parsing ===
 
   /**
@@ -157,26 +170,38 @@ export class ContactSectionOperations {
 
       // Parse field lines based on current type
       if (currentFieldType && currentFieldType !== 'ADR') {
-        // Parse simple fields (EMAIL, TEL, URL) with pattern "- Label: Value"
-        const fieldMatch = line.match(/^-\s*([^:]+):\s*(.+)$/);
-        if (fieldMatch) {
-          const [, label, value] = fieldMatch;
+        // Parse simple fields (EMAIL, TEL, URL)
+        // Try new format first: "Label value" (no dash, no colon)
+        const newFormatMatch = line.match(/^([A-Za-z]+)\s+(.+)$/);
+        if (newFormatMatch) {
+          const [, label, value] = newFormatMatch;
           fields.push({
             fieldType: currentFieldType,
             fieldLabel: label.trim(),
             value: value.trim()
           });
         } else {
-          // Try without label (just "- value")
-          const simpleMatch = line.match(/^-\s*(.+)$/);
-          if (simpleMatch) {
-            // Use numeric index for unlabeled fields
-            const existingCount = fields.filter(f => f.fieldType === currentFieldType).length;
+          // Try old format: "- Label: Value"
+          const oldFormatMatch = line.match(/^-\s*([^:]+):\s*(.+)$/);
+          if (oldFormatMatch) {
+            const [, label, value] = oldFormatMatch;
             fields.push({
               fieldType: currentFieldType,
-              fieldLabel: String(existingCount + 1),
-              value: simpleMatch[1].trim()
+              fieldLabel: label.trim(),
+              value: value.trim()
             });
+          } else {
+            // Try without label (just "- value")
+            const simpleMatch = line.match(/^-\s*(.+)$/);
+            if (simpleMatch) {
+              // Use numeric index for unlabeled fields
+              const existingCount = fields.filter(f => f.fieldType === currentFieldType).length;
+              fields.push({
+                fieldType: currentFieldType,
+                fieldLabel: String(existingCount + 1),
+                value: simpleMatch[1].trim()
+              });
+            }
           }
         }
       } else if (currentFieldType === 'ADR') {
@@ -302,13 +327,17 @@ export class ContactSectionOperations {
 
     for (const group of groups) {
       markdown += `${group.icon} ${group.displayName}\n`;
-      for (const field of group.fields) {
+      
+      // Only display the first field of each type by default
+      const fieldsToDisplay = group.fields.slice(0, 1);
+      
+      for (const field of fieldsToDisplay) {
         if (field.isMultiLine) {
           // Multi-line field (e.g., address)
-          markdown += `(${field.label})\n${field.value}\n\n`;
+          markdown += `(${this.formatFieldLabel(field.label)})\n${field.value}\n\n`;
         } else {
-          // Single-line field
-          markdown += `- ${field.label}: ${field.value}\n`;
+          // Single-line field - format: "Label value" (no colon after label)
+          markdown += `${this.formatFieldLabel(field.label)} ${field.value}\n`;
         }
       }
       markdown += '\n';

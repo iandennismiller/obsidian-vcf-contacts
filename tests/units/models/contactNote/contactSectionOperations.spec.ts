@@ -263,8 +263,9 @@ EMAIL[WORK]: test@work.com
 
       expect(section).toContain('## Contact');
       expect(section).toContain('📧 Email');
-      expect(section).toContain('HOME: test@home.com');
-      expect(section).toContain('WORK: test@work.com');
+      expect(section).toContain('Home test@home.com');
+      // Only first field should be shown by default
+      expect(section).not.toContain('Work');
     });
 
     it('should generate Contact section from phone frontmatter', async () => {
@@ -291,7 +292,9 @@ TEL[HOME]: +1-555-5678
 
       expect(section).toContain('## Contact');
       expect(section).toContain('📞 Phone');
-      expect(section).toContain('CELL: +1-555-1234');
+      expect(section).toContain('Cell +1-555-1234');
+      // Only first field should be shown by default
+      expect(section).not.toContain('Home');
     });
 
     it('should generate Contact section with address fields', async () => {
