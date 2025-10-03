@@ -205,7 +205,7 @@ When contributing code:
 
 - [Vitest Documentation](https://vitest.dev/)
 - [Istanbul Coverage](https://istanbul.js.org/)
-- [Testing Best Practices](./development.md#testing-and-code-quality)
+- [Testing Best Practices](./development/testing.md)
 
 ---
 

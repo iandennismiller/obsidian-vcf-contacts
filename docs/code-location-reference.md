@@ -446,5 +446,5 @@ After each refactoring step:
 
 - **Main Analysis:** `docs/marked-migration-analysis.md`
 - **Quick Reference:** `docs/refactoring-opportunities.md`
-- **Marked Documentation:** `reference/marked/`
-- **Contact List Parsing Spec:** `docs/contact-list-parsing-spec.md`
+- **Marked Documentation:** `references/marked/`
+- **Contact List Parsing Spec:** `docs/specifications.md#contact-list-parsing`
