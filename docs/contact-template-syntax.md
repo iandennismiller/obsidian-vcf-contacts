@@ -90,7 +90,7 @@ Variable tags are replaced with actual values from the contact data.
 
 ## Newline Suppression
 
-When a tag is suffixed with a hyphen (`-`), newlines immediately following the closing tag are suppressed if the section renders empty. This feature is inspired by Jinja2's whitespace control.
+When a tag is suffixed with a hyphen (`-`), newlines immediately following the closing tag are suppressed during rendering. This feature is inspired by Jinja2's whitespace control and applies **regardless of whether the section contains data or not**.
 
 **Syntax:**
 ```
@@ -100,8 +100,8 @@ When a tag is suffixed with a hyphen (`-`), newlines immediately following the c
 ```
 
 **Behavior:**
-- **Without hyphen:** If a section is empty, it still leaves newlines in the output
-- **With hyphen:** If a section is empty, trailing newlines are removed, resulting in no output at all
+- **Without hyphen:** Newlines after the closing tag are preserved
+- **With hyphen:** Newlines immediately after the closing tag are removed
 
 **Example without hyphen:**
 ```
@@ -109,7 +109,7 @@ When a tag is suffixed with a hyphen (`-`), newlines immediately following the c
 {{LABEL}}
 {{/EMAIL}}
 ```
-If there's no email, this still inserts newlines into the output.
+The newline after `{{/EMAIL}}` is preserved in the output.
 
 **Example with hyphen:**
 ```
@@ -117,11 +117,13 @@ If there's no email, this still inserts newlines into the output.
 {{LABEL}}
 {{/EMAIL-}}
 ```
-If there's no email, this adds nothing to the output - no newlines, no whitespace.
+The newline after `{{/EMAIL-}}` is removed from the output.
+
+**Important:** The hyphen suffix controls whitespace **unconditionally**. It removes trailing newlines whether or not the section has data. This gives you precise control over spacing in your template.
 
 **Practical Use Case:**
 
-Without hyphen suppression, empty sections can create unwanted whitespace:
+Without hyphen suppression, sections can create unwanted whitespace:
 ```
 {{#EMAIL}}
 📧 Email
@@ -135,9 +137,9 @@ Without hyphen suppression, empty sections can create unwanted whitespace:
 {{/TEL}}
 ```
 
-If the contact has no email but has a phone number, the output includes extra blank lines where the email section would have been.
+Even if the contact has both email and phone, there's a blank line between the closing `{{/EMAIL}}` and opening `{{#TEL}}` tags.
 
-With hyphen suppression, empty sections are cleanly removed:
+With hyphen suppression, you have precise control:
 ```
 {{#EMAIL-}}
 📧 Email
@@ -151,7 +153,7 @@ With hyphen suppression, empty sections are cleanly removed:
 {{/TEL-}}
 ```
 
-Now if the contact has no email, the output contains only the phone section with no extra whitespace.
+Now the newline after each closing tag is suppressed, allowing you to control spacing through the blank lines explicitly written in your template content, not from the tags themselves.
 
 ## Default Template
 

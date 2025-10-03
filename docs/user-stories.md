@@ -446,19 +446,26 @@ Email
 - `{{POSTAL}}` - Postal/zip code
 - `{{COUNTRY}}` - Country
 
+*Whitespace Control:*
+- Add `-` suffix to closing tags (e.g., `{{/EMAIL-}}`) to suppress trailing newlines
+- Hyphen suppression works unconditionally - newlines are removed regardless of content
+- Without hyphen: `{{/EMAIL}}` preserves the newline after the tag
+- With hyphen: `{{/EMAIL-}}` removes the newline after the tag
+- Use hyphen for precise control over spacing in your template
+
 **Default template:**
 ```
-{{#EMAIL}}
+{{#EMAIL-}}
 📧 Email
 {{#FIRST}}{{LABEL}} {{VALUE}}{{/FIRST}}
 
-{{/EMAIL}}
-{{#TEL}}
+{{/EMAIL-}}
+{{#TEL-}}
 📞 Phone
 {{#FIRST}}{{LABEL}} {{VALUE}}{{/FIRST}}
 
-{{/TEL}}
-{{#ADR}}
+{{/TEL-}}
+{{#ADR-}}
 🏠 Address
 {{#FIRST}}({{LABEL}})
 {{STREET}}
@@ -466,12 +473,12 @@ Email
 {{COUNTRY}}
 
 {{/FIRST}}
-{{/ADR}}
-{{#URL}}
+{{/ADR-}}
+{{#URL-}}
 🌐 Website
 {{#FIRST}}{{LABEL}} {{VALUE}}{{/FIRST}}
 
-{{/URL}}
+{{/URL-}}
 ```
 
 **Expected behavior:**
@@ -480,6 +487,7 @@ Email
 - FIRST directive shows only the first field, ALL directive shows all fields
 - Labels are automatically formatted to title case (e.g., "WORK" → "Work")
 - Numeric indices are stripped from labels (e.g., "1:WORK" → "Work")
+- Hyphen suffix on tags removes trailing newlines unconditionally
 - Invalid template syntax is handled gracefully
 - Settings are persisted across Obsidian restarts
 
@@ -490,3 +498,4 @@ Email
 - Custom formatting: Add your own text, bullets, or formatting around variables
 - Hide field types: Remove entire field type sections from the template
 - Multi-line formats: Use newlines and spacing to control layout
+- Precise spacing: Use hyphen suffix to control where newlines appear

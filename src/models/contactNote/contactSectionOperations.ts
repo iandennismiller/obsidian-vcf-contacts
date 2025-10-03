@@ -377,15 +377,8 @@ export class ContactSectionOperations {
       output = output.replace(sectionRegex, (match, hyphen, sectionContent) => {
         const fields = fieldsByType[fieldType];
         
-        // If no fields and hyphen is present, check if followed by newline and suppress it
+        // If no fields, return empty
         if (fields.length === 0) {
-          // If hyphen suffix is used and the closing tag is followed by a newline, 
-          // the entire match including the newline should be removed
-          if (hyphen === '-') {
-            // The replacement returns empty string, and the regex match already 
-            // consumed up to the closing tag. We need to check what follows.
-            return '';
-          }
           return '';
         }
 
@@ -410,7 +403,7 @@ export class ContactSectionOperations {
     }
 
     // Handle newline suppression: when a tag with hyphen is followed by newline, remove the newline
-    // This catches cases where {{/TAG-}}\n should become {{/TAG-}} (newline removed)
+    // The hyphen suffix ALWAYS suppresses newlines, regardless of whether content was rendered
     output = output.replace(/{{\/(?:EMAIL|TEL|ADR|URL|FIRST|ALL)-}}\n/g, (match) => {
       // Remove the newline after the closing tag with hyphen
       return match.slice(0, -1);
