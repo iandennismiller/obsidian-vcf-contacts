@@ -77,6 +77,20 @@ Software engineer at Acme Corporation. Specializes in backend development.
 | `TEL[2:WORK]` | Work Phone | `+1-555-987-6543` |
 | `TEL[3:HOME]` | Home Phone | `+1-555-111-2222` |
 
+**Contact List Input:**
+You can also enter contact information using the Contact List format in the `## Contact` section:
+
+```markdown
+## Contact
+
+- contact@example.com
+- work j.doe@company.com
+- cell 555-123-4567
+- work 555-987-6543
+```
+
+The parser automatically detects field types and syncs to frontmatter using the appropriate field names and kind labels.
+
 ### 🏠 Address Information
 
 | Field | Description | Example |
@@ -142,6 +156,28 @@ TEL[1:CELL]: +1-555-123-4567      # Mobile
 TEL[2:WORK]: +1-555-987-6543      # Work phone
 TEL[3:HOME]: +1-555-111-2222      # Home phone
 ```
+
+### Contact List Alternative
+
+Instead of manually entering frontmatter fields, you can use the Contact List format in the `## Contact` section:
+
+```markdown
+## Contact
+
+- primary@example.com
+- work work@company.com
+- home home@personal.com
+- cell 555-123-4567
+- work 555-987-6543
+```
+
+The parser will:
+1. Auto-detect field types (email, phone, URL, address)
+2. Extract optional kind labels (`work`, `home`, `cell`, etc.)
+3. Sync to frontmatter with appropriate keys (`EMAIL[WORK]`, `TEL[CELL]`, etc.)
+4. Auto-index fields without kind labels (`EMAIL[1]`, `EMAIL[2]`, etc.)
+
+This provides a more user-friendly way to enter contact information without worrying about exact frontmatter syntax.
 
 ## Type Labels
 

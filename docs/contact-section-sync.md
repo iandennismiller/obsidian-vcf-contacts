@@ -14,6 +14,82 @@ The parser can automatically detect contact information even without explicit he
 - **Phone numbers**: Including international formats like `+1-555-123-4567`, `(555) 123-4567`, etc.
 - **URLs/Websites**: `https://example.com`, `www.example.com`, `example.com`
 
+### Contact List Parsing (Recommended Format)
+
+The **Contact List** format is the recommended way to enter contact information. It provides a simple, flexible syntax that's easy to parse and doesn't require rigid templates.
+
+#### How It Works
+
+Each line in the Contact section can be a markdown list item (starting with `-`) containing a single piece of contact information. The parser:
+
+1. **Detects the field type** using pattern matching (email, phone, URL, or address)
+2. **Extracts an optional kind/type prefix** (like `home`, `work`, `personal`)
+3. **Automatically adds emoji prefixes** when displaying the information
+4. **Syncs to frontmatter** using the format `FIELDTYPE[KIND]: value`
+
+#### Supported Patterns
+
+The following are all valid contact list entries:
+
+```markdown
+## Contact
+
+- home 555-555-5555
+- contact@example.com
+- work contact@example.com
+- 123 Some street
+- 123 Some street, Town
+- http://example.com
+- personal http://example.com
+```
+
+#### Kind/Type Prefix
+
+You can optionally prefix any contact line with a "kind" label:
+
+- **Email kinds**: `home`, `work`, `personal`, `vacation`, or any custom label
+- **Phone kinds**: `home`, `work`, `cell`, `mobile`, `fax`, or any custom label
+- **URL kinds**: `home`, `work`, `personal`, or any custom label
+- **Address kinds**: `home`, `work`, or any custom label
+
+The kind is **optional** - if omitted, the field is indexed numerically (e.g., `EMAIL[1]`, `TEL[2]`).
+
+#### Auto-Detection Examples
+
+**Email Detection:**
+- `- contact@example.com` → Detected as email, syncs to `EMAIL[1]`
+- `- work contact@example.com` → Detected as email with kind "work", syncs to `EMAIL[WORK]`
+
+**Phone Detection:**
+- `- 555-555-5555` → Detected as phone, normalized and syncs to `TEL[1]`
+- `- home 555-555-5555` → Detected as phone with kind "home", syncs to `TEL[HOME]`
+
+**URL Detection:**
+- `- http://example.com` → Detected as URL, syncs to `URL[1]`
+- `- personal http://example.com` → Detected as URL with kind "personal", syncs to `URL[PERSONAL]`
+
+**Address Detection:**
+- `- 123 Some street` → Detected as address, syncs to `ADR[1].STREET`
+- `- 123 Some street, Town` → Detected as address with locality, syncs to address fields
+
+#### Frontmatter Mapping
+
+When syncing to frontmatter, the parser uses this format:
+
+```yaml
+# Email with kind
+EMAIL[WORK]: contact@example.com
+
+# Phone with kind
+TEL[HOME]: +1-555-555-5555
+
+# URL with kind
+URL[PERSONAL]: http://example.com
+
+# Email without kind (indexed)
+EMAIL[1]: another@example.com
+```
+
 ### Supported Input Formats
 
 The Contact section parser is flexible and supports multiple user input formats:
@@ -56,6 +132,32 @@ john@example.com
 555-123-4567
 https://johndoe.com
 ```
+
+#### Format 5: Contact List with Optional Kinds (Recommended)
+```markdown
+## Contact
+
+- home 555-555-5555
+- contact@example.com
+- work contact@example.com
+- 123 Some street
+- 123 Some street, Town
+- http://example.com
+- personal http://example.com
+```
+
+This format provides maximum flexibility by allowing users to optionally specify "kind" labels (like `home`, `work`, `personal`) before the contact information. The parser automatically:
+
+- Detects the field type (email, phone, URL, address) from the value
+- Extracts the optional kind/type prefix
+- Adds appropriate emoji prefixes when displaying
+- Syncs to frontmatter using the pattern `FIELDTYPE[KIND]`
+
+**Example parsing:**
+- `- work contact@example.com` → `EMAIL[WORK]: contact@example.com` (📧 email detected)
+- `- home 555-555-5555` → `TEL[HOME]: +1-555-555-5555` (📞 phone detected and normalized)
+- `- personal http://example.com` → `URL[PERSONAL]: http://example.com` (🌐 URL detected)
+- `- 123 Some street, Town` → `ADR[1].STREET: 123 Some street, Town` (🏠 address detected)
 
 ### Field Normalization
 
@@ -147,12 +249,28 @@ The sync handles combinations of additions, modifications, and deletions in a si
 
 ## Field Type Detection
 
-The system uses intelligent pattern matching to identify field types:
+The system uses intelligent pattern matching to identify field types from contact list entries.
+
+### Detection Process
+
+When parsing a contact list item like `- work contact@example.com`:
+
+1. **Extract the value**: Remove the list marker (`-`) and trim whitespace
+2. **Check for kind prefix**: Look for an optional label at the beginning
+3. **Identify field type**: Use pattern matching to determine if it's email, phone, URL, or address
+4. **Parse components**: Extract the kind (if present) and the actual value
+5. **Sync to frontmatter**: Create the appropriate frontmatter key like `EMAIL[WORK]`
 
 ### Email Detection
 - Must contain `@` symbol
 - Valid domain format
 - Examples: `user@example.com`, `name+tag@domain.co.uk`
+- Pattern: `optional_kind email@domain.com`
+
+**Valid formats:**
+- `contact@example.com` → `EMAIL[1]`
+- `work contact@example.com` → `EMAIL[WORK]`
+- `personal user+tag@example.com` → `EMAIL[PERSONAL]`
 
 ### Phone Number Detection
 - 7-15 digits
@@ -162,11 +280,47 @@ The system uses intelligent pattern matching to identify field types:
   - `+1-555-123-4567`
   - `+86-10-1234-5678`
   - `555 123 4567`
+- Pattern: `optional_kind phone_number`
+
+**Valid formats:**
+- `555-555-5555` → `TEL[1]` (normalized to `+1-555-555-5555`)
+- `home 555-555-5555` → `TEL[HOME]`
+- `cell (555) 123-4567` → `TEL[CELL]`
 
 ### URL Detection
 - Valid domain structure
 - Optional protocol (`http://`, `https://`)
 - Examples: `https://example.com`, `www.example.com`, `example.com`
+- Pattern: `optional_kind url`
+
+**Valid formats:**
+- `http://example.com` → `URL[1]`
+- `personal http://example.com` → `URL[PERSONAL]`
+- `work https://company.com` → `URL[WORK]`
+
+### Address Detection
+- Street address patterns
+- City, state, zip patterns
+- Multi-line address support
+- Pattern: `optional_kind address_line`
+
+**Valid formats:**
+- `123 Some street` → `ADR[1].STREET`
+- `123 Some street, Town` → `ADR[1].STREET` + `ADR[1].LOCALITY`
+- `home 123 Main St, Springfield, IL 62701` → `ADR[HOME].*`
+
+### Kind/Type Extraction
+
+The parser extracts kind/type prefixes using a general method:
+
+1. **Split the line**: Separate potential kind from value
+2. **Validate the value**: Check if the remainder matches a known pattern
+3. **Use the kind**: If valid, use the prefix as the kind; otherwise, treat the whole line as the value
+
+**Examples:**
+- `work email@example.com` → kind=`work`, value=`email@example.com`
+- `555-5555` → kind=`1` (auto-indexed), value=`555-5555`
+- `home 123 Main St` → kind=`home`, value=`123 Main St`
 
 ### Postal Code Detection
 Used for address components:
@@ -176,15 +330,19 @@ Used for address components:
 
 ## Best Practices
 
-1. **Use Headers**: While auto-detection works, using section headers like `📧 Email` makes the Contact section more readable
+1. **Use Contact List Format**: The contact list format (with `-` prefix) is recommended for its flexibility and ease of use
 
-2. **Label Your Fields**: Use labels like `Home:`, `Work:`, `Cell:` for better organization
+2. **Use Headers**: While auto-detection works, using section headers like `📧 Email` makes the Contact section more readable
 
-3. **Check the Preview**: When confirmation is enabled, review changes before confirming
+3. **Label Your Fields**: Use kind labels like `home:`, `work:`, `cell:` for better organization
 
-4. **Keep It Simple**: The parser handles multiple formats, but consistent formatting makes it easier to read
+4. **Check the Preview**: When confirmation is enabled, review changes before confirming
 
-5. **Backup First**: Always have backups when testing new features
+5. **Keep It Simple**: The parser handles multiple formats, but consistent formatting makes it easier to read
+
+6. **Backup First**: Always have backups when testing new features
+
+7. **Use Optional Kinds**: Add kind prefixes (like `work`, `home`) when you need to distinguish multiple values of the same type
 
 ## Integration with VCF Sync
 
@@ -223,6 +381,46 @@ If you see warnings about invalid formats:
 - **URL**: Must be a valid domain
 
 ## API Reference
+
+### Parsing Architecture
+
+The contact list parsing uses a two-stage approach:
+
+#### Stage 1: Field Type Detection
+
+The `identifyFieldType()` function determines what kind of information a line contains:
+
+```typescript
+import { identifyFieldType } from 'src/models/contactNote/fieldPatternDetection';
+
+// Detect field type from value
+identifyFieldType('contact@example.com'); // 'EMAIL'
+identifyFieldType('555-123-4567'); // 'TEL'
+identifyFieldType('https://example.com'); // 'URL'
+```
+
+This uses pattern matching to check (in order):
+1. Email pattern (contains `@` and valid domain)
+2. URL pattern (valid domain with optional protocol)
+3. Phone pattern (7-15 digits with various formatting)
+
+#### Stage 2: Line Parsing
+
+For each contact list item, the parser:
+
+1. **Extracts the line content**: Removes list marker and whitespace
+2. **Splits kind from value**: Attempts to separate optional kind prefix
+3. **Validates the pattern**: Confirms the value matches a known field type
+4. **Creates frontmatter key**: Generates key like `EMAIL[WORK]` or `TEL[1]`
+
+**Parsing separate methods by type:**
+
+Each field type has its own parsing logic:
+
+- **Email parsing**: Extracts kind and email address
+- **Phone parsing**: Extracts kind, normalizes phone number format
+- **URL parsing**: Extracts kind, adds protocol if missing
+- **Address parsing**: Handles multi-line addresses with street, city, state, etc.
 
 ### Field Pattern Detection
 

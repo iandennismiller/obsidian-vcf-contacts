@@ -67,6 +67,31 @@ Standard vCard field support:
 - Multiple address types (Home, Work, Other)
 - International format support
 
+#### Contact Section Parsing
+- **Contact List Format**: Simple markdown list items for entering contact information
+- **Auto-detection**: Automatically identifies field types (email, phone, URL, address)
+- **Optional kind labels**: Add prefixes like `home`, `work`, `personal` to categorize fields
+- **Flexible parsing**: Works with or without kind labels - if omitted, fields are auto-indexed
+- **Pattern matching**: Uses intelligent regex patterns to detect field types
+- **Emoji prefixes**: Automatically adds emojis (📧, 📞, 🌐, 🏠) when displaying
+- **Bidirectional sync**: Changes in Contact section sync to frontmatter and vice versa
+
+**Example Contact List:**
+```markdown
+## Contact
+
+- home 555-555-5555
+- contact@example.com
+- work contact@example.com
+- 123 Some street, Town
+- personal http://example.com
+```
+
+**Parsing behavior:**
+- `work contact@example.com` → `EMAIL[WORK]: contact@example.com`
+- `home 555-555-5555` → `TEL[HOME]: +1-555-555-5555` (normalized)
+- `personal http://example.com` → `URL[PERSONAL]: http://example.com`
+
 #### Metadata
 - Birthday and anniversary tracking
 - Categories and tags
