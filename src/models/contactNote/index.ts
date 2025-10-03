@@ -101,3 +101,26 @@ export {
   getSortName,
   createFileName
 } from './utilityFunctions';
+
+// Export field pattern detection utilities
+export {
+  isEmail,
+  isPhoneNumber,
+  isPostalCode,
+  isUrl,
+  identifyFieldType,
+  normalizePhoneNumber,
+  normalizePostalCode,
+  normalizeUrl,
+  normalizeFieldValue,
+  parseContactListItem,
+  parseEmailLine,
+  parsePhoneLine,
+  parseUrlLine,
+  parseAddressLine
+} from './fieldPatternDetection';
+
+export type {
+  /** Result of parsing a contact list item */
+  ParsedContactLine
+} from './fieldPatternDetection';
