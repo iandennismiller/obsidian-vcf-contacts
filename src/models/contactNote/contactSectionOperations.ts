@@ -9,7 +9,7 @@
 import { marked } from 'marked';
 import { ContactData } from './contactData';
 import { ContactsPluginSettings } from 'src/plugin/settings';
-import { identifyFieldType } from './fieldPatternDetection';
+import { identifyFieldType, parseContactListItem } from './fieldPatternDetection';
 import { BaseMarkdownSectionOperations } from './baseMarkdownSectionOperations';
 import { SECTION_NAMES, FIELD_DISPLAY } from './markdownConstants';
 
@@ -204,10 +204,11 @@ export class ContactSectionOperations extends BaseMarkdownSectionOperations {
             const simpleMatch = line.match(/^-\s*(.+)$/);
             if (simpleMatch) {
               // Use numeric index for unlabeled fields
+              // First field has no index (bare), subsequent fields use 1, 2, 3...
               const existingCount = fields.filter(f => f.fieldType === currentFieldType).length;
               fields.push({
                 fieldType: currentFieldType,
-                fieldLabel: String(existingCount + 1),
+                fieldLabel: existingCount === 0 ? '' : String(existingCount),
                 value: simpleMatch[1].trim()
               });
             } else if (!line.startsWith('(') && !line.startsWith('#')) {
@@ -216,7 +217,7 @@ export class ContactSectionOperations extends BaseMarkdownSectionOperations {
               const existingCount = fields.filter(f => f.fieldType === currentFieldType).length;
               fields.push({
                 fieldType: currentFieldType,
-                fieldLabel: String(existingCount + 1),
+                fieldLabel: existingCount === 0 ? '' : String(existingCount),
                 value: line.trim()
               });
             }
@@ -260,40 +261,39 @@ export class ContactSectionOperations extends BaseMarkdownSectionOperations {
         continue;
       }
       
-      // Skip lines that start with dash (already parsed above)
-      if (line.startsWith('-')) {
+      // Auto-detection for lines not in a typed section
+      // Skip lines that are part of addresses or comments
+      if (line.startsWith('(') || line.startsWith('#')) {
         continue;
       }
       
-      // Skip lines with label: value format (already parsed above)
-      // But allow URLs with protocol (https://example.com)
-      const hasLabelColonFormat = line.match(/^[A-Za-z]+\s*:\s+[^\/]/);
-      if (hasLabelColonFormat) {
-        continue;
-      }
+      // Use the new parseContactListItem function to detect and parse the line
+      const parsed = parseContactListItem(line);
       
-      // Skip lines that are part of addresses
-      if (line.startsWith('(')) {
-        continue;
-      }
-      
-      // Try to identify field type from the value
-      const detectedType = identifyFieldType(line);
-      if (detectedType) {
+      if (parsed.fieldType) {
         // Check if we already parsed this field
         const alreadyParsed = fields.some(f => 
-          f.value === line.trim()
+          f.value === parsed.value || f.value === line.trim()
         );
         
         if (!alreadyParsed) {
-          // Add auto-detected field
-          const existingCount = fields.filter(f => f.fieldType === detectedType).length;
+          // Determine the field label
+          let fieldLabel: string;
+          if (parsed.kind) {
+            // Has explicit kind from parsing
+            fieldLabel = parsed.kind;
+          } else {
+            // No kind - use bare for first, indexed for subsequent
+            const existingCount = fields.filter(f => f.fieldType === parsed.fieldType).length;
+            fieldLabel = existingCount === 0 ? '' : String(existingCount);
+          }
+          
           fields.push({
-            fieldType: detectedType,
-            fieldLabel: String(existingCount + 1),
-            value: line.trim()
+            fieldType: parsed.fieldType,
+            fieldLabel: fieldLabel,
+            value: parsed.value
           });
-          console.debug(`[ContactSectionOperations] Auto-detected ${detectedType}: ${line.trim()}`);
+          console.debug(`[ContactSectionOperations] Auto-detected ${parsed.fieldType}: ${parsed.value}`);
         }
       }
     }
@@ -383,25 +383,105 @@ export class ContactSectionOperations extends BaseMarkdownSectionOperations {
   /**
    * Generate Contact section markdown from frontmatter fields using template
    * Returns the markdown content for the Contact section
+   * Generates a simple list-based format from frontmatter fields
    */
   async generateContactSection(): Promise<string> {
     const frontmatter = await this.contactData.getFrontmatter();
     if (!frontmatter) return '';
 
-    const template = this.settings.contactSectionTemplate || '';
-    if (!template) return '';
-
-    const result = this.renderTemplate(template, frontmatter);
+    const lines: string[] = [`## ${SECTION_NAMES.CONTACT}`, ''];
     
-    // If the result only contains the heading and no actual contact fields, return empty
-    // This handles the case where template has "## Contact" but no fields are populated
-    const trimmedResult = result.trim();
-    const expectedHeading = `## ${SECTION_NAMES.CONTACT}`;
-    if (trimmedResult === expectedHeading || trimmedResult === '') {
+    // Group fields by type and collect them
+    const fieldsByType: Record<string, Array<{key: string, label: string, value: any, components?: Record<string, string>}>> = {
+      EMAIL: [],
+      TEL: [],
+      URL: [],
+      ADR: []
+    };
+
+    // Parse frontmatter into field groups
+    for (const [key, value] of Object.entries(frontmatter)) {
+      // Match bare keys (EMAIL, TEL, URL, ADR) or bracketed keys (EMAIL[WORK], EMAIL[1])
+      const bareMatch = key.match(/^(EMAIL|TEL|URL|ADR)$/);
+      const bracketMatch = key.match(/^(EMAIL|TEL|URL|ADR)\[([^\]]+)\](?:\.(.+))?$/);
+      
+      if (bareMatch) {
+        const [, fieldType] = bareMatch;
+        fieldsByType[fieldType].push({
+          key,
+          label: '',  // Bare key has no label
+          value
+        });
+      } else if (bracketMatch) {
+        const [, fieldType, label, component] = bracketMatch;
+        
+        if (fieldType === 'ADR' && component) {
+          // Handle address components
+          let field = fieldsByType[fieldType].find(f => f.label === label);
+          if (!field) {
+            field = { key: `${fieldType}[${label}]`, label, value: '', components: {} };
+            fieldsByType[fieldType].push(field);
+          }
+          if (field.components) {
+            field.components[component] = String(value);
+          }
+        } else if (!component) {
+          // Handle simple fields
+          fieldsByType[fieldType].push({
+            key,
+            label,
+            value: String(value)
+          });
+        }
+      }
+    }
+
+    // Generate list items for each field type
+    // Order: EMAIL, TEL, URL, ADR
+    for (const fieldType of ['EMAIL', 'TEL', 'URL', 'ADR']) {
+      const fields = fieldsByType[fieldType];
+      if (fields.length === 0) continue;
+
+      for (const field of fields) {
+        if (fieldType === 'ADR' && field.components) {
+          // Format address
+          const parts: string[] = [];
+          if (field.components.STREET) parts.push(field.components.STREET);
+          if (field.components.LOCALITY || field.components.REGION || field.components.POSTAL) {
+            const cityLine = [
+              field.components.LOCALITY,
+              field.components.REGION,
+              field.components.POSTAL
+            ].filter(Boolean).join(', ');
+            if (cityLine) parts.push(cityLine);
+          }
+          if (field.components.COUNTRY) parts.push(field.components.COUNTRY);
+          
+          if (parts.length > 0) {
+            const addressValue = parts.join(', ');
+            if (field.label) {
+              lines.push(`- ${field.label} ${addressValue}`);
+            } else {
+              lines.push(`- ${addressValue}`);
+            }
+          }
+        } else {
+          // Format simple field
+          if (field.label) {
+            lines.push(`- ${field.label} ${field.value}`);
+          } else {
+            lines.push(`- ${field.value}`);
+          }
+        }
+      }
+    }
+
+    // If only header, no fields, return empty
+    if (lines.length <= 2) {
       return '';
     }
     
-    return result;
+    return lines.join('\n');
   }
 
   /**

@@ -72,7 +72,8 @@ export function isUrl(value: string): boolean {
 
 /**
  * Identifies the field type from a value string
- * Returns the field type (EMAIL, TEL, ADR, URL) or null if unidentified
+ * Returns the field type (EMAIL, TEL, URL) or null if unidentified
+ * Note: Does not return 'ADR' - addresses are handled as fallback in parseContactListItem
  */
 export function identifyFieldType(value: string): 'EMAIL' | 'TEL' | 'URL' | null {
   if (!value || value.trim().length === 0) {
@@ -186,4 +187,191 @@ export function normalizeFieldValue(value: string, fieldType: string): string {
     default:
       return value.trim();
   }
+}
+
+/**
+ * Result of parsing a contact list item
+ */
+export interface ParsedContactLine {
+  /** The detected field type (EMAIL, TEL, URL, ADR) or null if not detected */
+  fieldType: 'EMAIL' | 'TEL' | 'URL' | 'ADR' | null;
+  /** The kind/type prefix (e.g., "work", "home", "personal") or null if none */
+  kind: string | null;
+  /** The contact value (email address, phone number, URL, or address) */
+  value: string;
+}
+
+/**
+ * General method for parsing a contact list item
+ * Detects field type and extracts optional kind/type prefix
+ * 
+ * Supports both formats:
+ * - Space-separated: "kind value" (e.g., "work contact@example.com")
+ * - Colon-separated: "kind: value" (e.g., "HOME: test@example.com")
+ * 
+ * Examples:
+ * - "home 555-555-5555" → { fieldType: 'TEL', kind: 'home', value: '555-555-5555' }
+ * - "HOME: test@example.com" → { fieldType: 'EMAIL', kind: 'HOME', value: 'test@example.com' }
+ * - "contact@example.com" → { fieldType: 'EMAIL', kind: null, value: 'contact@example.com' }
+ * - "work contact@example.com" → { fieldType: 'EMAIL', kind: 'work', value: 'contact@example.com' }
+ * - "123 Some street" → { fieldType: 'ADR', kind: null, value: '123 Some street' }
+ * - "personal http://example.com" → { fieldType: 'URL', kind: 'personal', value: 'http://example.com' }
+ */
+export function parseContactListItem(line: string): ParsedContactLine {
+  const trimmed = line.trim();
+  
+  if (!trimmed) {
+    return { fieldType: null, kind: null, value: '' };
+  }
+  
+  // Remove list marker if present
+  const withoutMarker = trimmed.replace(/^-\s*/, '');
+  
+  // First, try to identify if the entire line is a recognized field type
+  const wholeLineType = identifyFieldType(withoutMarker);
+  if (wholeLineType) {
+    // The whole line is a field - no kind prefix
+    return { fieldType: wholeLineType, kind: null, value: withoutMarker };
+  }
+  
+  // Check for colon-separated format: "Label: value" or "Label:value"
+  // Only match if the label part is purely alphabetic (to avoid matching URLs like http://example.com)
+  const colonMatch = withoutMarker.match(/^([a-zA-Z]+)\s*:\s*(.+)$/);
+  if (colonMatch) {
+    const potentialKind = colonMatch[1].trim();
+    const potentialValue = colonMatch[2].trim();
+    
+    // Check if the value part (after colon) is a recognized field type
+    const valueType = identifyFieldType(potentialValue);
+    if (valueType) {
+      // Found a field type after the colon - label before colon is the kind
+      return { fieldType: valueType, kind: potentialKind, value: potentialValue };
+    }
+    
+    // If value doesn't match a known type, treat as address with kind
+    return { fieldType: 'ADR', kind: potentialKind, value: potentialValue };
+  }
+  
+  // Split on first space to check if first word might be a kind
+  const firstSpaceIndex = withoutMarker.indexOf(' ');
+  if (firstSpaceIndex === -1) {
+    // No space - single word, not a recognized type
+    // Check if it could be an address (fallback)
+    return { fieldType: 'ADR', kind: null, value: withoutMarker };
+  }
+  
+  // Try parsing with first word as kind
+  const potentialKind = withoutMarker.substring(0, firstSpaceIndex);
+  const potentialValue = withoutMarker.substring(firstSpaceIndex + 1).trim();
+  
+  // Check if the remainder (after removing first word) is a recognized field type
+  const valueType = identifyFieldType(potentialValue);
+  if (valueType) {
+    // Found a field type after removing first word - first word is the kind
+    return { fieldType: valueType, kind: potentialKind, value: potentialValue };
+  }
+  
+  // Could not identify field type even after removing first word
+  // This is likely an address. Only extract kind if:
+  // 1. First word is alphabetic (potential kind label)
+  // 2. Value part starts with a digit (typical for addresses)
+  if (/^[a-zA-Z]+$/.test(potentialKind) && /^\d/.test(potentialValue)) {
+    // Looks like "home 123 Main St" - extract kind
+    return { fieldType: 'ADR', kind: potentialKind, value: potentialValue };
+  }
+  
+  // Otherwise, treat the whole line as an address (no kind)
+  // This covers cases like "some random text" or "Main Street"
+  return { fieldType: 'ADR', kind: null, value: withoutMarker };
+}
+
+/**
+ * Parse an email line with optional kind prefix
+ * 
+ * Examples:
+ * - "contact@example.com" → { kind: null, value: "contact@example.com" }
+ * - "work contact@example.com" → { kind: "work", value: "contact@example.com" }
+ * - "personal user+tag@example.com" → { kind: "personal", value: "user+tag@example.com" }
+ */
+export function parseEmailLine(line: string): { kind: string | null; value: string } {
+  const parsed = parseContactListItem(line);
+  
+  if (parsed.fieldType !== 'EMAIL') {
+    // Not an email line
+    return { kind: null, value: '' };
+  }
+  
+  return {
+    kind: parsed.kind,
+    value: parsed.value
+  };
+}
+
+/**
+ * Parse a phone line with optional kind prefix
+ * Returns normalized phone number
+ * 
+ * Examples:
+ * - "555-555-5555" → { kind: null, value: "+1-555-555-5555" }
+ * - "home 555-555-5555" → { kind: "home", value: "+1-555-555-5555" }
+ * - "cell (555) 123-4567" → { kind: "cell", value: "+1-555-123-4567" }
+ */
+export function parsePhoneLine(line: string): { kind: string | null; value: string } {
+  const parsed = parseContactListItem(line);
+  
+  if (parsed.fieldType !== 'TEL') {
+    // Not a phone line
+    return { kind: null, value: '' };
+  }
+  
+  return {
+    kind: parsed.kind,
+    value: normalizePhoneNumber(parsed.value)
+  };
+}
+
+/**
+ * Parse a URL line with optional kind prefix
+ * Returns normalized URL with protocol
+ * 
+ * Examples:
+ * - "http://example.com" → { kind: null, value: "http://example.com" }
+ * - "example.com" → { kind: null, value: "https://example.com" }
+ * - "personal http://example.com" → { kind: "personal", value: "http://example.com" }
+ * - "work www.company.com" → { kind: "work", value: "https://www.company.com" }
+ */
+export function parseUrlLine(line: string): { kind: string | null; value: string } {
+  const parsed = parseContactListItem(line);
+  
+  if (parsed.fieldType !== 'URL') {
+    // Not a URL line
+    return { kind: null, value: '' };
+  }
+  
+  return {
+    kind: parsed.kind,
+    value: normalizeUrl(parsed.value)
+  };
+}
+
+/**
+ * Parse an address line with optional kind prefix
+ * 
+ * Examples:
+ * - "123 Some street" → { kind: null, value: "123 Some street" }
+ * - "123 Some street, Town" → { kind: null, value: "123 Some street, Town" }
+ * - "home 123 Main St" → { kind: "home", value: "123 Main St" }
+ */
+export function parseAddressLine(line: string): { kind: string | null; value: string } {
+  const parsed = parseContactListItem(line);
+  
+  if (parsed.fieldType !== 'ADR') {
+    // Not an address line
+    return { kind: null, value: '' };
+  }
+  
+  return {
+    kind: parsed.kind,
+    value: parsed.value
+  };
 }

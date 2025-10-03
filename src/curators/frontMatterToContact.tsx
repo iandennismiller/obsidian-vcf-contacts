@@ -66,7 +66,7 @@ export const FrontMatterToContactProcessor: CuratorProcessor = {
       
       // Check if there are any contact fields in frontmatter
       const hasContactFields = Object.keys(frontmatter).some(key => 
-        /^(EMAIL|TEL|ADR|URL)\[/.test(key)
+        /^(EMAIL|TEL|ADR|URL)(\[|\.)?/.test(key)
       );
       
       if (!hasContactFields) {
@@ -88,23 +88,23 @@ export const FrontMatterToContactProcessor: CuratorProcessor = {
       const content = await contactNote.getContent();
       const hasExistingContactSection = /\n#{2,}\s*contact\s*\n/i.test(content);
       
-      // Parse existing Contact section to compare
-      const existingFields = await contactNote.parseContactSection();
-      const existingFieldCount = existingFields.length;
-      
-      // Count fields in generated section (approximate)
-      const generatedFieldCount = Object.keys(frontmatter).filter(key => 
-        /^(EMAIL|TEL|ADR|URL)\[/.test(key)
-      ).length;
-      
-      // If existing Contact section has same or more fields, don't overwrite
-      if (hasExistingContactSection && existingFieldCount >= generatedFieldCount) {
-        console.debug(`[FrontMatterToContactProcessor] Existing Contact section is complete (${existingFieldCount} fields), no update needed`);
+      // If Contact section already exists, don't overwrite it
+      // User should use ContactToFrontMatterProcessor to sync from Contact section to frontmatter
+      // This processor should only create Contact sections when they don't exist
+      if (hasExistingContactSection) {
+        console.debug(`[FrontMatterToContactProcessor] Contact section already exists, skipping update to preserve user edits`);
         return Promise.resolve(undefined);
       }
       
+      console.debug(`[FrontMatterToContactProcessor] No existing Contact section, creating one from frontmatter`);
+      
       // Update Contact section in content
       await contactNote.updateContactSectionInContent(generatedContactSection);
+      
+      // Count fields in generated section (approximate)
+      const generatedFieldCount = Object.keys(frontmatter).filter(key => 
+        /^(EMAIL|TEL|ADR|URL)(\[|\.)?/.test(key)
+      ).length;
       
       const action = hasExistingContactSection ? 'Updated' : 'Created';
       console.debug(`[FrontMatterToContactProcessor] ${action} Contact section with ${generatedFieldCount} fields`);

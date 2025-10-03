@@ -8,7 +8,12 @@ import {
   normalizePhoneNumber,
   normalizePostalCode,
   normalizeUrl,
-  normalizeFieldValue
+  normalizeFieldValue,
+  parseContactListItem,
+  parseEmailLine,
+  parsePhoneLine,
+  parseUrlLine,
+  parseAddressLine
 } from '../../../../src/models/contactNote/fieldPatternDetection';
 
 describe('Field Pattern Detection', () => {
@@ -194,6 +199,275 @@ describe('Field Pattern Detection', () => {
 
     it('should trim unknown field types', () => {
       expect(normalizeFieldValue('  some text  ', 'OTHER')).toBe('some text');
+    });
+  });
+
+  describe('parseContactListItem', () => {
+    describe('email detection', () => {
+      it('should parse email without kind', () => {
+        const result = parseContactListItem('contact@example.com');
+        expect(result.fieldType).toBe('EMAIL');
+        expect(result.kind).toBeNull();
+        expect(result.value).toBe('contact@example.com');
+      });
+
+      it('should parse email with kind prefix', () => {
+        const result = parseContactListItem('work contact@example.com');
+        expect(result.fieldType).toBe('EMAIL');
+        expect(result.kind).toBe('work');
+        expect(result.value).toBe('contact@example.com');
+      });
+
+      it('should parse email with colon-separated kind', () => {
+        const result = parseContactListItem('HOME: test@example.com');
+        expect(result.fieldType).toBe('EMAIL');
+        expect(result.kind).toBe('HOME');
+        expect(result.value).toBe('test@example.com');
+      });
+
+      it('should parse email with different kind prefixes', () => {
+        const result1 = parseContactListItem('home user@example.com');
+        expect(result1.kind).toBe('home');
+        expect(result1.value).toBe('user@example.com');
+
+        const result2 = parseContactListItem('personal jane@domain.com');
+        expect(result2.kind).toBe('personal');
+        expect(result2.value).toBe('jane@domain.com');
+      });
+
+      it('should handle email with list marker and colon', () => {
+        const result = parseContactListItem('- HOME: contact@example.com');
+        expect(result.fieldType).toBe('EMAIL');
+        expect(result.kind).toBe('HOME');
+        expect(result.value).toBe('contact@example.com');
+      });
+
+      it('should handle email with list marker', () => {
+        const result = parseContactListItem('- work contact@example.com');
+        expect(result.fieldType).toBe('EMAIL');
+        expect(result.kind).toBe('work');
+        expect(result.value).toBe('contact@example.com');
+      });
+    });
+
+    describe('phone detection', () => {
+      it('should parse phone without kind', () => {
+        const result = parseContactListItem('555-555-5555');
+        expect(result.fieldType).toBe('TEL');
+        expect(result.kind).toBeNull();
+        expect(result.value).toBe('555-555-5555');
+      });
+
+      it('should parse phone with kind prefix', () => {
+        const result = parseContactListItem('home 555-555-5555');
+        expect(result.fieldType).toBe('TEL');
+        expect(result.kind).toBe('home');
+        expect(result.value).toBe('555-555-5555');
+      });
+
+      it('should parse phone with colon-separated kind', () => {
+        const result = parseContactListItem('CELL: 555-555-5555');
+        expect(result.fieldType).toBe('TEL');
+        expect(result.kind).toBe('CELL');
+        expect(result.value).toBe('555-555-5555');
+      });
+
+      it('should parse different phone formats with kind', () => {
+        const result1 = parseContactListItem('cell (555) 123-4567');
+        expect(result1.fieldType).toBe('TEL');
+        expect(result1.kind).toBe('cell');
+        expect(result1.value).toBe('(555) 123-4567');
+
+        const result2 = parseContactListItem('work +1-555-987-6543');
+        expect(result2.fieldType).toBe('TEL');
+        expect(result2.kind).toBe('work');
+        expect(result2.value).toBe('+1-555-987-6543');
+      });
+    });
+
+    describe('URL detection', () => {
+      it('should parse URL without kind', () => {
+        const result = parseContactListItem('http://example.com');
+        expect(result.fieldType).toBe('URL');
+        expect(result.kind).toBeNull();
+        expect(result.value).toBe('http://example.com');
+      });
+
+      it('should parse URL with kind prefix', () => {
+        const result = parseContactListItem('personal http://example.com');
+        expect(result.fieldType).toBe('URL');
+        expect(result.kind).toBe('personal');
+        expect(result.value).toBe('http://example.com');
+      });
+
+      it('should parse URL with colon-separated kind', () => {
+        const result = parseContactListItem('WORK: https://company.com');
+        expect(result.fieldType).toBe('URL');
+        expect(result.kind).toBe('WORK');
+        expect(result.value).toBe('https://company.com');
+      });
+
+      it('should parse domain without protocol', () => {
+        const result1 = parseContactListItem('example.com');
+        expect(result1.fieldType).toBe('URL');
+        expect(result1.kind).toBeNull();
+        expect(result1.value).toBe('example.com');
+
+        const result2 = parseContactListItem('work www.company.com');
+        expect(result2.fieldType).toBe('URL');
+        expect(result2.kind).toBe('work');
+        expect(result2.value).toBe('www.company.com');
+      });
+    });
+
+    describe('address detection', () => {
+      it('should parse address without kind', () => {
+        const result = parseContactListItem('123 Some street');
+        expect(result.fieldType).toBe('ADR');
+        expect(result.kind).toBeNull();
+        expect(result.value).toBe('123 Some street');
+      });
+
+      it('should parse address with city', () => {
+        const result = parseContactListItem('123 Some street, Town');
+        expect(result.fieldType).toBe('ADR');
+        expect(result.kind).toBeNull();
+        expect(result.value).toBe('123 Some street, Town');
+      });
+
+      it('should parse address with kind prefix', () => {
+        const result = parseContactListItem('home 123 Main St');
+        expect(result.fieldType).toBe('ADR');
+        expect(result.kind).toBe('home');
+        expect(result.value).toBe('123 Main St');
+      });
+
+      it('should treat unidentifiable text as address', () => {
+        const result = parseContactListItem('some random text');
+        expect(result.fieldType).toBe('ADR');
+        expect(result.kind).toBeNull();
+        expect(result.value).toBe('some random text');
+      });
+    });
+
+    describe('edge cases', () => {
+      it('should handle empty string', () => {
+        const result = parseContactListItem('');
+        expect(result.fieldType).toBeNull();
+        expect(result.kind).toBeNull();
+        expect(result.value).toBe('');
+      });
+
+      it('should handle whitespace only', () => {
+        const result = parseContactListItem('   ');
+        expect(result.fieldType).toBeNull();
+        expect(result.kind).toBeNull();
+        expect(result.value).toBe('');
+      });
+
+      it('should strip list markers', () => {
+        const result = parseContactListItem('- contact@example.com');
+        expect(result.fieldType).toBe('EMAIL');
+        expect(result.value).toBe('contact@example.com');
+      });
+
+      it('should handle single word as address', () => {
+        const result = parseContactListItem('SingleWord');
+        expect(result.fieldType).toBe('ADR');
+        expect(result.value).toBe('SingleWord');
+      });
+    });
+  });
+
+  describe('parseEmailLine', () => {
+    it('should parse email without kind', () => {
+      const result = parseEmailLine('contact@example.com');
+      expect(result.kind).toBeNull();
+      expect(result.value).toBe('contact@example.com');
+    });
+
+    it('should parse email with kind', () => {
+      const result = parseEmailLine('work contact@example.com');
+      expect(result.kind).toBe('work');
+      expect(result.value).toBe('contact@example.com');
+    });
+
+    it('should return empty for non-email lines', () => {
+      const result = parseEmailLine('555-555-5555');
+      expect(result.kind).toBeNull();
+      expect(result.value).toBe('');
+    });
+  });
+
+  describe('parsePhoneLine', () => {
+    it('should parse phone without kind and normalize', () => {
+      const result = parsePhoneLine('555-123-4567');
+      expect(result.kind).toBeNull();
+      expect(result.value).toBe('+1-555-123-4567');
+    });
+
+    it('should parse phone with kind and normalize', () => {
+      const result = parsePhoneLine('home 555-555-5555');
+      expect(result.kind).toBe('home');
+      expect(result.value).toBe('+1-555-555-5555');
+    });
+
+    it('should return empty for non-phone lines', () => {
+      const result = parsePhoneLine('contact@example.com');
+      expect(result.kind).toBeNull();
+      expect(result.value).toBe('');
+    });
+  });
+
+  describe('parseUrlLine', () => {
+    it('should parse URL without kind and normalize', () => {
+      const result = parseUrlLine('example.com');
+      expect(result.kind).toBeNull();
+      expect(result.value).toBe('https://example.com');
+    });
+
+    it('should parse URL with kind and normalize', () => {
+      const result = parseUrlLine('personal http://example.com');
+      expect(result.kind).toBe('personal');
+      expect(result.value).toBe('http://example.com');
+    });
+
+    it('should preserve protocol when present', () => {
+      const result = parseUrlLine('work https://company.com');
+      expect(result.kind).toBe('work');
+      expect(result.value).toBe('https://company.com');
+    });
+
+    it('should return empty for non-URL lines', () => {
+      const result = parseUrlLine('contact@example.com');
+      expect(result.kind).toBeNull();
+      expect(result.value).toBe('');
+    });
+  });
+
+  describe('parseAddressLine', () => {
+    it('should parse address without kind', () => {
+      const result = parseAddressLine('123 Some street');
+      expect(result.kind).toBeNull();
+      expect(result.value).toBe('123 Some street');
+    });
+
+    it('should parse address with kind', () => {
+      const result = parseAddressLine('home 123 Main St');
+      expect(result.kind).toBe('home');
+      expect(result.value).toBe('123 Main St');
+    });
+
+    it('should parse full address', () => {
+      const result = parseAddressLine('123 Some street, Town');
+      expect(result.kind).toBeNull();
+      expect(result.value).toBe('123 Some street, Town');
+    });
+
+    it('should return empty for non-address lines', () => {
+      const result = parseAddressLine('contact@example.com');
+      expect(result.kind).toBeNull();
+      expect(result.value).toBe('');
     });
   });
 });
