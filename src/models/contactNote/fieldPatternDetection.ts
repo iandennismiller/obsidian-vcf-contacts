@@ -205,8 +205,13 @@ export interface ParsedContactLine {
  * General method for parsing a contact list item
  * Detects field type and extracts optional kind/type prefix
  * 
+ * Supports both formats:
+ * - Space-separated: "kind value" (e.g., "work contact@example.com")
+ * - Colon-separated: "kind: value" (e.g., "HOME: test@example.com")
+ * 
  * Examples:
  * - "home 555-555-5555" → { fieldType: 'TEL', kind: 'home', value: '555-555-5555' }
+ * - "HOME: test@example.com" → { fieldType: 'EMAIL', kind: 'HOME', value: 'test@example.com' }
  * - "contact@example.com" → { fieldType: 'EMAIL', kind: null, value: 'contact@example.com' }
  * - "work contact@example.com" → { fieldType: 'EMAIL', kind: 'work', value: 'contact@example.com' }
  * - "123 Some street" → { fieldType: 'ADR', kind: null, value: '123 Some street' }
@@ -227,6 +232,24 @@ export function parseContactListItem(line: string): ParsedContactLine {
   if (wholeLineType) {
     // The whole line is a field - no kind prefix
     return { fieldType: wholeLineType, kind: null, value: withoutMarker };
+  }
+  
+  // Check for colon-separated format: "Label: value" or "Label:value"
+  // Only match if the label part is purely alphabetic (to avoid matching URLs like http://example.com)
+  const colonMatch = withoutMarker.match(/^([a-zA-Z]+)\s*:\s*(.+)$/);
+  if (colonMatch) {
+    const potentialKind = colonMatch[1].trim();
+    const potentialValue = colonMatch[2].trim();
+    
+    // Check if the value part (after colon) is a recognized field type
+    const valueType = identifyFieldType(potentialValue);
+    if (valueType) {
+      // Found a field type after the colon - label before colon is the kind
+      return { fieldType: valueType, kind: potentialKind, value: potentialValue };
+    }
+    
+    // If value doesn't match a known type, treat as address with kind
+    return { fieldType: 'ADR', kind: potentialKind, value: potentialValue };
   }
   
   // Split on first space to check if first word might be a kind

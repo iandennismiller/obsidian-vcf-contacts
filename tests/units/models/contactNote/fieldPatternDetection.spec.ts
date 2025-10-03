@@ -218,6 +218,13 @@ describe('Field Pattern Detection', () => {
         expect(result.value).toBe('contact@example.com');
       });
 
+      it('should parse email with colon-separated kind', () => {
+        const result = parseContactListItem('HOME: test@example.com');
+        expect(result.fieldType).toBe('EMAIL');
+        expect(result.kind).toBe('HOME');
+        expect(result.value).toBe('test@example.com');
+      });
+
       it('should parse email with different kind prefixes', () => {
         const result1 = parseContactListItem('home user@example.com');
         expect(result1.kind).toBe('home');
@@ -226,6 +233,13 @@ describe('Field Pattern Detection', () => {
         const result2 = parseContactListItem('personal jane@domain.com');
         expect(result2.kind).toBe('personal');
         expect(result2.value).toBe('jane@domain.com');
+      });
+
+      it('should handle email with list marker and colon', () => {
+        const result = parseContactListItem('- HOME: contact@example.com');
+        expect(result.fieldType).toBe('EMAIL');
+        expect(result.kind).toBe('HOME');
+        expect(result.value).toBe('contact@example.com');
       });
 
       it('should handle email with list marker', () => {
@@ -248,6 +262,13 @@ describe('Field Pattern Detection', () => {
         const result = parseContactListItem('home 555-555-5555');
         expect(result.fieldType).toBe('TEL');
         expect(result.kind).toBe('home');
+        expect(result.value).toBe('555-555-5555');
+      });
+
+      it('should parse phone with colon-separated kind', () => {
+        const result = parseContactListItem('CELL: 555-555-5555');
+        expect(result.fieldType).toBe('TEL');
+        expect(result.kind).toBe('CELL');
         expect(result.value).toBe('555-555-5555');
       });
 
@@ -277,6 +298,13 @@ describe('Field Pattern Detection', () => {
         expect(result.fieldType).toBe('URL');
         expect(result.kind).toBe('personal');
         expect(result.value).toBe('http://example.com');
+      });
+
+      it('should parse URL with colon-separated kind', () => {
+        const result = parseContactListItem('WORK: https://company.com');
+        expect(result.fieldType).toBe('URL');
+        expect(result.kind).toBe('WORK');
+        expect(result.value).toBe('https://company.com');
       });
 
       it('should parse domain without protocol', () => {
