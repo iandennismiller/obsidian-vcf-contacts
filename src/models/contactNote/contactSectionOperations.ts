@@ -383,25 +383,105 @@ export class ContactSectionOperations extends BaseMarkdownSectionOperations {
   /**
    * Generate Contact section markdown from frontmatter fields using template
    * Returns the markdown content for the Contact section
+   * Generates a simple list-based format from frontmatter fields
    */
   async generateContactSection(): Promise<string> {
     const frontmatter = await this.contactData.getFrontmatter();
     if (!frontmatter) return '';
 
-    const template = this.settings.contactSectionTemplate || '';
-    if (!template) return '';
-
-    const result = this.renderTemplate(template, frontmatter);
+    const lines: string[] = [`## ${SECTION_NAMES.CONTACT}`, ''];
     
-    // If the result only contains the heading and no actual contact fields, return empty
-    // This handles the case where template has "## Contact" but no fields are populated
-    const trimmedResult = result.trim();
-    const expectedHeading = `## ${SECTION_NAMES.CONTACT}`;
-    if (trimmedResult === expectedHeading || trimmedResult === '') {
+    // Group fields by type and collect them
+    const fieldsByType: Record<string, Array<{key: string, label: string, value: any, components?: Record<string, string>}>> = {
+      EMAIL: [],
+      TEL: [],
+      URL: [],
+      ADR: []
+    };
+
+    // Parse frontmatter into field groups
+    for (const [key, value] of Object.entries(frontmatter)) {
+      // Match bare keys (EMAIL, TEL, URL, ADR) or bracketed keys (EMAIL[WORK], EMAIL[1])
+      const bareMatch = key.match(/^(EMAIL|TEL|URL|ADR)$/);
+      const bracketMatch = key.match(/^(EMAIL|TEL|URL|ADR)\[([^\]]+)\](?:\.(.+))?$/);
+      
+      if (bareMatch) {
+        const [, fieldType] = bareMatch;
+        fieldsByType[fieldType].push({
+          key,
+          label: '',  // Bare key has no label
+          value
+        });
+      } else if (bracketMatch) {
+        const [, fieldType, label, component] = bracketMatch;
+        
+        if (fieldType === 'ADR' && component) {
+          // Handle address components
+          let field = fieldsByType[fieldType].find(f => f.label === label);
+          if (!field) {
+            field = { key: `${fieldType}[${label}]`, label, value: '', components: {} };
+            fieldsByType[fieldType].push(field);
+          }
+          if (field.components) {
+            field.components[component] = String(value);
+          }
+        } else if (!component) {
+          // Handle simple fields
+          fieldsByType[fieldType].push({
+            key,
+            label,
+            value: String(value)
+          });
+        }
+      }
+    }
+
+    // Generate list items for each field type
+    // Order: EMAIL, TEL, URL, ADR
+    for (const fieldType of ['EMAIL', 'TEL', 'URL', 'ADR']) {
+      const fields = fieldsByType[fieldType];
+      if (fields.length === 0) continue;
+
+      for (const field of fields) {
+        if (fieldType === 'ADR' && field.components) {
+          // Format address
+          const parts: string[] = [];
+          if (field.components.STREET) parts.push(field.components.STREET);
+          if (field.components.LOCALITY || field.components.REGION || field.components.POSTAL) {
+            const cityLine = [
+              field.components.LOCALITY,
+              field.components.REGION,
+              field.components.POSTAL
+            ].filter(Boolean).join(', ');
+            if (cityLine) parts.push(cityLine);
+          }
+          if (field.components.COUNTRY) parts.push(field.components.COUNTRY);
+          
+          if (parts.length > 0) {
+            const addressValue = parts.join(', ');
+            if (field.label) {
+              lines.push(`- ${field.label} ${addressValue}`);
+            } else {
+              lines.push(`- ${addressValue}`);
+            }
+          }
+        } else {
+          // Format simple field
+          if (field.label) {
+            lines.push(`- ${field.label} ${field.value}`);
+          } else {
+            lines.push(`- ${field.value}`);
+          }
+        }
+      }
+    }
+
+    // If only header, no fields, return empty
+    if (lines.length <= 2) {
       return '';
     }
     
-    return result;
+    return lines.join('\n');
   }
 
   /**
