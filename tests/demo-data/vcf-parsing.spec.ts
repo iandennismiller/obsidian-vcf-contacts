@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { VCardParser } from '../../src/models/vcardFile/parsing';
 import { VcardFile } from '../../src/models/vcardFile/vcardFile';
+import { VCardFileOperations } from '../../src/models/vcardFile/fileOperations';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
@@ -166,7 +167,7 @@ describe('Demo VCF Data Parsing', () => {
       ];
 
       testCases.forEach(({ name, expected }) => {
-        const filename = VcardFile.generateVcardFilename(name);
+        const filename = VCardFileOperations.generateVcardFilename(name);
         expect(filename).toBe(expected);
       });
     });

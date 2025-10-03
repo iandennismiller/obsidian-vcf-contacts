@@ -95,7 +95,7 @@ export const VcardSyncPostProcessor: CuratorProcessor = {
       } else {
         // vcard exists - check REV timestamps
         try {
-          const vcardContent = await VcardFile.readVcardFile(existingVcardPath);
+          const vcardContent = await VCardFileOperations.readVcardFile(existingVcardPath);
           const parsedEntries = await vcardManager.readAndParseVCard(existingVcardPath);
           
           if (parsedEntries && parsedEntries.length > 0) {
