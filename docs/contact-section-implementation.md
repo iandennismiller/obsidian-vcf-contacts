@@ -4,6 +4,13 @@
 
 This document summarizes the implementation of user stories 30-40, which add Contact Information Display functionality to the Obsidian VCF Contacts plugin.
 
+**Architecture Note**: The Contact Section feature leverages the [marked](https://www.npmjs.com/package/marked) library for standard markdown parsing operations (headings, lists, structure). Custom parsing is limited to:
+- Contact-specific data patterns (emails, phones, URLs)
+- Field type and kind extraction
+- Obsidian wiki-links
+
+This architecture reduces code complexity and eliminates edge cases in markdown syntax handling.
+
 ## What Was Implemented
 
 ### Core Features (User Stories 30-31)

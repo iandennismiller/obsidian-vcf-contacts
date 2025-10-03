@@ -44,6 +44,11 @@ The primary user interface for curating relationships is the contact note itself
 - The plugin should not touch any other heading or anything else in the note
 - Add both "## Related" heading and the list when a relationship change is being propagated to a contact
 
+**Technical Note**: Heading detection and extraction uses the [marked](https://www.npmjs.com/package/marked) library for robust markdown parsing. Custom logic is only applied for:
+- Wiki-link extraction (`[[Contact Name]]`)
+- Relationship type identification
+- Case normalization and cleanup
+
 #### Relationship List Format
 
 - A list under the Related heading maps onto RELATED items in front matter
@@ -53,6 +58,11 @@ The primary user interface for curating relationships is the contact note itself
 - The object, appearing in double-square brackets, is an Obsidian-flavored markdown link (wiki-link)
 - If the object's note exists as a contact, then the UID in its front matter serves as the identifier in front matter and the graph
 - In the Related list, it always renders as the human-readable contact name (the name of the contact note in Obsidian)
+
+**Technical Note**: List parsing leverages marked for structure extraction. The plugin focuses on:
+- Wiki-link pattern matching (Obsidian-specific)
+- Relationship semantic extraction
+- Contact reference resolution
 
 #### User Editing
 

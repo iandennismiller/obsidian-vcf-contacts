@@ -4,6 +4,17 @@
 
 This document provides a comprehensive specification for contact list parsing in the Obsidian VCF Contacts plugin. The contact list parsing feature allows users to enter contact information using simple markdown list items, with automatic field type detection and optional kind/type labels.
 
+**Architecture Note**: The plugin uses the [marked](https://www.npmjs.com/package/marked) library for standard markdown parsing operations. This approach:
+- Reduces the need for custom markdown parsing utilities
+- Eliminates edge cases related to markdown syntax (whitespace, line breaks, list formatting)
+- Allows the plugin to focus on contact-specific data extraction
+- Provides a well-tested, performant markdown parser
+
+Custom parsing is limited to:
+1. **Obsidian-specific syntax**: Wiki-style links (`[[Contact Name]]`)
+2. **Contact data extraction**: Identifying emails, phone numbers, URLs from list item content
+3. **Semantic interpretation**: Extracting type/kind labels and values from contact data
+
 ## Core Concepts
 
 ### The Contact Section
@@ -39,13 +50,27 @@ Each line represents a single piece of contact information with:
 
 ### Detection Process
 
-The parser uses a general method to identify field types:
+The parser leverages the marked library for markdown structure, then applies contact-specific pattern matching:
 
-1. **Clean the line**: Remove list marker (`-`) and trim whitespace
-2. **Identify field type**: Use pattern matching to determine type (EMAIL, TEL, URL, ADR)
-3. **Extract components**: Separate optional kind prefix from value
-4. **Validate**: Ensure the value matches the detected pattern
-5. **Create frontmatter key**: Generate key like `EMAIL[WORK]` or bare `TEL` (first field) or indexed `TEL[1]` (second field)
+1. **Parse markdown structure** (handled by marked library):
+   - Extract heading hierarchy
+   - Parse list items from markdown
+   - Normalize whitespace and line breaks
+   - Handle various list formatting styles
+
+2. **Extract contact data** (custom logic):
+   - Clean the line: Remove list marker (`-`) and trim whitespace
+   - Identify field type: Use pattern matching to determine type (EMAIL, TEL, URL, ADR)
+   - Extract components: Separate optional kind prefix from value
+   - Validate: Ensure the value matches the detected pattern
+   - Create frontmatter key: Generate key like `EMAIL[WORK]` or bare `TEL` (first field) or indexed `TEL[1]` (second field)
+
+**Benefit**: By delegating markdown parsing to marked, the plugin eliminates the need for custom handling of:
+- Different list marker styles
+- Inconsistent indentation
+- Mixed whitespace (spaces vs tabs)
+- Line break variations
+- Nested list structures
 
 ### Pattern Detection Priority
 
@@ -479,9 +504,63 @@ Kind labels map to vCard TYPE parameters:
 
 1. **Use contact list format**: Recommended for flexibility and ease of use
 2. **Add kind labels**: When multiple values of same type exist
-3. **Consistent formatting**: Makes parsing more reliable
+3. **Consistent formatting**: Makes parsing more reliable (though marked handles most variations)
 4. **Review sync changes**: Use confirmation modal when enabled
 5. **Backup data**: Before enabling processors on existing vault
+
+## Architecture: Marked Library Integration
+
+### Why Use Marked?
+
+The marked library provides several advantages for the VCF Contacts plugin:
+
+1. **Reduced Code Complexity**: Eliminates hundreds of lines of custom markdown parsing code
+2. **Better Edge Case Handling**: Marked is battle-tested on millions of markdown documents
+3. **Performance**: Optimized for speed with minimal overhead
+4. **Maintenance**: Reduces maintenance burden by delegating to well-supported library
+5. **Standards Compliance**: Follows CommonMark and GFM specifications
+
+### What Marked Handles
+
+The marked library processes:
+- **Headings**: Detection and hierarchy (`##`, `###`, etc.)
+- **Lists**: Unordered lists, ordered lists, nested structures
+- **Whitespace**: Normalization and trimming
+- **Line Breaks**: Cross-platform line ending handling
+- **Paragraphs**: Block-level element parsing
+- **Inline Elements**: Basic inline formatting
+
+### What Still Requires Custom Parsing
+
+The plugin maintains custom parsing for:
+
+1. **Obsidian Wiki-Links**: `[[Contact Name]]` syntax is Obsidian-specific
+   - Not part of standard markdown
+   - Used extensively in relationship linking
+   - Requires custom regex patterns
+
+2. **Contact Data Semantics**: Extracting meaning from list item content
+   - Email pattern recognition
+   - Phone number detection and normalization
+   - URL identification
+   - Address component parsing
+   - Kind/type label extraction
+
+3. **VCard Field Mapping**: Converting between formats
+   - Frontmatter to markdown representation
+   - VCard field types to display labels
+   - Relationship type transformations
+
+### Migration Benefits
+
+By migrating to marked, the plugin can remove:
+- Custom list parsing utilities
+- Whitespace handling edge cases
+- Line break normalization code
+- Heading detection regex patterns
+- Section extraction utilities (partially - wiki-links still need handling)
+
+The remaining code focuses purely on domain logic rather than markdown syntax.
 
 ## Summary
 

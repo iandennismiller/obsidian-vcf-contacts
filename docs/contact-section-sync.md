@@ -4,6 +4,13 @@
 
 The Contact Section Sync feature allows you to edit contact information in the human-readable `## Contact` section of your notes, and automatically sync those changes back to the frontmatter. This provides a two-way sync between the structured frontmatter fields and the markdown-formatted Contact section.
 
+**Architecture Note**: This feature uses the [marked](https://www.npmjs.com/package/marked) library for markdown structure parsing (extracting list items, headings, etc.). Custom parsing focuses only on:
+- Contact field pattern recognition (emails, phones, URLs)
+- Kind/type label extraction
+- Obsidian-specific wiki-links
+
+This approach eliminates the need for custom markdown syntax edge case handling.
+
 ## How It Works
 
 ### Automatic Field Detection
@@ -13,6 +20,8 @@ The parser can automatically detect contact information even without explicit he
 - **Email addresses**: `user@example.com`
 - **Phone numbers**: Including international formats like `+1-555-123-4567`, `(555) 123-4567`, etc.
 - **URLs/Websites**: `https://example.com`, `www.example.com`, `example.com`
+
+**Note**: Markdown list parsing (extracting `-` list items, handling whitespace, line breaks) is handled by the marked library. Pattern matching is applied to the parsed content.
 
 ### Contact List Parsing (Recommended Format)
 
