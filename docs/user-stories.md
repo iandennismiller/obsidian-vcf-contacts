@@ -406,4 +406,98 @@ Email
 - Frontmatter updates occur only when data changes
 - Large contact lists (100+ contacts) don't cause lag
 - Sync operations don't block the UI
-- Template compilation is cached and reused
+
+### 41. Contact Template Customization
+**As a user**, I want to customize how the Contact section displays information by editing a template string in my plugin settings so that I can control the appearance and content of contact information in an open-ended, flexible way. The plugin should allow me to:
+
+- Edit a template string that controls the entire Contact section format
+- Use template variables to control which fields are displayed and how
+- Control field ordering through template structure
+- Customize icons, labels, and formatting through the template
+- Show first field only or all fields using template directives
+
+**Configuration interface:**
+- A dedicated "Contact Section Template" section in plugin settings
+- A large text area for editing the template string
+- Documentation of available template variables directly in the UI
+- A "Reset to Default" button to restore the default template
+- Immediate application of changes to Contact sections
+
+**Template Variables:**
+
+*Field Type Sections:*
+- `{{#EMAIL}}...{{/EMAIL}}` - Email fields section
+- `{{#TEL}}...{{/TEL}}` - Phone fields section
+- `{{#ADR}}...{{/ADR}}` - Address fields section
+- `{{#URL}}...{{/URL}}` - Website fields section
+
+*Field Display Control:*
+- `{{#FIRST}}...{{/FIRST}}` - Show only first field of this type
+- `{{#ALL}}...{{/ALL}}` - Show all fields of this type
+
+*Field Data:*
+- `{{LABEL}}` - Field label (e.g., Home, Work, Cell) in title case
+- `{{VALUE}}` - Field value
+
+*Address Components:*
+- `{{STREET}}` - Street address
+- `{{LOCALITY}}` - City/locality
+- `{{REGION}}` - State/region
+- `{{POSTAL}}` - Postal/zip code
+- `{{COUNTRY}}` - Country
+
+*Whitespace Control:*
+- Add `-` suffix to closing tags (e.g., `{{/EMAIL-}}`) for tight whitespace control
+- Hyphen trims leading/trailing whitespace from section content and adds exactly one newline after
+- Without hyphen: `{{/EMAIL}}` preserves all template whitespace
+- With hyphen: `{{/EMAIL-}}` trims whitespace and normalizes to single newline
+- Use hyphen for clean, compact output without extra blank lines
+
+**Default template:**
+```
+## Contact
+
+{{#EMAIL-}}
+📧 Email
+{{#FIRST}}{{LABEL}} {{VALUE}}{{/FIRST}}
+
+{{/EMAIL-}}
+{{#TEL-}}
+📞 Phone
+{{#FIRST}}{{LABEL}} {{VALUE}}{{/FIRST}}
+
+{{/TEL-}}
+{{#ADR-}}
+🏠 Address
+{{#FIRST}}({{LABEL}})
+{{STREET}}
+{{LOCALITY}}, {{REGION}} {{POSTAL}}
+{{COUNTRY}}
+
+{{/FIRST}}
+{{/ADR-}}
+{{#URL-}}
+🌐 Website
+{{#FIRST}}{{LABEL}} {{VALUE}}{{/FIRST}}
+
+{{/URL-}}
+```
+
+**Expected behavior:**
+- When I edit the template string, changes apply to all Contact sections
+- Field type sections (EMAIL, TEL, etc.) only render if fields exist
+- FIRST directive shows only the first field, ALL directive shows all fields
+- Labels are automatically formatted to title case (e.g., "WORK" → "Work")
+- Numeric indices are stripped from labels (e.g., "1:WORK" → "Work")
+- Hyphen suffix on tags removes trailing newlines unconditionally
+- Invalid template syntax is handled gracefully
+- Settings are persisted across Obsidian restarts
+
+**Advanced customization examples:**
+- Show all emails: Change `{{#FIRST}}` to `{{#ALL}}` in EMAIL section
+- Remove icons: Delete the emoji characters from each section
+- Change field order: Reorder the field type sections in the template
+- Custom formatting: Add your own text, bullets, or formatting around variables
+- Hide field types: Remove entire field type sections from the template
+- Multi-line formats: Use newlines and spacing to control layout
+- Precise spacing: Use hyphen suffix to control where newlines appear

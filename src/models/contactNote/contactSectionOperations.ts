@@ -7,6 +7,7 @@
  */
 
 import { ContactData } from './contactData';
+import { ContactsPluginSettings } from 'src/plugin/settings';
 
 /**
  * Represents a parsed contact field from the Contact section
@@ -62,6 +63,7 @@ export interface FuzzyTemplate {
  */
 export class ContactSectionOperations {
   private contactData: ContactData;
+  private settings: ContactsPluginSettings;
   
   // Default templates for common field types
   private static readonly DEFAULT_TEMPLATES: Record<string, FuzzyTemplate> = {
@@ -95,8 +97,22 @@ export class ContactSectionOperations {
     }
   };
 
-  constructor(contactData: ContactData) {
+  constructor(contactData: ContactData, settings: ContactsPluginSettings) {
     this.contactData = contactData;
+    this.settings = settings;
+  }
+
+  /**
+   * Format a field label for display
+   * - Removes numeric index prefix (e.g., "1:WORK" -> "WORK")
+   * - Converts to title case (e.g., "WORK" -> "Work")
+   */
+  private formatFieldLabel(label: string): string {
+    // Remove numeric index prefix if present (e.g., "1:WORK" -> "WORK")
+    const withoutIndex = label.replace(/^\d+:/, '');
+    
+    // Convert to title case
+    return withoutIndex.charAt(0).toUpperCase() + withoutIndex.slice(1).toLowerCase();
   }
 
   // === Contact Section Parsing ===
@@ -157,26 +173,38 @@ export class ContactSectionOperations {
 
       // Parse field lines based on current type
       if (currentFieldType && currentFieldType !== 'ADR') {
-        // Parse simple fields (EMAIL, TEL, URL) with pattern "- Label: Value"
-        const fieldMatch = line.match(/^-\s*([^:]+):\s*(.+)$/);
-        if (fieldMatch) {
-          const [, label, value] = fieldMatch;
+        // Parse simple fields (EMAIL, TEL, URL)
+        // Try new format first: "Label value" (no dash, no colon)
+        const newFormatMatch = line.match(/^([A-Za-z]+)\s+(.+)$/);
+        if (newFormatMatch) {
+          const [, label, value] = newFormatMatch;
           fields.push({
             fieldType: currentFieldType,
             fieldLabel: label.trim(),
             value: value.trim()
           });
         } else {
-          // Try without label (just "- value")
-          const simpleMatch = line.match(/^-\s*(.+)$/);
-          if (simpleMatch) {
-            // Use numeric index for unlabeled fields
-            const existingCount = fields.filter(f => f.fieldType === currentFieldType).length;
+          // Try old format: "- Label: Value"
+          const oldFormatMatch = line.match(/^-\s*([^:]+):\s*(.+)$/);
+          if (oldFormatMatch) {
+            const [, label, value] = oldFormatMatch;
             fields.push({
               fieldType: currentFieldType,
-              fieldLabel: String(existingCount + 1),
-              value: simpleMatch[1].trim()
+              fieldLabel: label.trim(),
+              value: value.trim()
             });
+          } else {
+            // Try without label (just "- value")
+            const simpleMatch = line.match(/^-\s*(.+)$/);
+            if (simpleMatch) {
+              // Use numeric index for unlabeled fields
+              const existingCount = fields.filter(f => f.fieldType === currentFieldType).length;
+              fields.push({
+                fieldType: currentFieldType,
+                fieldLabel: String(existingCount + 1),
+                value: simpleMatch[1].trim()
+              });
+            }
           }
         }
       } else if (currentFieldType === 'ADR') {
@@ -288,33 +316,141 @@ export class ContactSectionOperations {
   // === Contact Section Generation ===
 
   /**
-   * Generate Contact section markdown from frontmatter fields
+   * Generate Contact section markdown from frontmatter fields using template
    * Returns the markdown content for the Contact section
    */
   async generateContactSection(): Promise<string> {
     const frontmatter = await this.contactData.getFrontmatter();
     if (!frontmatter) return '';
 
-    const groups = this.groupContactFields(frontmatter);
-    if (groups.length === 0) return '';
+    const template = this.settings.contactSectionTemplate || '';
+    if (!template) return '';
 
-    let markdown = '## Contact\n\n';
+    const result = this.renderTemplate(template, frontmatter);
+    
+    // If the result only contains the heading and no actual contact fields, return empty
+    // This handles the case where template has "## Contact" but no fields are populated
+    const trimmedResult = result.trim();
+    if (trimmedResult === '## Contact' || trimmedResult === '') {
+      return '';
+    }
+    
+    return result;
+  }
 
-    for (const group of groups) {
-      markdown += `${group.icon} ${group.displayName}\n`;
-      for (const field of group.fields) {
-        if (field.isMultiLine) {
-          // Multi-line field (e.g., address)
-          markdown += `(${field.label})\n${field.value}\n\n`;
-        } else {
-          // Single-line field
-          markdown += `- ${field.label}: ${field.value}\n`;
+  /**
+   * Render template string with frontmatter data
+   */
+  private renderTemplate(template: string, frontmatter: Record<string, any>): string {
+    let output = template;
+
+    // Group fields by type
+    const fieldsByType: Record<string, Array<{label: string, value: string, components?: Record<string, string>}>> = {
+      EMAIL: [],
+      TEL: [],
+      ADR: [],
+      URL: []
+    };
+
+    // Parse frontmatter into field groups
+    for (const [key, value] of Object.entries(frontmatter)) {
+      const match = key.match(/^(EMAIL|TEL|ADR|URL)\[([^\]]+)\](?:\.(.+))?$/);
+      if (!match) continue;
+
+      const [, fieldType, label, component] = match;
+      
+      if (fieldType === 'ADR') {
+        // Handle address components
+        let field = fieldsByType[fieldType].find(f => f.label === label);
+        if (!field) {
+          field = { label, value: '', components: {} };
+          fieldsByType[fieldType].push(field);
         }
+        if (component && field.components) {
+          field.components[component] = String(value);
+        }
+      } else {
+        // Handle simple fields
+        fieldsByType[fieldType].push({
+          label: this.formatFieldLabel(label),
+          value: String(value)
+        });
       }
-      markdown += '\n';
     }
 
-    return markdown.trim();
+    // Process each field type section (with or without hyphen for newline suppression)
+    for (const fieldType of ['EMAIL', 'TEL', 'ADR', 'URL']) {
+      // Match both {{#FIELDTYPE}} and {{#FIELDTYPE-}} (with hyphen for newline suppression)
+      // Also capture an optional newline after the closing tag
+      const sectionRegex = new RegExp(`{{#${fieldType}(-?)}}([\\s\\S]*?){{/${fieldType}\\1}}(\\n?)`, 'g');
+      
+      output = output.replace(sectionRegex, (match, hyphen, sectionContent, trailingNewline) => {
+        const fields = fieldsByType[fieldType];
+        
+        // If no fields, return empty (or newline if no hyphen)
+        if (fields.length === 0) {
+          // If hyphen is used, suppress the trailing newline
+          return hyphen === '-' ? '' : trailingNewline;
+        }
+
+        // Process FIRST or ALL blocks within the section
+        let result = sectionContent;
+        
+        // Handle {{#FIRST}}...{{/FIRST}} and {{#FIRST-}}...{{/FIRST-}}
+        const firstRegex = /{{#FIRST(-?)}}([\s\S]*?){{\/FIRST\1}}/g;
+        result = result.replace(firstRegex, (_match: string, hyphen: string, blockContent: string) => {
+          if (fields.length === 0) return '';
+          return this.renderFieldBlock(blockContent, fields[0], fieldType);
+        });
+
+        // Handle {{#ALL}}...{{/ALL}} and {{#ALL-}}...{{/ALL-}}
+        const allRegex = /{{#ALL(-?)}}([\s\S]*?){{\/ALL\1}}/g;
+        result = result.replace(allRegex, (_match: string, hyphen: string, blockContent: string) => {
+          return fields.map(field => this.renderFieldBlock(blockContent, field, fieldType)).join('\n');
+        });
+
+        // If hyphen is used, trim whitespace and add single newline
+        if (hyphen === '-') {
+          result = result.trim();
+          // Add a newline after the trimmed content (for separation from next section)
+          return result + '\n';
+        } else {
+          // Preserve original behavior - keep section content as-is and add trailing newline
+          return result + trailingNewline;
+        }
+      });
+    }
+
+    // Remove any remaining template tags
+    output = output.replace(/{{[^}]+}}/g, '');
+    
+    return output.trim();
+  }
+
+  /**
+   * Render a single field block with template variables
+   */
+  private renderFieldBlock(
+    template: string, 
+    field: {label: string, value: string, components?: Record<string, string>},
+    fieldType: string
+  ): string {
+    let result = template;
+
+    // Replace common variables
+    result = result.replace(/{{LABEL}}/g, field.label);
+    result = result.replace(/{{VALUE}}/g, field.value);
+
+    // Replace address-specific variables
+    if (fieldType === 'ADR' && field.components) {
+      result = result.replace(/{{STREET}}/g, field.components.STREET || '');
+      result = result.replace(/{{LOCALITY}}/g, field.components.LOCALITY || '');
+      result = result.replace(/{{REGION}}/g, field.components.REGION || '');
+      result = result.replace(/{{POSTAL}}/g, field.components.POSTAL || '');
+      result = result.replace(/{{COUNTRY}}/g, field.components.COUNTRY || '');
+    }
+
+    return result;
   }
 
   /**
@@ -323,8 +459,8 @@ export class ContactSectionOperations {
   private groupContactFields(frontmatter: Record<string, any>): ContactFieldGroup[] {
     const groups: Map<string, ContactFieldGroup> = new Map();
 
-    // Define field order
-    const fieldOrder = ['EMAIL', 'TEL', 'ADR', 'URL'];
+    // Use configured field order from settings
+    const fieldOrder = this.settings.contactTemplateFieldOrder || ['EMAIL', 'TEL', 'ADR', 'URL'];
 
     for (const [key, value] of Object.entries(frontmatter)) {
       // Parse field type and label from key (e.g., "EMAIL[HOME]", "ADR[HOME].STREET")
@@ -335,12 +471,12 @@ export class ContactSectionOperations {
       const template = ContactSectionOperations.DEFAULT_TEMPLATES[fieldType];
       if (!template) continue;
 
-      // Get or create group
+      // Get or create group using configured icons and display names
       if (!groups.has(fieldType)) {
         groups.set(fieldType, {
           fieldType,
-          icon: template.icon || '',
-          displayName: template.displayName || fieldType,
+          icon: this.settings.contactTemplateIcons[fieldType] || template.icon || '',
+          displayName: this.settings.contactTemplateDisplayNames[fieldType] || template.displayName || fieldType,
           fields: []
         });
       }

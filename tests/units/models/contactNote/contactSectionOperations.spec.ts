@@ -2,12 +2,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { App, TFile } from 'obsidian';
 import { ContactSectionOperations } from '../../../../src/models/contactNote/contactSectionOperations';
 import { ContactData } from '../../../../src/models/contactNote/contactData';
+import { ContactsPluginSettings } from '../../../../src/plugin/settings';
 
 describe('ContactSectionOperations', () => {
   let mockApp: Partial<App>;
   let mockFile: TFile;
   let contactData: ContactData;
   let ops: ContactSectionOperations;
+  let mockSettings: ContactsPluginSettings;
 
   beforeEach(() => {
     mockFile = { 
@@ -26,8 +28,48 @@ describe('ContactSectionOperations', () => {
       } as any
     };
 
+    mockSettings = {
+      contactsFolder: "",
+      defaultHashtag: "",
+      vcfStorageMethod: 'vcf-folder',
+      vcfFilename: "contacts.vcf",
+      vcfWatchFolder: "",
+      vcfWatchEnabled: false,
+      vcfWatchPollingInterval: 30,
+      vcfWriteBackEnabled: false,
+      vcfCustomizeIgnoreList: false,
+      vcfIgnoreFilenames: [],
+      vcfIgnoreUIDs: [],
+      contactSectionTemplate: `## Contact
+
+{{#EMAIL-}}
+📧 Email
+{{#FIRST}}{{LABEL}} {{VALUE}}{{/FIRST}}
+
+{{/EMAIL-}}
+{{#TEL-}}
+📞 Phone
+{{#FIRST}}{{LABEL}} {{VALUE}}{{/FIRST}}
+
+{{/TEL-}}
+{{#ADR-}}
+🏠 Address
+{{#FIRST}}({{LABEL}})
+{{STREET}}
+{{LOCALITY}}, {{REGION}} {{POSTAL}}
+{{COUNTRY}}
+
+{{/FIRST}}
+{{/ADR-}}
+{{#URL-}}
+🌐 Website
+{{#FIRST}}{{LABEL}} {{VALUE}}{{/FIRST}}
+
+{{/URL-}}`
+    };
+
     contactData = new ContactData(mockApp as App, mockFile);
-    ops = new ContactSectionOperations(contactData);
+    ops = new ContactSectionOperations(contactData, mockSettings);
   });
 
   describe('parseContactSection', () => {
@@ -263,8 +305,9 @@ EMAIL[WORK]: test@work.com
 
       expect(section).toContain('## Contact');
       expect(section).toContain('📧 Email');
-      expect(section).toContain('HOME: test@home.com');
-      expect(section).toContain('WORK: test@work.com');
+      expect(section).toContain('Home test@home.com');
+      // Only first field should be shown by default
+      expect(section).not.toContain('Work');
     });
 
     it('should generate Contact section from phone frontmatter', async () => {
@@ -291,7 +334,9 @@ TEL[HOME]: +1-555-5678
 
       expect(section).toContain('## Contact');
       expect(section).toContain('📞 Phone');
-      expect(section).toContain('CELL: +1-555-1234');
+      expect(section).toContain('Cell +1-555-1234');
+      // Only first field should be shown by default
+      expect(section).not.toContain('Home');
     });
 
     it('should generate Contact section with address fields', async () => {

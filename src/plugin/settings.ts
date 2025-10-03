@@ -20,6 +20,8 @@ export interface ContactsPluginSettings {
   vcfCustomizeIgnoreList: boolean;
   vcfIgnoreFilenames: string[];
   vcfIgnoreUIDs: string[];
+  // Contact Section Template Settings
+  contactSectionTemplate: string;
   [key: string]: string|boolean|number|string[];
 }
 
@@ -41,6 +43,33 @@ export const DEFAULT_SETTINGS: ContactsPluginSettings = {
   vcfCustomizeIgnoreList: false,
   vcfIgnoreFilenames: [],
   vcfIgnoreUIDs: [],
+  // Contact Section Template Default
+  contactSectionTemplate: `## Contact
+
+{{#EMAIL-}}
+📧 Email
+{{#FIRST}}{{LABEL}} {{VALUE}}{{/FIRST}}
+
+{{/EMAIL-}}
+{{#TEL-}}
+📞 Phone
+{{#FIRST}}{{LABEL}} {{VALUE}}{{/FIRST}}
+
+{{/TEL-}}
+{{#ADR-}}
+🏠 Address
+{{#FIRST}}({{LABEL}})
+{{STREET}}
+{{LOCALITY}}, {{REGION}} {{POSTAL}}
+{{COUNTRY}}
+
+{{/FIRST}}
+{{/ADR-}}
+{{#URL-}}
+🌐 Website
+{{#FIRST}}{{LABEL}} {{VALUE}}{{/FIRST}}
+
+{{/URL-}}`,
   ...curatorSettingDefaults
 }
 
@@ -311,5 +340,142 @@ export class ContactsSettingTab extends PluginSettingTab {
           textArea.inputEl.style.width = "100%";
         });
     }
+
+    // Contact Section Template
+    const contactTemplateTitle = containerEl.createEl("h3", { text: "Contact Section Template" });
+    contactTemplateTitle.style.marginTop = "2em";
+
+    const contactTemplateDesc = document.createDocumentFragment();
+    contactTemplateDesc.append(
+      "Edit the template string to customize how the Contact section is formatted.",
+      contactTemplateDesc.createEl("br"),
+      contactTemplateDesc.createEl("br"),
+      contactTemplateDesc.createEl("strong", { text: "Template Variables:" }),
+      contactTemplateDesc.createEl("br"),
+      contactTemplateDesc.createEl("code", { text: "{{#EMAIL}}" }),
+      " ... ",
+      contactTemplateDesc.createEl("code", { text: "{{/EMAIL}}" }),
+      " - Email fields section",
+      contactTemplateDesc.createEl("br"),
+      contactTemplateDesc.createEl("code", { text: "{{#TEL}}" }),
+      " ... ",
+      contactTemplateDesc.createEl("code", { text: "{{/TEL}}" }),
+      " - Phone fields section",
+      contactTemplateDesc.createEl("br"),
+      contactTemplateDesc.createEl("code", { text: "{{#ADR}}" }),
+      " ... ",
+      contactTemplateDesc.createEl("code", { text: "{{/ADR}}" }),
+      " - Address fields section",
+      contactTemplateDesc.createEl("br"),
+      contactTemplateDesc.createEl("code", { text: "{{#URL}}" }),
+      " ... ",
+      contactTemplateDesc.createEl("code", { text: "{{/URL}}" }),
+      " - Website fields section",
+      contactTemplateDesc.createEl("br"),
+      contactTemplateDesc.createEl("br"),
+      contactTemplateDesc.createEl("strong", { text: "Whitespace Control:" }),
+      contactTemplateDesc.createEl("br"),
+      "Add ",
+      contactTemplateDesc.createEl("code", { text: "-" }),
+      " before ",
+      contactTemplateDesc.createEl("code", { text: "}}" }),
+      " (e.g., ",
+      contactTemplateDesc.createEl("code", { text: "{{/EMAIL-}}" }),
+      ") to trim whitespace and add single newline (produces compact output)",
+      contactTemplateDesc.createEl("br"),
+      contactTemplateDesc.createEl("br"),
+      contactTemplateDesc.createEl("strong", { text: "Field Variables:" }),
+      contactTemplateDesc.createEl("br"),
+      contactTemplateDesc.createEl("code", { text: "{{#FIRST}}" }),
+      " ... ",
+      contactTemplateDesc.createEl("code", { text: "{{/FIRST}}" }),
+      " - Show only first field",
+      contactTemplateDesc.createEl("br"),
+      contactTemplateDesc.createEl("code", { text: "{{#ALL}}" }),
+      " ... ",
+      contactTemplateDesc.createEl("code", { text: "{{/ALL}}" }),
+      " - Show all fields",
+      contactTemplateDesc.createEl("br"),
+      contactTemplateDesc.createEl("code", { text: "{{LABEL}}" }),
+      " - Field label (e.g., Home, Work)",
+      contactTemplateDesc.createEl("br"),
+      contactTemplateDesc.createEl("code", { text: "{{VALUE}}" }),
+      " - Field value",
+      contactTemplateDesc.createEl("br"),
+      contactTemplateDesc.createEl("br"),
+      contactTemplateDesc.createEl("strong", { text: "Address Variables:" }),
+      contactTemplateDesc.createEl("br"),
+      contactTemplateDesc.createEl("code", { text: "{{STREET}}" }),
+      ", ",
+      contactTemplateDesc.createEl("code", { text: "{{LOCALITY}}" }),
+      ", ",
+      contactTemplateDesc.createEl("code", { text: "{{REGION}}" }),
+      ", ",
+      contactTemplateDesc.createEl("code", { text: "{{POSTAL}}" }),
+      ", ",
+      contactTemplateDesc.createEl("code", { text: "{{COUNTRY}}" }),
+      contactTemplateDesc.createEl("br"),
+      contactTemplateDesc.createEl("br"),
+      contactTemplateDesc.createEl("em", { text: "See docs/contact-template-syntax.md for full documentation" })
+    );
+
+    new Setting(containerEl)
+      .setName("Template String")
+      .setDesc(contactTemplateDesc)
+      .addTextArea(textArea => {
+        textArea
+          .setPlaceholder("Enter your custom template...")
+          .setValue(this.plugin.settings.contactSectionTemplate)
+          .onChange(async (value) => {
+            this.plugin.settings.contactSectionTemplate = value;
+            await this.plugin.saveSettings();
+            setSettings(this.plugin.settings);
+          });
+        textArea.inputEl.rows = 20;
+        textArea.inputEl.cols = 80;
+        textArea.inputEl.style.width = "100%";
+        textArea.inputEl.style.fontFamily = "monospace";
+        textArea.inputEl.style.fontSize = "12px";
+      });
+
+    // Reset to Defaults Button
+    new Setting(containerEl)
+      .setName("Reset Template to Default")
+      .setDesc("Reset the Contact section template to its default value")
+      .addButton(button =>
+        button
+          .setButtonText("Reset to Default")
+          .onClick(async () => {
+            this.plugin.settings.contactSectionTemplate = `## Contact
+
+{{#EMAIL-}}
+📧 Email
+{{#FIRST}}{{LABEL}} {{VALUE}}{{/FIRST}}
+
+{{/EMAIL-}}
+{{#TEL-}}
+📞 Phone
+{{#FIRST}}{{LABEL}} {{VALUE}}{{/FIRST}}
+
+{{/TEL-}}
+{{#ADR-}}
+🏠 Address
+{{#FIRST}}({{LABEL}})
+{{STREET}}
+{{LOCALITY}}, {{REGION}} {{POSTAL}}
+{{COUNTRY}}
+
+{{/FIRST}}
+{{/ADR-}}
+{{#URL-}}
+🌐 Website
+{{#FIRST}}{{LABEL}} {{VALUE}}{{/FIRST}}
+
+{{/URL-}}`;
+            await this.plugin.saveSettings();
+            setSettings(this.plugin.settings);
+            this.display(); // Refresh the settings display
+            new Notice('Contact template reset to default');
+          }));
   }
 }

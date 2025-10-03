@@ -61,7 +61,7 @@ export class ContactNote {
     this.uidOps = new UIDOperations(app, settings, this.contactData);
     this.advancedRelationshipOps = new AdvancedRelationshipOperations(app, settings, this.contactData, this.relationshipOps);
     this.relationshipHelpers = new RelationshipHelpers();
-    this.contactSectionOps = new ContactSectionOperations(this.contactData);
+    this.contactSectionOps = new ContactSectionOperations(this.contactData, settings);
   }
 
   // === Core File Operations (directly from ContactData) ===
