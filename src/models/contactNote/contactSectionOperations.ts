@@ -409,8 +409,15 @@ export class ContactSectionOperations {
           return fields.map(field => this.renderFieldBlock(blockContent, field, fieldType)).join('\n');
         });
 
-        // If hyphen is used, suppress the trailing newline
-        return hyphen === '-' ? result : result + trailingNewline;
+        // If hyphen is used, trim whitespace and add single newline
+        if (hyphen === '-') {
+          result = result.trim();
+          // Add a newline after the trimmed content (for separation from next section)
+          return result + '\n';
+        } else {
+          // Preserve original behavior - keep section content as-is and add trailing newline
+          return result + trailingNewline;
+        }
       });
     }
 

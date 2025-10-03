@@ -447,11 +447,11 @@ Email
 - `{{COUNTRY}}` - Country
 
 *Whitespace Control:*
-- Add `-` suffix to closing tags (e.g., `{{/EMAIL-}}`) to suppress trailing newlines
-- Hyphen suppression works unconditionally - newlines are removed regardless of content
-- Without hyphen: `{{/EMAIL}}` preserves the newline after the tag
-- With hyphen: `{{/EMAIL-}}` removes the newline after the tag
-- Use hyphen for precise control over spacing in your template
+- Add `-` suffix to closing tags (e.g., `{{/EMAIL-}}`) for tight whitespace control
+- Hyphen trims leading/trailing whitespace from section content and adds exactly one newline after
+- Without hyphen: `{{/EMAIL}}` preserves all template whitespace
+- With hyphen: `{{/EMAIL-}}` trims whitespace and normalizes to single newline
+- Use hyphen for clean, compact output without extra blank lines
 
 **Default template:**
 ```
