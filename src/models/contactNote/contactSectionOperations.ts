@@ -6,9 +6,12 @@
  * (EMAIL, TEL, ADR, URL, etc.) and a human-readable Contact section in markdown.
  */
 
+import { marked } from 'marked';
 import { ContactData } from './contactData';
 import { ContactsPluginSettings } from 'src/plugin/settings';
 import { identifyFieldType } from './fieldPatternDetection';
+import { BaseMarkdownSectionOperations } from './baseMarkdownSectionOperations';
+import { SECTION_NAMES, FIELD_DISPLAY } from './markdownConstants';
 
 /**
  * Represents a parsed contact field from the Contact section
@@ -61,9 +64,11 @@ export interface FuzzyTemplate {
 /**
  * Contact Section operations that work directly with ContactData
  * to minimize data access overhead and improve cache locality.
+ * 
+ * Extends BaseMarkdownSectionOperations to use marked library for
+ * standard markdown parsing while maintaining contact-specific logic.
  */
-export class ContactSectionOperations {
-  private contactData: ContactData;
+export class ContactSectionOperations extends BaseMarkdownSectionOperations {
   private settings: ContactsPluginSettings;
   
   // Default templates for common field types
@@ -72,34 +77,34 @@ export class ContactSectionOperations {
       fieldType: 'EMAIL',
       displayTemplate: '- {TYPE}: {VALUE}',
       parsePattern: /^-\s*([^:]+):\s*(.+)$/,
-      icon: '📧',
-      displayName: 'Email'
+      icon: FIELD_DISPLAY.EMAIL.icon,
+      displayName: FIELD_DISPLAY.EMAIL.name
     },
     TEL: {
       fieldType: 'TEL',
       displayTemplate: '- {TYPE}: {VALUE}',
       parsePattern: /^-\s*([^:]+):\s*(.+)$/,
-      icon: '📞',
-      displayName: 'Phone'
+      icon: FIELD_DISPLAY.TEL.icon,
+      displayName: FIELD_DISPLAY.TEL.name
     },
     URL: {
       fieldType: 'URL',
       displayTemplate: '- {TYPE}: {VALUE}',
       parsePattern: /^-\s*([^:]+):\s*(.+)$/,
-      icon: '🌐',
-      displayName: 'Website'
+      icon: FIELD_DISPLAY.URL.icon,
+      displayName: FIELD_DISPLAY.URL.name
     },
     ADR: {
       fieldType: 'ADR',
       displayTemplate: '{STREET}\n{LOCALITY}, {REGION} {POSTAL}\n{COUNTRY}',
       parsePattern: /^(.+)$/,
-      icon: '🏠',
-      displayName: 'Address'
+      icon: FIELD_DISPLAY.ADR.icon,
+      displayName: FIELD_DISPLAY.ADR.name
     }
   };
 
   constructor(contactData: ContactData, settings: ContactsPluginSettings) {
-    this.contactData = contactData;
+    super(contactData);
     this.settings = settings;
   }
 
@@ -120,21 +125,20 @@ export class ContactSectionOperations {
 
   /**
    * Parse Contact section from markdown content
-   * Returns parsed contact fields that can be synced to frontmatter
+   * Uses marked library for section extraction, custom logic for field parsing
    */
   async parseContactSection(): Promise<ParsedContactField[]> {
     const content = await this.contactData.getContent();
     const fields: ParsedContactField[] = [];
 
-    // Find the Contact section - case-insensitive and depth-agnostic
-    // Matches any heading level (##, ###, ####, etc.) with "Contact" in any case
-    const contactSectionMatch = content.match(/(^|\n)(#{2,})\s*contact\s*\n([\s\S]*?)(?=\n#{2,}\s|\n\n(?:#|$)|\n$)/i);
-    if (!contactSectionMatch) {
+    // Use marked to find the Contact section
+    const contactContent = await this.extractSection(SECTION_NAMES.CONTACT);
+    
+    if (!contactContent) {
       console.debug(`[ContactSectionOperations] No Contact section found in content`);
       return fields;
     }
 
-    const contactContent = contactSectionMatch[3];
     console.debug(`[ContactSectionOperations] Found Contact section content: ${contactContent.substring(0, 200)}`);
     
     const lines = contactContent.split('\n');
@@ -392,7 +396,8 @@ export class ContactSectionOperations {
     // If the result only contains the heading and no actual contact fields, return empty
     // This handles the case where template has "## Contact" but no fields are populated
     const trimmedResult = result.trim();
-    if (trimmedResult === '## Contact' || trimmedResult === '') {
+    const expectedHeading = `## ${SECTION_NAMES.CONTACT}`;
+    if (trimmedResult === expectedHeading || trimmedResult === '') {
       return '';
     }
     
@@ -680,44 +685,46 @@ export class ContactSectionOperations {
   async updateContactSectionInContent(contactSection: string): Promise<void> {
     const content = await this.contactData.getContent();
 
-    // Check if Contact section exists
-    const contactSectionMatch = content.match(/(^|\n)(#{2,})\s*contact\s*\n[\s\S]*?(?=\n#{2,}\s|\n\n(?:#|$)|\n$)/i);
-    // Check if Related section exists
-    const relatedSectionMatch = content.match(/(^|\n)(#{2,})\s*related\s*\n/i);
+    // Use marked to parse sections and find Contact and Related
+    const sections = await this.extractAllSections(content);
+    
+    const contactSectionObj = sections.find(s => s.name.toLowerCase() === SECTION_NAMES.CONTACT.toLowerCase());
+    const relatedSectionObj = sections.find(s => s.name.toLowerCase() === SECTION_NAMES.RELATED.toLowerCase());
+    
+    const contactIndex = contactSectionObj ? sections.indexOf(contactSectionObj) : -1;
+    const relatedIndex = relatedSectionObj ? sections.indexOf(relatedSectionObj) : -1;
     
     let newContent: string;
-    if (contactSectionMatch) {
+    if (contactIndex !== -1) {
       // Contact section exists
-      if (relatedSectionMatch) {
-        // Both sections exist - check if Contact is after Related
-        const contactIndex = content.indexOf(contactSectionMatch[0]);
-        const relatedIndex = content.indexOf(relatedSectionMatch[0]);
-        
-        if (contactIndex > relatedIndex) {
-          // Contact is AFTER Related - need to fix the ordering
-          // 1. Remove Contact from its current location
-          const contentWithoutContact = content.replace(contactSectionMatch[0], '');
-          // 2. Insert Contact before Related
-          const relatedIndexInNewContent = contentWithoutContact.indexOf(relatedSectionMatch[0]);
-          newContent = contentWithoutContact.substring(0, relatedIndexInNewContent) + 
-                      `\n${contactSection}\n` + 
-                      contentWithoutContact.substring(relatedIndexInNewContent);
-        } else {
-          // Contact is already before Related - just replace in place
-          newContent = content.replace(contactSectionMatch[0], `\n${contactSection}`);
-        }
+      if (relatedIndex !== -1 && contactIndex > relatedIndex) {
+        // Contact is AFTER Related - need to fix the ordering
+        // Remove Contact from its current position
+        sections.splice(contactIndex, 1);
+        // Insert Contact before Related
+        const newRelatedIndex = sections.findIndex(s => s.name.toLowerCase() === SECTION_NAMES.RELATED.toLowerCase());
+        contactSectionObj.content = this.extractSectionContentOnly(contactSection);
+        sections.splice(newRelatedIndex, 0, contactSectionObj);
+        newContent = this.reconstructMarkdown(content, sections);
       } else {
-        // Only Contact exists - replace in place
-        newContent = content.replace(contactSectionMatch[0], `\n${contactSection}`);
+        // Contact is already in the correct position - just update content
+        await this.updateSection(SECTION_NAMES.CONTACT, this.extractSectionContentOnly(contactSection));
+        return; // updateSection already saves the content
       }
     } else {
       // Contact section doesn't exist - add it
-      if (relatedSectionMatch) {
+      if (relatedIndex !== -1) {
         // Insert Contact section before Related section
-        const relatedIndex = content.indexOf(relatedSectionMatch[0]);
-        newContent = content.substring(0, relatedIndex) + `\n${contactSection}\n` + content.substring(relatedIndex);
+        const newContactSection: any = {
+          name: SECTION_NAMES.CONTACT,
+          level: 2,
+          content: this.extractSectionContentOnly(contactSection),
+          tokens: []
+        };
+        sections.splice(relatedIndex, 0, newContactSection);
+        newContent = this.reconstructMarkdown(content, sections);
       } else {
-        // Add Contact section before final hashtags (match both single and double newlines)
+        // Add Contact section before final hashtags
         const hashtagMatch = content.match(/\n+(#\w+.*?)$/);
         if (hashtagMatch) {
           newContent = content.replace(hashtagMatch[0], `\n\n${contactSection}\n\n${hashtagMatch[1]}`);
@@ -729,5 +736,17 @@ export class ContactSectionOperations {
     }
 
     await this.contactData.updateContent(newContent);
+  }
+
+  /**
+   * Extract just the content part of a section (without the heading)
+   */
+  private extractSectionContentOnly(sectionMarkdown: string): string {
+    // Remove the heading line (e.g., "## Contact\n")
+    const lines = sectionMarkdown.split('\n');
+    if (lines[0].match(/^#{1,6}\s+/)) {
+      return lines.slice(1).join('\n').trim();
+    }
+    return sectionMarkdown.trim();
   }
 }

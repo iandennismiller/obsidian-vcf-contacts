@@ -4,8 +4,11 @@
  */
 
 import { TFile } from 'obsidian';
+import { marked, Tokens } from 'marked';
 import { ContactData } from './contactData';
 import { Gender, ParsedRelationship, FrontmatterRelationship, ResolvedContact } from './types';
+import { BaseMarkdownSectionOperations } from './baseMarkdownSectionOperations';
+import { SECTION_NAMES, HEADING_LEVELS, REGEX_PATTERNS } from './markdownConstants';
 
 // Re-export types for external consumption
 export type { ParsedRelationship, FrontmatterRelationship, ResolvedContact };
@@ -13,50 +16,51 @@ export type { ParsedRelationship, FrontmatterRelationship, ResolvedContact };
 /**
  * Relationship operations that work directly with ContactData
  * to minimize data access overhead and improve cache locality.
+ * 
+ * Extends BaseMarkdownSectionOperations to use marked library for
+ * standard markdown parsing while maintaining relationship-specific logic.
  */
-export class RelationshipOperations {
-  private contactData: ContactData;
+export class RelationshipOperations extends BaseMarkdownSectionOperations {
 
   constructor(contactData: ContactData) {
-    this.contactData = contactData;
+    super(contactData);
   }
 
   // === Relationship Parsing (co-located with relationship data access) ===
 
   /**
    * Parse Related section from markdown content
-   * Groups parsing logic with data access for better cache locality
+   * Uses marked library for section extraction, custom logic for relationship parsing
    */
   async parseRelatedSection(): Promise<ParsedRelationship[]> {
     const content = await this.contactData.getContent();
     const relationships: ParsedRelationship[] = [];
 
-    // Find the Related section - case-insensitive and depth-agnostic
-    // Matches any heading level (##, ###, ####, etc.) with "Related" in any case
-    const relatedSectionMatch = content.match(/(^|\n)(#{2,})\s*related\s*\n([\s\S]*?)(?=\n#{2,}\s|\n\n(?:#|$)|\n$)/i);
-    if (!relatedSectionMatch) {
+    // Use marked to find the Related section
+    const contentWithoutFrontmatter = this.removeFrontmatter(content);
+    const tokens = marked.lexer(contentWithoutFrontmatter);
+    
+    // Find the Related list
+    const relatedList = this.findListAfterHeading(tokens, SECTION_NAMES.RELATED);
+    
+    if (!relatedList) {
       console.debug(`[RelationshipOperations] No Related section found in content`);
       return relationships;
     }
 
-    const relatedContent = relatedSectionMatch[3];
-    console.debug(`[RelationshipOperations] Found Related section content: ${relatedContent.substring(0, 200)}`);
+    console.debug(`[RelationshipOperations] Found Related section with ${relatedList.items.length} items`);
     
-    const lines = relatedContent.split('\n').filter(line => line.trim());
-    console.debug(`[RelationshipOperations] Parsing ${lines.length} lines from Related section`);
-
-    for (const line of lines) {
+    // Parse each list item using domain-specific patterns
+    for (const item of relatedList.items) {
+      const line = item.text;
       console.debug(`[RelationshipOperations] Parsing line: "${line}"`);
       
       // Parse different formats (in order of preference):
-      // 1. "- type [[Contact Name]]" (canonical format - no colon)
-      // 2. "- type: [[Contact Name]]" (alternative format with colon)
-      // 3. "- [[Contact Name]] (type)" (with brackets, type in parentheses)
-      // 4. "- type: Contact Name" (plain text with colon - fallback for non-wiki-link format)
-      const match1 = line.match(/^-\s*(\w+)\s+\[\[([^\]]+)\]\]/); // type [[Name]] - canonical
-      const match2 = line.match(/^-\s*([^:]+):\s*\[\[([^\]]+)\]\]/); // type: [[Name]] - alternative
-      const match3 = line.match(/^-\s*\[\[([^\]]+)\]\]\s*\(([^)]+)\)/); // [[Name]] (type)
-      const match4 = line.match(/^-\s*([^:]+):\s*(.+)$/); // type: Name - plain text fallback
+      // Use constants for patterns
+      const match1 = line.match(REGEX_PATTERNS.RELATIONSHIP_FORMATS.TYPE_LINK);
+      const match2 = line.match(REGEX_PATTERNS.RELATIONSHIP_FORMATS.TYPE_COLON_LINK);
+      const match3 = line.match(REGEX_PATTERNS.RELATIONSHIP_FORMATS.LINK_TYPE_PARENS);
+      const match4 = line.match(REGEX_PATTERNS.RELATIONSHIP_FORMATS.TYPE_COLON_TEXT);
 
       if (match1) {
         const [, type, contactName] = match1;
@@ -64,7 +68,7 @@ export class RelationshipOperations {
         relationships.push({
           type: type.trim(),
           contactName: contactName.trim(),
-          linkType: 'name' // Markdown links are always name-based
+          linkType: 'name'
         });
       } else if (match2) {
         const [, type, contactName] = match2;
@@ -72,7 +76,7 @@ export class RelationshipOperations {
         relationships.push({
           type: type.trim(),
           contactName: contactName.trim(),
-          linkType: 'name' // Markdown links are always name-based
+          linkType: 'name'
         });
       } else if (match3) {
         const [, contactName, type] = match3;
@@ -80,11 +84,9 @@ export class RelationshipOperations {
         relationships.push({
           type: type.trim(),
           contactName: contactName.trim(),
-          linkType: 'name' // Markdown links are always name-based
+          linkType: 'name'
         });
       } else if (match4 && !match4[2].startsWith('[[')) {
-        // Format: "- type: Name" (plain text with colon, without brackets - fallback)
-        // Only accept if it doesn't start with [[ (to avoid matching malformed bracket syntax)
         const [, type, contactName] = match4;
         console.debug(`[RelationshipOperations]   Matched format 4 (type: Name - plain text fallback): ${type} -> ${contactName}`);
         relationships.push({
@@ -362,8 +364,8 @@ export class RelationshipOperations {
   async updateRelatedSectionInContent(relationships: { type: string; contactName: string }[]): Promise<void> {
     const content = await this.contactData.getContent();
     
-    // Generate new Related section
-    let newRelatedSection = '## Related\n';
+    // Generate new Related section using constants
+    let newRelatedSection = `${HEADING_LEVELS.SECTION} ${SECTION_NAMES.RELATED}\n`;
     if (relationships.length > 0) {
       for (const rel of relationships) {
         newRelatedSection += `- ${rel.type} [[${rel.contactName}]]\n`;

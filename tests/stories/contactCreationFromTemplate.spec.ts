@@ -76,7 +76,7 @@ describe('Contact Creation from Template Story', () => {
     
     // Should have proper structure
     expect(markdown).toContain('#### Notes');
-    expect(markdown).toContain('#### Related');
+    expect(markdown).toContain('## Related');
   });
 
   it('should generate unique UIDs for new contacts', () => {
@@ -118,7 +118,7 @@ describe('Contact Creation from Template Story', () => {
     expect(markdown).toContain('FN: Jane Smith');
     expect(markdown).toContain('#Contact');
     expect(markdown).toContain('#### Notes');
-    expect(markdown).toContain('#### Related');
+    expect(markdown).toContain('## Related');
   });
 
   it('should format structured fields correctly', () => {
@@ -181,7 +181,7 @@ describe('Contact Creation from Template Story', () => {
       // All contacts should have consistent structure (adjust regex for actual format)
       expect(markdown).toContain('---');
       expect(markdown).toContain('#### Notes');
-      expect(markdown).toContain('#### Related');
+      expect(markdown).toContain('## Related');
       expect(markdown).toContain('#Contact');
       
       // Should contain contact-specific information

@@ -272,20 +272,6 @@ export class ContactNote {
     return this.markdownOps.mdRender(record, hashtags, genderLookup);
   }
 
-  /**
-   * Extract specific sections from markdown content
-   */
-  async extractMarkdownSections(): Promise<Map<string, string>> {
-    return this.markdownOps.extractMarkdownSections();
-  }
-
-  /**
-   * Update a specific section in the markdown content
-   */
-  async updateMarkdownSection(sectionName: string, newContent: string): Promise<void> {
-    return this.markdownOps.updateMarkdownSection(sectionName, newContent);
-  }
-
   // === Sync Operations (delegated to SyncOperations) ===
 
   /**
