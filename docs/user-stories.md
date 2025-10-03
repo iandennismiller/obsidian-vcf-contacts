@@ -349,7 +349,7 @@ Email
 
 **Expected behavior:**
 - Fuzzy matching identifies contact fields
-- Missing type labels default to indexed numbers (EMAIL[1], EMAIL[2])
+- Missing type labels default to bare for first (EMAIL), then indexed (EMAIL[1], EMAIL[2])
 - Extra whitespace is ignored
 - Common formatting variations are recognized
 - Unrecognized content is preserved but not synced
@@ -501,3 +501,98 @@ Email
 - Hide field types: Remove entire field type sections from the template
 - Multi-line formats: Use newlines and spacing to control layout
 - Precise spacing: Use hyphen suffix to control where newlines appear
+
+### 42. Contact List Parsing
+**As a user**, I want a simple, flexible way to enter contact information in a Contact section using markdown list items so that I don't need to follow rigid templates and the plugin can automatically detect what type of information each line contains.
+
+**User Experience:**
+
+I can enter contact information as simple list items:
+```markdown
+## Contact
+
+- home 555-555-5555
+- contact@example.com
+- work contact@example.com
+- 123 Some street
+- 123 Some street, Town
+- http://example.com
+- personal http://example.com
+```
+
+**Expected Behavior:**
+
+The plugin should:
+1. **Auto-detect field types** - Use pattern matching to identify if a line is an email, phone, URL, or address
+2. **Extract optional kind prefixes** - Parse optional labels like `home`, `work`, `personal` before the value
+3. **Insert emoji prefixes automatically** - Add appropriate emojis (📧, 📞, 🌐, 🏠) when displaying
+4. **Sync to frontmatter** - Create frontmatter keys using format `FIELDTYPE[KIND]: value`
+
+**Detection Examples:**
+
+- `- work contact@example.com`
+  - Detects as: EMAIL
+  - Kind: work
+  - Frontmatter: `EMAIL[WORK]: contact@example.com`
+  - Display: `📧 work contact@example.com`
+
+- `- home 555-555-5555`
+  - Detects as: TEL (phone)
+  - Kind: home
+  - Frontmatter: `TEL[HOME]: +1-555-555-5555` (normalized)
+  - Display: `📞 home +1-555-555-5555`
+
+- `- personal http://example.com`
+  - Detects as: URL
+  - Kind: personal
+  - Frontmatter: `URL[PERSONAL]: http://example.com`
+  - Display: `🌐 personal http://example.com`
+
+- `- 123 Some street, Town`
+  - Detects as: ADR (address)
+  - Kind: none (first address is bare)
+  - Frontmatter: `ADR.STREET: 123 Some street`, `ADR.LOCALITY: Town`
+  - Display: `🏠 123 Some street, Town`
+
+**Supported Kinds:**
+
+The "kind" prefix is optional and can be any label the user wants:
+- **Email**: home, work, personal, vacation, etc.
+- **Phone**: home, work, cell, mobile, fax, etc.
+- **URL**: home, work, personal, etc.
+- **Address**: home, work, etc.
+
+If no kind is specified, fields use bare keys for the first field (e.g., `EMAIL`, `TEL`), then indexed for subsequent fields (e.g., `EMAIL[1]`, `EMAIL[2]`).
+
+**General Parsing Method:**
+
+1. For each list item starting with `-`:
+   - Remove the list marker and trim whitespace
+   - Use `identifyFieldType()` to determine field type (EMAIL, TEL, URL, ADR)
+   - If type detected, try to extract kind prefix from beginning of line
+   - Split into kind and value components
+   - Create appropriate frontmatter key: `FIELDTYPE[KIND]` or `FIELDTYPE[INDEX]`
+   - Normalize value if needed (e.g., phone numbers to international format)
+
+2. Use separate parsing methods for each field type:
+   - **parseEmailLine()**: Extract kind and email from line
+   - **parsePhoneLine()**: Extract kind, parse and normalize phone number
+   - **parseUrlLine()**: Extract kind, ensure protocol is present
+   - **parseAddressLine()**: Handle multi-line addresses with components
+
+**Benefits:**
+
+- No rigid template required
+- Easy to read and write
+- Flexible - works with or without kind labels
+- Auto-detection reduces errors
+- Parser is forgiving of formatting variations
+- Consistent with markdown list conventions
+
+**Integration:**
+
+This parsing method works within the existing Contact Section Sync feature:
+- ContactToFrontMatterProcessor uses this parsing
+- FrontMatterToContactProcessor generates this format
+- Bidirectional sync maintains consistency
+- Works alongside other Contact section formats

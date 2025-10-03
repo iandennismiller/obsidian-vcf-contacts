@@ -9,12 +9,15 @@ Manage contacts in Obsidian using the vCard 4.0 standard format. This plugin int
 - [Getting Started](docs/getting-started.md)
 - [Feature Overview](docs/features.md)
 - [VCard Format Guide](docs/vcard-format.md)
+- [Contact Section Sync](docs/contact-section-sync.md)
+- [Contact List Parsing Specification](docs/contact-list-parsing-spec.md)
 - [Development](docs/development.md)
 - [User Stories](docs/user-stories.md)
 
 ## Core Features
 
 - **vCard 4.0 Standard**: Full compliance with vCard format for interoperability
+- **Contact List Parsing**: Flexible markdown list format for entering contact information with auto-detection of field types
 - **Relationship Management**: Bidirectional relationship tracking between contacts with automatic reciprocal updates
 - **Folder Watching**: Monitor external VCF folders and automatically sync changes
 - **Import/Export**: Standard VCF file import and export functionality
