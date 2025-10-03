@@ -150,10 +150,10 @@ export class MarkdownOperations {
     });
 
     if (relatedEntries.length === 0) {
-      return '#### Related\n';
+      return '## Related\n';
     }
 
-    return `#### Related\n${relatedEntries.join('\n')}\n`;
+    return `## Related\n${relatedEntries.join('\n')}\n`;
   }
 
   // === Helper Methods (grouped with related functionality) ===

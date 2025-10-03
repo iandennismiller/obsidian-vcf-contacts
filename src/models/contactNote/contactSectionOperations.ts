@@ -477,26 +477,57 @@ export class ContactSectionOperations {
 
   /**
    * Update the Contact section in markdown content
-   * Replaces existing Contact section or adds it before the final hashtags
+   * Replaces existing Contact section or adds it before Related section (if exists) or before final hashtags
+   * If Contact exists after Related, moves it to before Related
    */
   async updateContactSectionInContent(contactSection: string): Promise<void> {
     const content = await this.contactData.getContent();
 
     // Check if Contact section exists
     const contactSectionMatch = content.match(/(^|\n)(#{2,})\s*contact\s*\n[\s\S]*?(?=\n#{2,}\s|\n\n(?:#|$)|\n$)/i);
+    // Check if Related section exists
+    const relatedSectionMatch = content.match(/(^|\n)(#{2,})\s*related\s*\n/i);
     
     let newContent: string;
     if (contactSectionMatch) {
-      // Replace existing Contact section
-      newContent = content.replace(contactSectionMatch[0], `\n${contactSection}`);
-    } else {
-      // Add Contact section before final hashtags (match both single and double newlines)
-      const hashtagMatch = content.match(/\n+(#\w+.*?)$/);
-      if (hashtagMatch) {
-        newContent = content.replace(hashtagMatch[0], `\n\n${contactSection}\n\n${hashtagMatch[1]}`);
+      // Contact section exists
+      if (relatedSectionMatch) {
+        // Both sections exist - check if Contact is after Related
+        const contactIndex = content.indexOf(contactSectionMatch[0]);
+        const relatedIndex = content.indexOf(relatedSectionMatch[0]);
+        
+        if (contactIndex > relatedIndex) {
+          // Contact is AFTER Related - need to fix the ordering
+          // 1. Remove Contact from its current location
+          const contentWithoutContact = content.replace(contactSectionMatch[0], '');
+          // 2. Insert Contact before Related
+          const relatedIndexInNewContent = contentWithoutContact.indexOf(relatedSectionMatch[0]);
+          newContent = contentWithoutContact.substring(0, relatedIndexInNewContent) + 
+                      `\n${contactSection}\n` + 
+                      contentWithoutContact.substring(relatedIndexInNewContent);
+        } else {
+          // Contact is already before Related - just replace in place
+          newContent = content.replace(contactSectionMatch[0], `\n${contactSection}`);
+        }
       } else {
-        // Add at the end
-        newContent = `${content}\n\n${contactSection}`;
+        // Only Contact exists - replace in place
+        newContent = content.replace(contactSectionMatch[0], `\n${contactSection}`);
+      }
+    } else {
+      // Contact section doesn't exist - add it
+      if (relatedSectionMatch) {
+        // Insert Contact section before Related section
+        const relatedIndex = content.indexOf(relatedSectionMatch[0]);
+        newContent = content.substring(0, relatedIndex) + `\n${contactSection}\n` + content.substring(relatedIndex);
+      } else {
+        // Add Contact section before final hashtags (match both single and double newlines)
+        const hashtagMatch = content.match(/\n+(#\w+.*?)$/);
+        if (hashtagMatch) {
+          newContent = content.replace(hashtagMatch[0], `\n\n${contactSection}\n\n${hashtagMatch[1]}`);
+        } else {
+          // Add at the end
+          newContent = `${content}\n\n${contactSection}`;
+        }
       }
     }
 
