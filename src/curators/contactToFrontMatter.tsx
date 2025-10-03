@@ -9,11 +9,17 @@ import { UpdateContactModal, FieldChange } from "src/plugin/ui/modals/updateCont
 import { normalizeFieldValue } from "src/models/contactNote/fieldPatternDetection";
 
 const renderGroup = (queItems: CuratorQueItem[]): JSX.Element => {
+  const totalChanges = queItems.reduce((sum, item) => {
+    // Extract change count from message
+    const match = item.message?.match(/(\d+) contact field/);
+    return sum + (match ? parseInt(match[1]) : 0);
+  }, 0);
+  
   return (
     <div className="action-card">
       <div className="action-card-content">
         <p><b>{queItems.length} contacts updated with Contact section sync</b></p>
-        <p>Contact information from Contact sections has been synced to frontmatter.</p>
+        <p>Contact information from Contact sections has been synced to frontmatter ({totalChanges} total fields).</p>
       </div>
     </div>
   );
