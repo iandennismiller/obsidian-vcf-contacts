@@ -45,7 +45,7 @@ The parser uses a general method to identify field types:
 2. **Identify field type**: Use pattern matching to determine type (EMAIL, TEL, URL, ADR)
 3. **Extract components**: Separate optional kind prefix from value
 4. **Validate**: Ensure the value matches the detected pattern
-5. **Create frontmatter key**: Generate key like `EMAIL[WORK]` or `TEL[1]`
+5. **Create frontmatter key**: Generate key like `EMAIL[WORK]` or bare `TEL` (first field) or indexed `TEL[1]` (second field)
 
 ### Pattern Detection Priority
 
@@ -249,11 +249,11 @@ The kind/type prefix is **optional** and can be any string:
 
 ### Auto-Indexing
 
-When no kind is specified, fields are auto-indexed:
+When no kind is specified, fields use bare keys for the first field, then indexed:
 
-- First field without kind: `EMAIL[1]`, `TEL[1]`, `URL[1]`, `ADR[1]`
-- Second field without kind: `EMAIL[2]`, `TEL[2]`, etc.
-- Index increments for each field of the same type without a kind label
+- First field without kind: bare `EMAIL`, `TEL`, `URL`, `ADR`
+- Second field without kind: `EMAIL[1]`, `TEL[1]`, `URL[1]`, `ADR[1]`
+- Third field without kind: `EMAIL[2]`, `TEL[2]`, etc.
 
 ## Frontmatter Mapping
 
@@ -268,11 +268,13 @@ TEL[HOME]: +1-555-555-5555
 URL[PERSONAL]: http://example.com
 ```
 
-**Without kind (auto-indexed):**
+**Without kind (first is bare, then indexed):**
 ```yaml
-EMAIL[1]: first@example.com
-EMAIL[2]: second@example.com
-TEL[1]: +1-555-111-1111
+EMAIL: first@example.com
+EMAIL[1]: second@example.com
+EMAIL[2]: third@example.com
+TEL: +1-555-111-1111
+TEL[1]: +1-555-222-2222
 ```
 
 **Address components:**
@@ -282,6 +284,9 @@ ADR[HOME].LOCALITY: Town
 ADR[HOME].REGION: State
 ADR[HOME].POSTAL: 12345
 ADR[HOME].COUNTRY: USA
+# First address without kind is bare:
+ADR.STREET: 456 Main St
+ADR.LOCALITY: Springfield
 ```
 
 ### Parsing Examples
@@ -315,11 +320,11 @@ EMAIL[WORK]: contact@example.com
 1. Detect type: TEL
 2. Extract kind: null (auto-index)
 3. Normalize value: `+1-555-555-5555`
-4. Create key: `TEL[1]` (first phone)
+4. Create key: `TEL` (first phone field is bare)
 
 **Frontmatter:**
 ```yaml
-TEL[1]: +1-555-555-5555
+TEL: +1-555-555-5555
 ```
 
 #### Example 3: URL with Kind
@@ -353,12 +358,12 @@ URL[PERSONAL]: http://example.com
 3. Parse components:
    - STREET: `123 Some street`
    - LOCALITY: `Town`
-4. Create keys: `ADR[1].STREET`, `ADR[1].LOCALITY`
+4. Create keys: `ADR.STREET`, `ADR.LOCALITY` (first address is bare)
 
 **Frontmatter:**
 ```yaml
-ADR[1].STREET: 123 Some street
-ADR[1].LOCALITY: Town
+ADR.STREET: 123 Some street
+ADR.LOCALITY: Town
 ```
 
 ## Display and Emoji Prefixes

@@ -152,8 +152,8 @@ VERSION: "4.0"
 FN: Jane Doe
 N.GN: Jane
 N.FN: Doe
-EMAIL[1]: jane@example.com
-TEL[1:CELL]: +1-555-123-4567
+EMAIL: jane@example.com
+TEL[CELL]: +1-555-123-4567
 GENDER: F
 REV: 20250925T141344Z
 ---
@@ -200,6 +200,8 @@ The plugin supports a flexible Contact List format for entering contact informat
 - `- work contact@example.com` → `EMAIL[WORK]: contact@example.com`
 - `- home 555-555-5555` → `TEL[HOME]: +1-555-555-5555` (normalized)
 - `- personal http://example.com` → `URL[PERSONAL]: http://example.com`
+- Fields without kind use bare keys for first field: `EMAIL`, `TEL`, `URL`, `ADR`
+- Second field of same type uses indexed key: `EMAIL[1]`, `TEL[1]`, etc.
 
 See the [Contact List Parsing Specification](contact-list-parsing-spec.md) for complete details.
 
@@ -208,6 +210,8 @@ See the [Contact List Parsing Specification](contact-list-parsing-spec.md) for c
 You can also edit contact fields directly in frontmatter:
 
 ```yaml
+EMAIL: first@email.com
+EMAIL[1]: second@email.com
 EMAIL[HOME]: jane@example.com
 EMAIL[WORK]: jane.work@company.com
 TEL[CELL]: +1-555-123-4567
@@ -218,6 +222,8 @@ ADR[HOME].POSTAL: 62701
 ```
 
 Changes in frontmatter automatically sync to the Contact section.
+
+**Note on indexing**: The first field of each type without a kind uses a bare key (e.g., `EMAIL`, `TEL`). Subsequent fields use indexed keys (`EMAIL[1]`, `EMAIL[2]`, etc.).
 
 ## Data Synchronization
 

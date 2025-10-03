@@ -175,7 +175,7 @@ The parser will:
 1. Auto-detect field types (email, phone, URL, address)
 2. Extract optional kind labels (`work`, `home`, `cell`, etc.)
 3. Sync to frontmatter with appropriate keys (`EMAIL[WORK]`, `TEL[CELL]`, etc.)
-4. Auto-index fields without kind labels (`EMAIL[1]`, `EMAIL[2]`, etc.)
+4. Use bare keys for first field of each type (e.g., `EMAIL`, `TEL`), then indexed for subsequent fields (e.g., `EMAIL[1]`, `EMAIL[2]`)
 
 This provides a more user-friendly way to enter contact information without worrying about exact frontmatter syntax.
 

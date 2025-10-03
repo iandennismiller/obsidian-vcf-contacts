@@ -349,7 +349,7 @@ Email
 
 **Expected behavior:**
 - Fuzzy matching identifies contact fields
-- Missing type labels default to indexed numbers (EMAIL[1], EMAIL[2])
+- Missing type labels default to bare for first (EMAIL), then indexed (EMAIL[1], EMAIL[2])
 - Extra whitespace is ignored
 - Common formatting variations are recognized
 - Unrecognized content is preserved but not synced
@@ -550,8 +550,8 @@ The plugin should:
 
 - `- 123 Some street, Town`
   - Detects as: ADR (address)
-  - Kind: 1 (auto-indexed)
-  - Frontmatter: `ADR[1].STREET: 123 Some street`, `ADR[1].LOCALITY: Town`
+  - Kind: none (first address is bare)
+  - Frontmatter: `ADR.STREET: 123 Some street`, `ADR.LOCALITY: Town`
   - Display: `🏠 123 Some street, Town`
 
 **Supported Kinds:**
@@ -562,7 +562,7 @@ The "kind" prefix is optional and can be any label the user wants:
 - **URL**: home, work, personal, etc.
 - **Address**: home, work, etc.
 
-If no kind is specified, fields are auto-indexed (e.g., `EMAIL[1]`, `EMAIL[2]`).
+If no kind is specified, fields use bare keys for the first field (e.g., `EMAIL`, `TEL`), then indexed for subsequent fields (e.g., `EMAIL[1]`, `EMAIL[2]`).
 
 **General Parsing Method:**
 

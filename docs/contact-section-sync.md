@@ -52,24 +52,24 @@ You can optionally prefix any contact line with a "kind" label:
 - **URL kinds**: `home`, `work`, `personal`, or any custom label
 - **Address kinds**: `home`, `work`, or any custom label
 
-The kind is **optional** - if omitted, the field is indexed numerically (e.g., `EMAIL[1]`, `TEL[2]`).
+The kind is **optional** - if omitted, the field is indexed (e.g., first is bare `EMAIL`, second is `EMAIL[1]`, third is `EMAIL[2]`).
 
 #### Auto-Detection Examples
 
 **Email Detection:**
-- `- contact@example.com` → Detected as email, syncs to `EMAIL[1]`
+- `- contact@example.com` → Detected as email, syncs to `EMAIL`
 - `- work contact@example.com` → Detected as email with kind "work", syncs to `EMAIL[WORK]`
 
 **Phone Detection:**
-- `- 555-555-5555` → Detected as phone, normalized and syncs to `TEL[1]`
+- `- 555-555-5555` → Detected as phone, normalized and syncs to `TEL`
 - `- home 555-555-5555` → Detected as phone with kind "home", syncs to `TEL[HOME]`
 
 **URL Detection:**
-- `- http://example.com` → Detected as URL, syncs to `URL[1]`
+- `- http://example.com` → Detected as URL, syncs to `URL`
 - `- personal http://example.com` → Detected as URL with kind "personal", syncs to `URL[PERSONAL]`
 
 **Address Detection:**
-- `- 123 Some street` → Detected as address, syncs to `ADR[1].STREET`
+- `- 123 Some street` → Detected as address, syncs to `ADR.STREET`
 - `- 123 Some street, Town` → Detected as address with locality, syncs to address fields
 
 #### Frontmatter Mapping
@@ -86,8 +86,9 @@ TEL[HOME]: +1-555-555-5555
 # URL with kind
 URL[PERSONAL]: http://example.com
 
-# Email without kind (indexed)
-EMAIL[1]: another@example.com
+# Email without kind (first is bare, second indexed)
+EMAIL: first@example.com
+EMAIL[1]: second@example.com
 ```
 
 ### Supported Input Formats
@@ -157,7 +158,7 @@ This format provides maximum flexibility by allowing users to optionally specify
 - `- work contact@example.com` → `EMAIL[WORK]: contact@example.com` (📧 email detected)
 - `- home 555-555-5555` → `TEL[HOME]: +1-555-555-5555` (📞 phone detected and normalized)
 - `- personal http://example.com` → `URL[PERSONAL]: http://example.com` (🌐 URL detected)
-- `- 123 Some street, Town` → `ADR[1].STREET: 123 Some street, Town` (🏠 address detected)
+- `- 123 Some street, Town` → `ADR.STREET: 123 Some street, Town` (🏠 address detected)
 
 ### Field Normalization
 
@@ -411,7 +412,7 @@ For each contact list item, the parser:
 1. **Extracts the line content**: Removes list marker and whitespace
 2. **Splits kind from value**: Attempts to separate optional kind prefix
 3. **Validates the pattern**: Confirms the value matches a known field type
-4. **Creates frontmatter key**: Generates key like `EMAIL[WORK]` or `TEL[1]`
+4. **Creates frontmatter key**: Generates key like `EMAIL[WORK]` or bare `TEL` (first field) or indexed `TEL[1]` (second field)
 
 **Parsing separate methods by type:**
 
