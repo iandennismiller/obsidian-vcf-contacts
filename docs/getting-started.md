@@ -158,6 +158,11 @@ GENDER: F
 REV: 20250925T141344Z
 ---
 
+## Contact
+
+- jane@example.com
+- cell 555-123-4567
+
 ## Related
 
 #Contact
@@ -167,6 +172,52 @@ REV: 20250925T141344Z
 - **UID**: Unique identifier in UUID format (preferred) with `urn:uuid:` prefix
 - **REV**: Revision timestamp in format `YYYYMMDDTHHMMSSZ` - automatically updated when data changes
 - **GENDER**: M, F, NB, or U for relationship rendering
+
+## Managing Contact Information
+
+### Contact Section (Recommended)
+
+The plugin supports a flexible Contact List format for entering contact information:
+
+```markdown
+## Contact
+
+- home 555-555-5555
+- contact@example.com
+- work contact@example.com
+- 123 Some street, Town
+- personal http://example.com
+```
+
+**How it works:**
+- Each line is a markdown list item starting with `-`
+- The parser automatically detects field types (email, phone, URL, address)
+- You can optionally prefix lines with kind labels like `home`, `work`, `personal`
+- Changes sync bidirectionally between Contact section and frontmatter
+- Emoji prefixes (📧, 📞, 🌐, 🏠) are added automatically when displaying
+
+**Detection examples:**
+- `- work contact@example.com` → `EMAIL[WORK]: contact@example.com`
+- `- home 555-555-5555` → `TEL[HOME]: +1-555-555-5555` (normalized)
+- `- personal http://example.com` → `URL[PERSONAL]: http://example.com`
+
+See the [Contact List Parsing Specification](contact-list-parsing-spec.md) for complete details.
+
+### Direct Frontmatter Editing
+
+You can also edit contact fields directly in frontmatter:
+
+```yaml
+EMAIL[HOME]: jane@example.com
+EMAIL[WORK]: jane.work@company.com
+TEL[CELL]: +1-555-123-4567
+URL[PERSONAL]: https://jane.example.com
+ADR[HOME].STREET: 123 Main St
+ADR[HOME].LOCALITY: Springfield
+ADR[HOME].POSTAL: 62701
+```
+
+Changes in frontmatter automatically sync to the Contact section.
 
 ## Data Synchronization
 
