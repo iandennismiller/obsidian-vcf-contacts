@@ -39,10 +39,10 @@ export const VcardSyncPostProcessor: CuratorProcessor = {
   async process(contact: Contact): Promise<CuratorQueItem | undefined> {
     const settings = getSettings();
     const activeProcessor = settings[`${this.settingPropertyName}`] as boolean;
-    const vcfWatchEnabled = settings.vcfWatchEnabled;
-    const vcfWriteBackEnabled = settings.vcfWriteBackEnabled;
+    const vcardWatchEnabled = settings.vcardWatchEnabled;
+    const vcardWriteBackEnabled = settings.vcardWriteBackEnabled;
     
-    if (!activeProcessor || !vcfWatchEnabled || !vcfWriteBackEnabled || !contact.data["UID"]) {
+    if (!activeProcessor || !vcardWatchEnabled || !vcardWriteBackEnabled || !contact.data["UID"]) {
       return Promise.resolve(undefined);
     }
 
@@ -50,17 +50,17 @@ export const VcardSyncPostProcessor: CuratorProcessor = {
     const vcardManager = new VcardManager(settings);
     const contactNote = new ContactNote(app, settings, contact.file);
     
-    // Helper function to generate VCF content from a contact file
-    const generateVCFFromContact = async (file: any, app: any): Promise<string | null> => {
+    // Helper function to generate vcard content from a contact file
+    const generateVcardFromContact = async (file: any, app: any): Promise<string | null> => {
       try {
-        const vcfResult = await VcardFile.fromObsidianFiles([file], app);
-        if (vcfResult.errors.length > 0) {
-          console.warn(`[VcardSyncPostProcessor] Warnings generating VCF for ${file.basename}:`);
-          vcfResult.errors.forEach(error => console.warn(`  ${error.message}`));
+        const vcardResult = await VcardFile.fromObsidianFiles([file], app);
+        if (vcardResult.errors.length > 0) {
+          console.warn(`[VcardSyncPostProcessor] Warnings generating vcard for ${file.basename}:`);
+          vcardResult.errors.forEach(error => console.warn(`  ${error.message}`));
         }
-        return vcfResult.vcards || null;
+        return vcardResult.vcards || null;
       } catch (error: any) {
-        console.error(`[VcardSyncPostProcessor] Error generating VCF for ${file.basename}: ${error.message}`);
+        console.error(`[VcardSyncPostProcessor] Error generating vcard for ${file.basename}: ${error.message}`);
         return null;
       }
     };
@@ -81,65 +81,65 @@ export const VcardSyncPostProcessor: CuratorProcessor = {
         return Promise.resolve(undefined);
       }
 
-      // Check if VCF file exists for this UID
-      const existingVCFPath = await vcardManager.findVCardFileByUID(contactUID);
+      // Check if vcard file exists for this UID
+      const existingVcardPath = await vcardManager.findVCardFileByUID(contactUID);
       
-      let shouldWriteVCF = false;
+      let shouldWriteVcard = false;
       let action = '';
       
-      if (!existingVCFPath) {
-        // No VCF exists - create it
-        shouldWriteVCF = true;
+      if (!existingVcardPath) {
+        // No vcard exists - create it
+        shouldWriteVcard = true;
         action = 'created';
-        console.debug(`[VcardSyncPostProcessor] No VCF found for UID ${contactUID}, will create new VCF`);
+        console.debug(`[VcardSyncPostProcessor] No vcard found for UID ${contactUID}, will create new vcard`);
       } else {
-        // VCF exists - check REV timestamps
+        // vcard exists - check REV timestamps
         try {
-          const vcfContent = await VcardFile.readVCFFile(existingVCFPath);
-          const parsedEntries = await vcardManager.readAndParseVCard(existingVCFPath);
+          const vcardContent = await VcardFile.readVcardFile(existingVcardPath);
+          const parsedEntries = await vcardManager.readAndParseVCard(existingVcardPath);
           
           if (parsedEntries && parsedEntries.length > 0) {
-            const vcfRecord = parsedEntries.find(([slug, record]: [string, any]) => record.UID === contactUID);
-            if (vcfRecord) {
-              const [slug, record] = vcfRecord;
-              const vcfREV = record.REV;
+            const vcardRecord = parsedEntries.find(([slug, record]: [string, any]) => record.UID === contactUID);
+            if (vcardRecord) {
+              const [slug, record] = vcardRecord;
+              const vcardREV = record.REV;
               
               // Compare REV timestamps
-              const shouldUpdate = await contactNote.shouldUpdateFromVCF(record);
+              const shouldUpdate = await contactNote.shouldUpdateFromVcard(record);
               
-              // If shouldUpdateFromVCF returns true, it means VCF is newer
-              // We want the opposite - to check if contact is newer than VCF
-              if (!shouldUpdate || !vcfREV) {
-                // Either contact is newer or VCF has no REV
-                shouldWriteVCF = true;
+              // If shouldUpdateFromVcard returns true, it means vcard is newer
+              // We want the opposite - to check if contact is newer than vcard
+              if (!shouldUpdate || !vcardREV) {
+                // Either contact is newer or vcard has no REV
+                shouldWriteVcard = true;
                 action = 'updated';
                 console.debug(
-                  `[VcardSyncPostProcessor] Contact REV ${contactREV} is newer than VCF REV ${vcfREV || 'none'}, will update VCF`
+                  `[VcardSyncPostProcessor] Contact REV ${contactREV} is newer than vcard REV ${vcardREV || 'none'}, will update vcard`
                 );
               }
             }
           }
         } catch (error: any) {
-          console.error(`[VcardSyncPostProcessor] Error reading existing VCF ${existingVCFPath}: ${error.message}`);
-          // If we can't read the VCF, assume we should recreate it
-          shouldWriteVCF = true;
+          console.error(`[VcardSyncPostProcessor] Error reading existing vcard ${existingVcardPath}: ${error.message}`);
+          // If we can't read the vcard, assume we should recreate it
+          shouldWriteVcard = true;
           action = 'recreated';
         }
       }
       
-      if (!shouldWriteVCF) {
+      if (!shouldWriteVcard) {
         return Promise.resolve(undefined);
       }
       
-      // Generate VCF content from contact file
-      const vcfContent = await generateVCFFromContact(contact.file, app);
-      if (!vcfContent) {
-        console.error(`[VcardSyncPostProcessor] Failed to generate VCF content for ${contact.file.name}`);
+      // Generate vcard content from contact file
+      const vcardContent = await generateVcardFromContact(contact.file, app);
+      if (!vcardContent) {
+        console.error(`[VcardSyncPostProcessor] Failed to generate vcard content for ${contact.file.name}`);
         return Promise.resolve(undefined);
       }
       
       // Generate filename if needed
-      let filename = existingVCFPath ? existingVCFPath.split('/').pop() || `${contactUID}.vcf` : `${contactUID}.vcf`;
+      let filename = existingVcardPath ? existingVcardPath.split('/').pop() || `${contactUID}.vcf` : `${contactUID}.vcf`;
       if (!filename.endsWith('.vcf')) {
         filename = `${filename}.vcf`;
       }
