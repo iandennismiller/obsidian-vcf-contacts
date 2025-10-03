@@ -6,9 +6,12 @@
  * (EMAIL, TEL, ADR, URL, etc.) and a human-readable Contact section in markdown.
  */
 
+import { marked } from 'marked';
 import { ContactData } from './contactData';
 import { ContactsPluginSettings } from 'src/plugin/settings';
 import { identifyFieldType } from './fieldPatternDetection';
+import { BaseMarkdownSectionOperations } from './baseMarkdownSectionOperations';
+import { SECTION_NAMES, FIELD_DISPLAY } from './markdownConstants';
 
 /**
  * Represents a parsed contact field from the Contact section
@@ -61,9 +64,11 @@ export interface FuzzyTemplate {
 /**
  * Contact Section operations that work directly with ContactData
  * to minimize data access overhead and improve cache locality.
+ * 
+ * Extends BaseMarkdownSectionOperations to use marked library for
+ * standard markdown parsing while maintaining contact-specific logic.
  */
-export class ContactSectionOperations {
-  private contactData: ContactData;
+export class ContactSectionOperations extends BaseMarkdownSectionOperations {
   private settings: ContactsPluginSettings;
   
   // Default templates for common field types
@@ -72,34 +77,34 @@ export class ContactSectionOperations {
       fieldType: 'EMAIL',
       displayTemplate: '- {TYPE}: {VALUE}',
       parsePattern: /^-\s*([^:]+):\s*(.+)$/,
-      icon: '📧',
-      displayName: 'Email'
+      icon: FIELD_DISPLAY.EMAIL.icon,
+      displayName: FIELD_DISPLAY.EMAIL.name
     },
     TEL: {
       fieldType: 'TEL',
       displayTemplate: '- {TYPE}: {VALUE}',
       parsePattern: /^-\s*([^:]+):\s*(.+)$/,
-      icon: '📞',
-      displayName: 'Phone'
+      icon: FIELD_DISPLAY.TEL.icon,
+      displayName: FIELD_DISPLAY.TEL.name
     },
     URL: {
       fieldType: 'URL',
       displayTemplate: '- {TYPE}: {VALUE}',
       parsePattern: /^-\s*([^:]+):\s*(.+)$/,
-      icon: '🌐',
-      displayName: 'Website'
+      icon: FIELD_DISPLAY.URL.icon,
+      displayName: FIELD_DISPLAY.URL.name
     },
     ADR: {
       fieldType: 'ADR',
       displayTemplate: '{STREET}\n{LOCALITY}, {REGION} {POSTAL}\n{COUNTRY}',
       parsePattern: /^(.+)$/,
-      icon: '🏠',
-      displayName: 'Address'
+      icon: FIELD_DISPLAY.ADR.icon,
+      displayName: FIELD_DISPLAY.ADR.name
     }
   };
 
   constructor(contactData: ContactData, settings: ContactsPluginSettings) {
-    this.contactData = contactData;
+    super(contactData);
     this.settings = settings;
   }
 
@@ -120,21 +125,20 @@ export class ContactSectionOperations {
 
   /**
    * Parse Contact section from markdown content
-   * Returns parsed contact fields that can be synced to frontmatter
+   * Uses marked library for section extraction, custom logic for field parsing
    */
   async parseContactSection(): Promise<ParsedContactField[]> {
     const content = await this.contactData.getContent();
     const fields: ParsedContactField[] = [];
 
-    // Find the Contact section - case-insensitive and depth-agnostic
-    // Matches any heading level (##, ###, ####, etc.) with "Contact" in any case
-    const contactSectionMatch = content.match(/(^|\n)(#{2,})\s*contact\s*\n([\s\S]*?)(?=\n#{2,}\s|\n\n(?:#|$)|\n$)/i);
-    if (!contactSectionMatch) {
+    // Use marked to find the Contact section
+    const contactContent = await this.extractSection(SECTION_NAMES.CONTACT);
+    
+    if (!contactContent) {
       console.debug(`[ContactSectionOperations] No Contact section found in content`);
       return fields;
     }
 
-    const contactContent = contactSectionMatch[3];
     console.debug(`[ContactSectionOperations] Found Contact section content: ${contactContent.substring(0, 200)}`);
     
     const lines = contactContent.split('\n');
@@ -392,7 +396,8 @@ export class ContactSectionOperations {
     // If the result only contains the heading and no actual contact fields, return empty
     // This handles the case where template has "## Contact" but no fields are populated
     const trimmedResult = result.trim();
-    if (trimmedResult === '## Contact' || trimmedResult === '') {
+    const expectedHeading = `## ${SECTION_NAMES.CONTACT}`;
+    if (trimmedResult === expectedHeading || trimmedResult === '') {
       return '';
     }
     

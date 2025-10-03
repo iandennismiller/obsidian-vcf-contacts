@@ -189,7 +189,14 @@ export abstract class BaseMarkdownSectionOperations {
         }
       } else if (token.type === 'paragraph') {
         const paragraphToken = token as Tokens.Paragraph;
-        markdown += `${paragraphToken.text}\n\n`;
+        const text = paragraphToken.text;
+        
+        // Skip paragraphs that are just hashtags (document-level tags)
+        if (text.match(/^#\w+(\s+#\w+)*$/)) {
+          continue;
+        }
+        
+        markdown += `${text}\n\n`;
       } else if (token.type === 'space') {
         markdown += '\n';
       } else {
