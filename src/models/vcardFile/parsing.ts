@@ -22,14 +22,14 @@ export class VCardParser {
     
     // Normalize line endings to CRLF (required by vcard4)
     const normalized = vcardData.replace(/\r\n/g, '\n').replace(/\n/g, '\r\n');
-    const vcardWithCRLF = normalized.endsWith('\r\n') ? normalized : normalized + '\r\n';
     
-    try {
-      // vcard4.parse() can return single object or array
-      const parseResult = parse(vcardWithCRLF);
-      const results = Array.isArray(parseResult) ? parseResult : [parseResult];
-      
-      for (const parsedVcard of results) {
+    // Split into individual vCards (vcard4 parses one at a time)
+    const vcardStrings = VCardParser.splitVCards(normalized);
+    
+    for (const vcardString of vcardStrings) {
+      try {
+        // vcard4.parse() expects a single vCard
+        const parsedVcard = parse(vcardString);
         const frontmatter = VCardParser.convertToFrontmatter(parsedVcard);
         
         try {
@@ -37,14 +37,43 @@ export class VCardParser {
           yield [slug, frontmatter];
         } catch (error: any) {
           // If slug creation fails, still yield the frontmatter
+          console.warn('[VCardParser] Failed to create slug:', error.message, 'FN:', frontmatter.FN);
           yield [undefined, frontmatter];
         }
+      } catch (error: any) {
+        console.error('[VCardParser] Error parsing vCard:', error.message, 'vCard preview:', vcardString.substring(0, 100));
+        // Skip this vCard and continue with others
+        continue;
       }
-    } catch (error: any) {
-      console.error('[VCardParser] Error parsing vCard:', error.message);
-      // Don't yield anything for error case
-      return;
     }
+  }
+
+  /**
+   * Split multiple vCards into individual vCard strings
+   * @private
+   */
+  private static splitVCards(vcardData: string): string[] {
+    const vcards: string[] = [];
+    const lines = vcardData.split('\r\n');
+    let currentVCard: string[] = [];
+    let inVCard = false;
+    
+    for (const line of lines) {
+      if (line === 'BEGIN:VCARD') {
+        inVCard = true;
+        currentVCard = [line];
+      } else if (line === 'END:VCARD') {
+        currentVCard.push(line);
+        currentVCard.push(''); // Add trailing CRLF
+        vcards.push(currentVCard.join('\r\n'));
+        currentVCard = [];
+        inVCard = false;
+      } else if (inVCard) {
+        currentVCard.push(line);
+      }
+    }
+    
+    return vcards;
   }
 
   /**
