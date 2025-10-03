@@ -223,8 +223,8 @@ FN: Test Contact
       const fields = await ops.parseContactSection();
 
       expect(fields).toHaveLength(2);
-      expect(fields[0].fieldLabel).toBe('1');
-      expect(fields[1].fieldLabel).toBe('2');
+      expect(fields[0].fieldLabel).toBe('');  // First field has no index (bare)
+      expect(fields[1].fieldLabel).toBe('1'); // Second field is indexed as [1]
     });
 
     it('should return empty array when no Contact section exists', async () => {

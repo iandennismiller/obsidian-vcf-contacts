@@ -92,18 +92,26 @@ export const ContactToFrontMatterProcessor: CuratorProcessor = {
       
       // Track existing contact field keys for deletion detection
       const existingContactKeys = new Set(
-        Object.keys(currentFrontmatter).filter(key => /^(EMAIL|TEL|ADR|URL)\[/.test(key))
+        Object.keys(currentFrontmatter).filter(key => /^(EMAIL|TEL|ADR|URL)(\[|\.)?/.test(key))
       );
       
       for (const field of contactFields) {
         let frontmatterKey: string;
         
         if (field.component) {
-          // Structured field (e.g., ADR[HOME].STREET)
-          frontmatterKey = `${field.fieldType}[${field.fieldLabel}].${field.component}`;
+          // Structured field (e.g., ADR[HOME].STREET or ADR.STREET for bare)
+          if (field.fieldLabel) {
+            frontmatterKey = `${field.fieldType}[${field.fieldLabel}].${field.component}`;
+          } else {
+            frontmatterKey = `${field.fieldType}.${field.component}`;
+          }
         } else {
-          // Simple field (e.g., EMAIL[HOME])
-          frontmatterKey = `${field.fieldType}[${field.fieldLabel}]`;
+          // Simple field (e.g., EMAIL[HOME] or EMAIL for bare)
+          if (field.fieldLabel) {
+            frontmatterKey = `${field.fieldType}[${field.fieldLabel}]`;
+          } else {
+            frontmatterKey = field.fieldType;
+          }
         }
         
         // Normalize the value based on field type

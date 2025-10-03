@@ -66,7 +66,7 @@ export const FrontMatterToContactProcessor: CuratorProcessor = {
       
       // Check if there are any contact fields in frontmatter
       const hasContactFields = Object.keys(frontmatter).some(key => 
-        /^(EMAIL|TEL|ADR|URL)\[/.test(key)
+        /^(EMAIL|TEL|ADR|URL)(\[|\.)?/.test(key)
       );
       
       if (!hasContactFields) {
@@ -103,7 +103,7 @@ export const FrontMatterToContactProcessor: CuratorProcessor = {
       
       // Count fields in generated section (approximate)
       const generatedFieldCount = Object.keys(frontmatter).filter(key => 
-        /^(EMAIL|TEL|ADR|URL)\[/.test(key)
+        /^(EMAIL|TEL|ADR|URL)(\[|\.)?/.test(key)
       ).length;
       
       const action = hasExistingContactSection ? 'Updated' : 'Created';

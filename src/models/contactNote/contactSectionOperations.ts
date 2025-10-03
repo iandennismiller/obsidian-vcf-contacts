@@ -204,10 +204,11 @@ export class ContactSectionOperations extends BaseMarkdownSectionOperations {
             const simpleMatch = line.match(/^-\s*(.+)$/);
             if (simpleMatch) {
               // Use numeric index for unlabeled fields
+              // First field has no index (bare), subsequent fields use 1, 2, 3...
               const existingCount = fields.filter(f => f.fieldType === currentFieldType).length;
               fields.push({
                 fieldType: currentFieldType,
-                fieldLabel: String(existingCount + 1),
+                fieldLabel: existingCount === 0 ? '' : String(existingCount),
                 value: simpleMatch[1].trim()
               });
             } else if (!line.startsWith('(') && !line.startsWith('#')) {
@@ -216,7 +217,7 @@ export class ContactSectionOperations extends BaseMarkdownSectionOperations {
               const existingCount = fields.filter(f => f.fieldType === currentFieldType).length;
               fields.push({
                 fieldType: currentFieldType,
-                fieldLabel: String(existingCount + 1),
+                fieldLabel: existingCount === 0 ? '' : String(existingCount),
                 value: line.trim()
               });
             }
@@ -287,10 +288,11 @@ export class ContactSectionOperations extends BaseMarkdownSectionOperations {
         
         if (!alreadyParsed) {
           // Add auto-detected field
+          // First field has no index (bare), subsequent fields use 1, 2, 3...
           const existingCount = fields.filter(f => f.fieldType === detectedType).length;
           fields.push({
             fieldType: detectedType,
-            fieldLabel: String(existingCount + 1),
+            fieldLabel: existingCount === 0 ? '' : String(existingCount),
             value: line.trim()
           });
           console.debug(`[ContactSectionOperations] Auto-detected ${detectedType}: ${line.trim()}`);

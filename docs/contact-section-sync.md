@@ -278,7 +278,8 @@ When parsing a contact list item like `- work contact@example.com`:
 - Pattern: `optional_kind email@domain.com`
 
 **Valid formats:**
-- `contact@example.com` → `EMAIL[1]`
+- `contact@example.com` → `EMAIL` (first email, bare key)
+- `second@example.com` → `EMAIL[1]` (second email)
 - `work contact@example.com` → `EMAIL[WORK]`
 - `personal user+tag@example.com` → `EMAIL[PERSONAL]`
 
@@ -293,7 +294,8 @@ When parsing a contact list item like `- work contact@example.com`:
 - Pattern: `optional_kind phone_number`
 
 **Valid formats:**
-- `555-555-5555` → `TEL[1]` (normalized to `+1-555-555-5555`)
+- `555-555-5555` → `TEL` (first phone, bare key, normalized to `+1-555-555-5555`)
+- `222-222-2222` → `TEL[1]` (second phone)
 - `home 555-555-5555` → `TEL[HOME]`
 - `cell (555) 123-4567` → `TEL[CELL]`
 
