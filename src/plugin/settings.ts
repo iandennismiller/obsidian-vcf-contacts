@@ -44,7 +44,9 @@ export const DEFAULT_SETTINGS: ContactsPluginSettings = {
   vcfIgnoreFilenames: [],
   vcfIgnoreUIDs: [],
   // Contact Section Template Default
-  contactSectionTemplate: `{{#EMAIL-}}
+  contactSectionTemplate: `## Contact
+
+{{#EMAIL-}}
 📧 Email
 {{#FIRST}}{{LABEL}} {{VALUE}}{{/FIRST}}
 
@@ -444,7 +446,9 @@ export class ContactsSettingTab extends PluginSettingTab {
         button
           .setButtonText("Reset to Default")
           .onClick(async () => {
-            this.plugin.settings.contactSectionTemplate = `{{#EMAIL-}}
+            this.plugin.settings.contactSectionTemplate = `## Contact
+
+{{#EMAIL-}}
 📧 Email
 {{#FIRST}}{{LABEL}} {{VALUE}}{{/FIRST}}
 

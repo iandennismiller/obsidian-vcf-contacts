@@ -40,7 +40,9 @@ describe('ContactSectionOperations', () => {
       vcfCustomizeIgnoreList: false,
       vcfIgnoreFilenames: [],
       vcfIgnoreUIDs: [],
-      contactSectionTemplate: `{{#EMAIL-}}
+      contactSectionTemplate: `## Contact
+
+{{#EMAIL-}}
 📧 Email
 {{#FIRST}}{{LABEL}} {{VALUE}}{{/FIRST}}
 

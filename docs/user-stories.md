@@ -455,6 +455,8 @@ Email
 
 **Default template:**
 ```
+## Contact
+
 {{#EMAIL-}}
 📧 Email
 {{#FIRST}}{{LABEL}} {{VALUE}}{{/FIRST}}

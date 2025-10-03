@@ -44,7 +44,9 @@ describe('Contact Section Format Fix', () => {
       vcfCustomizeIgnoreList: false,
       vcfIgnoreFilenames: [],
       vcfIgnoreUIDs: [],
-      contactSectionTemplate: `{{#EMAIL-}}
+      contactSectionTemplate: `## Contact
+
+{{#EMAIL-}}
 📧 Email
 {{#FIRST}}{{LABEL}} {{VALUE}}{{/FIRST}}
 

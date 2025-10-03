@@ -326,7 +326,16 @@ export class ContactSectionOperations {
     const template = this.settings.contactSectionTemplate || '';
     if (!template) return '';
 
-    return this.renderTemplate(template, frontmatter);
+    const result = this.renderTemplate(template, frontmatter);
+    
+    // If the result only contains the heading and no actual contact fields, return empty
+    // This handles the case where template has "## Contact" but no fields are populated
+    const trimmedResult = result.trim();
+    if (trimmedResult === '## Contact' || trimmedResult === '') {
+      return '';
+    }
+    
+    return result;
   }
 
   /**
@@ -372,14 +381,16 @@ export class ContactSectionOperations {
     // Process each field type section (with or without hyphen for newline suppression)
     for (const fieldType of ['EMAIL', 'TEL', 'ADR', 'URL']) {
       // Match both {{#FIELDTYPE}} and {{#FIELDTYPE-}} (with hyphen for newline suppression)
-      const sectionRegex = new RegExp(`{{#${fieldType}(-?)}}([\\s\\S]*?){{/${fieldType}\\1}}`, 'g');
+      // Also capture an optional newline after the closing tag
+      const sectionRegex = new RegExp(`{{#${fieldType}(-?)}}([\\s\\S]*?){{/${fieldType}\\1}}(\\n?)`, 'g');
       
-      output = output.replace(sectionRegex, (match, hyphen, sectionContent) => {
+      output = output.replace(sectionRegex, (match, hyphen, sectionContent, trailingNewline) => {
         const fields = fieldsByType[fieldType];
         
-        // If no fields, return empty
+        // If no fields, return empty (or newline if no hyphen)
         if (fields.length === 0) {
-          return '';
+          // If hyphen is used, suppress the trailing newline
+          return hyphen === '-' ? '' : trailingNewline;
         }
 
         // Process FIRST or ALL blocks within the section
@@ -398,16 +409,10 @@ export class ContactSectionOperations {
           return fields.map(field => this.renderFieldBlock(blockContent, field, fieldType)).join('\n');
         });
 
-        return result;
+        // If hyphen is used, suppress the trailing newline
+        return hyphen === '-' ? result : result + trailingNewline;
       });
     }
-
-    // Handle newline suppression: when a tag with hyphen is followed by newline, remove the newline
-    // The hyphen suffix ALWAYS suppresses newlines, regardless of whether content was rendered
-    output = output.replace(/{{\/(?:EMAIL|TEL|ADR|URL|FIRST|ALL)-}}\n/g, (match) => {
-      // Remove the newline after the closing tag with hyphen
-      return match.slice(0, -1);
-    });
 
     // Remove any remaining template tags
     output = output.replace(/{{[^}]+}}/g, '');
