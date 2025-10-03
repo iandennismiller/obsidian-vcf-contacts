@@ -203,7 +203,7 @@ The plugin supports a flexible Contact List format for entering contact informat
 - Fields without kind use bare keys for first field: `EMAIL`, `TEL`, `URL`, `ADR`
 - Second field of same type uses indexed key: `EMAIL[1]`, `TEL[1]`, etc.
 
-See the [Contact List Parsing Specification](contact-list-parsing-spec.md) for complete details.
+See the [Contact List Parsing Specification](specifications.md#contact-list-parsing) for complete details.
 
 ### Direct Frontmatter Editing
 
@@ -299,4 +299,4 @@ Used for:
 - Review [Feature Overview](features.md) for comprehensive capabilities
 - Consult [VCard Format Guide](vcard-format.md) for field reference
 - See [User Stories](user-stories.md) for usage scenarios
-- Check [Development Guide](development.md) to extend the plugin
+- Check [Development Guide](development/) to extend the plugin
