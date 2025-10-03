@@ -4,6 +4,8 @@
 
 The VCF Contacts plugin uses the industry-standard vCard 4.0 format to store contact information. This ensures compatibility with virtually all contact management systems.
 
+**Technical Foundation**: The plugin uses the [vcard4](https://www.npmjs.com/package/vcard4) library for all vCard parsing and generation. This library fully implements RFC 6350 (vCard 4.0) and ensures spec compliance, proper field validation, and compatibility with all vCard 4.0 extensions.
+
 ## What is vCard?
 
 vCard is an electronic business card format that contains contact information in a standardized way. It's supported by:
@@ -12,6 +14,12 @@ vCard is an electronic business card format that contains contact information in
 - Phone contact apps (iOS Contacts, Android Contacts)
 - CRM systems (Salesforce, HubSpot)
 - Address book applications
+
+**vCard 4.0 Compliance**: The plugin leverages the vcard4 library which fully implements:
+- RFC 6350 (vCard 4.0) - Core specification
+- RFC 6351 (XML vCard) - XML representation
+- RFC 7095 (jCard) - JSON representation
+- RFC 6474, RFC 8605, RFC 6715, RFC 6868, RFC 6473, RFC 7852 - vCard extensions
 
 ## File Structure
 
@@ -309,5 +317,11 @@ The plugin can:
 - **Import** from any vCard 4.0 compliant file
 - **Export** to standard .vcf files compatible with other systems
 - **Sync** bidirectionally with external contact sources
+
+**Technical Implementation**: Import and export operations use the vcard4 library:
+- **Parsing**: The `parse()` function from vcard4 handles all vCard file parsing, including edge cases like line folding, structured fields, and property parameters
+- **Generation**: The `VCARD` class and property constructors from vcard4 generate spec-compliant vCard 4.0 output
+- **Validation**: vcard4 ensures all fields comply with RFC 6350, preventing invalid vCard files
+- **Compatibility**: Generated vCard files work with any RFC 6350-compliant contact management system
 
 This ensures your contact data remains accessible and portable across different platforms and applications.
