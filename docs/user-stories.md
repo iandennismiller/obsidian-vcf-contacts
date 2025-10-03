@@ -2,9 +2,13 @@
 
 This document outlines user stories and use cases for managing contacts and relationships in Obsidian using vCard (VCF) files. Each story represents a specific need or workflow that users want to accomplish with this plugin.
 
-## Architecture: Markdown Processing
+## Architecture: Library Integration
 
-**Technical Foundation**: The plugin uses the [marked](https://www.npmjs.com/package/marked) library for standard markdown parsing and rendering operations. This architectural decision provides:
+**Technical Foundation**: The plugin leverages two key libraries to provide robust, standards-compliant functionality:
+
+### Markdown Processing: [marked](https://www.npmjs.com/package/marked)
+
+The plugin uses the marked library for standard markdown parsing and rendering operations. This architectural decision provides:
 
 - **Reduced Complexity**: Eliminates custom markdown parsing utilities and edge case handling
 - **Better Standards Compliance**: Follows CommonMark and GitHub Flavored Markdown specifications
@@ -14,33 +18,75 @@ This document outlines user stories and use cases for managing contacts and rela
 **Scope of Custom Parsing**: Custom parsing is limited to:
 1. **Obsidian-Specific Syntax**: Wiki-links (`[[Contact Name]]`) which are not standard markdown
 2. **Contact Semantics**: Pattern recognition for emails, phones, URLs, addresses
-3. **VCard Field Mapping**: Converting between frontmatter and contact display formats
+3. **Contact Display Formatting**: Converting between frontmatter and contact display formats
 
 This means:
 - Standard markdown list parsing is handled by marked
 - Heading extraction and hierarchy is handled by marked
 - Whitespace normalization is handled by marked
 - Line break handling is handled by marked
-- Custom code focuses only on domain-specific logic (contacts, relationships, VCards)
+- Custom code focuses only on domain-specific logic (contacts, relationships)
 
-**User Benefit**: More reliable markdown handling with fewer edge cases and better compatibility with standard markdown tools.
+### vCard Processing: [vcard4](https://www.npmjs.com/package/vcard4)
+
+The plugin uses the vcard4 library for all vCard 4.0 parsing, generation, and manipulation. This architectural decision provides:
+
+- **Full RFC 6350 Compliance**: Complete implementation of vCard 4.0 specification
+- **Reduced Complexity**: Eliminates custom vCard parsing/generation utilities and edge case handling
+- **Better Standards Compliance**: Follows vCard 4.0 spec exactly, including extensions (RFC 6474, RFC 8605, etc.)
+- **Improved Reliability**: Leverages a battle-tested, spec-compliant parser and generator
+- **Lower Maintenance**: Delegates vCard format concerns to a well-maintained library
+- **Multiple Output Formats**: Supports standard vCard, XML vCard (RFC 6351), and jCard (RFC 7095)
+
+**Scope of vcard4 Library Usage**: The vcard4 library handles:
+1. **vCard Parsing**: Reading and parsing vCard 4.0 files into structured objects
+2. **vCard Generation**: Creating valid vCard 4.0 output from structured data
+3. **Field Validation**: Ensuring all vCard fields comply with RFC 6350
+4. **Structured Fields**: Parsing and generating complex fields (N, ADR, GENDER, etc.)
+5. **Line Folding**: Proper handling of long lines per vCard specification
+6. **Property Parameters**: TYPE, PREF, VALUE, and other vCard parameters
+7. **Special Properties**: RELATED, PHOTO, GEO, and other vCard 4.0 properties
+
+**Scope of Custom Integration**: Custom code is limited to:
+1. **Obsidian Frontmatter Mapping**: Converting between vCard properties and Obsidian YAML frontmatter
+2. **UID Management**: Generating and tracking unique contact identifiers
+3. **Relationship Extensions**: Custom RELATED field handling for bidirectional relationships
+4. **File Operations**: Reading/writing VCF files and managing sync workflows
+
+This means:
+- All vCard parsing is handled by vcard4
+- All vCard generation is handled by vcard4
+- Field validation per RFC 6350 is handled by vcard4
+- Line folding/unfolding is handled by vcard4
+- Structured field parsing (N, ADR, GENDER) is handled by vcard4
+- Custom code focuses only on Obsidian-specific integration (frontmatter, relationships, file sync)
+
+**User Benefit**: More reliable markdown and vCard handling with fewer edge cases, better standards compliance, and improved compatibility with external contact management systems.
 
 ## VCF File Management Stories
 
 ### 1. Single VCF File Synchronization
 **As a user**, I store my vCard contacts in a single VCF file and I want to keep that file synced with my Obsidian contacts so that any changes in Obsidian are reflected in my VCF file and vice versa.
 
+**Technical Note**: The plugin uses the [vcard4](https://www.npmjs.com/package/vcard4) library to parse and generate vCard 4.0 files. This ensures full RFC 6350 compliance and handles all vCard parsing edge cases automatically.
+
 ### 2. Individual VCF Files in Folder
 **As a user**, I store my vCard contacts as individual VCF files in a folder and I want to keep that folder synced with my Obsidian contacts so that each contact corresponds to one VCF file.
 
+**Technical Note**: vCard parsing and generation is delegated to the vcard4 library, which fully implements RFC 6350 including all field types, parameters, and structured fields.
+
 ### 3. VCF File Drop Import
 **As a user**, when I drop a VCF file into my Obsidian vault, I want the plugin to automatically import the contacts into my contacts folder and place the VCF file in my watch folder for ongoing synchronization.
+
+**Technical Note**: The vcard4 library handles parsing of imported VCF files, supporting all vCard 4.0 properties and automatically handling line folding, structured fields, and field validation.
 
 ### 4. Automatic VCF Monitoring
 **As a user**, I want the plugin to monitor my VCF watch folder for changes and automatically update my Obsidian contacts when VCF files are modified externally.
 
 ### 5. VCF Export from Obsidian
 **As a user**, I want to export my Obsidian contacts to VCF format so I can share them with other applications or backup my contact data.
+
+**Technical Note**: Export uses the vcard4 library to generate spec-compliant vCard 4.0 files that work with any standards-compliant contact management application.
 
 ## Relationship Management Stories
 
@@ -84,6 +130,8 @@ This means:
 
 ### 16. Contact Deduplication
 **As a user**, when importing VCF files, I want the plugin to detect existing contacts by UID and update them rather than creating duplicates.
+
+**Technical Note**: The vcard4 library parses UIDs from vCard files according to RFC 6350, ensuring proper UID extraction and comparison.
 
 ### 17. Efficient VCF Updates
 **As a user**, I expect VCFs will only be updated when the data actually changes; the plugin should ensure vcard and front matter are always sorted to prevent relationships, which inherently have no "order," from shuffling around chaotically when refreshed. Specifically, when mapping relationships to frontmatter, the plugin sorts first by key, then by value, creating a deterministic ordering for serialization. The REV field is only updated when frontmatter actually changes.

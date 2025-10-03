@@ -34,12 +34,14 @@ The plugin's primary focus is on tracking and managing relationships between con
 
 Standard vCard format support for interoperability:
 
-- **vCard 4.0 Compliance**: Full support for the latest vCard standard
+- **vCard 4.0 Compliance**: Full RFC 6350 compliance via [vcard4](https://www.npmjs.com/package/vcard4) library
 - **Import**: Create contacts from .vcf files (single contacts or entire databases)
 - **Export**: Generate standard .vcf files for use in other applications
 - **Batch Operations**: Process multiple contacts simultaneously
 - **Name Extraction**: Automatic file naming from contact data
 - **Smart Updates**: Revision timestamp comparison for conflict resolution
+- **Standards-Compliant Parsing**: All vCard parsing handled by vcard4 library (eliminates custom parsing edge cases)
+- **Validated Generation**: All vCard generation handled by vcard4 library (ensures RFC 6350 compliance)
 
 ### Folder Watching
 

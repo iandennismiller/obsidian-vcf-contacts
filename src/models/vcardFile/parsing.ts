@@ -1,219 +1,159 @@
-import { VCardForObsidianRecord, StructuredFields } from './types';
+import { parse } from 'vcard4';
+import { VCardForObsidianRecord } from './types';
 import { createContactSlug } from '../contactNote';
 
 /**
  * VCard parsing operations
- * Handles parsing VCard data into structured objects
+ * Uses vcard4 library for RFC 6350 compliant parsing
  */
 export class VCardParser {
   /**
    * Parse VCard data and yield [slug, vCardObject] tuples
+   * Converts vcard4 parsed objects directly to Obsidian frontmatter format
+   * 
    * @param {string} vcardData - The raw VCard data to parse
    * @returns {AsyncGenerator} An async generator that yields arrays with two elements: slug (string or undefined) and vCardObject
    */
   static async* parse(vcardData: string): AsyncGenerator<[string | undefined, VCardForObsidianRecord], void, unknown> {
-    const singles: string[] = VCardParser.parseToSingles(vcardData);
-
-    for (const singleVCard of singles) {
-      const unfoldedLines = VCardParser.unfoldVCardLines(singleVCard);
-      const vCardObject: VCardForObsidianRecord = {};
-
-      for (const line of unfoldedLines) {
-        const parsedLine = VCardParser.parseVCardLine(line);
-        if (parsedLine) {
-          const indexedParsedLine = VCardParser.indexIfKeysExist(vCardObject, parsedLine);
-          Object.assign(vCardObject, indexedParsedLine);
-        }
-      }
-
+    // Handle empty input
+    if (!vcardData || !vcardData.trim()) {
+      return;
+    }
+    
+    // Normalize line endings to CRLF (required by vcard4)
+    const normalized = vcardData.replace(/\r\n/g, '\n').replace(/\n/g, '\r\n');
+    
+    // Split into individual vCards (vcard4 parses one at a time)
+    const vcardStrings = VCardParser.splitVCards(normalized);
+    
+    for (const vcardString of vcardStrings) {
       try {
-        const slug = createContactSlug(vCardObject);
-        yield [slug, vCardObject];
-      } catch (error: any) {
-        yield [undefined, vCardObject];
-      }
-    }
-  }
-
-  private static unfoldVCardLines(vCardData: string): string[] {
-    const normalized = vCardData.replace(/\r\n?/g, '\n');
-    const lines = normalized.split('\n');
-    const unfoldedLines: string[] = [];
-    let currentLine = "";
-
-    for (const line of lines) {
-      if (/^[ \t]/.test(line)) {
-        currentLine += ' ' + line.slice(1);
-      } else {
-        if (currentLine) unfoldedLines.push(currentLine);
-        currentLine = line;
-      }
-    }
-
-    return unfoldedLines;
-  }
-
-  private static parseToSingles(vCardsRaw: string): string[] {
-    return vCardsRaw.split(/BEGIN:VCARD\s*[\n\r]+|END:VCARD\s*[\n\r]+/).filter(section => section.trim());
-  }
-
-  private static indexIfKeysExist(vCardObject: VCardForObsidianRecord, newEntry: VCardForObsidianRecord): VCardForObsidianRecord {
-    const indexedEntry: Record<string, any> = {};
-    const typeRegex = /\[(.*?)\]/;
-    const dotRegex = /^([^\.]+)\./;
-
-    Object.entries(newEntry).forEach(([key, value]) => {
-      let newKey = key;
-
-      if (vCardObject.hasOwnProperty(key)) {
-        let index = 1;
-
-        const typeMatch = key.match(typeRegex);
-        const dotMatch = key.match(dotRegex);
-
-        if (typeMatch) {
-          // Key contains [TYPE] - insert index inside brackets
-          const beforeBracket = key.substring(0, key.indexOf('['));
-          const insideBrackets = typeMatch[1];
-          const afterBracket = key.substring(key.indexOf(']') + 1);
-          
-          do {
-            newKey = `${beforeBracket}[${index}:${insideBrackets}]${afterBracket}`;
-            index++;
-          } while (vCardObject.hasOwnProperty(newKey));
-        } else if (dotMatch) {
-          // Key contains dot - insert index before dot
-          const beforeDot = dotMatch[1];
-          const afterDot = key.substring(key.indexOf('.'));
-          
-          do {
-            newKey = `${beforeDot}[${index}:]${afterDot}`;
-            index++;
-          } while (vCardObject.hasOwnProperty(newKey));
-        } else {
-          // General key - append index at end
-          do {
-            newKey = `${key}[${index}:]`;
-            index++;
-          } while (vCardObject.hasOwnProperty(newKey));
+        // vcard4.parse() expects a single vCard
+        const parsedVcard = parse(vcardString);
+        const frontmatter = VCardParser.convertToFrontmatter(parsedVcard);
+        
+        try {
+          const slug = createContactSlug(frontmatter);
+          yield [slug, frontmatter];
+        } catch (error: any) {
+          // If slug creation fails, still yield the frontmatter
+          console.warn('[VCardParser] Failed to create slug:', error.message, 'FN:', frontmatter.FN);
+          yield [undefined, frontmatter];
         }
+      } catch (error: any) {
+        console.error('[VCardParser] Error parsing vCard:', error.message, 'vCard preview:', vcardString.substring(0, 100));
+        // Skip this vCard and continue with others
+        continue;
       }
-
-      indexedEntry[newKey] = value;
-    });
-
-    return indexedEntry;
+    }
   }
 
-  private static parseStructuredField(key: keyof typeof StructuredFields, value: string, typeValues: string): Record<string, string> {
-    const structuredFieldsForKey = StructuredFields[key];
-    const result: Record<string, string> = {};
-    const values = value.split(';');
+  /**
+   * Split multiple vCards into individual vCard strings
+   * @private
+   */
+  private static splitVCards(vcardData: string): string[] {
+    const vcards: string[] = [];
+    const lines = vcardData.split('\r\n');
+    let currentVCard: string[] = [];
+    let inVCard = false;
     
-    structuredFieldsForKey.forEach((field, index) => {
-      const fieldValue = values[index] || '';
-      if (fieldValue) {
-        result[`${key}${typeValues}.${field}`] = fieldValue;
+    for (const line of lines) {
+      if (line === 'BEGIN:VCARD') {
+        inVCard = true;
+        currentVCard = [line];
+      } else if (line === 'END:VCARD') {
+        currentVCard.push(line);
+        currentVCard.push(''); // Add trailing CRLF
+        vcards.push(currentVCard.join('\r\n'));
+        currentVCard = [];
+        inVCard = false;
+      } else if (inVCard) {
+        currentVCard.push(line);
       }
-    });
+    }
     
-    return result;
+    return vcards;
   }
 
-  private static parseVCardLine(line: string): VCardForObsidianRecord {
-    const [keyPart, ...valueParts] = line.split(':');
-    if (!keyPart || valueParts.length === 0) {
-      // Throw error for lines without proper key:value format
-      if (line.trim() && !line.startsWith('BEGIN:') && !line.startsWith('END:') && !line.startsWith('VERSION:')) {
-        throw new Error(`VCard parse error: Invalid line format: ${line}`);
-      }
-      return {};
-    }
-
-    const value = valueParts.join(':').trim();
-    if (!value) return {};
-
-    const keyMatch = keyPart.match(/^([A-Z]+)(.*)/);
-    if (!keyMatch) {
-      // Throw error for invalid key format
-      throw new Error(`VCard parse error: Invalid property key: ${keyPart}`);
-    }
-
-    const [, baseKey, paramsPart] = keyMatch;
-    let typeValues = '';
-
-    if (paramsPart) {
-      const typeMatch = paramsPart.match(/TYPE=([^;]+)/);
-      if (typeMatch) {
-        typeValues = `[${typeMatch[1]}]`;
-      }
-    }
-
-    if (['N', 'ADR'].includes(baseKey) && StructuredFields[baseKey as keyof typeof StructuredFields]) {
-      return VCardParser.parseStructuredField(baseKey as keyof typeof StructuredFields, value, typeValues);
-    }
-
-    if (['BDAY', 'ANNIVERSARY'].includes(baseKey)) {
-      return { [`${baseKey}${typeValues}`]: VCardParser.formatVCardDate(value) };
-    }
-
-    if (baseKey === 'PHOTO') {
-      // Handle both v3 and v4 formats
-      if (paramsPart && paramsPart.includes('ENCODING=BASE64')) {
-        // v3 format: reconstruct the line for processing
-        const fullLine = `PHOTO${paramsPart}:${value}`;
-        return { [`${baseKey}${typeValues}`]: VCardParser.photoLineFromV3toV4(fullLine) };
-      } else if (value.startsWith('data:')) {
-        // v4 format
-        return { [`${baseKey}${typeValues}`]: value };
+  /**
+   * Convert vcard4 parsed object to Obsidian frontmatter format
+   * @private
+   */
+  private static convertToFrontmatter(parsedVcard: any): VCardForObsidianRecord {
+    const frontmatter: VCardForObsidianRecord = {};
+    const parsedVcardArray = parsedVcard.parsedVcard || [];
+    const fieldCounts: Map<string, number> = new Map();
+    
+    for (const prop of parsedVcardArray) {
+      const { property, parameters, value } = prop;
+      
+      // Handle structured fields (N, ADR)
+      if (property === 'N' && typeof value === 'object') {
+        const typeParam = parameters.TYPE || '';
+        const typeStr = typeParam ? `[${typeParam}]` : '';
+        
+        if (value.familyNames) frontmatter[`N${typeStr}.FN`] = value.familyNames;
+        if (value.givenNames) frontmatter[`N${typeStr}.GN`] = value.givenNames;
+        if (value.additionalNames) frontmatter[`N${typeStr}.MN`] = value.additionalNames;
+        if (value.honorificPrefixes) frontmatter[`N${typeStr}.PREFIX`] = value.honorificPrefixes;
+        if (value.honorificSuffixes) frontmatter[`N${typeStr}.SUFFIX`] = value.honorificSuffixes;
+      } else if (property === 'ADR' && typeof value === 'object') {
+        const typeParam = parameters.TYPE || '';
+        const typeStr = typeParam ? `[${typeParam}]` : '';
+        
+        if (value.postOfficeBox) frontmatter[`ADR${typeStr}.PO`] = value.postOfficeBox;
+        if (value.extendedAddress) frontmatter[`ADR${typeStr}.EXT`] = value.extendedAddress;
+        if (value.streetAddress) frontmatter[`ADR${typeStr}.STREET`] = value.streetAddress;
+        if (value.locality) frontmatter[`ADR${typeStr}.LOCALITY`] = value.locality;
+        if (value.region) frontmatter[`ADR${typeStr}.REGION`] = value.region;
+        if (value.postalCode) frontmatter[`ADR${typeStr}.POSTAL`] = value.postalCode;
+        if (value.countryName) frontmatter[`ADR${typeStr}.COUNTRY`] = value.countryName;
+      } else if (property === 'GENDER' && typeof value === 'object') {
+        if (value.sex) frontmatter.GENDER = value.sex;
       } else {
-        return { [`${baseKey}${typeValues}`]: value };
+        // Handle regular fields with TYPE parameters
+        const typeParam = parameters.TYPE;
+        let key = property;
+        
+        if (typeParam) {
+          const typeValue = Array.isArray(typeParam) ? typeParam[0] : typeParam;
+          key = `${property}[${typeValue}]`;
+        }
+        
+        // Handle duplicate fields by adding index
+        if (frontmatter.hasOwnProperty(key)) {
+          const count = fieldCounts.get(property) || 1;
+          fieldCounts.set(property, count + 1);
+          
+          if (typeParam) {
+            const typeValue = Array.isArray(typeParam) ? typeParam[0] : typeParam;
+            key = `${property}[${count}:${typeValue}]`;
+          } else {
+            key = `${property}[${count}:]`;
+          }
+        } else {
+          fieldCounts.set(property, 1);
+        }
+        
+        frontmatter[key] = typeof value === 'string' ? value : String(value);
       }
     }
-
-    if (baseKey === 'VERSION') {
-      // Convert vCard version 3.0 to 4.0
-      if (value === '3.0') {
-        return { [`${baseKey}${typeValues}`]: '4.0' };
-      }
-      return { [`${baseKey}${typeValues}`]: value };
-    }
-
-    return { [`${baseKey}${typeValues}`]: value };
-  }
-
-  private static formatVCardDate(input: string): string {
-    let trimmed = input.trim();
-
-    if (trimmed[8] === 'T') {
-      trimmed = trimmed.slice(0, 8);
-    }
-
-    if (trimmed.length === 8 && !isNaN(Number(trimmed))) {
-      const dashed = `${trimmed.slice(0, 4)}-${trimmed.slice(4, 6)}-${trimmed.slice(6, 8)}`;
-      const date = new Date(dashed);
-      if (!isNaN(date.getTime())) {
-        return date.toISOString().substring(0, 10);
-      }
-    }
-
-    const date = new Date(trimmed);
-    if (!isNaN(date.getTime())) {
-      return date.toISOString().substring(0, 10);
-    }
-
-    return trimmed;
+    
+    return frontmatter;
   }
 
   /**
    * Convert vCard v3 photo format to v4 format
-   * Migrated from src/util/photoLineFromV3toV4.ts
+   * 
+   * @deprecated This functionality is now handled by vcard4 library
+   * Kept for backward compatibility during migration
    */
   static photoLineFromV3toV4(line: string): string {
     const url = line.startsWith('PHOTO;') ? line.slice(6) : line;
     const match = url.match(/^ENCODING=BASE64;(.*?):/);
     if (match) {
-      const mimeType = match[1].toLowerCase(); // e.g., "jpeg"
+      const mimeType = match[1].toLowerCase();
       const base64Data = url.split(':').slice(1).join(':');
       return `data:image/${mimeType};base64,${base64Data}`;
     }

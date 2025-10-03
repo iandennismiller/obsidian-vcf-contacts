@@ -1,12 +1,15 @@
 import { TFile, App } from "obsidian";
-import { VCardToStringError, VCardToStringReply, StructuredFields } from './types';
+import { VCARD, FNProperty, NProperty, EmailProperty, TelProperty, AdrProperty, 
+         TextType, URIType, SpecialValueType, TypeParameter, ParameterValueType,
+         BdayProperty, GenderProperty, PhotoProperty, OrgProperty, TitleProperty, RoleProperty,
+         UIDProperty, RevProperty, RelatedProperty, CategoriesProperty, NoteProperty, URLProperty } from 'vcard4';
+import { VCardToStringError, VCardToStringReply } from './types';
 import { getApp } from "../../plugin/context/sharedAppContext";
 import { ContactManagerUtils } from "../contactManager/contactManagerUtils";
-import { parseKey } from "../contactNote";
 
 /**
  * VCard generation operations
- * Handles generating VCard data from various sources
+ * Uses vcard4 library for RFC 6350 compliant generation
  */
 export class VCardGenerator {
   /**
@@ -22,7 +25,7 @@ export class VCardGenerator {
         if (singleVcard) {
           vCards.push(singleVcard);
         }
-      } catch (err) {
+      } catch (err: any) {
         vCardsErrors.push({"status": "error", "file": file.basename + '.md', "message": err.message});
       }
     });
@@ -62,7 +65,6 @@ export class VCardGenerator {
     };
     
     const namedObject = await ContactManagerUtils.ensureHasName(vCardObject);
-    // Convert the object back to VCF format
     return VCardGenerator.objectToVcf(namedObject);
   }
 
@@ -81,115 +83,182 @@ export class VCardGenerator {
       throw new Error('Missing required fields (UID or FN).');
     }
 
-    const entries = Object.entries(frontMatter) as Array<[string, string]>;
-    const singleLineFields: Array<[string, string]> = [];
-    const structuredFields: Array<[string, string]> = [];
-
-    entries.forEach(([key, value]) => {
-      const keyObj = parseKey(key);
-
-      // Check if this is a structured field by looking for subkey/dot notation
-      if (['ADR', 'N'].includes(keyObj.key) && key.includes('.')) {
-        structuredFields.push([key, value]);
-      } else {
-        singleLineFields.push([key, value]);
-      }
-    });
-
-    const fnExists = singleLineFields.some(([key, _]) => key === 'FN');
-    if (!fnExists) {
-      singleLineFields.push(['FN', file.basename]);
+    // Add FN from filename if not present
+    const frontMatterWithFN = { ...frontMatter };
+    if (!hasFN) {
+      frontMatterWithFN.FN = file.basename;
     }
 
-    const structuredLines = VCardGenerator.renderStructuredLines(structuredFields);
-    const singleLines = singleLineFields.map(VCardGenerator.renderSingleKey);
-    
-    // Ensure VERSION is included and comes first
-    const versionLine = 'VERSION:4.0';
-    const hasVersion = singleLines.some(line => line.startsWith('VERSION:'));
-    
-    let lines: string[] = [];
-    if (!hasVersion) {
-      lines.push(versionLine);
-    }
-    lines = lines.concat(structuredLines).concat(singleLines);
-
-    return `BEGIN:VCARD\n${lines.join("\n")}\nEND:VCARD`;
+    return VCardGenerator.objectToVcf(frontMatterWithFN);
   }
 
-  private static renderStructuredLines(structuredFields: [string, string][]): string[] {
-    const fields = Object.fromEntries(structuredFields);
-    const partialKeys = structuredFields
-      .map(([key]) => key.includes('.') ? key.split('.')[0] : null)
-      .filter((item): item is string => item !== null);
-    const uniqueKeys = [...new Set(partialKeys)];
-
-    const structuredLines = uniqueKeys.map((key) => {
-      const keyObj = parseKey(key);
-      const type = keyObj.type ? `;TYPE=${keyObj.type}` : '';
-      switch (keyObj.key) {
-        case 'N': {
-          return `N${type}:${StructuredFields.N.map(field => fields[key + '.' + field] || "").join(";")}`;
-        }
-        case 'ADR': {
-          return `ADR${type}:${StructuredFields.ADR.map(field => fields[key + '.' + field] || "").join(";")}`;
-        }
-        default: {
-          return '';
-        }
-      }
-    });
-
-    return structuredLines.filter((line) => line !== '');
-  }
-
-  private static renderSingleKey([key, value]: [string, string]): string {
-    const keyObj = parseKey(key);
-    const type = keyObj.type ? `;TYPE=${keyObj.type}` : '';
-    return `${keyObj.key}${type}:${value}`;
-  }
-
+  /**
+   * Convert vCard object to VCF string using vcard4 library
+   */
   static objectToVcf(vCardObject: Record<string, any>): string {
-    const entries = Object.entries(vCardObject) as Array<[string, string]>;
-    const singleLineFields: Array<[string, string]> = [];
-    const structuredFields: Array<[string, string]> = [];
-
-    entries.forEach(([key, value]) => {
-      const keyObj = parseKey(key);
-
-      // Check if this is a structured field by looking for subkey/dot notation
-      if (['ADR', 'N'].includes(keyObj.key) && key.includes('.')) {
-        structuredFields.push([key, value]);
-      } else {
-        singleLineFields.push([key, value]);
+    const properties: any[] = [];
+    const processedKeys = new Set<string>();
+    
+    // Helper to parse Obsidian key format
+    function parseObsidianKey(key: string): { base: string; type?: string; subfield?: string } {
+      const typeMatch = key.match(/^([A-Z]+)\[([^\]]+)\](?:\.(.+))?$/);
+      if (typeMatch) {
+        return { 
+          base: typeMatch[1], 
+          type: typeMatch[2].includes(':') ? typeMatch[2].split(':')[1] : typeMatch[2],
+          subfield: typeMatch[3]
+        };
       }
-    });
-
-    // Sort single line fields for deterministic ordering
-    // First by key, then by value (per spec)
-    singleLineFields.sort((a, b) => {
-      // Compare keys first
-      if (a[0] < b[0]) return -1;
-      if (a[0] > b[0]) return 1;
-      // If keys are equal, compare values
-      if (a[1] < b[1]) return -1;
-      if (a[1] > b[1]) return 1;
-      return 0;
-    });
-
-    const structuredLines = VCardGenerator.renderStructuredLines(structuredFields);
-    const singleLines = singleLineFields.map(VCardGenerator.renderSingleKey);
-    
-    // Ensure VERSION is included and comes first
-    const versionLine = 'VERSION:4.0';
-    const hasVersion = singleLines.some(line => line.startsWith('VERSION:'));
-    
-    let lines: string[] = [];
-    if (!hasVersion) {
-      lines.push(versionLine);
+      
+      const dotMatch = key.match(/^([A-Z]+)\.(.+)$/);
+      if (dotMatch) {
+        return { base: dotMatch[1], subfield: dotMatch[2] };
+      }
+      
+      return { base: key };
     }
-    lines = lines.concat(structuredLines).concat(singleLines);
-
-    return `BEGIN:VCARD\n${lines.join("\n")}\nEND:VCARD`;
+    
+    // First pass: handle structured fields (N, ADR)
+    const nFields: Map<string, any> = new Map();
+    const adrFields: Map<string, any> = new Map();
+    
+    for (const [key, value] of Object.entries(vCardObject)) {
+      const parsed = parseObsidianKey(key);
+      
+      if (parsed.base === 'N' && parsed.subfield) {
+        const typeKey = parsed.type || 'default';
+        if (!nFields.has(typeKey)) {
+          nFields.set(typeKey, { type: parsed.type });
+        }
+        // Only add non-empty values
+        if (value) {
+          nFields.get(typeKey)[parsed.subfield] = value;
+        }
+        processedKeys.add(key);
+      } else if (parsed.base === 'ADR' && parsed.subfield) {
+        const typeKey = parsed.type || 'default';
+        if (!adrFields.has(typeKey)) {
+          adrFields.set(typeKey, { type: parsed.type });
+        }
+        // Only add non-empty values
+        if (value) {
+          adrFields.get(typeKey)[parsed.subfield] = value;
+        }
+        processedKeys.add(key);
+      }
+    }
+    
+    // Create N properties
+    for (const [typeKey, fields] of nFields) {
+      const nArr = new Array(5);
+      nArr[0] = fields.FN ? new TextType(fields.FN) : new TextType('');
+      nArr[1] = fields.GN ? new TextType(fields.GN) : new TextType('');
+      nArr[2] = fields.MN ? new TextType(fields.MN) : new TextType('');
+      nArr[3] = fields.PREFIX ? new TextType(fields.PREFIX) : new TextType('');
+      nArr[4] = fields.SUFFIX ? new TextType(fields.SUFFIX) : new TextType('');
+      
+      const params = fields.type ? [new TypeParameter('NProperty', new ParameterValueType(fields.type))] : [];
+      properties.push(new NProperty(params, new SpecialValueType('NProperty', nArr)));
+    }
+    
+    // Create ADR properties
+    for (const [typeKey, fields] of adrFields) {
+      const adrArr = new Array(7);
+      adrArr[0] = new TextType(fields.PO || '');
+      adrArr[1] = new TextType(fields.EXT || '');
+      adrArr[2] = new TextType(fields.STREET || '');
+      adrArr[3] = new TextType(fields.LOCALITY || '');
+      adrArr[4] = new TextType(fields.REGION || '');
+      adrArr[5] = new TextType(fields.POSTAL || '');
+      adrArr[6] = new TextType(fields.COUNTRY || '');
+      
+      const params = fields.type ? [new TypeParameter('AdrProperty', new ParameterValueType(fields.type))] : [];
+      properties.push(new AdrProperty(params, new SpecialValueType('AdrProperty', adrArr)));
+    }
+    
+    // Second pass: handle regular fields
+    for (const [key, value] of Object.entries(vCardObject)) {
+      if (processedKeys.has(key)) continue;
+      
+      // Skip empty values but process non-empty ones
+      if (!value && value !== 0 && value !== false) continue;
+      
+      const parsed = parseObsidianKey(key);
+      const params = parsed.type ? [new TypeParameter(`${parsed.base}Property`, new ParameterValueType(parsed.type))] : [];
+      
+      try {
+        switch (parsed.base) {
+          case 'FN':
+            properties.push(new FNProperty(params, new TextType(String(value))));
+            break;
+          case 'EMAIL':
+            properties.push(new EmailProperty(params, new TextType(String(value))));
+            break;
+          case 'TEL':
+            const telValue = String(value);
+            const telUri = telValue.startsWith('tel:') || telValue.startsWith('+') ? telValue : `tel:${telValue}`;
+            properties.push(new TelProperty(params, new URIType(telUri)));
+            break;
+          case 'BDAY':
+          case 'ANNIVERSARY':
+            const PropClass = parsed.base === 'BDAY' ? BdayProperty : require('vcard4').AnniversaryProperty;
+            properties.push(new PropClass(params, new TextType(String(value))));
+            break;
+          case 'GENDER':
+            properties.push(new GenderProperty([], new SpecialValueType('GenderProperty', [
+              new TextType(String(value)),
+              new TextType('')
+            ])));
+            break;
+          case 'PHOTO':
+            properties.push(new PhotoProperty(params, new URIType(String(value))));
+            break;
+          case 'ORG':
+            const orgValue = String(value);
+            const orgParts = orgValue.split(';').map(part => new TextType(part.trim()));
+            const OrgTextListType = require('vcard4').TextListType;
+            properties.push(new OrgProperty(params, new OrgTextListType(orgParts)));
+            break;
+          case 'TITLE':
+            properties.push(new TitleProperty(params, new TextType(String(value))));
+            break;
+          case 'ROLE':
+            properties.push(new RoleProperty(params, new TextType(String(value))));
+            break;
+          case 'UID':
+            properties.push(new UIDProperty(params, new TextType(String(value))));
+            break;
+          case 'REV':
+            const RevTimestampType = require('vcard4').TimestampType;
+            properties.push(new RevProperty(params, new RevTimestampType(String(value))));
+            break;
+          case 'RELATED':
+            properties.push(new RelatedProperty(params, new URIType(String(value))));
+            break;
+          case 'CATEGORIES':
+            properties.push(new CategoriesProperty(params, new TextType(String(value))));
+            break;
+          case 'NOTE':
+            properties.push(new NoteProperty(params, new TextType(String(value))));
+            break;
+          case 'URL':
+            properties.push(new URLProperty(params, new URIType(String(value))));
+            break;
+          case 'VERSION':
+            // VERSION is handled automatically by VCARD
+            break;
+        }
+      } catch (error: any) {
+        console.warn(`[VCardGenerator] Error creating property ${parsed.base}:`, error.message);
+      }
+    }
+    
+    // Ensure we have at least FN property (required by vcard4)
+    if (!properties.some(p => p.constructor.name === 'FNProperty')) {
+      properties.unshift(new FNProperty([], new TextType('Unnamed Contact')));
+    }
+    
+    const vcard = new VCARD(properties);
+    return vcard.repr();
   }
 }

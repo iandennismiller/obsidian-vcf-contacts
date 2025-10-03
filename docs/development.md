@@ -38,18 +38,20 @@ Responsibilities:
 - Related section rendering
 
 #### VcardFile (`src/models/vcardFile/`)
-Handles VCF file operations:
+Handles VCF file operations and integration with the vcard4 library:
 - **vcardFile.ts**: Main VCardFile class
-- **parsing.ts**: VCF file parsing logic
-- **generation.ts**: VCF file generation from contact data
+- **parsing.ts**: Integration with vcard4 parser, converting to Obsidian frontmatter
+- **generation.ts**: Integration with vcard4 generator, converting from Obsidian frontmatter
 - **fileOperations.ts**: File system operations for VCF files
 - **types.ts**: VCard-specific type definitions
 
 Responsibilities:
-- VCF file parsing (vCard 4.0 format)
-- VCF file generation and validation
-- Conversion between Obsidian frontmatter and vCard format
+- Integration with vcard4 library for parsing/generation (vCard 4.0 format per RFC 6350)
+- Conversion between vcard4 parsed objects and Obsidian frontmatter format
+- Conversion between Obsidian frontmatter and vcard4 property objects
 - File system operations (read, write, list VCF files)
+
+**Technical Note**: The vcard4 library handles all vCard 4.0 parsing, generation, field validation, structured field handling, and line folding per RFC 6350. Custom code focuses only on mapping between vcard4's data structures and Obsidian's frontmatter format.
 
 #### VcardManager (`src/models/vcardManager/`)
 Manages collections of VCF files:
@@ -95,7 +97,9 @@ The plugin uses a processor-based architecture for data operations (`src/curator
 4. **Write Queue System**: Prevents file system conflicts during batch operations
 5. **Bidirectional Sync**: Maintains consistency between markdown and frontmatter
 6. **UID-Based References**: Contact relationships use unique identifiers
-7. **Markdown Library Integration**: Uses [marked](https://www.npmjs.com/package/marked) library for standard markdown parsing/rendering, with custom handling only for Obsidian-specific features (wiki-links) and contact data semantics
+7. **Library Integration**: 
+   - **Markdown**: Uses [marked](https://www.npmjs.com/package/marked) library for standard markdown parsing/rendering, with custom handling only for Obsidian-specific features (wiki-links) and contact data semantics
+   - **vCard**: Uses [vcard4](https://www.npmjs.com/package/vcard4) library for all vCard 4.0 parsing/generation per RFC 6350, with custom code only for Obsidian frontmatter mapping
 
 ### Markdown Processing Architecture
 
@@ -144,6 +148,63 @@ This architecture:
 - **Improves maintainability**: Single source of truth for markdown operations
 - **Enhances reliability**: Battle-tested marked library handles edge cases
 - **Future-proof**: Can leverage marked library updates and extensions
+
+### vCard Processing Architecture
+
+As of version 2.2.0, the plugin uses the [vcard4](https://www.npmjs.com/package/vcard4) library for all vCard 4.0 parsing and generation operations. This migration eliminates custom vCard parsing/generation utilities and provides robust, RFC 6350-compliant vCard handling.
+
+#### VCard Integration Layer
+
+The VcardFile model (`src/models/vcardFile/`) integrates with vcard4 through specialized components:
+
+**Core Components:**
+- `VCardParser` (`parsing.ts`): Integrates vcard4 parser, converts to Obsidian frontmatter
+- `VCardGenerator` (`generation.ts`): Integrates vcard4 generator, converts from Obsidian frontmatter
+- `VCardFileOperations` (`fileOperations.ts`): File I/O for VCF files
+
+**What vcard4 Library Handles:**
+- **Full RFC 6350 Compliance**: Complete vCard 4.0 specification implementation
+- **Parsing**: Reading and parsing vCard files into structured objects
+- **Generation**: Creating valid vCard 4.0 output from structured data
+- **Field Validation**: Ensuring fields comply with RFC 6350
+- **Structured Fields**: Parsing complex fields (N, ADR, GENDER, etc.)
+- **Line Folding/Unfolding**: Proper handling of long lines per spec
+- **Property Parameters**: TYPE, PREF, VALUE, and other vCard parameters
+- **Special Properties**: RELATED, PHOTO, GEO, and all vCard 4.0 properties
+- **Extensions**: RFC 6474, RFC 8605, RFC 6715, RFC 6868, RFC 6473, RFC 7852
+
+**Custom Integration Code (Obsidian-Specific):**
+- **Frontmatter Mapping**: Converting between vcard4 parsed objects and Obsidian YAML frontmatter
+- **UID Management**: Generating and tracking unique contact identifiers
+- **Relationship Extensions**: Custom RELATED field handling for bidirectional relationships
+- **File Sync Coordination**: Managing sync between Obsidian notes and VCF files
+
+#### vcard4 Usage Pattern
+
+```typescript
+import { parse, VCARD, FNProperty, TextType } from 'vcard4';
+
+// Parsing vCard files
+const vcardContent = await readVCFFile('contact.vcf');
+const parsedCard = parse(vcardContent);
+// parsedCard contains structured vCard data with properties, groups, etc.
+
+// Generating vCard files
+const fn = new FNProperty([], new TextType("John Doe"));
+const card = new VCARD([fn, /* other properties */]);
+const vcfContent = card.repr(); // Returns valid vCard 4.0 string
+```
+
+#### Benefits of vcard4 Integration
+
+This architecture:
+- **Eliminates custom parsing**: All vCard parsing edge cases handled by vcard4
+- **Ensures spec compliance**: Full RFC 6350 implementation guaranteed
+- **Improves reliability**: Battle-tested library with comprehensive test coverage
+- **Reduces maintenance**: Delegates vCard format concerns to maintained library
+- **Supports extensions**: Automatic support for vCard 4.0 extensions
+- **Future-proof**: Can leverage vcard4 updates and new vCard features
+- **Multiple formats**: Can generate XML vCard (RFC 6351) and jCard (RFC 7095) if needed
 
 ## Development Setup
 
@@ -435,20 +496,34 @@ await contactManager.syncContactFile(file);
 
 #### VCF Operations
 
-Work with VCF files:
+Work with VCF files using the vcard4 library integration:
 
 ```typescript
 import { VcardFile } from 'src/models/vcardFile';
+import { parse } from 'vcard4';
 
-// Parse a VCF file
-const vcardData = await VcardFile.parseVCFFile(filePath);
+// Parse a VCF file (uses vcard4 library internally)
+const vcardFile = await VcardFile.fromFile(filePath);
 
-// Generate VCF from contact
-const vcfContent = await VcardFile.generateVCardFromObsidianNote(file, app);
+// Iterate through parsed contacts
+for await (const [slug, contact] of vcardFile.parse()) {
+  console.log(`Contact: ${slug}`, contact);
+}
 
-// Write VCF file
-await VcardFile.writeVCFFile(filePath, vcfContent);
+// Generate VCF from Obsidian contact files (uses vcard4 library)
+const result = await VcardFile.fromObsidianFiles([file], app);
+console.log(result.vcards); // Valid vCard 4.0 string
+console.log(result.errors);  // Any errors during generation
+
+// Direct vcard4 library usage
+const vcfContent = await readFile('contact.vcf');
+const parsedCard = parse(vcfContent);
+// Access parsed vCard properties
+console.log(parsedCard.getProperty('FN'));
+console.log(parsedCard.getProperty('EMAIL'));
 ```
+
+**Note**: The plugin uses the [vcard4](https://www.npmjs.com/package/vcard4) library for all vCard parsing and generation. The library fully implements RFC 6350 (vCard 4.0) and handles all parsing edge cases, field validation, and structured field processing. Custom code focuses on mapping between vcard4's data structures and Obsidian's frontmatter format.
 
 ## Deployment
 
