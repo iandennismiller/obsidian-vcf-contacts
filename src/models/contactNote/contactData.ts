@@ -3,7 +3,8 @@
  * Groups all contact-related data in one place to minimize cache misses.
  */
 
-import { TFile, App, parseYaml, stringifyYaml } from 'obsidian';
+import { TFile, App } from 'obsidian';
+import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 import { Gender } from './types';
 
 /**
@@ -101,7 +102,7 @@ export class ContactData {
         const match = content.match(/^---\n([\s\S]*?)\n---/);
         if (match) {
           try {
-            this._frontmatter = parseYaml(match[1]) || {};
+            this._frontmatter = parseYaml(match[1]) ?? {};
           } catch (error: any) {
             console.debug(`[ContactData] Error parsing frontmatter for ${this.file.path}: ${error.message}`);
             this._frontmatter = null; // Return null for malformed YAML
@@ -202,33 +203,9 @@ export class ContactData {
   private async saveFrontmatter(frontmatter: Record<string, any>): Promise<void> {
     const content = await this.getContent();
     
-    // Separate RELATED fields from other frontmatter
-    // RELATED fields need special handling to ensure brackets are preserved
-    const relatedFields: Record<string, any> = {};
-    const otherFields: Record<string, any> = {};
-    
-    for (const [key, value] of Object.entries(frontmatter)) {
-      if (key.startsWith('RELATED')) {
-        relatedFields[key] = value;
-      } else {
-        otherFields[key] = value;
-      }
-    }
-    
-    // Use Obsidian's stringifyYaml for non-RELATED fields
-    let frontmatterYaml = stringifyYaml(otherFields);
-    
-    // Ensure there's a newline after other fields before adding RELATED fields
-    if (Object.keys(otherFields).length > 0 && !frontmatterYaml.endsWith('\n')) {
-      frontmatterYaml += '\n';
-    }
-    
-    // Manually add RELATED fields with properly quoted keys to preserve brackets
-    for (const [key, value] of Object.entries(relatedFields)) {
-      // Quote keys that contain brackets to preserve them in YAML
-      const quotedKey = key.includes('[') && key.includes(']') ? `"${key}"` : key;
-      frontmatterYaml += `${quotedKey}: ${value}\n`;
-    }
+    // Use yaml library to stringify frontmatter
+    // The yaml library natively handles keys with brackets and special characters
+    let frontmatterYaml = stringifyYaml(frontmatter);
     
     // Ensure frontmatter YAML ends with a newline
     if (!frontmatterYaml.endsWith('\n')) {

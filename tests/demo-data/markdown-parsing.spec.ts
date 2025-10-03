@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { parseKey, mdRender, createNameSlug, createFileName } from '../../src/models/contactNote';
+import { parse as parseYaml } from 'yaml';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
@@ -44,25 +45,7 @@ describe('Demo Markdown Data Validation', () => {
         const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
         expect(frontmatterMatch).toBeTruthy();
         
-        const frontmatterLines = frontmatterMatch![1].split('\n');
-        const frontmatter: Record<string, any> = {};
-        
-        // Parse YAML-like frontmatter manually for test
-        frontmatterLines.forEach(line => {
-          const colonIndex = line.indexOf(':');
-          if (colonIndex !== -1) {
-            const key = line.substring(0, colonIndex).trim();
-            let value = line.substring(colonIndex + 1).trim();
-            
-            // Handle quoted values
-            if ((value.startsWith('"') && value.endsWith('"')) || 
-                (value.startsWith("'") && value.endsWith("'"))) {
-              value = value.slice(1, -1);
-            }
-            
-            frontmatter[key] = value;
-          }
-        });
+        const frontmatter = parseYaml(frontmatterMatch![1]);
         
         // Every contact should have some form of name
         const hasName = frontmatter.FN || (frontmatter['N.GN'] && frontmatter['N.FN']);

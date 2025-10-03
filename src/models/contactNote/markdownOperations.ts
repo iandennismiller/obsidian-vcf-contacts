@@ -2,7 +2,7 @@
  * Markdown operations optimized for data locality with ContactData
  */
 
-import { stringifyYaml } from 'obsidian';
+import { stringify as stringifyYaml } from 'yaml';
 import { ContactData } from './contactData';
 import { Gender } from './types';
 import { BaseMarkdownSectionOperations } from './baseMarkdownSectionOperations';
