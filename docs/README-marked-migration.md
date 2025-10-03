@@ -199,7 +199,7 @@ All changes must maintain compatibility with:
 
 ## 📖 Related Documentation
 
-- **Marked library docs:** `/reference/marked/`
+- **Marked library docs:** `/references/marked/`
 - **Contact list parsing spec:** `docs/contact-list-parsing-spec.md`
 - **Development guide:** `docs/development.md`
 

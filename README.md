@@ -14,8 +14,8 @@ Manage contacts in Obsidian using the vCard 4.0 standard format. This plugin int
 - [Feature Overview](docs/features.md)
 - [VCard Format Guide](docs/vcard-format.md)
 - [Contact Section Sync](docs/contact-section-sync.md)
-- [Contact List Parsing Specification](docs/contact-list-parsing-spec.md)
-- [Development](docs/development.md)
+- [Technical Specifications](docs/specifications.md)
+- [Development](docs/development/)
 - [User Stories](docs/user-stories.md)
 
 ## Core Features
@@ -57,7 +57,7 @@ The plugin provides comprehensive relationship tracking capabilities:
 
 - [Report Issues](https://github.com/iandennismiller/obsidian-vcf-contacts/issues)
 - [Discussions](https://github.com/iandennismiller/obsidian-vcf-contacts/discussions)
-- [Development Guide](docs/development.md)
+- [Development Guide](docs/development/)
 
 ## License
 
