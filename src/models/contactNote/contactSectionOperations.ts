@@ -7,6 +7,7 @@
  */
 
 import { ContactData } from './contactData';
+import { ContactsPluginSettings } from 'src/plugin/settings';
 
 /**
  * Represents a parsed contact field from the Contact section
@@ -62,6 +63,7 @@ export interface FuzzyTemplate {
  */
 export class ContactSectionOperations {
   private contactData: ContactData;
+  private settings: ContactsPluginSettings;
   
   // Default templates for common field types
   private static readonly DEFAULT_TEMPLATES: Record<string, FuzzyTemplate> = {
@@ -95,8 +97,9 @@ export class ContactSectionOperations {
     }
   };
 
-  constructor(contactData: ContactData) {
+  constructor(contactData: ContactData, settings: ContactsPluginSettings) {
     this.contactData = contactData;
+    this.settings = settings;
   }
 
   /**
@@ -326,10 +329,17 @@ export class ContactSectionOperations {
     let markdown = '## Contact\n\n';
 
     for (const group of groups) {
+      // Skip disabled field types
+      if (this.settings.contactTemplateEnabledFields[group.fieldType] === false) {
+        continue;
+      }
+
       markdown += `${group.icon} ${group.displayName}\n`;
       
-      // Only display the first field of each type by default
-      const fieldsToDisplay = group.fields.slice(0, 1);
+      // Use settings to determine how many fields to show
+      const fieldsToDisplay = this.settings.contactTemplateShowFirstOnly 
+        ? group.fields.slice(0, 1)
+        : group.fields;
       
       for (const field of fieldsToDisplay) {
         if (field.isMultiLine) {
@@ -352,8 +362,8 @@ export class ContactSectionOperations {
   private groupContactFields(frontmatter: Record<string, any>): ContactFieldGroup[] {
     const groups: Map<string, ContactFieldGroup> = new Map();
 
-    // Define field order
-    const fieldOrder = ['EMAIL', 'TEL', 'ADR', 'URL'];
+    // Use configured field order from settings
+    const fieldOrder = this.settings.contactTemplateFieldOrder || ['EMAIL', 'TEL', 'ADR', 'URL'];
 
     for (const [key, value] of Object.entries(frontmatter)) {
       // Parse field type and label from key (e.g., "EMAIL[HOME]", "ADR[HOME].STREET")
@@ -364,12 +374,12 @@ export class ContactSectionOperations {
       const template = ContactSectionOperations.DEFAULT_TEMPLATES[fieldType];
       if (!template) continue;
 
-      // Get or create group
+      // Get or create group using configured icons and display names
       if (!groups.has(fieldType)) {
         groups.set(fieldType, {
           fieldType,
-          icon: template.icon || '',
-          displayName: template.displayName || fieldType,
+          icon: this.settings.contactTemplateIcons[fieldType] || template.icon || '',
+          displayName: this.settings.contactTemplateDisplayNames[fieldType] || template.displayName || fieldType,
           fields: []
         });
       }

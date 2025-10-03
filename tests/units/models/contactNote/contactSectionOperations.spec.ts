@@ -2,12 +2,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { App, TFile } from 'obsidian';
 import { ContactSectionOperations } from '../../../../src/models/contactNote/contactSectionOperations';
 import { ContactData } from '../../../../src/models/contactNote/contactData';
+import { ContactsPluginSettings } from '../../../../src/plugin/settings';
 
 describe('ContactSectionOperations', () => {
   let mockApp: Partial<App>;
   let mockFile: TFile;
   let contactData: ContactData;
   let ops: ContactSectionOperations;
+  let mockSettings: ContactsPluginSettings;
 
   beforeEach(() => {
     mockFile = { 
@@ -26,8 +28,42 @@ describe('ContactSectionOperations', () => {
       } as any
     };
 
+    mockSettings = {
+      contactsFolder: "",
+      defaultHashtag: "",
+      vcfStorageMethod: 'vcf-folder',
+      vcfFilename: "contacts.vcf",
+      vcfWatchFolder: "",
+      vcfWatchEnabled: false,
+      vcfWatchPollingInterval: 30,
+      vcfWriteBackEnabled: false,
+      vcfCustomizeIgnoreList: false,
+      vcfIgnoreFilenames: [],
+      vcfIgnoreUIDs: [],
+      contactTemplateShowFirstOnly: true,
+      contactTemplateFieldOrder: ['EMAIL', 'TEL', 'ADR', 'URL'],
+      contactTemplateIcons: {
+        EMAIL: '📧',
+        TEL: '📞',
+        ADR: '🏠',
+        URL: '🌐'
+      },
+      contactTemplateDisplayNames: {
+        EMAIL: 'Email',
+        TEL: 'Phone',
+        ADR: 'Address',
+        URL: 'Website'
+      },
+      contactTemplateEnabledFields: {
+        EMAIL: true,
+        TEL: true,
+        ADR: true,
+        URL: true
+      }
+    };
+
     contactData = new ContactData(mockApp as App, mockFile);
-    ops = new ContactSectionOperations(contactData);
+    ops = new ContactSectionOperations(contactData, mockSettings);
   });
 
   describe('parseContactSection', () => {
