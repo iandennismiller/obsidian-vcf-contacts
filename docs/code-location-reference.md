@@ -344,16 +344,13 @@ function extractFrontmatter(content: string): Record<string, any> {
   const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
   if (!frontmatterMatch) return {};
   
-  const yaml = frontmatterMatch[1];
-  const frontmatter: any = {};
-  const lines = yaml.split('\n');
-  lines.forEach(line => {
-    // Manual YAML parsing...
-  });
+  const yamlContent = frontmatterMatch[1];
+  // Use yaml.parse() from yaml library instead of manual parsing
+  const frontmatter = parse(yamlContent);
   return frontmatter;
 }
 ```
-**Replacement:** Use Obsidian's built-in frontmatter parsing or marked for structure
+**Replacement:** Use yaml library's parse() function for YAML parsing
 
 **Lines 165-181:** Manual Related section extraction
 ```typescript
