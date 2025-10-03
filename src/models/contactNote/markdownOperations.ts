@@ -5,16 +5,25 @@
 import { stringifyYaml } from 'obsidian';
 import { ContactData } from './contactData';
 import { Gender } from './types';
+import { BaseMarkdownSectionOperations } from './baseMarkdownSectionOperations';
+import { 
+  SECTION_NAMES, 
+  HEADING_LEVELS, 
+  VCARD_FIELD_TYPES,
+  FIELD_GROUPS 
+} from './markdownConstants';
 
 /**
  * Markdown operations that work directly with ContactData
  * for optimal cache locality and performance.
+ * 
+ * Extends BaseMarkdownSectionOperations to use marked library for
+ * standard markdown parsing while maintaining domain-specific logic.
  */
-export class MarkdownOperations {
-  private contactData: ContactData;
+export class MarkdownOperations extends BaseMarkdownSectionOperations {
 
   constructor(contactData: ContactData) {
-    this.contactData = contactData;
+    super(contactData);
   }
 
   // === Markdown Rendering (co-located with data access) ===
@@ -43,18 +52,15 @@ export class MarkdownOperations {
 
     const relatedSection = this.generateRelatedList(recordWithoutNote, genderLookup);
 
-    return `---\n${stringifyYaml(frontmatter)}---\n#### Notes\n${myNote}\n${relatedSection}\n\n${hashtags} ${additionalTags}\n`;
+    return `---\n${stringifyYaml(frontmatter)}---\n${HEADING_LEVELS.SUBSECTION} ${SECTION_NAMES.NOTES}\n${myNote}\n${relatedSection}\n\n${hashtags} ${additionalTags}\n`;
   }
 
   // === Field Grouping Operations (grouped with rendering) ===
 
   private groupVCardFields(record: Record<string, any>) {
-    const nameKeys = ["N", "FN"];
-    const priorityKeys = [
-      "EMAIL", "TEL", "BDAY", "URL",
-      "ORG", "TITLE", "ROLE", "PHOTO", "RELATED", "GENDER"
-    ];
-    const addressKeys = ["ADR"];
+    const nameKeys = FIELD_GROUPS.NAME as readonly string[];
+    const priorityKeys = FIELD_GROUPS.PRIORITY as readonly string[];
+    const addressKeys = FIELD_GROUPS.ADDRESS as readonly string[];
 
     const groups = {
       name: {} as Record<string, any>,
@@ -150,10 +156,10 @@ export class MarkdownOperations {
     });
 
     if (relatedEntries.length === 0) {
-      return '## Related\n';
+      return `${HEADING_LEVELS.SECTION} ${SECTION_NAMES.RELATED}\n`;
     }
 
-    return `## Related\n${relatedEntries.join('\n')}\n`;
+    return `${HEADING_LEVELS.SECTION} ${SECTION_NAMES.RELATED}\n${relatedEntries.join('\n')}\n`;
   }
 
   // === Helper Methods (grouped with related functionality) ===
@@ -201,47 +207,23 @@ export class MarkdownOperations {
   /**
    * Extract specific sections from markdown content
    * Groups content parsing with markdown operations for data locality
+   * 
+   * @deprecated Use extractMarkdownSections() from BaseMarkdownSectionOperations
+   * This method is maintained for backward compatibility
    */
   async extractMarkdownSections(): Promise<Map<string, string>> {
-    const content = await this.contactData.getContent();
-    const sections = new Map<string, string>();
-
-    // Split content into sections based on headers
-    const sectionRegex = /#### ([^\n]+)\n([\s\S]*?)(?=\n#### |$)/g;
-    let match;
-
-    while ((match = sectionRegex.exec(content)) !== null) {
-      const [, sectionName, sectionContent] = match;
-      sections.set(sectionName.trim(), sectionContent.trim());
-    }
-
-    return sections;
+    // Delegate to base class implementation using marked
+    return super.extractMarkdownSections();
   }
 
   /**
    * Update a specific section in the markdown content
+   * 
+   * @deprecated Use updateSection() from BaseMarkdownSectionOperations
+   * This method is maintained for backward compatibility
    */
   async updateMarkdownSection(sectionName: string, newContent: string): Promise<void> {
-    const content = await this.contactData.getContent();
-    const sectionRegex = new RegExp(`#### ${sectionName}\\n[\\s\\S]*?(?=\\n#### |$)`, 'g');
-    
-    const newSection = `#### ${sectionName}\n${newContent}`;
-    let updatedContent: string;
-    
-    if (sectionRegex.test(content)) {
-      // Replace existing section
-      updatedContent = content.replace(sectionRegex, newSection);
-    } else {
-      // Add new section before tags
-      const tagMatch = content.match(/\n(#\w.*?)\s*$/);
-      if (tagMatch) {
-        const insertIndex = content.lastIndexOf(tagMatch[1]);
-        updatedContent = content.substring(0, insertIndex) + newSection + '\n\n' + tagMatch[1] + '\n';
-      } else {
-        updatedContent = content + '\n\n' + newSection;
-      }
-    }
-
-    await this.contactData.updateContent(updatedContent);
+    // Delegate to base class implementation using marked
+    await super.updateSection(sectionName, newContent);
   }
 }
