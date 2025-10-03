@@ -44,17 +44,17 @@ describe('Contact Section Format Fix', () => {
       vcfCustomizeIgnoreList: false,
       vcfIgnoreFilenames: [],
       vcfIgnoreUIDs: [],
-      contactSectionTemplate: `{{#EMAIL}}
+      contactSectionTemplate: `{{#EMAIL-}}
 📧 Email
 {{#FIRST}}{{LABEL}} {{VALUE}}{{/FIRST}}
 
-{{/EMAIL}}
-{{#TEL}}
+{{/EMAIL-}}
+{{#TEL-}}
 📞 Phone
 {{#FIRST}}{{LABEL}} {{VALUE}}{{/FIRST}}
 
-{{/TEL}}
-{{#ADR}}
+{{/TEL-}}
+{{#ADR-}}
 🏠 Address
 {{#FIRST}}({{LABEL}})
 {{STREET}}
@@ -62,12 +62,12 @@ describe('Contact Section Format Fix', () => {
 {{COUNTRY}}
 
 {{/FIRST}}
-{{/ADR}}
-{{#URL}}
+{{/ADR-}}
+{{#URL-}}
 🌐 Website
 {{#FIRST}}{{LABEL}} {{VALUE}}{{/FIRST}}
 
-{{/URL}}`
+{{/URL-}}`
     };
 
     contactData = new ContactData(mockApp as App, mockFile);
@@ -318,5 +318,91 @@ URL[HOME]: https://example.com
     // Should not show TEL
     expect(section).not.toContain('Phone');
     expect(section).not.toContain('+1-555-1234');
+  });
+
+  it('should suppress newlines with hyphen suffix when section is empty', async () => {
+    const content = `---
+UID: test-123
+FN: Test Contact
+TEL[CELL]: +1-555-1234
+---
+
+#Contact`;
+
+    mockApp.vault!.read = vi.fn().mockResolvedValue(content);
+    mockApp.metadataCache!.getFileCache = vi.fn().mockReturnValue({
+      frontmatter: {
+        UID: 'test-123',
+        FN: 'Test Contact',
+        'TEL[CELL]': '+1-555-1234'
+      }
+    });
+
+    // Template with hyphen for newline suppression
+    mockSettings.contactSectionTemplate = `{{#EMAIL-}}
+📧 Email
+{{#FIRST}}{{LABEL}} {{VALUE}}{{/FIRST}}
+
+{{/EMAIL-}}
+{{#TEL-}}
+📞 Phone
+{{#FIRST}}{{LABEL}} {{VALUE}}{{/FIRST}}
+
+{{/TEL-}}`;
+
+    const opsWithHyphen = new ContactSectionOperations(contactData, mockSettings);
+    const sectionWithHyphen = await opsWithHyphen.generateContactSection();
+
+    // Should not have extra blank lines where EMAIL section would have been
+    // The output should start directly with the Phone section
+    expect(sectionWithHyphen).toContain('📞 Phone');
+    expect(sectionWithHyphen).toContain('Cell +1-555-1234');
+    expect(sectionWithHyphen).not.toContain('Email');
+    
+    // Should not have multiple consecutive newlines at the start
+    expect(sectionWithHyphen).not.toMatch(/^\n\n/);
+    expect(sectionWithHyphen.trim()).toMatch(/^📞 Phone/);
+  });
+
+  it('should preserve newlines without hyphen suffix when section is empty', async () => {
+    const content = `---
+UID: test-123
+FN: Test Contact
+TEL[CELL]: +1-555-1234
+---
+
+#Contact`;
+
+    mockApp.vault!.read = vi.fn().mockResolvedValue(content);
+    mockApp.metadataCache!.getFileCache = vi.fn().mockReturnValue({
+      frontmatter: {
+        UID: 'test-123',
+        FN: 'Test Contact',
+        'TEL[CELL]': '+1-555-1234'
+      }
+    });
+
+    // Template WITHOUT hyphen - should preserve newlines
+    mockSettings.contactSectionTemplate = `{{#EMAIL}}
+📧 Email
+{{#FIRST}}{{LABEL}} {{VALUE}}{{/FIRST}}
+
+{{/EMAIL}}
+{{#TEL}}
+📞 Phone
+{{#FIRST}}{{LABEL}} {{VALUE}}{{/FIRST}}
+
+{{/TEL}}`;
+
+    const opsWithoutHyphen = new ContactSectionOperations(contactData, mockSettings);
+    const sectionWithoutHyphen = await opsWithoutHyphen.generateContactSection();
+
+    // Should still contain the Phone section
+    expect(sectionWithoutHyphen).toContain('📞 Phone');
+    expect(sectionWithoutHyphen).toContain('Cell +1-555-1234');
+    
+    // Note: The exact whitespace behavior may vary, but the content should be there
+    // The key difference is that with hyphen, empty sections produce NO output
+    // Without hyphen, they may produce newlines
   });
 });

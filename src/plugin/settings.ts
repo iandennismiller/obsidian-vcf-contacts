@@ -44,17 +44,17 @@ export const DEFAULT_SETTINGS: ContactsPluginSettings = {
   vcfIgnoreFilenames: [],
   vcfIgnoreUIDs: [],
   // Contact Section Template Default
-  contactSectionTemplate: `{{#EMAIL}}
+  contactSectionTemplate: `{{#EMAIL-}}
 📧 Email
 {{#FIRST}}{{LABEL}} {{VALUE}}{{/FIRST}}
 
-{{/EMAIL}}
-{{#TEL}}
+{{/EMAIL-}}
+{{#TEL-}}
 📞 Phone
 {{#FIRST}}{{LABEL}} {{VALUE}}{{/FIRST}}
 
-{{/TEL}}
-{{#ADR}}
+{{/TEL-}}
+{{#ADR-}}
 🏠 Address
 {{#FIRST}}({{LABEL}})
 {{STREET}}
@@ -62,12 +62,12 @@ export const DEFAULT_SETTINGS: ContactsPluginSettings = {
 {{COUNTRY}}
 
 {{/FIRST}}
-{{/ADR}}
-{{#URL}}
+{{/ADR-}}
+{{#URL-}}
 🌐 Website
 {{#FIRST}}{{LABEL}} {{VALUE}}{{/FIRST}}
 
-{{/URL}}`,
+{{/URL-}}`,
   ...curatorSettingDefaults
 }
 
@@ -371,6 +371,17 @@ export class ContactsSettingTab extends PluginSettingTab {
       " - Website fields section",
       contactTemplateDesc.createEl("br"),
       contactTemplateDesc.createEl("br"),
+      contactTemplateDesc.createEl("strong", { text: "Newline Suppression:" }),
+      contactTemplateDesc.createEl("br"),
+      "Add ",
+      contactTemplateDesc.createEl("code", { text: "-" }),
+      " before ",
+      contactTemplateDesc.createEl("code", { text: "}}" }),
+      " (e.g., ",
+      contactTemplateDesc.createEl("code", { text: "{{#EMAIL-}}" }),
+      ") to suppress newlines when section is empty",
+      contactTemplateDesc.createEl("br"),
+      contactTemplateDesc.createEl("br"),
       contactTemplateDesc.createEl("strong", { text: "Field Variables:" }),
       contactTemplateDesc.createEl("br"),
       contactTemplateDesc.createEl("code", { text: "{{#FIRST}}" }),
@@ -400,7 +411,10 @@ export class ContactsSettingTab extends PluginSettingTab {
       ", ",
       contactTemplateDesc.createEl("code", { text: "{{POSTAL}}" }),
       ", ",
-      contactTemplateDesc.createEl("code", { text: "{{COUNTRY}}" })
+      contactTemplateDesc.createEl("code", { text: "{{COUNTRY}}" }),
+      contactTemplateDesc.createEl("br"),
+      contactTemplateDesc.createEl("br"),
+      contactTemplateDesc.createEl("em", { text: "See docs/contact-template-syntax.md for full documentation" })
     );
 
     new Setting(containerEl)
@@ -430,17 +444,17 @@ export class ContactsSettingTab extends PluginSettingTab {
         button
           .setButtonText("Reset to Default")
           .onClick(async () => {
-            this.plugin.settings.contactSectionTemplate = `{{#EMAIL}}
+            this.plugin.settings.contactSectionTemplate = `{{#EMAIL-}}
 📧 Email
 {{#FIRST}}{{LABEL}} {{VALUE}}{{/FIRST}}
 
-{{/EMAIL}}
-{{#TEL}}
+{{/EMAIL-}}
+{{#TEL-}}
 📞 Phone
 {{#FIRST}}{{LABEL}} {{VALUE}}{{/FIRST}}
 
-{{/TEL}}
-{{#ADR}}
+{{/TEL-}}
+{{#ADR-}}
 🏠 Address
 {{#FIRST}}({{LABEL}})
 {{STREET}}
@@ -448,12 +462,12 @@ export class ContactsSettingTab extends PluginSettingTab {
 {{COUNTRY}}
 
 {{/FIRST}}
-{{/ADR}}
-{{#URL}}
+{{/ADR-}}
+{{#URL-}}
 🌐 Website
 {{#FIRST}}{{LABEL}} {{VALUE}}{{/FIRST}}
 
-{{/URL}}`;
+{{/URL-}}`;
             await this.plugin.saveSettings();
             setSettings(this.plugin.settings);
             this.display(); // Refresh the settings display

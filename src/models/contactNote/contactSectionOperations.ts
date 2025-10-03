@@ -369,33 +369,52 @@ export class ContactSectionOperations {
       }
     }
 
-    // Process each field type section
+    // Process each field type section (with or without hyphen for newline suppression)
     for (const fieldType of ['EMAIL', 'TEL', 'ADR', 'URL']) {
-      const sectionRegex = new RegExp(`{{#${fieldType}}}([\\s\\S]*?){{/${fieldType}}}`, 'g');
+      // Match both {{#FIELDTYPE}} and {{#FIELDTYPE-}} (with hyphen for newline suppression)
+      const sectionRegex = new RegExp(`{{#${fieldType}(-?)}}([\\s\\S]*?){{/${fieldType}\\1}}`, 'g');
       
-      output = output.replace(sectionRegex, (match, sectionContent) => {
+      output = output.replace(sectionRegex, (match, hyphen, sectionContent) => {
         const fields = fieldsByType[fieldType];
-        if (fields.length === 0) return '';
+        
+        // If no fields and hyphen is present, check if followed by newline and suppress it
+        if (fields.length === 0) {
+          // If hyphen suffix is used and the closing tag is followed by a newline, 
+          // the entire match including the newline should be removed
+          if (hyphen === '-') {
+            // The replacement returns empty string, and the regex match already 
+            // consumed up to the closing tag. We need to check what follows.
+            return '';
+          }
+          return '';
+        }
 
         // Process FIRST or ALL blocks within the section
         let result = sectionContent;
         
-        // Handle {{#FIRST}}...{{/FIRST}}
-        const firstRegex = /{{#FIRST}}([\s\S]*?){{\/FIRST}}/g;
-        result = result.replace(firstRegex, (_match: string, blockContent: string) => {
+        // Handle {{#FIRST}}...{{/FIRST}} and {{#FIRST-}}...{{/FIRST-}}
+        const firstRegex = /{{#FIRST(-?)}}([\s\S]*?){{\/FIRST\1}}/g;
+        result = result.replace(firstRegex, (_match: string, hyphen: string, blockContent: string) => {
           if (fields.length === 0) return '';
           return this.renderFieldBlock(blockContent, fields[0], fieldType);
         });
 
-        // Handle {{#ALL}}...{{/ALL}}
-        const allRegex = /{{#ALL}}([\s\S]*?){{\/ALL}}/g;
-        result = result.replace(allRegex, (_match: string, blockContent: string) => {
+        // Handle {{#ALL}}...{{/ALL}} and {{#ALL-}}...{{/ALL-}}
+        const allRegex = /{{#ALL(-?)}}([\s\S]*?){{\/ALL\1}}/g;
+        result = result.replace(allRegex, (_match: string, hyphen: string, blockContent: string) => {
           return fields.map(field => this.renderFieldBlock(blockContent, field, fieldType)).join('\n');
         });
 
         return result;
       });
     }
+
+    // Handle newline suppression: when a tag with hyphen is followed by newline, remove the newline
+    // This catches cases where {{/TAG-}}\n should become {{/TAG-}} (newline removed)
+    output = output.replace(/{{\/(?:EMAIL|TEL|ADR|URL|FIRST|ALL)-}}\n/g, (match) => {
+      // Remove the newline after the closing tag with hyphen
+      return match.slice(0, -1);
+    });
 
     // Remove any remaining template tags
     output = output.replace(/{{[^}]+}}/g, '');

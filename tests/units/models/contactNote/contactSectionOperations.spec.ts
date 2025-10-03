@@ -40,17 +40,17 @@ describe('ContactSectionOperations', () => {
       vcfCustomizeIgnoreList: false,
       vcfIgnoreFilenames: [],
       vcfIgnoreUIDs: [],
-      contactSectionTemplate: `{{#EMAIL}}
+      contactSectionTemplate: `{{#EMAIL-}}
 📧 Email
 {{#FIRST}}{{LABEL}} {{VALUE}}{{/FIRST}}
 
-{{/EMAIL}}
-{{#TEL}}
+{{/EMAIL-}}
+{{#TEL-}}
 📞 Phone
 {{#FIRST}}{{LABEL}} {{VALUE}}{{/FIRST}}
 
-{{/TEL}}
-{{#ADR}}
+{{/TEL-}}
+{{#ADR-}}
 🏠 Address
 {{#FIRST}}({{LABEL}})
 {{STREET}}
@@ -58,12 +58,12 @@ describe('ContactSectionOperations', () => {
 {{COUNTRY}}
 
 {{/FIRST}}
-{{/ADR}}
-{{#URL}}
+{{/ADR-}}
+{{#URL-}}
 🌐 Website
 {{#FIRST}}{{LABEL}} {{VALUE}}{{/FIRST}}
 
-{{/URL}}`
+{{/URL-}}`
     };
 
     contactData = new ContactData(mockApp as App, mockFile);
