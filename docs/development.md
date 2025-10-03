@@ -99,17 +99,51 @@ The plugin uses a processor-based architecture for data operations (`src/curator
 
 ### Markdown Processing Architecture
 
-The plugin delegates standard markdown operations to the marked library:
-- **Parsing**: Headings, lists, paragraphs, whitespace normalization
-- **Rendering**: Converting markdown to structured format
-- **Edge Cases**: Line breaks, indentation, list formatting variations
+As of version 2.2.0, the plugin uses the [marked](https://www.npmjs.com/package/marked) library for all standard markdown parsing operations. This migration eliminates custom regex patterns and provides robust, standards-compliant markdown handling.
 
-Custom parsing is limited to:
+#### BaseMarkdownSectionOperations
+
+All markdown operations extend from `BaseMarkdownSectionOperations` (`src/models/contactNote/baseMarkdownSectionOperations.ts`), which provides:
+
+**Core Methods:**
+- `extractSection(sectionName)`: Extract content from a named section
+- `updateSection(sectionName, content)`: Update or create a section
+- `extractAllSections()`: Get all sections as structured data
+- `extractMarkdownSections()`: Get sections as a Map (for backward compatibility with tests)
+
+**What Marked Library Handles:**
+- Heading detection and hierarchy (`##`, `###`, `####`, etc.)
+- List structure parsing (ordered, unordered, nested)
+- Whitespace normalization
+- Line break handling
+- Paragraph and block-level element parsing
+
+**Custom Parsing (Domain-Specific):**
 - **Wiki-Links**: Obsidian's `[[Contact Name]]` syntax
 - **Contact Semantics**: Email/phone/URL pattern detection and extraction
+- **Relationship Types**: Gender-aware relationship term processing
 - **VCard Mapping**: Contact field type identification and frontmatter conversion
 
-This architecture reduces code complexity and maintenance burden while providing robust markdown handling.
+#### Classes Using BaseMarkdownSectionOperations
+
+1. **MarkdownOperations** (`markdownOperations.ts`): General markdown rendering and section management
+2. **RelationshipOperations** (`relationshipOperations.ts`): Relationship parsing from Related section
+3. **ContactSectionOperations** (`contactSectionOperations.ts`): Contact field parsing and sync
+
+#### Centralized Constants
+
+All markdown-related constants are centralized in `markdownConstants.ts`:
+- `SECTION_NAMES`: Standardized section names (Notes, Related, Contact)
+- `HEADING_LEVELS`: Heading depth definitions
+- `VCARD_FIELD_TYPES`: VCard field type constants
+- `FIELD_DISPLAY`: Field display information (icons, labels)
+- `REGEX_PATTERNS`: Reusable regex patterns for wiki-links and fields
+
+This architecture:
+- **Reduces complexity**: ~70 custom regex patterns eliminated
+- **Improves maintainability**: Single source of truth for markdown operations
+- **Enhances reliability**: Battle-tested marked library handles edge cases
+- **Future-proof**: Can leverage marked library updates and extensions
 
 ## Development Setup
 

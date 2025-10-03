@@ -890,15 +890,6 @@ FN: John Doe
   });
 
   describe('delegated sync operations', () => {
-    it('should delegate extractMarkdownSections', async () => {
-      const result = await contactNote.extractMarkdownSections();
-      expect(result).toBeInstanceOf(Map);
-    });
-
-    it('should delegate updateMarkdownSection', async () => {
-      await expect(contactNote.updateMarkdownSection('Notes', 'New content')).resolves.not.toThrow();
-    });
-
     it('should delegate performFullSync', async () => {
       const result = await contactNote.performFullSync();
       expect(result).toHaveProperty('success');

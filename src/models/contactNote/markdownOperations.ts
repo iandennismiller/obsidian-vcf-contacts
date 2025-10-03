@@ -202,28 +202,4 @@ export class MarkdownOperations extends BaseMarkdownSectionOperations {
     return typeMapping.default;
   }
 
-  // === Content Analysis Operations (grouped with markdown processing) ===
-
-  /**
-   * Extract specific sections from markdown content
-   * Groups content parsing with markdown operations for data locality
-   * 
-   * @deprecated Use extractMarkdownSections() from BaseMarkdownSectionOperations
-   * This method is maintained for backward compatibility
-   */
-  async extractMarkdownSections(): Promise<Map<string, string>> {
-    // Delegate to base class implementation using marked
-    return super.extractMarkdownSections();
-  }
-
-  /**
-   * Update a specific section in the markdown content
-   * 
-   * @deprecated Use updateSection() from BaseMarkdownSectionOperations
-   * This method is maintained for backward compatibility
-   */
-  async updateMarkdownSection(sectionName: string, newContent: string): Promise<void> {
-    // Delegate to base class implementation using marked
-    await super.updateSection(sectionName, newContent);
-  }
 }

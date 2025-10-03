@@ -322,7 +322,7 @@ Line 3
     });
   });
 
-  describe('updateMarkdownSection', () => {
+  describe('updateSection', () => {
     it('should update an existing section', async () => {
       const content = `---
 FN: John Doe
@@ -338,7 +338,7 @@ Old note content.
 
       vi.mocked(mockContactData.getContent).mockResolvedValue(content);
 
-      await markdownOps.updateMarkdownSection('Notes', 'New note content.');
+      await markdownOps.updateSection('Notes', 'New note content.');
 
       expect(mockContactData.updateContent).toHaveBeenCalled();
       const updatedContent = vi.mocked(mockContactData.updateContent).mock.calls[0][0];
@@ -359,7 +359,7 @@ Some notes.
 
       vi.mocked(mockContactData.getContent).mockResolvedValue(content);
 
-      await markdownOps.updateMarkdownSection('Custom', 'Custom content.');
+      await markdownOps.updateSection('Custom', 'Custom content.');
 
       expect(mockContactData.updateContent).toHaveBeenCalled();
       const updatedContent = vi.mocked(mockContactData.updateContent).mock.calls[0][0];
@@ -379,7 +379,7 @@ Some notes.
 
       vi.mocked(mockContactData.getContent).mockResolvedValue(content);
 
-      await markdownOps.updateMarkdownSection('Related', '- spouse [[Jane]]');
+      await markdownOps.updateSection('Related', '- spouse [[Jane]]');
 
       expect(mockContactData.updateContent).toHaveBeenCalled();
       const updatedContent = vi.mocked(mockContactData.updateContent).mock.calls[0][0];
@@ -400,7 +400,7 @@ Some notes.`;
 
       vi.mocked(mockContactData.getContent).mockResolvedValue(content);
 
-      await markdownOps.updateMarkdownSection('Related', '- spouse [[Jane]]');
+      await markdownOps.updateSection('Related', '- spouse [[Jane]]');
 
       expect(mockContactData.updateContent).toHaveBeenCalled();
       const updatedContent = vi.mocked(mockContactData.updateContent).mock.calls[0][0];
