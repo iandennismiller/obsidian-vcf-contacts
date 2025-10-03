@@ -40,26 +40,30 @@ describe('ContactSectionOperations', () => {
       vcfCustomizeIgnoreList: false,
       vcfIgnoreFilenames: [],
       vcfIgnoreUIDs: [],
-      contactTemplateShowFirstOnly: true,
-      contactTemplateFieldOrder: ['EMAIL', 'TEL', 'ADR', 'URL'],
-      contactTemplateIcons: {
-        EMAIL: '📧',
-        TEL: '📞',
-        ADR: '🏠',
-        URL: '🌐'
-      },
-      contactTemplateDisplayNames: {
-        EMAIL: 'Email',
-        TEL: 'Phone',
-        ADR: 'Address',
-        URL: 'Website'
-      },
-      contactTemplateEnabledFields: {
-        EMAIL: true,
-        TEL: true,
-        ADR: true,
-        URL: true
-      }
+      contactSectionTemplate: `{{#EMAIL}}
+📧 Email
+{{#FIRST}}{{LABEL}} {{VALUE}}{{/FIRST}}
+
+{{/EMAIL}}
+{{#TEL}}
+📞 Phone
+{{#FIRST}}{{LABEL}} {{VALUE}}{{/FIRST}}
+
+{{/TEL}}
+{{#ADR}}
+🏠 Address
+{{#FIRST}}({{LABEL}})
+{{STREET}}
+{{LOCALITY}}, {{REGION}} {{POSTAL}}
+{{COUNTRY}}
+
+{{/FIRST}}
+{{/ADR}}
+{{#URL}}
+🌐 Website
+{{#FIRST}}{{LABEL}} {{VALUE}}{{/FIRST}}
+
+{{/URL}}`
     };
 
     contactData = new ContactData(mockApp as App, mockFile);

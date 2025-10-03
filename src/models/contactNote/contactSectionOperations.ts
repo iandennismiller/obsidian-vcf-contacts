@@ -316,44 +316,117 @@ export class ContactSectionOperations {
   // === Contact Section Generation ===
 
   /**
-   * Generate Contact section markdown from frontmatter fields
+   * Generate Contact section markdown from frontmatter fields using template
    * Returns the markdown content for the Contact section
    */
   async generateContactSection(): Promise<string> {
     const frontmatter = await this.contactData.getFrontmatter();
     if (!frontmatter) return '';
 
-    const groups = this.groupContactFields(frontmatter);
-    if (groups.length === 0) return '';
+    const template = this.settings.contactSectionTemplate || '';
+    if (!template) return '';
 
-    let markdown = '## Contact\n\n';
+    return this.renderTemplate(template, frontmatter);
+  }
 
-    for (const group of groups) {
-      // Skip disabled field types
-      if (this.settings.contactTemplateEnabledFields[group.fieldType] === false) {
-        continue;
-      }
+  /**
+   * Render template string with frontmatter data
+   */
+  private renderTemplate(template: string, frontmatter: Record<string, any>): string {
+    let output = template;
 
-      markdown += `${group.icon} ${group.displayName}\n`;
+    // Group fields by type
+    const fieldsByType: Record<string, Array<{label: string, value: string, components?: Record<string, string>}>> = {
+      EMAIL: [],
+      TEL: [],
+      ADR: [],
+      URL: []
+    };
+
+    // Parse frontmatter into field groups
+    for (const [key, value] of Object.entries(frontmatter)) {
+      const match = key.match(/^(EMAIL|TEL|ADR|URL)\[([^\]]+)\](?:\.(.+))?$/);
+      if (!match) continue;
+
+      const [, fieldType, label, component] = match;
       
-      // Use settings to determine how many fields to show
-      const fieldsToDisplay = this.settings.contactTemplateShowFirstOnly 
-        ? group.fields.slice(0, 1)
-        : group.fields;
-      
-      for (const field of fieldsToDisplay) {
-        if (field.isMultiLine) {
-          // Multi-line field (e.g., address)
-          markdown += `(${this.formatFieldLabel(field.label)})\n${field.value}\n\n`;
-        } else {
-          // Single-line field - format: "Label value" (no colon after label)
-          markdown += `${this.formatFieldLabel(field.label)} ${field.value}\n`;
+      if (fieldType === 'ADR') {
+        // Handle address components
+        let field = fieldsByType[fieldType].find(f => f.label === label);
+        if (!field) {
+          field = { label, value: '', components: {} };
+          fieldsByType[fieldType].push(field);
         }
+        if (component && field.components) {
+          field.components[component] = String(value);
+        }
+      } else {
+        // Handle simple fields
+        fieldsByType[fieldType].push({
+          label: this.formatFieldLabel(label),
+          value: String(value)
+        });
       }
-      markdown += '\n';
     }
 
-    return markdown.trim();
+    // Process each field type section
+    for (const fieldType of ['EMAIL', 'TEL', 'ADR', 'URL']) {
+      const sectionRegex = new RegExp(`{{#${fieldType}}}([\\s\\S]*?){{/${fieldType}}}`, 'g');
+      
+      output = output.replace(sectionRegex, (match, sectionContent) => {
+        const fields = fieldsByType[fieldType];
+        if (fields.length === 0) return '';
+
+        // Process FIRST or ALL blocks within the section
+        let result = sectionContent;
+        
+        // Handle {{#FIRST}}...{{/FIRST}}
+        const firstRegex = /{{#FIRST}}([\s\S]*?){{\/FIRST}}/g;
+        result = result.replace(firstRegex, (_match: string, blockContent: string) => {
+          if (fields.length === 0) return '';
+          return this.renderFieldBlock(blockContent, fields[0], fieldType);
+        });
+
+        // Handle {{#ALL}}...{{/ALL}}
+        const allRegex = /{{#ALL}}([\s\S]*?){{\/ALL}}/g;
+        result = result.replace(allRegex, (_match: string, blockContent: string) => {
+          return fields.map(field => this.renderFieldBlock(blockContent, field, fieldType)).join('\n');
+        });
+
+        return result;
+      });
+    }
+
+    // Remove any remaining template tags
+    output = output.replace(/{{[^}]+}}/g, '');
+    
+    return output.trim();
+  }
+
+  /**
+   * Render a single field block with template variables
+   */
+  private renderFieldBlock(
+    template: string, 
+    field: {label: string, value: string, components?: Record<string, string>},
+    fieldType: string
+  ): string {
+    let result = template;
+
+    // Replace common variables
+    result = result.replace(/{{LABEL}}/g, field.label);
+    result = result.replace(/{{VALUE}}/g, field.value);
+
+    // Replace address-specific variables
+    if (fieldType === 'ADR' && field.components) {
+      result = result.replace(/{{STREET}}/g, field.components.STREET || '');
+      result = result.replace(/{{LOCALITY}}/g, field.components.LOCALITY || '');
+      result = result.replace(/{{REGION}}/g, field.components.REGION || '');
+      result = result.replace(/{{POSTAL}}/g, field.components.POSTAL || '');
+      result = result.replace(/{{COUNTRY}}/g, field.components.COUNTRY || '');
+    }
+
+    return result;
   }
 
   /**

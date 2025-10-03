@@ -408,43 +408,85 @@ Email
 - Sync operations don't block the UI
 
 ### 41. Contact Template Customization
-**As a user**, I want to customize how the Contact section displays information in my plugin settings so that I can control the appearance and content of contact information according to my preferences. The plugin should allow me to:
+**As a user**, I want to customize how the Contact section displays information by editing a template string in my plugin settings so that I can control the appearance and content of contact information in an open-ended, flexible way. The plugin should allow me to:
 
-- Configure which field types are displayed (Email, Phone, Address, Website, etc.)
-- Set the order of field types in the Contact section
-- Customize icons/emojis used for each field type
-- Customize display names for each field type (e.g., "Email" vs "E-mail" vs "📧")
-- Control how many fields of each type are shown (e.g., show only first phone, or show all phones)
-- Configure field formatting preferences
+- Edit a template string that controls the entire Contact section format
+- Use template variables to control which fields are displayed and how
+- Control field ordering through template structure
+- Customize icons, labels, and formatting through the template
+- Show first field only or all fields using template directives
 
 **Configuration interface:**
 - A dedicated "Contact Section Template" section in plugin settings
-- Toggle controls for enabling/disabling specific field types
-- Text inputs for customizing icons and display names
-- Dropdown or number input for "fields to show" (first, all, first N)
-- Order controls (drag/drop or up/down buttons) for field type priority
-- Preview of how the Contact section will look with current settings
-- Reset to defaults button
+- A large text area for editing the template string
+- Documentation of available template variables directly in the UI
+- A "Reset to Default" button to restore the default template
+- Immediate application of changes to Contact sections
 
-**Expected behavior:**
-- When I disable a field type (e.g., URL), it no longer appears in Contact sections
-- When I change the display name for "Phone" to "Tel", all contacts show "Tel" instead
-- When I set "Show first 2 emails", only the first 2 email addresses appear
-- When I reorder field types, the Contact section reflects the new order
-- Changes apply to all contacts immediately (or on next sync)
-- Invalid configurations are prevented or warned about
-- Settings are persisted across Obsidian restarts
+**Template Variables:**
+
+*Field Type Sections:*
+- `{{#EMAIL}}...{{/EMAIL}}` - Email fields section
+- `{{#TEL}}...{{/TEL}}` - Phone fields section
+- `{{#ADR}}...{{/ADR}}` - Address fields section
+- `{{#URL}}...{{/URL}}` - Website fields section
+
+*Field Display Control:*
+- `{{#FIRST}}...{{/FIRST}}` - Show only first field of this type
+- `{{#ALL}}...{{/ALL}}` - Show all fields of this type
+
+*Field Data:*
+- `{{LABEL}}` - Field label (e.g., Home, Work, Cell) in title case
+- `{{VALUE}}` - Field value
+
+*Address Components:*
+- `{{STREET}}` - Street address
+- `{{LOCALITY}}` - City/locality
+- `{{REGION}}` - State/region
+- `{{POSTAL}}` - Postal/zip code
+- `{{COUNTRY}}` - Country
 
 **Default template:**
-The default template should match the current behavior:
-- Field types: EMAIL, TEL, ADR, URL (in that order)
-- Icons: 📧 Email, 📞 Phone, 🏠 Address, 🌐 Website
-- Show first field only for each type
-- Title case labels without colons
+```
+{{#EMAIL}}
+📧 Email
+{{#FIRST}}{{LABEL}} {{VALUE}}{{/FIRST}}
 
-**Advanced customization:**
-- Option to show/hide field labels (e.g., "Work" vs just the phone number)
-- Option to customize the label format (e.g., "Work:" vs "Work" vs "work")
-- Option to add custom field types beyond the defaults
-- Template variables for complex formatting (e.g., "{TYPE}: {VALUE}" or "{TYPE} {VALUE}")
-- Template compilation is cached and reused
+{{/EMAIL}}
+{{#TEL}}
+📞 Phone
+{{#FIRST}}{{LABEL}} {{VALUE}}{{/FIRST}}
+
+{{/TEL}}
+{{#ADR}}
+🏠 Address
+{{#FIRST}}({{LABEL}})
+{{STREET}}
+{{LOCALITY}}, {{REGION}} {{POSTAL}}
+{{COUNTRY}}
+
+{{/FIRST}}
+{{/ADR}}
+{{#URL}}
+🌐 Website
+{{#FIRST}}{{LABEL}} {{VALUE}}{{/FIRST}}
+
+{{/URL}}
+```
+
+**Expected behavior:**
+- When I edit the template string, changes apply to all Contact sections
+- Field type sections (EMAIL, TEL, etc.) only render if fields exist
+- FIRST directive shows only the first field, ALL directive shows all fields
+- Labels are automatically formatted to title case (e.g., "WORK" → "Work")
+- Numeric indices are stripped from labels (e.g., "1:WORK" → "Work")
+- Invalid template syntax is handled gracefully
+- Settings are persisted across Obsidian restarts
+
+**Advanced customization examples:**
+- Show all emails: Change `{{#FIRST}}` to `{{#ALL}}` in EMAIL section
+- Remove icons: Delete the emoji characters from each section
+- Change field order: Reorder the field type sections in the template
+- Custom formatting: Add your own text, bullets, or formatting around variables
+- Hide field types: Remove entire field type sections from the template
+- Multi-line formats: Use newlines and spacing to control layout

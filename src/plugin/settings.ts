@@ -21,12 +21,8 @@ export interface ContactsPluginSettings {
   vcfIgnoreFilenames: string[];
   vcfIgnoreUIDs: string[];
   // Contact Section Template Settings
-  contactTemplateShowFirstOnly: boolean;
-  contactTemplateFieldOrder: string[];
-  contactTemplateIcons: Record<string, string>;
-  contactTemplateDisplayNames: Record<string, string>;
-  contactTemplateEnabledFields: Record<string, boolean>;
-  [key: string]: string|boolean|number|string[]|Record<string, string>|Record<string, boolean>;
+  contactSectionTemplate: string;
+  [key: string]: string|boolean|number|string[];
 }
 
 const curatorSetting = curatorService.settings();
@@ -47,27 +43,31 @@ export const DEFAULT_SETTINGS: ContactsPluginSettings = {
   vcfCustomizeIgnoreList: false,
   vcfIgnoreFilenames: [],
   vcfIgnoreUIDs: [],
-  // Contact Section Template Defaults
-  contactTemplateShowFirstOnly: true,
-  contactTemplateFieldOrder: ['EMAIL', 'TEL', 'ADR', 'URL'],
-  contactTemplateIcons: {
-    EMAIL: '📧',
-    TEL: '📞',
-    ADR: '🏠',
-    URL: '🌐'
-  },
-  contactTemplateDisplayNames: {
-    EMAIL: 'Email',
-    TEL: 'Phone',
-    ADR: 'Address',
-    URL: 'Website'
-  },
-  contactTemplateEnabledFields: {
-    EMAIL: true,
-    TEL: true,
-    ADR: true,
-    URL: true
-  },
+  // Contact Section Template Default
+  contactSectionTemplate: `{{#EMAIL}}
+📧 Email
+{{#FIRST}}{{LABEL}} {{VALUE}}{{/FIRST}}
+
+{{/EMAIL}}
+{{#TEL}}
+📞 Phone
+{{#FIRST}}{{LABEL}} {{VALUE}}{{/FIRST}}
+
+{{/TEL}}
+{{#ADR}}
+🏠 Address
+{{#FIRST}}({{LABEL}})
+{{STREET}}
+{{LOCALITY}}, {{REGION}} {{POSTAL}}
+{{COUNTRY}}
+
+{{/FIRST}}
+{{/ADR}}
+{{#URL}}
+🌐 Website
+{{#FIRST}}{{LABEL}} {{VALUE}}{{/FIRST}}
+
+{{/URL}}`,
   ...curatorSettingDefaults
 }
 
@@ -345,140 +345,119 @@ export class ContactsSettingTab extends PluginSettingTab {
 
     const contactTemplateDesc = document.createDocumentFragment();
     contactTemplateDesc.append(
-      "Customize how contact information is displayed in the Contact section.",
+      "Edit the template string to customize how the Contact section is formatted.",
       contactTemplateDesc.createEl("br"),
-      "These settings control the appearance, order, and content of contact fields."
+      contactTemplateDesc.createEl("br"),
+      contactTemplateDesc.createEl("strong", { text: "Template Variables:" }),
+      contactTemplateDesc.createEl("br"),
+      contactTemplateDesc.createEl("code", { text: "{{#EMAIL}}" }),
+      " ... ",
+      contactTemplateDesc.createEl("code", { text: "{{/EMAIL}}" }),
+      " - Email fields section",
+      contactTemplateDesc.createEl("br"),
+      contactTemplateDesc.createEl("code", { text: "{{#TEL}}" }),
+      " ... ",
+      contactTemplateDesc.createEl("code", { text: "{{/TEL}}" }),
+      " - Phone fields section",
+      contactTemplateDesc.createEl("br"),
+      contactTemplateDesc.createEl("code", { text: "{{#ADR}}" }),
+      " ... ",
+      contactTemplateDesc.createEl("code", { text: "{{/ADR}}" }),
+      " - Address fields section",
+      contactTemplateDesc.createEl("br"),
+      contactTemplateDesc.createEl("code", { text: "{{#URL}}" }),
+      " ... ",
+      contactTemplateDesc.createEl("code", { text: "{{/URL}}" }),
+      " - Website fields section",
+      contactTemplateDesc.createEl("br"),
+      contactTemplateDesc.createEl("br"),
+      contactTemplateDesc.createEl("strong", { text: "Field Variables:" }),
+      contactTemplateDesc.createEl("br"),
+      contactTemplateDesc.createEl("code", { text: "{{#FIRST}}" }),
+      " ... ",
+      contactTemplateDesc.createEl("code", { text: "{{/FIRST}}" }),
+      " - Show only first field",
+      contactTemplateDesc.createEl("br"),
+      contactTemplateDesc.createEl("code", { text: "{{#ALL}}" }),
+      " ... ",
+      contactTemplateDesc.createEl("code", { text: "{{/ALL}}" }),
+      " - Show all fields",
+      contactTemplateDesc.createEl("br"),
+      contactTemplateDesc.createEl("code", { text: "{{LABEL}}" }),
+      " - Field label (e.g., Home, Work)",
+      contactTemplateDesc.createEl("br"),
+      contactTemplateDesc.createEl("code", { text: "{{VALUE}}" }),
+      " - Field value",
+      contactTemplateDesc.createEl("br"),
+      contactTemplateDesc.createEl("br"),
+      contactTemplateDesc.createEl("strong", { text: "Address Variables:" }),
+      contactTemplateDesc.createEl("br"),
+      contactTemplateDesc.createEl("code", { text: "{{STREET}}" }),
+      ", ",
+      contactTemplateDesc.createEl("code", { text: "{{LOCALITY}}" }),
+      ", ",
+      contactTemplateDesc.createEl("code", { text: "{{REGION}}" }),
+      ", ",
+      contactTemplateDesc.createEl("code", { text: "{{POSTAL}}" }),
+      ", ",
+      contactTemplateDesc.createEl("code", { text: "{{COUNTRY}}" })
     );
 
     new Setting(containerEl)
-      .setName("Contact Section Template")
-      .setDesc(contactTemplateDesc);
-
-    // Show First Field Only Toggle
-    new Setting(containerEl)
-      .setName("Show First Field Only")
-      .setDesc("When enabled, only the first field of each type is displayed. When disabled, all fields are shown.")
-      .addToggle(toggle =>
-        toggle
-          .setValue(this.plugin.settings.contactTemplateShowFirstOnly)
+      .setName("Template String")
+      .setDesc(contactTemplateDesc)
+      .addTextArea(textArea => {
+        textArea
+          .setPlaceholder("Enter your custom template...")
+          .setValue(this.plugin.settings.contactSectionTemplate)
           .onChange(async (value) => {
-            this.plugin.settings.contactTemplateShowFirstOnly = value;
+            this.plugin.settings.contactSectionTemplate = value;
             await this.plugin.saveSettings();
             setSettings(this.plugin.settings);
-          }));
-
-    // Field Enable/Disable Controls
-    const fieldTypesTitle = containerEl.createEl("h4", { text: "Enabled Field Types" });
-    fieldTypesTitle.style.marginTop = "1em";
-    fieldTypesTitle.style.fontSize = "1em";
-
-    const fieldTypes = ['EMAIL', 'TEL', 'ADR', 'URL'];
-    for (const fieldType of fieldTypes) {
-      new Setting(containerEl)
-        .setName(`Show ${this.plugin.settings.contactTemplateDisplayNames[fieldType] || fieldType}`)
-        .setDesc(`Display ${fieldType} fields in Contact section`)
-        .addToggle(toggle =>
-          toggle
-            .setValue(this.plugin.settings.contactTemplateEnabledFields[fieldType] !== false)
-            .onChange(async (value) => {
-              this.plugin.settings.contactTemplateEnabledFields[fieldType] = value;
-              await this.plugin.saveSettings();
-              setSettings(this.plugin.settings);
-            }));
-    }
-
-    // Field Customization
-    const fieldCustomTitle = containerEl.createEl("h4", { text: "Field Customization" });
-    fieldCustomTitle.style.marginTop = "1em";
-    fieldCustomTitle.style.fontSize = "1em";
-
-    for (const fieldType of fieldTypes) {
-      // Icon customization
-      new Setting(containerEl)
-        .setName(`${fieldType} Icon`)
-        .setDesc(`Icon/emoji for ${fieldType} fields`)
-        .addText(text => text
-          .setPlaceholder(this.plugin.settings.contactTemplateIcons[fieldType])
-          .setValue(this.plugin.settings.contactTemplateIcons[fieldType])
-          .onChange(async (value) => {
-            this.plugin.settings.contactTemplateIcons[fieldType] = value || this.plugin.settings.contactTemplateIcons[fieldType];
-            await this.plugin.saveSettings();
-            setSettings(this.plugin.settings);
-          }));
-
-      // Display name customization
-      new Setting(containerEl)
-        .setName(`${fieldType} Display Name`)
-        .setDesc(`Display name for ${fieldType} fields`)
-        .addText(text => text
-          .setPlaceholder(this.plugin.settings.contactTemplateDisplayNames[fieldType])
-          .setValue(this.plugin.settings.contactTemplateDisplayNames[fieldType])
-          .onChange(async (value) => {
-            this.plugin.settings.contactTemplateDisplayNames[fieldType] = value || this.plugin.settings.contactTemplateDisplayNames[fieldType];
-            await this.plugin.saveSettings();
-            setSettings(this.plugin.settings);
-          }));
-    }
-
-    // Field Order
-    const fieldOrderTitle = containerEl.createEl("h4", { text: "Field Display Order" });
-    fieldOrderTitle.style.marginTop = "1em";
-    fieldOrderTitle.style.fontSize = "1em";
-
-    const fieldOrderDesc = document.createDocumentFragment();
-    fieldOrderDesc.append(
-      "Comma-separated list of field types in display order.",
-      fieldOrderDesc.createEl("br"),
-      "Example: EMAIL,TEL,ADR,URL"
-    );
-
-    new Setting(containerEl)
-      .setName("Field Order")
-      .setDesc(fieldOrderDesc)
-      .addText(text => text
-        .setPlaceholder("EMAIL,TEL,ADR,URL")
-        .setValue(this.plugin.settings.contactTemplateFieldOrder.join(','))
-        .onChange(async (value) => {
-          const order = value.split(',').map(s => s.trim()).filter(s => s.length > 0);
-          if (order.length > 0) {
-            this.plugin.settings.contactTemplateFieldOrder = order;
-            await this.plugin.saveSettings();
-            setSettings(this.plugin.settings);
-          }
-        }));
+          });
+        textArea.inputEl.rows = 20;
+        textArea.inputEl.cols = 80;
+        textArea.inputEl.style.width = "100%";
+        textArea.inputEl.style.fontFamily = "monospace";
+        textArea.inputEl.style.fontSize = "12px";
+      });
 
     // Reset to Defaults Button
     new Setting(containerEl)
-      .setName("Reset Template to Defaults")
-      .setDesc("Reset all Contact section template settings to their default values")
+      .setName("Reset Template to Default")
+      .setDesc("Reset the Contact section template to its default value")
       .addButton(button =>
         button
-          .setButtonText("Reset to Defaults")
+          .setButtonText("Reset to Default")
           .onClick(async () => {
-            this.plugin.settings.contactTemplateShowFirstOnly = true;
-            this.plugin.settings.contactTemplateFieldOrder = ['EMAIL', 'TEL', 'ADR', 'URL'];
-            this.plugin.settings.contactTemplateIcons = {
-              EMAIL: '📧',
-              TEL: '📞',
-              ADR: '🏠',
-              URL: '🌐'
-            };
-            this.plugin.settings.contactTemplateDisplayNames = {
-              EMAIL: 'Email',
-              TEL: 'Phone',
-              ADR: 'Address',
-              URL: 'Website'
-            };
-            this.plugin.settings.contactTemplateEnabledFields = {
-              EMAIL: true,
-              TEL: true,
-              ADR: true,
-              URL: true
-            };
+            this.plugin.settings.contactSectionTemplate = `{{#EMAIL}}
+📧 Email
+{{#FIRST}}{{LABEL}} {{VALUE}}{{/FIRST}}
+
+{{/EMAIL}}
+{{#TEL}}
+📞 Phone
+{{#FIRST}}{{LABEL}} {{VALUE}}{{/FIRST}}
+
+{{/TEL}}
+{{#ADR}}
+🏠 Address
+{{#FIRST}}({{LABEL}})
+{{STREET}}
+{{LOCALITY}}, {{REGION}} {{POSTAL}}
+{{COUNTRY}}
+
+{{/FIRST}}
+{{/ADR}}
+{{#URL}}
+🌐 Website
+{{#FIRST}}{{LABEL}} {{VALUE}}{{/FIRST}}
+
+{{/URL}}`;
             await this.plugin.saveSettings();
             setSettings(this.plugin.settings);
             this.display(); // Refresh the settings display
-            new Notice('Contact template settings reset to defaults');
+            new Notice('Contact template reset to default');
           }));
   }
 }

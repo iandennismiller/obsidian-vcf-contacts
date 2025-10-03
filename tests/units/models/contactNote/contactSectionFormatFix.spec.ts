@@ -44,26 +44,30 @@ describe('Contact Section Format Fix', () => {
       vcfCustomizeIgnoreList: false,
       vcfIgnoreFilenames: [],
       vcfIgnoreUIDs: [],
-      contactTemplateShowFirstOnly: true,
-      contactTemplateFieldOrder: ['EMAIL', 'TEL', 'ADR', 'URL'],
-      contactTemplateIcons: {
-        EMAIL: '📧',
-        TEL: '📞',
-        ADR: '🏠',
-        URL: '🌐'
-      },
-      contactTemplateDisplayNames: {
-        EMAIL: 'Email',
-        TEL: 'Phone',
-        ADR: 'Address',
-        URL: 'Website'
-      },
-      contactTemplateEnabledFields: {
-        EMAIL: true,
-        TEL: true,
-        ADR: true,
-        URL: true
-      }
+      contactSectionTemplate: `{{#EMAIL}}
+📧 Email
+{{#FIRST}}{{LABEL}} {{VALUE}}{{/FIRST}}
+
+{{/EMAIL}}
+{{#TEL}}
+📞 Phone
+{{#FIRST}}{{LABEL}} {{VALUE}}{{/FIRST}}
+
+{{/TEL}}
+{{#ADR}}
+🏠 Address
+{{#FIRST}}({{LABEL}})
+{{STREET}}
+{{LOCALITY}}, {{REGION}} {{POSTAL}}
+{{COUNTRY}}
+
+{{/FIRST}}
+{{/ADR}}
+{{#URL}}
+🌐 Website
+{{#FIRST}}{{LABEL}} {{VALUE}}{{/FIRST}}
+
+{{/URL}}`
     };
 
     contactData = new ContactData(mockApp as App, mockFile);
@@ -141,7 +145,7 @@ TEL[CELL]: +1-555-1234
     expect(section).not.toContain('john@work.com');
   });
 
-  it('should respect contactTemplateShowFirstOnly setting', async () => {
+  it('should respect template with {{#FIRST}} directive', async () => {
     const content = `---
 UID: test-123
 FN: Test Contact
@@ -165,19 +169,7 @@ TEL[HOME]: +1-555-5678
       }
     });
 
-    // Test with showFirstOnly = false
-    mockSettings.contactTemplateShowFirstOnly = false;
-    const opsShowAll = new ContactSectionOperations(contactData, mockSettings);
-    const sectionShowAll = await opsShowAll.generateContactSection();
-
-    // Should show all fields
-    expect(sectionShowAll).toContain('john@home.com');
-    expect(sectionShowAll).toContain('john@work.com');
-    expect(sectionShowAll).toContain('+1-555-1234');
-    expect(sectionShowAll).toContain('+1-555-5678');
-
-    // Test with showFirstOnly = true
-    mockSettings.contactTemplateShowFirstOnly = true;
+    // Test with FIRST directive (default)
     const opsShowFirst = new ContactSectionOperations(contactData, mockSettings);
     const sectionShowFirst = await opsShowFirst.generateContactSection();
 
@@ -188,7 +180,53 @@ TEL[HOME]: +1-555-5678
     expect(sectionShowFirst).not.toContain('+1-555-5678');
   });
 
-  it('should use custom icons and display names from settings', async () => {
+  it('should respect template with {{#ALL}} directive', async () => {
+    const content = `---
+UID: test-123
+FN: Test Contact
+EMAIL[HOME]: john@home.com
+EMAIL[WORK]: john@work.com
+TEL[CELL]: +1-555-1234
+TEL[HOME]: +1-555-5678
+---
+
+#Contact`;
+
+    mockApp.vault!.read = vi.fn().mockResolvedValue(content);
+    mockApp.metadataCache!.getFileCache = vi.fn().mockReturnValue({
+      frontmatter: {
+        UID: 'test-123',
+        FN: 'Test Contact',
+        'EMAIL[HOME]': 'john@home.com',
+        'EMAIL[WORK]': 'john@work.com',
+        'TEL[CELL]': '+1-555-1234',
+        'TEL[HOME]': '+1-555-5678'
+      }
+    });
+
+    // Test with ALL directive
+    mockSettings.contactSectionTemplate = `{{#EMAIL}}
+📧 Email
+{{#ALL}}{{LABEL}} {{VALUE}}
+{{/ALL}}
+{{/EMAIL}}
+{{#TEL}}
+📞 Phone
+{{#ALL}}{{LABEL}} {{VALUE}}
+{{/ALL}}
+{{/TEL}}`;
+
+    const opsShowAll = new ContactSectionOperations(contactData, mockSettings);
+    const sectionShowAll = await opsShowAll.generateContactSection();
+
+    // Should show all fields
+    expect(sectionShowAll).toContain('john@home.com');
+    expect(sectionShowAll).toContain('john@work.com');
+    expect(sectionShowAll).toContain('+1-555-1234');
+    expect(sectionShowAll).toContain('+1-555-5678');
+  });
+
+  it('should use custom template format', async () => {
     const content = `---
 UID: test-123
 FN: Test Contact
@@ -208,33 +246,33 @@ TEL[CELL]: +1-555-1234
       }
     });
 
-    // Customize settings
-    mockSettings.contactTemplateIcons = {
-      EMAIL: '✉️',
-      TEL: '☎️',
-      ADR: '🏠',
-      URL: '🌐'
-    };
-    mockSettings.contactTemplateDisplayNames = {
-      EMAIL: 'E-mail',
-      TEL: 'Telephone',
-      ADR: 'Address',
-      URL: 'Website'
-    };
+    // Customize template with different icons and format
+    mockSettings.contactSectionTemplate = `{{#EMAIL}}
+✉️ E-mail
+{{#FIRST}}{{LABEL}}: {{VALUE}}{{/FIRST}}
+
+{{/EMAIL}}
+{{#TEL}}
+☎️ Telephone
+{{#FIRST}}{{LABEL}}: {{VALUE}}{{/FIRST}}
+
+{{/TEL}}`;
 
     const opsCustom = new ContactSectionOperations(contactData, mockSettings);
     const section = await opsCustom.generateContactSection();
 
-    // Should use custom icons
+    // Should use custom icons and format
     expect(section).toContain('✉️ E-mail');
     expect(section).toContain('☎️ Telephone');
+    expect(section).toContain('Home: john@home.com');
+    expect(section).toContain('Cell: +1-555-1234');
 
-    // Should not contain default icons/names
+    // Should not contain default format
     expect(section).not.toContain('📧 Email');
     expect(section).not.toContain('📞 Phone');
   });
 
-  it('should respect enabled/disabled field types', async () => {
+  it('should hide field types not in template', async () => {
     const content = `---
 UID: test-123
 FN: Test Contact
@@ -256,24 +294,28 @@ URL[HOME]: https://example.com
       }
     });
 
-    // Disable TEL fields
-    mockSettings.contactTemplateEnabledFields = {
-      EMAIL: true,
-      TEL: false,
-      ADR: true,
-      URL: true
-    };
+    // Template without TEL section
+    mockSettings.contactSectionTemplate = `{{#EMAIL}}
+📧 Email
+{{#FIRST}}{{LABEL}} {{VALUE}}{{/FIRST}}
 
-    const opsDisabled = new ContactSectionOperations(contactData, mockSettings);
-    const section = await opsDisabled.generateContactSection();
+{{/EMAIL}}
+{{#URL}}
+🌐 Website
+{{#FIRST}}{{LABEL}} {{VALUE}}{{/FIRST}}
 
-    // Should show enabled fields
+{{/URL}}`;
+
+    const opsCustom = new ContactSectionOperations(contactData, mockSettings);
+    const section = await opsCustom.generateContactSection();
+
+    // Should show EMAIL and URL
     expect(section).toContain('Email');
     expect(section).toContain('john@home.com');
     expect(section).toContain('Website');
     expect(section).toContain('https://example.com');
 
-    // Should not show disabled TEL field
+    // Should not show TEL
     expect(section).not.toContain('Phone');
     expect(section).not.toContain('+1-555-1234');
   });
