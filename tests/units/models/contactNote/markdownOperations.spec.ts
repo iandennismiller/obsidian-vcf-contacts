@@ -36,7 +36,8 @@ describe('MarkdownOperations', () => {
       expect(result).toContain('---');
       expect(result).toContain('FN: John Doe');
       expect(result).toContain('EMAIL: john@example.com');
-      expect(result).toContain('TEL: +1234567890');
+      // yaml library may quote values with special characters like +
+      expect(result).toMatch(/TEL:\s*"?\+1234567890"?/);
       expect(result).toContain('#### Notes');
       expect(result).toContain('## Related');
       expect(result).toContain('#Contact');
