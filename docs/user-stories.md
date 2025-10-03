@@ -2,6 +2,29 @@
 
 This document outlines user stories and use cases for managing contacts and relationships in Obsidian using vCard (VCF) files. Each story represents a specific need or workflow that users want to accomplish with this plugin.
 
+## Architecture: Markdown Processing
+
+**Technical Foundation**: The plugin uses the [marked](https://www.npmjs.com/package/marked) library for standard markdown parsing and rendering operations. This architectural decision provides:
+
+- **Reduced Complexity**: Eliminates custom markdown parsing utilities and edge case handling
+- **Better Standards Compliance**: Follows CommonMark and GitHub Flavored Markdown specifications
+- **Improved Performance**: Leverages a battle-tested, optimized parser
+- **Lower Maintenance**: Delegates markdown syntax concerns to a well-maintained library
+
+**Scope of Custom Parsing**: Custom parsing is limited to:
+1. **Obsidian-Specific Syntax**: Wiki-links (`[[Contact Name]]`) which are not standard markdown
+2. **Contact Semantics**: Pattern recognition for emails, phones, URLs, addresses
+3. **VCard Field Mapping**: Converting between frontmatter and contact display formats
+
+This means:
+- Standard markdown list parsing is handled by marked
+- Heading extraction and hierarchy is handled by marked
+- Whitespace normalization is handled by marked
+- Line break handling is handled by marked
+- Custom code focuses only on domain-specific logic (contacts, relationships, VCards)
+
+**User Benefit**: More reliable markdown handling with fewer edge cases and better compatibility with standard markdown tools.
+
 ## VCF File Management Stories
 
 ### 1. Single VCF File Synchronization
@@ -140,12 +163,15 @@ This document outlines user stories and use cases for managing contacts and rela
 ### 30. Contact Section Display in Markdown
 **As a user**, when I view a contact note, I want to see contact information like addresses, emails, and phone numbers displayed in a dedicated "## Contact" section in the markdown. This section should render the frontmatter fields (like `ADR[HOME].STREET`, `EMAIL[WORK]`, `TEL[CELL]`) in a human-readable format, making it easy to view contact details without parsing YAML frontmatter.
 
+**Technical Note**: The plugin uses the [marked](https://www.npmjs.com/package/marked) library for standard markdown parsing and rendering operations. Custom parsing is only applied to non-standard markdown elements like Obsidian's wiki-style links (`[[Contact Name]]`).
+
 **Expected behavior:**
 - Contact information appears under a `## Contact` heading
 - Fields are formatted using a "fuzzy template" that defines both display and parsing rules
 - The section is automatically generated from frontmatter fields
 - The display is readable and well-organized
 - Common fields like email, phone, and address are supported
+- Standard markdown rendering (lists, headings, etc.) is handled by the marked library
 
 **Example display:**
 ```markdown
@@ -178,6 +204,8 @@ USA
 - Work bidirectionally (display and parsing)
 - Be configurable per field type (email, phone, address, etc.)
 
+**Technical Note**: The marked library handles standard markdown list parsing (extracting list items, structure, etc.). The fuzzy template system focuses on extracting semantic contact data (email addresses, phone numbers, types) from the parsed markdown content.
+
 **Template syntax examples:**
 - Email template: `{TYPE}: {VALUE}` matches "Home: email@example.com"
 - Phone template: `{TYPE}: {VALUE}` matches "Cell: +1-555-0000"
@@ -187,8 +215,9 @@ USA
 **Expected behavior:**
 - Templates handle optional fields gracefully (e.g., missing TYPE)
 - Fuzzy matching tolerates minor formatting variations
-- Parsing extracts data back to frontmatter fields
+- Parsing extracts data back to frontmatter fields (after markdown structure is parsed by marked)
 - Display uses the same template to format output consistently
+- Markdown rendering (converting to HTML/structure) is delegated to marked library
 
 ### 32. Contact Section Sync to Frontmatter
 **As a user**, when I edit contact information in the "## Contact" section and save the note, I want those changes to automatically sync back to the frontmatter. Similar to how the Related list syncs relationships, the Contact section should:
@@ -199,6 +228,8 @@ USA
 - Use fuzzy template matching to identify fields
 - Update REV timestamp when changes are made
 - Preserve formatting where possible
+
+**Technical Note**: The marked library parses markdown structure (headings, lists) while custom fuzzy matching extracts contact-specific data (email addresses, phone numbers). This separation of concerns reduces the need for custom edge-case handling in markdown parsing.
 
 **Test scenarios:**
 1. **Adding new email**: When I add "Personal: john@personal.com" to the Email section, the frontmatter should add `EMAIL[PERSONAL]: john@personal.com`
@@ -330,6 +361,17 @@ URL Template:
 - Work with or without field type labels
 - Parse incomplete information gracefully
 
+**Technical Note**: By using the marked library for markdown structure parsing, the plugin can focus fuzzy matching on contact data semantics rather than markdown syntax edge cases. The marked library handles:
+- List item detection and extraction
+- Whitespace normalization
+- Line break handling
+- Heading identification
+
+Custom parsing is only needed for:
+- Obsidian wiki-links (`[[Contact Name]]`)
+- Contact-specific data patterns (emails, phones, URLs)
+- Field type/kind extraction
+
 **Example variations that should all work:**
 ```markdown
 ## Contact
@@ -348,11 +390,12 @@ Email
 ```
 
 **Expected behavior:**
-- Fuzzy matching identifies contact fields
+- Fuzzy matching identifies contact fields from parsed markdown structure
 - Missing type labels default to bare for first (EMAIL), then indexed (EMAIL[1], EMAIL[2])
-- Extra whitespace is ignored
+- Extra whitespace is ignored by marked's normalization
 - Common formatting variations are recognized
 - Unrecognized content is preserved but not synced
+- Markdown structure edge cases are handled by marked, not custom code
 
 ### 38. Contact Information Validation
 **As a user**, I want the plugin to validate contact information when syncing from the Contact section to frontmatter. The plugin should:

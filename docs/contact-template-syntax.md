@@ -2,6 +2,8 @@
 
 The Contact section template uses a simple template language inspired by Mustache and Jinja2 that allows you to control how contact information is displayed.
 
+**Architecture Note**: Template rendering generates markdown content that is then processed by the [marked](https://www.npmjs.com/package/marked) library. The template system focuses on data transformation (frontmatter → markdown content), while marked handles the markdown structure and formatting.
+
 ## Overview
 
 Templates consist of regular text mixed with template tags. Tags are enclosed in double curly braces: `{{TAG}}`.

@@ -6,6 +6,14 @@ This document provides a comprehensive overview of the test coverage for the Obs
 
 **Last Updated**: December 2024
 
+**Architecture Update**: The plugin is transitioning to use the [marked](https://www.npmjs.com/package/marked) library for standard markdown parsing operations. This will:
+- Reduce the number of custom markdown parsing utilities
+- Eliminate many edge case tests related to markdown syntax
+- Simplify the test suite by focusing on domain logic rather than markdown syntax
+- Improve reliability by delegating to a well-tested library
+
+Edge case tests for markdown whitespace, line breaks, and list formatting will be removed as these are now handled by marked.
+
 ## Current Coverage Statistics
 
 | Metric | Coverage | Target |

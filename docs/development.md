@@ -95,6 +95,21 @@ The plugin uses a processor-based architecture for data operations (`src/curator
 4. **Write Queue System**: Prevents file system conflicts during batch operations
 5. **Bidirectional Sync**: Maintains consistency between markdown and frontmatter
 6. **UID-Based References**: Contact relationships use unique identifiers
+7. **Markdown Library Integration**: Uses [marked](https://www.npmjs.com/package/marked) library for standard markdown parsing/rendering, with custom handling only for Obsidian-specific features (wiki-links) and contact data semantics
+
+### Markdown Processing Architecture
+
+The plugin delegates standard markdown operations to the marked library:
+- **Parsing**: Headings, lists, paragraphs, whitespace normalization
+- **Rendering**: Converting markdown to structured format
+- **Edge Cases**: Line breaks, indentation, list formatting variations
+
+Custom parsing is limited to:
+- **Wiki-Links**: Obsidian's `[[Contact Name]]` syntax
+- **Contact Semantics**: Email/phone/URL pattern detection and extraction
+- **VCard Mapping**: Contact field type identification and frontmatter conversion
+
+This architecture reduces code complexity and maintenance burden while providing robust markdown handling.
 
 ## Development Setup
 
