@@ -3,6 +3,10 @@
 
 Manage contacts in Obsidian using the vCard 4.0 standard format. This plugin integrates contact data with your knowledge base, enabling relationship tracking and bidirectional synchronization with external contact management systems.
 
+**Technical Foundation**: The plugin uses industry-standard libraries for robust functionality:
+- **[vcard4](https://www.npmjs.com/package/vcard4)**: Full RFC 6350 (vCard 4.0) implementation for parsing and generation
+- **[marked](https://www.npmjs.com/package/marked)**: Standards-compliant markdown parsing and rendering
+
 ## Documentation
 
 - [Installation Guide](docs/installation.md)
@@ -16,11 +20,11 @@ Manage contacts in Obsidian using the vCard 4.0 standard format. This plugin int
 
 ## Core Features
 
-- **vCard 4.0 Standard**: Full compliance with vCard format for interoperability
+- **vCard 4.0 Standard**: Full RFC 6350 compliance via [vcard4](https://www.npmjs.com/package/vcard4) library for interoperability
 - **Contact List Parsing**: Flexible markdown list format for entering contact information with auto-detection of field types
 - **Relationship Management**: Bidirectional relationship tracking between contacts with automatic reciprocal updates
 - **Folder Watching**: Monitor external VCF folders and automatically sync changes
-- **Import/Export**: Standard VCF file import and export functionality
+- **Import/Export**: Standards-compliant VCF file import and export functionality
 - **UID-Based Linking**: Contact references use unique identifiers to maintain integrity across name changes
 - **Gender-Aware Processing**: Automatic relationship term conversion based on contact gender
 
@@ -30,9 +34,13 @@ The plugin uses a modular architecture organized around core models:
 
 - **ContactManager**: Collection-level operations and contact file management
 - **ContactNote**: Individual contact operations, relationships, and markdown rendering
-- **VcardFile**: VCF file parsing, generation, and validation
+- **VcardFile**: Integration with vcard4 library for VCF parsing/generation and Obsidian frontmatter mapping
 - **VcardManager**: VCF collection management with write queue system
 - **CuratorManager**: Processor-based system for contact data operations
+
+**Library Integration**:
+- **vcard4**: Handles all vCard 4.0 parsing, generation, field validation, and RFC 6350 compliance
+- **marked**: Handles standard markdown parsing and rendering (headings, lists, structure)
 
 ## Relationship Features
 
