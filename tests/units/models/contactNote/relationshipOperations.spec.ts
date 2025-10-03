@@ -497,7 +497,7 @@ Some notes.
       await relationshipOperations.updateRelatedSectionInContent(newRelationships);
 
       expect(mockContactData.updateContent).toHaveBeenCalledWith(
-        expect.stringContaining('#### Related\n- spouse [[Jane Doe]]')
+        expect.stringContaining('## Related\n- spouse [[Jane Doe]]')
       );
     });
 
@@ -517,7 +517,7 @@ UID: john-doe-123
       await relationshipOperations.updateRelatedSectionInContent([]);
 
       expect(mockContactData.updateContent).toHaveBeenCalledWith(
-        expect.stringContaining('#### Related\n\n')
+        expect.stringContaining('## Related\n\n')
       );
     });
 

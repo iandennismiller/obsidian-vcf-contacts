@@ -38,7 +38,7 @@ describe('MarkdownOperations', () => {
       expect(result).toContain('EMAIL: john@example.com');
       expect(result).toContain('TEL: +1234567890');
       expect(result).toContain('#### Notes');
-      expect(result).toContain('#### Related');
+      expect(result).toContain('## Related');
       expect(result).toContain('#Contact');
     });
 
@@ -134,7 +134,7 @@ describe('MarkdownOperations', () => {
 
       const result = markdownOps.mdRender(record, '#Contact');
 
-      expect(result).toContain('#### Related');
+      expect(result).toContain('## Related');
       expect(result).toContain('- spouse [[Jane Doe]]');
       expect(result).toContain('- child [[Alice Doe]]');
     });
@@ -195,7 +195,7 @@ describe('MarkdownOperations', () => {
 
       const result = markdownOps.mdRender(record, '#Contact');
 
-      expect(result).toContain('#### Related\n');
+      expect(result).toContain('## Related\n');
       expect(result).not.toMatch(/- \w+:/);
     });
 
@@ -265,7 +265,7 @@ FN: John Doe
 #### Notes
 This is a note.
 
-#### Related
+## Related
 - spouse [[Jane Doe]]
 
 #### Custom Section
@@ -330,7 +330,7 @@ FN: John Doe
 #### Notes
 Old note content.
 
-#### Related
+## Related
 - spouse [[Jane Doe]]
 
 #Contact
@@ -344,7 +344,7 @@ Old note content.
       const updatedContent = vi.mocked(mockContactData.updateContent).mock.calls[0][0];
       expect(updatedContent).toContain('#### Notes\nNew note content.');
       expect(updatedContent).not.toContain('Old note content.');
-      expect(updatedContent).toContain('#### Related');
+      expect(updatedContent).toContain('## Related');
     });
 
     it('should add new section when section does not exist', async () => {
@@ -363,7 +363,7 @@ Some notes.
 
       expect(mockContactData.updateContent).toHaveBeenCalled();
       const updatedContent = vi.mocked(mockContactData.updateContent).mock.calls[0][0];
-      expect(updatedContent).toContain('#### Custom\nCustom content.');
+      expect(updatedContent).toContain('## Custom\nCustom content.');
       expect(updatedContent).toContain('#Contact');
     });
 
@@ -384,7 +384,7 @@ Some notes.
       expect(mockContactData.updateContent).toHaveBeenCalled();
       const updatedContent = vi.mocked(mockContactData.updateContent).mock.calls[0][0];
       
-      const customIndex = updatedContent.indexOf('#### Related');
+      const customIndex = updatedContent.indexOf('## Related');
       const tagIndex = updatedContent.indexOf('#Contact');
       
       expect(customIndex).toBeGreaterThan(-1);
@@ -404,7 +404,7 @@ Some notes.`;
 
       expect(mockContactData.updateContent).toHaveBeenCalled();
       const updatedContent = vi.mocked(mockContactData.updateContent).mock.calls[0][0];
-      expect(updatedContent).toContain('#### Related\n- spouse [[Jane]]');
+      expect(updatedContent).toContain('## Related\n- spouse [[Jane]]');
     });
   });
 });

@@ -80,7 +80,7 @@ EMAIL[HOME]: john@home.com
     
     // Verify Contact appears before Related
     const contactIndex = updatedContent.indexOf('## Contact');
-    const relatedIndex = updatedContent.indexOf('#### Related');
+    const relatedIndex = updatedContent.indexOf('## Related');
     
     expect(contactIndex).toBeGreaterThan(-1); // Contact exists
     expect(relatedIndex).toBeGreaterThan(-1); // Related exists
@@ -138,7 +138,7 @@ RELATED[friend]: urn:uuid:jane-doe-456
     
     // Verify Contact appears before Related
     const contactIndex = updatedContent.indexOf('## Contact');
-    const relatedIndex = updatedContent.indexOf('#### Related');
+    const relatedIndex = updatedContent.indexOf('## Related');
     
     expect(contactIndex).toBeGreaterThan(-1); // Contact exists
     expect(relatedIndex).toBeGreaterThan(-1); // Related exists
@@ -189,7 +189,7 @@ EMAIL[WORK]: john@work.com
     
     // Verify Contact still appears before Related
     const contactIndex = updatedContent.indexOf('## Contact');
-    const relatedIndex = updatedContent.indexOf('#### Related');
+    const relatedIndex = updatedContent.indexOf('## Related');
     
     expect(contactIndex).toBeGreaterThan(-1); // Contact exists
     expect(relatedIndex).toBeGreaterThan(-1); // Related exists
@@ -242,7 +242,7 @@ Some notes here.
     
     // Verify ordering: Contact before Related before hashtags
     const contactIndex = finalContent.indexOf('## Contact');
-    const relatedIndex = finalContent.indexOf('#### Related');
+    const relatedIndex = finalContent.indexOf('## Related');
     const hashtagIndex = finalContent.indexOf('#Contact');
     
     expect(contactIndex).toBeGreaterThan(-1);
@@ -284,11 +284,11 @@ Notes here.
     const updatedContent = modifyCall.mock.calls[0][1];
     
     // Verify Related section was added
-    expect(updatedContent).toContain('#### Related');
+    expect(updatedContent).toContain('## Related');
     expect(updatedContent).toContain('friend [[Jane Doe]]');
     
     // Verify it's before hashtags
-    const relatedIndex = updatedContent.indexOf('#### Related');
+    const relatedIndex = updatedContent.indexOf('## Related');
     const hashtagIndex = updatedContent.indexOf('#Contact');
     expect(relatedIndex).toBeLessThan(hashtagIndex);
   });
@@ -381,7 +381,7 @@ EMAIL[WORK]: john@work.com
     
     // Verify Contact now appears before Related
     const contactIndex = updatedContent.indexOf('## Contact');
-    const relatedIndex = updatedContent.indexOf('#### Related');
+    const relatedIndex = updatedContent.indexOf('## Related');
     
     expect(contactIndex).toBeGreaterThan(-1); // Contact exists
     expect(relatedIndex).toBeGreaterThan(-1); // Related exists
@@ -433,7 +433,7 @@ EMAIL[HOME]: john@home.com
     
     // Verify Contact now appears before Related
     const contactIndex = updatedContent.indexOf('## Contact');
-    const relatedIndex = updatedContent.indexOf('#### Related');
+    const relatedIndex = updatedContent.indexOf('## Related');
     
     expect(contactIndex).toBeGreaterThan(-1); // Contact exists
     expect(relatedIndex).toBeGreaterThan(-1); // Related exists
