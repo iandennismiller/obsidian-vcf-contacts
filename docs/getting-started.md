@@ -266,8 +266,8 @@ The plugin maintains bidirectional synchronization between the Related list and 
 
 **Markdown to Frontmatter:**
 - Relationships in the "## Related" section sync to RELATED fields in frontmatter
-- Format: `RELATED.type: urn:uuid:target-uid` or `uid:custom-id` or `name:Contact Name`
-- Multiple relationships of same type use array indexing: `RELATED.friend.0`, `RELATED.friend.1`, etc.
+- Format: `"RELATED[type]": urn:uuid:target-uid` or `uid:custom-id` or `name:Contact Name`
+- Multiple relationships of same type use indexed notation: `"RELATED[friend]"`, `"RELATED[1:friend]"`, etc.
 - Changes propagate to related contacts automatically
 - Genderless types stored in frontmatter
 
@@ -278,6 +278,8 @@ The plugin maintains bidirectional synchronization between the Related list and 
 - Format in markdown: `- relationship_kind [[Contact Name]]`
 
 The plugin ensures both representations stay synchronized and updates the REV field only when data actually changes.
+
+**Note**: RELATED fields use bracket notation and must be quoted in YAML: `"RELATED[type]": value`
 
 ### Consistency Operations
 
