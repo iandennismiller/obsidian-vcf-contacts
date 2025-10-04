@@ -18,4 +18,14 @@ export {
   AddressComponents,
   UrlField 
 } from './fields';
+
+// Relationships
+export {
+  RelationshipType,
+  RelationshipReference,
+  ReferenceType,
+  Relationship,
+  RelationshipValidation
+} from './relationships';
+
 // More entities will be added as they are implemented
