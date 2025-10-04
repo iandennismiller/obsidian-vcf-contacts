@@ -16,12 +16,12 @@ Manage contacts in Obsidian using the vCard 4.0 standard format. This plugin int
 
 ### Developer Documentation
 - [Development Guide](docs/development/)
-- [Technical Specifications](project/specifications/)
+- [Technical Specifications](docs/specifications/)
 - [User Stories](project/user-stories/)
 
 ### Reference
-- [vCard Format Guide](project/specifications/vcard-format-spec.md)
-- [Library Integration](project/specifications/library-integration-spec.md)
+- [vCard Format Guide](docs/specifications/vcard-format.md)
+- [Library Integration](docs/specifications/library-integration.md)
 
 ## Core Features
 

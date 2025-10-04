@@ -34,7 +34,7 @@ Stories related to integrating with external tools and services.
 
 ## Related Documentation
 
-- **Specifications**: See [/project/specifications](../specifications/) for technical specifications
+- **Specifications**: See [/docs/specifications](../../docs/specifications/) for technical specifications
 - **Plans**: See [/project/plans](../plans/) for multi-stage implementation plans
 - **User Documentation**: See [/docs](../../docs/) for user-facing guides
 

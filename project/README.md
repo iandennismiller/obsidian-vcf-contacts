@@ -4,15 +4,17 @@ This directory contains project-level documentation for development, planning, a
 
 ## Directory Structure
 
-### `/specifications` - Technical Specifications
+### `/specifications` - Legacy Technical Specifications (Deprecated)
 
-Technical specifications describe **how** the system implements features. These documents include:
+**Note**: Legacy specifications have been refactored and moved to `/docs/specifications/` without code examples.
+
+Legacy technical specifications with code examples (deprecated). These documents include:
 - Implementation details and algorithms
 - Data structures and interfaces
 - Field formats and validation rules
 - API contracts and protocols
 
-See [specifications/README.md](specifications/README.md) for the complete specification index.
+**For current specifications, see [/docs/specifications/](../docs/specifications/)** which focuses on outcomes without implementation details.
 
 ### `/user-stories` - User Stories
 
@@ -51,15 +53,18 @@ When working on a feature:
 ## Relationship to /docs
 
 - **`/docs`**: User-facing and general developer documentation
+  - **`/docs/specifications/`**: Technical specifications (current, without code examples)
 - **`/project`**: Project-level documentation for contributors and maintainers
+  - **`/project/specifications/`**: Legacy specifications (deprecated)
 
 User guides, getting started, and feature overviews belong in `/docs`.  
-Technical specs, user stories, and implementation plans belong in `/project`.
+Technical specifications belong in `/docs/specifications/`.
+User stories and implementation plans belong in `/project`.
 
 ## Contributing
 
 When adding documentation:
 - Put user stories in `/project/user-stories/`
-- Put technical specs in `/project/specifications/`
+- Put technical specs in `/docs/specifications/` (not `/project/specifications/`)
 - Put implementation plans in `/project/plans/`
 - Put user guides in `/docs/`

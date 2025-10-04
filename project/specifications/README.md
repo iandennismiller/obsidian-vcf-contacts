@@ -1,8 +1,20 @@
-# Technical Specifications Index
+# Legacy Technical Specifications (Deprecated)
 
-This directory contains technical specifications for the VCF Contacts plugin. Specifications describe **how** the system implements features, while user stories describe **what** users want to accomplish.
+**Note**: These specifications have been refactored and moved to `/docs/specifications/` without code examples. Please use the versions in `/docs/specifications/` instead.
 
-## Specification Documents
+This directory contains legacy technical specifications for the VCF Contacts plugin. Specifications describe **how** the system implements features, while user stories describe **what** users want to accomplish.
+
+## Current Specifications
+
+**For current specifications without code examples, see [/docs/specifications/](../../docs/specifications/)**
+
+The specifications have been reorganized to:
+- Remove TypeScript code examples
+- Focus on outcomes and behaviors rather than implementation details
+- Consolidate duplicate information
+- Improve organization and clarity
+
+## Legacy Specification Documents
 
 ### [Library Integration Specification](library-integration-spec.md)
 Describes the integration of external libraries (marked, vcard4, yaml) and the separation of concerns between standard format handling and custom plugin logic.
