@@ -179,49 +179,26 @@ export class ContactSectionOperations extends BaseMarkdownSectionOperations {
       // Parse field lines based on current type
       if (currentFieldType && currentFieldType !== 'ADR') {
         // Parse simple fields (EMAIL, TEL, URL)
+        // Use the robust parseContactListItem function which handles various label formats
+        const parsed = parseContactListItem(line);
         
-        // Try old format first: "- Label: Value" or "Label: Value"
-        const colonMatch = line.match(/^-?\s*([^:]+):\s*(.+)$/);
-        if (colonMatch) {
-          const [, label, value] = colonMatch;
+        // Verify the parsed field type matches the current section type
+        // (or if no type was detected, use the section's type)
+        if (parsed.fieldType === currentFieldType || !parsed.fieldType) {
+          const existingCount = fields.filter(f => f.fieldType === currentFieldType).length;
           fields.push({
             fieldType: currentFieldType,
-            fieldLabel: label.trim(),
-            value: value.trim()
+            fieldLabel: parsed.kind || (existingCount === 0 ? '' : String(existingCount)),
+            value: parsed.value
           });
         } else {
-          // Try new format: "Label value" (space-separated, no colon)
-          const spaceMatch = line.match(/^([A-Za-z]+)\s+(.+)$/);
-          if (spaceMatch) {
-            const [, label, value] = spaceMatch;
-            fields.push({
-              fieldType: currentFieldType,
-              fieldLabel: label.trim(),
-              value: value.trim()
-            });
-          } else {
-            // Try without label (just "- value" or bare value)
-            const simpleMatch = line.match(/^-\s*(.+)$/);
-            if (simpleMatch) {
-              // Use numeric index for unlabeled fields
-              // First field has no index (bare), subsequent fields use 1, 2, 3...
-              const existingCount = fields.filter(f => f.fieldType === currentFieldType).length;
-              fields.push({
-                fieldType: currentFieldType,
-                fieldLabel: existingCount === 0 ? '' : String(existingCount),
-                value: simpleMatch[1].trim()
-              });
-            } else if (!line.startsWith('(') && !line.startsWith('#')) {
-              // Bare value without any prefix
-              // This handles cases where user just types the value
-              const existingCount = fields.filter(f => f.fieldType === currentFieldType).length;
-              fields.push({
-                fieldType: currentFieldType,
-                fieldLabel: existingCount === 0 ? '' : String(existingCount),
-                value: line.trim()
-              });
-            }
-          }
+          // Fallback: if type mismatch, treat as bare value for current section type
+          const existingCount = fields.filter(f => f.fieldType === currentFieldType).length;
+          fields.push({
+            fieldType: currentFieldType,
+            fieldLabel: existingCount === 0 ? '' : String(existingCount),
+            value: line.trim()
+          });
         }
       } else if (currentFieldType === 'ADR') {
         // Buffer address lines for multi-line parsing

@@ -98,17 +98,20 @@ export const ContactToFrontMatterProcessor: CuratorProcessor = {
       for (const field of contactFields) {
         let frontmatterKey: string;
         
+        // Normalize field label to uppercase for consistent frontmatter keys
+        const normalizedLabel = field.fieldLabel ? field.fieldLabel.toUpperCase() : '';
+        
         if (field.component) {
           // Structured field (e.g., ADR[HOME].STREET or ADR.STREET for bare)
-          if (field.fieldLabel) {
-            frontmatterKey = `${field.fieldType}[${field.fieldLabel}].${field.component}`;
+          if (normalizedLabel) {
+            frontmatterKey = `${field.fieldType}[${normalizedLabel}].${field.component}`;
           } else {
             frontmatterKey = `${field.fieldType}.${field.component}`;
           }
         } else {
           // Simple field (e.g., EMAIL[HOME] or EMAIL for bare)
-          if (field.fieldLabel) {
-            frontmatterKey = `${field.fieldType}[${field.fieldLabel}]`;
+          if (normalizedLabel) {
+            frontmatterKey = `${field.fieldType}[${normalizedLabel}]`;
           } else {
             frontmatterKey = field.fieldType;
           }

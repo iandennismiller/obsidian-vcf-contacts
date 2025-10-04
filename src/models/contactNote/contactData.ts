@@ -6,6 +6,7 @@
 import { TFile, App } from 'obsidian';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 import { Gender } from './types';
+import { normalizeFieldValue } from './fieldPatternDetection';
 
 /**
  * Centralized contact data storage that keeps related data together
@@ -149,6 +150,65 @@ export class ContactData {
   }
 
   /**
+   * Extract field type from a frontmatter key
+   * Examples:
+   * - "TEL[WORK]" -> "TEL"
+   * - "EMAIL[HOME]" -> "EMAIL"
+   * - "ADR[HOME].STREET" -> "ADR" (but we don't normalize ADR components)
+   * - "URL" -> "URL"
+   */
+  private extractFieldType(key: string): string | null {
+    // Match keys like EMAIL, TEL, URL, ADR with or without brackets
+    const match = key.match(/^(EMAIL|TEL|URL|ADR)(\[|\.)?/);
+    return match ? match[1] : null;
+  }
+
+  /**
+   * Compare two values for a given field type, normalizing both before comparison
+   * This ensures that "555-555-5555" and "+1-555-555-5555" are considered equal
+   */
+  private valuesAreEqual(currentValue: any, newValue: string, fieldType: string | null): boolean {
+    // If current value doesn't exist, they're not equal
+    if (currentValue === undefined || currentValue === null) {
+      return false;
+    }
+
+    // Convert current value to string
+    const currentStr = String(currentValue);
+    
+    // If we have a field type that supports normalization, normalize both values
+    if (fieldType && (fieldType === 'TEL' || fieldType === 'EMAIL' || fieldType === 'URL')) {
+      const normalizedCurrent = normalizeFieldValue(currentStr, fieldType);
+      const normalizedNew = normalizeFieldValue(newValue, fieldType);
+      return normalizedCurrent === normalizedNew;
+    }
+    
+    // For other field types, do direct string comparison
+    return currentStr === newValue;
+  }
+
+  /**
+   * Find an existing frontmatter key that matches the given key, ignoring case
+   * Returns the actual key from frontmatter or null if not found
+   */
+  private findFrontmatterKey(frontmatter: Record<string, any>, searchKey: string): string | null {
+    // First try exact match
+    if (searchKey in frontmatter) {
+      return searchKey;
+    }
+    
+    // Try case-insensitive match for contact fields
+    const searchKeyLower = searchKey.toLowerCase();
+    for (const key of Object.keys(frontmatter)) {
+      if (key.toLowerCase() === searchKeyLower) {
+        return key;
+      }
+    }
+    
+    return null;
+  }
+
+  /**
    * Update multiple frontmatter values in one operation
    */
   async updateMultipleFrontmatterValues(updates: Record<string, string>, skipRevUpdate = false): Promise<void> {
@@ -163,9 +223,20 @@ export class ContactData {
 
     // Check if any values have actually changed
     let hasChanges = false;
+    const keyMapping: Record<string, string> = {}; // Maps update keys to actual frontmatter keys
+    
     for (const [key, value] of Object.entries(updates)) {
-      const currentValue = frontmatter[key];
-      const valuesMatch = currentValue === value;
+      // Find the actual key in frontmatter (case-insensitive)
+      const actualKey = this.findFrontmatterKey(frontmatter, key);
+      if (actualKey) {
+        keyMapping[key] = actualKey;
+      } else {
+        keyMapping[key] = key; // New key, use as-is
+      }
+      
+      const currentValue = actualKey ? frontmatter[actualKey] : undefined;
+      const fieldType = this.extractFieldType(key);
+      const valuesMatch = this.valuesAreEqual(currentValue, value, fieldType);
       console.debug(`[ContactData] Checking ${key}: current="${currentValue}", new="${value}", match=${valuesMatch}`);
       if (!valuesMatch) {
         hasChanges = true;
@@ -180,6 +251,14 @@ export class ContactData {
 
     // Apply all updates
     for (const [key, value] of Object.entries(updates)) {
+      const actualKey = keyMapping[key];
+      
+      // If the actual key is different from the new key (case difference), remove the old one
+      if (actualKey !== key && actualKey in frontmatter) {
+        console.debug(`[ContactData] Removing old key with different case: ${actualKey}`);
+        delete frontmatter[actualKey];
+      }
+      
       if (value === '') {
         console.debug(`[ContactData] Deleting key: ${key}`);
         delete frontmatter[key];
