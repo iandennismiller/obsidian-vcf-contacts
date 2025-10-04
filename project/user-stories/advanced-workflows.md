@@ -87,4 +87,4 @@ Stories related to complex workflows, bulk operations, and system integration.
 ---
 
 **Related Specifications**: 
-- [Curator Pipeline Specification](../specifications/curator-pipeline-spec.md)
+- [Curator Pipeline Specification](../specifications/curator-pipeline.md)

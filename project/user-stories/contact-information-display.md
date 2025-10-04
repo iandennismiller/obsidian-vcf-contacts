@@ -607,4 +607,4 @@ This parsing method works within the existing Contact Section Sync feature:
 ---
 
 **Related Specifications**: 
-- [Contact Section Specification](../specifications/contact-section-spec.md)
+- [Contact Section Specification](../specifications/contact-section.md)

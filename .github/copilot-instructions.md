@@ -26,19 +26,9 @@ User-facing and developer-facing documentation:
 - **Development Guides**: Architecture, setup, testing, contributing
 - **Demo Data**: Example contact files for testing
 
-### `/project` - Project Management and Specifications
+### `/project` - Project Management
 
 Internal project documentation:
-
-#### `/project/specifications` - Technical Specifications
-Technical specifications describing **how** the system works:
-- `library-integration-spec.md` - External library usage (marked, vcard4, yaml)
-- `relationship-management-spec.md` - Bidirectional relationship sync
-- `contact-section-spec.md` - Contact section parsing and display
-- `vcf-sync-spec.md` - VCF file synchronization
-- `gender-processing-spec.md` - Gender-aware relationship rendering
-- `curator-pipeline-spec.md` - Processor pipeline architecture
-- `vcard-format-spec.md` - vCard 4.0 format reference
 
 #### `/project/user-stories` - User Stories
 User stories describing **what** users want to accomplish:
@@ -56,7 +46,10 @@ Multi-stage implementation plans for complex features
 #### `/project/references` - Third-Party References
 Documentation for external libraries and APIs (vCard specs, Obsidian API)
 
-**Usage**: When working on a feature, first check user stories to understand what users need, then check specifications for implementation details.
+#### `/project/specifications` - Technical Specifications
+Technical specifications describing **what** the system does and expected outcomes
+
+**Usage**: When working on a feature, first check user stories to understand what users need, then check `/project/specifications/` for technical details.
 
 ## Setup Instructions
 

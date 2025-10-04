@@ -153,4 +153,4 @@ Test scenarios simulating user workflows:
 ---
 
 **Related Specifications**: 
-- [External Integration Specification](../specifications/external-integration-spec.md)
+- [vdirsyncer UI Mockup](../specifications/vdirsyncer-ui-mockup.md)

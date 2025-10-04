@@ -48,7 +48,7 @@ YAML parsing library documentation:
 
 - [Architecture](../docs/development/architecture.md) - Details on how these libraries are integrated
 - [Development](../docs/development/) - Development documentation
-- [Specifications](../docs/specifications.md) - Technical specifications
+- [Specifications](../specifications/) - Technical specifications
 
 ## External Links
 

@@ -2,13 +2,13 @@
 
 ## Overview
 
-This specification covers the synchronization between Obsidian contact notes and vCard (VCF) files.
+This specification covers synchronization between Obsidian contact notes and vCard (VCF) files.
 
 ## Sync Modes
 
 ### Single VCF File Mode
 
-All contacts are stored in a single VCF file:
+All contacts stored in a single VCF file:
 - Changes to any contact trigger a full file rewrite
 - All contacts in the file are re-synced on plugin load
 - REV field tracking prevents unnecessary updates
@@ -35,14 +35,14 @@ The plugin can monitor a folder for VCF file changes:
 
 When contact notes change:
 1. Parse frontmatter to extract vCard fields
-2. Use vcard4 library to generate compliant VCF
+2. Generate compliant VCF
 3. Write to configured VCF location
 4. Only write if data actually changed (check REV field)
 
 ### VCF → Obsidian Import
 
 When VCF files change:
-1. Use vcard4 library to parse VCF file
+1. Parse VCF file
 2. Map vCard fields to frontmatter format
 3. Update or create contact note
 4. Preserve existing markdown content
@@ -50,9 +50,8 @@ When VCF files change:
 
 ## Field Mapping
 
-The plugin maps between vCard fields and Obsidian frontmatter:
-
 ### Standard Fields
+
 - `FN` → `FN` (Full Name)
 - `N` → `N.GN`, `N.FN`, etc. (Name components)
 - `EMAIL` → `EMAIL.WORK`, `EMAIL.HOME`, `EMAIL.0`, etc.
@@ -62,13 +61,10 @@ The plugin maps between vCard fields and Obsidian frontmatter:
 - `REV` → `REV` (Revision timestamp)
 - `GENDER` → `GENDER` (Gender field)
 
-**Technical Note**: The flat library handles the conversion between nested vCard structures and flat frontmatter using dot notation.
-
 ### Relationship Fields
+
 - `RELATED` → `RELATED.type`, `RELATED.type.0`, etc. with UID-based values
 - Bidirectional sync ensures reciprocal relationships
-
-**Technical Note**: The vcard4 library parses RELATED fields from vCard format, and the flat library converts them to dot notation in frontmatter.
 
 ## Conflict Resolution
 
@@ -89,7 +85,7 @@ The sync process handles various error conditions:
 - File system errors (retry with backoff)
 - Network errors for remote VCF sources
 
-## Performance
+## Performance Optimization
 
 Sync operations are optimized for efficiency:
 - Only sync changed contacts (REV field tracking)
@@ -97,9 +93,3 @@ Sync operations are optimized for efficiency:
 - Debounce file system events
 - Background processing to avoid blocking UI
 - Progress indicators for long operations
-
-## Related Specifications
-
-- [vCard Format Specification](vcard-format-spec.md)
-- [Library Integration Specification](library-integration-spec.md)
-- [Relationship Management Specification](relationship-management-spec.md)

@@ -40,7 +40,7 @@ Run periodically for data quality:
 
 ## Sequential Execution
 
-Processors must run sequentially to prevent data loss:
+Processors must run sequentially to prevent data loss.
 
 ### The Problem
 
@@ -59,32 +59,6 @@ Processors run in sequence:
 3. Processor B reads contact data (including A's changes)
 4. Processor B makes changes, writes contact
 5. **Result**: Both changes are preserved!
-
-## Processor Interface
-
-Each processor implements the CuratorProcessor interface:
-
-```typescript
-interface CuratorProcessor {
-  name: string;
-  runType: RunType;
-  dependencies?: string[];
-  
-  process(contact: ContactNote): Promise<ProcessResult | undefined>;
-}
-```
-
-### Process Method
-
-Returns `ProcessResult` if changes were made, `undefined` if no changes needed.
-
-```typescript
-interface ProcessResult {
-  success: boolean;
-  message?: string;
-  changes?: FieldChange[];
-}
-```
 
 ## Standard Processors
 
@@ -170,8 +144,3 @@ The curator pipeline guarantees:
 3. **Deterministic Results**: Same input produces same output
 4. **No Data Loss**: All processor changes are preserved
 5. **Idempotence**: Running processors multiple times is safe
-
-## Related Specifications
-
-- [Relationship Management Specification](relationship-management-spec.md)
-- [Gender Processing Specification](gender-processing-spec.md)

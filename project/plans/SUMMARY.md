@@ -36,11 +36,11 @@ ADR.HOME.STREET: 123 Main St
 ## Files Updated
 
 ### Specifications (`project/specifications/`)
-- ✅ `relationship-management-spec.md` - Array indexing examples
-- ✅ `contact-section-spec.md` - All field examples and parsing documentation
-- ✅ `vcf-sync-spec.md` - Field mapping examples
-- ✅ `gender-processing-spec.md` - Relationship examples
-- ✅ `vcard-format-spec.md` - RELATED field table and examples
+- ✅ `relationship-management.md` - Array indexing examples
+- ✅ `contact-section.md` - All field examples and parsing documentation
+- ✅ `vcf-sync.md` - Field mapping examples
+- ✅ `gender-processing.md` - Relationship examples
+- ✅ `vcard-format.md` - RELATED field table and examples
 
 ### User Documentation (`docs/`)
 - ✅ `docs/demo-data/README.md` - Examples in feature documentation

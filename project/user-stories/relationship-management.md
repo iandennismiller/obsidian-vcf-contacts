@@ -53,5 +53,5 @@ Stories related to creating, managing, and synchronizing contact relationships.
 ---
 
 **Related Specifications**: 
-- [Relationship Management Specification](../specifications/relationship-management-spec.md)
-- [Gender Processing Specification](../specifications/gender-processing-spec.md)
+- [Relationship Management Specification](../specifications/relationship-management.md)
+- [Gender Processing Specification](../specifications/gender-processing.md)

@@ -41,5 +41,5 @@ Stories related to creating and managing individual contact data.
 ---
 
 **Related Specifications**: 
-- [VCF Sync Specification](../specifications/vcf-sync-spec.md)
-- [Gender Processing Specification](../specifications/gender-processing-spec.md)
+- [VCF Sync Specification](../specifications/vcf-sync.md)
+- [Gender Processing Specification](../specifications/gender-processing.md)

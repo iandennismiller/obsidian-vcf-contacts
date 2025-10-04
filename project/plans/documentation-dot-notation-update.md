@@ -17,9 +17,9 @@ This means much of the custom parsing logic described in older documentation has
 ### Files Using Bracket Notation (Old)
 
 **Specifications:**
-- `project/specifications/vcf-sync-spec.md` - References `RELATED[type]`
-- `project/specifications/gender-processing-spec.md` - References `RELATED[parent]`
-- `project/specifications/contact-section-spec.md` - References `EMAIL[WORK]`, `TEL[HOME]`, etc.
+- `project/specifications/vcf-sync.md` - References `RELATED[type]`
+- `project/specifications/gender-processing.md` - References `RELATED[parent]`
+- `project/specifications/contact-section.md` - References `EMAIL[WORK]`, `TEL[HOME]`, etc.
 
 **Documentation:**
 - `docs/demo-data/README.md` - Mixed notation (shows bracket in some examples)
@@ -56,26 +56,26 @@ The issue is **NOT just in documentation** - the implementation itself needs to 
 ### Phase 2: Update Specifications ✅ COMPLETE
 Remove descriptions of custom key generation logic that is now handled by libraries:
 
-1. **relationship-management-spec.md** ✅
+1. **relationship-management.md** ✅
    - ✅ Updated to show complete array indexing examples with dot notation
    - ✅ References flat library for array indexing
    
-2. **contact-section-spec.md** ✅
+2. **contact-section.md** ✅
    - ✅ Removed bracket notation examples
    - ✅ Updated to show dot notation throughout
    - ✅ Updated all parsing examples to use dot notation
    - ✅ References flat library for flattening
    - ✅ Updated VCF field mapping examples
    
-3. **vcf-sync-spec.md** ✅
+3. **vcf-sync.md** ✅
    - ✅ Updated field mapping examples to dot notation
    - ✅ Added technical notes about library integration
    
-4. **gender-processing-spec.md** ✅
+4. **gender-processing.md** ✅
    - ✅ Updated examples to use dot notation
    - ✅ Added technical note about yaml library
    
-5. **vcard-format-spec.md** ✅
+5. **vcard-format.md** ✅
    - ✅ Updated RELATED field examples
    - ✅ Added multiple relationship examples with proper indexing
 
@@ -142,24 +142,24 @@ All documentation has been updated to consistently use YAML-compatible dot notat
 
 ### Files Updated
 
-1. **project/specifications/relationship-management-spec.md**
+1. **project/specifications/relationship-management.md**
    - Updated array indexing examples to show complete syntax (RELATED.friend.0, RELATED.friend.1, etc.)
    
-2. **project/specifications/contact-section-spec.md**
+2. **project/specifications/contact-section.md**
    - Replaced all bracket notation with dot notation
    - Updated parsing examples (EMAIL.WORK, TEL.CELL, etc.)
    - Updated auto-indexing documentation to reference flat library
    - Updated VCF field mapping examples
    
-3. **project/specifications/vcf-sync-spec.md**
+3. **project/specifications/vcf-sync.md**
    - Updated field mapping examples to dot notation
    - Added technical notes about library integration
    
-4. **project/specifications/gender-processing-spec.md**
+4. **project/specifications/gender-processing.md**
    - Updated examples from RELATED[parent] to RELATED.parent
    - Added technical note about yaml library handling serialization
    
-5. **project/specifications/vcard-format-spec.md**
+5. **project/specifications/vcard-format.md**
    - Updated RELATED field table with proper dot notation examples
    - Added multiple relationship indexing examples
    

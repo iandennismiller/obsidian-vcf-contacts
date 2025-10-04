@@ -2,7 +2,7 @@
 
 ## Overview
 
-This specification covers gender-aware relationship processing in the plugin. The system stores genderless relationship types internally but renders them with gender-specific terms based on the GENDER field.
+The Gender Processing feature stores genderless relationship types internally but renders them with gender-specific terms based on the GENDER field.
 
 ## Gender Field
 
@@ -43,7 +43,8 @@ The plugin stores relationship types in a genderless form in frontmatter and vCa
 | spouse         | husband  | wife       | spouse          | spouse      |
 | grandparent    | grandfather | grandmother | grandparent  | grandparent |
 | grandchild     | grandson | granddaughter | grandchild    | grandchild  |
-| kin            | uncle/nephew | aunt/niece | kin           | kin         |
+| aunt-uncle     | uncle    | aunt       | aunt-uncle      | aunt-uncle  |
+| niece-nephew   | nephew   | niece      | niece-nephew    | niece-nephew|
 
 ## Gender Inference
 
@@ -71,15 +72,13 @@ When a user specifies a gendered relationship term, the plugin infers the contac
 
 ### Inference Process
 
-1. User adds gendered term to Related list: `- mother [[Jane Doe]]`
-2. Plugin identifies gendered term "mother"
-3. Plugin infers Jane's gender: `F`
-4. Plugin updates Jane's frontmatter: `GENDER: F`
-5. Plugin converts relationship to genderless type: `parent`
-6. Plugin stores in frontmatter using dot notation: `RELATED.parent: urn:uuid:jane-uid-456`
-7. Plugin updates REV field on Jane's contact
-
-**Technical Note**: The yaml library handles serialization of the frontmatter using dot notation.
+When a gendered term is used in the Related list:
+1. Identify gendered term (e.g., "mother")
+2. Infer contact's gender (e.g., `F`)
+3. Update contact's GENDER field in frontmatter
+4. Convert relationship to genderless type (e.g., "parent")
+5. Store in frontmatter using genderless type
+6. Update REV field on the contact
 
 ## Bidirectional Consistency
 
@@ -103,13 +102,13 @@ When user edits Related list:
 
 ## Complex Relationships
 
-Some relationship terms include prefixes or modifiers:
+Relationship terms with prefixes or modifiers:
 - mother-in-law, father-in-law
 - step-mother, step-father
 - half-brother, half-sister
 - adopted-son, adopted-daughter
 
-These are handled by:
+Handled by:
 1. Extracting the base relationship term
 2. Preserving the modifier/prefix
 3. Applying gender inference to base term
@@ -121,7 +120,3 @@ Gender changes trigger REV field updates:
 - When GENDER is inferred from relationship term
 - When GENDER is explicitly changed
 - REV only updates if GENDER value actually changes
-
-## Related Specifications
-
-- [Relationship Management Specification](relationship-management-spec.md)

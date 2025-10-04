@@ -6,10 +6,10 @@ This directory contains project-level documentation for development, planning, a
 
 ### `/specifications` - Technical Specifications
 
-Technical specifications describe **how** the system implements features. These documents include:
-- Implementation details and algorithms
-- Data structures and interfaces
+Technical specifications describing **what** the system does and the **outcomes** it achieves, without prescribing implementation details. These documents include:
 - Field formats and validation rules
+- Data structures and mappings
+- Expected behaviors and outcomes
 - API contracts and protocols
 
 See [specifications/README.md](specifications/README.md) for the complete specification index.
@@ -52,9 +52,11 @@ When working on a feature:
 
 - **`/docs`**: User-facing and general developer documentation
 - **`/project`**: Project-level documentation for contributors and maintainers
+  - **`/project/specifications/`**: Technical specifications (what the system does)
 
 User guides, getting started, and feature overviews belong in `/docs`.  
-Technical specs, user stories, and implementation plans belong in `/project`.
+Technical specifications belong in `/project/specifications/`.
+User stories and implementation plans belong in `/project`.
 
 ## Contributing
 
