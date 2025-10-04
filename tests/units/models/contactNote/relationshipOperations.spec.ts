@@ -361,10 +361,10 @@ UID: test-123
       expect(relationships[1].key).toBe('RELATED.friend.1');
       expect(relationships[1].value).toBe('name:Bob Smith');
       expect(consoleDebugSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Auto-corrected malformed RELATED.friend[0] to RELATED.friend')
+        expect.stringContaining('Parsed RELATED.friend')
       );
       expect(consoleDebugSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Auto-corrected malformed RELATED.friend[1] to RELATED.friend.1')
+        expect.stringContaining('Parsed RELATED.friend.1')
       );
       
       consoleDebugSpy.mockRestore();
@@ -421,7 +421,7 @@ UID: test-123
       consoleDebugSpy.mockRestore();
     });
 
-    it('should auto-correct RELATED.friend with object containing string values', async () => {
+    it('should handle RELATED.friend with object containing string values', async () => {
       const consoleDebugSpy = vi.spyOn(console, 'debug').mockImplementation(() => {});
       
       const frontmatter = {
@@ -438,7 +438,7 @@ UID: test-123
       expect(relationships[0].key).toBe('RELATED.friend.name');
       expect(relationships[0].value).toBe('name:Jane Doe');
       expect(consoleDebugSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Auto-corrected malformed RELATED.friend.name to RELATED.friend.name')
+        expect.stringContaining('Parsed RELATED.friend.name')
       );
       
       consoleDebugSpy.mockRestore();

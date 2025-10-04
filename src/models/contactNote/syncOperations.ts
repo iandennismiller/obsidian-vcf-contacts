@@ -130,18 +130,18 @@ export class SyncOperations {
               resolvedContact.name
             );
             
-            // Use indexed RELATED fields for multiple relationships of the same type
+            // Use dot notation for RELATED fields
             const key = currentIndex === 0 
-              ? `RELATED[${genderlessType}]`
-              : `RELATED[${currentIndex}:${genderlessType}]`;
+              ? `RELATED.${genderlessType}`
+              : `RELATED.${genderlessType}.${currentIndex}`;
             
             console.debug(`[SyncOperations]   Generated key: ${key}`);
             frontmatterUpdates[key] = relatedValue;
           } else {
             // Keep unresolved relationships as name references
             const key = currentIndex === 0 
-              ? `RELATED[${genderlessType}]`
-              : `RELATED[${currentIndex}:${genderlessType}]`;
+              ? `RELATED.${genderlessType}`
+              : `RELATED.${genderlessType}.${currentIndex}`;
             
             console.debug(`[SyncOperations]   Generated key (unresolved): ${key}`);
             frontmatterUpdates[key] = `name:${relationship.contactName}`;

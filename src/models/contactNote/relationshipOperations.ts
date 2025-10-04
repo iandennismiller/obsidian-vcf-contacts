@@ -121,7 +121,7 @@ export class RelationshipOperations extends BaseMarkdownSectionOperations {
           // Process each property as a separate relationship
           for (const [nestedKey, nestedValue] of Object.entries(value)) {
             if (typeof nestedValue === 'string') {
-              const correctedKey = `RELATED[${nestedKey}]`;
+              const correctedKey = `RELATED.${nestedKey}`;
               const type = nestedKey;
               const parsedValue = this.parseRelatedValue(nestedValue);
               
@@ -132,13 +132,13 @@ export class RelationshipOperations extends BaseMarkdownSectionOperations {
                 parsedValue: parsedValue || undefined
               });
               
-              console.debug(`[RelationshipOperations] Auto-corrected malformed RELATED.${nestedKey} to RELATED[${nestedKey}]`);
+              console.debug(`[RelationshipOperations] Parsed RELATED.${nestedKey}`);
             } else if (Array.isArray(nestedValue)) {
               // Handle arrays in RELATED object - convert to indexed format
               for (let i = 0; i < nestedValue.length; i++) {
                 const arrayValue = nestedValue[i];
                 if (typeof arrayValue === 'string') {
-                  const correctedKey = i === 0 ? `RELATED[${nestedKey}]` : `RELATED[${i}:${nestedKey}]`;
+                  const correctedKey = i === 0 ? `RELATED.${nestedKey}` : `RELATED.${nestedKey}.${i}`;
                   const parsedValue = this.parseRelatedValue(arrayValue);
                   
                   relationships.push({
@@ -148,7 +148,7 @@ export class RelationshipOperations extends BaseMarkdownSectionOperations {
                     parsedValue: parsedValue || undefined
                   });
                   
-                  console.debug(`[RelationshipOperations] Auto-corrected malformed RELATED.${nestedKey}[${i}] to ${correctedKey}`);
+                  console.debug(`[RelationshipOperations] Parsed RELATED.${nestedKey}${i > 0 ? '.' + i : ''}`);
                 }
               }
             }
@@ -156,7 +156,7 @@ export class RelationshipOperations extends BaseMarkdownSectionOperations {
           continue;
         }
         
-        // Handle RELATED.type format (dot notation as a key) - convert to RELATED[type]
+        // Handle RELATED.type format (dot notation as a key)
         if (key.includes('.') && key !== 'RELATED') {
           // Extract the type from RELATED.type or RELATED.x.y format
           const parts = key.split('.');
@@ -164,25 +164,24 @@ export class RelationshipOperations extends BaseMarkdownSectionOperations {
             const typePart = parts.slice(1).join('.');
             
             if (typeof value === 'string') {
-              const correctedKey = `RELATED[${typePart}]`;
               const parsedValue = this.parseRelatedValue(value);
               
               relationships.push({
-                key: correctedKey,
+                key: key,
                 type: typePart,
                 value: value,
                 parsedValue: parsedValue || undefined
               });
               
-              console.debug(`[RelationshipOperations] Auto-corrected malformed ${key} to RELATED[${typePart}]`);
+              console.debug(`[RelationshipOperations] Parsed ${key}`);
               continue;
             } else if (Array.isArray(value)) {
-              // Handle array of relationships - convert to indexed RELATED[n:type] format
+              // Handle array of relationships - convert to indexed format
               for (let i = 0; i < value.length; i++) {
                 const arrayValue = value[i];
                 if (typeof arrayValue === 'string') {
-                  // Use RELATED[type] for first item, RELATED[n:type] for subsequent items
-                  const correctedKey = i === 0 ? `RELATED[${typePart}]` : `RELATED[${i}:${typePart}]`;
+                  // Use RELATED.type for first item, RELATED.type.n for subsequent items
+                  const correctedKey = i === 0 ? `RELATED.${typePart}` : `RELATED.${typePart}.${i}`;
                   const parsedValue = this.parseRelatedValue(arrayValue);
                   
                   relationships.push({
@@ -192,7 +191,7 @@ export class RelationshipOperations extends BaseMarkdownSectionOperations {
                     parsedValue: parsedValue || undefined
                   });
                   
-                  console.debug(`[RelationshipOperations] Auto-corrected malformed ${key}[${i}] to ${correctedKey}`);
+                  console.debug(`[RelationshipOperations] Parsed ${correctedKey}`);
                 }
               }
               continue;
@@ -203,17 +202,16 @@ export class RelationshipOperations extends BaseMarkdownSectionOperations {
                 if (typeof nestedValue === 'string') {
                   // Create a combined type from the path
                   const combinedType = `${typePart}.${nestedKey}`;
-                  const correctedKey = `RELATED[${combinedType}]`;
                   const parsedValue = this.parseRelatedValue(nestedValue);
                   
                   relationships.push({
-                    key: correctedKey,
+                    key: `RELATED.${combinedType}`,
                     type: combinedType,
                     value: nestedValue,
                     parsedValue: parsedValue || undefined
                   });
                   
-                  console.debug(`[RelationshipOperations] Auto-corrected malformed ${key}.${nestedKey} to RELATED[${combinedType}]`);
+                  console.debug(`[RelationshipOperations] Parsed RELATED.${combinedType}`);
                 }
               }
               continue;
@@ -225,7 +223,7 @@ export class RelationshipOperations extends BaseMarkdownSectionOperations {
               } else if (Array.isArray(value)) {
                 valueType = 'array';
               }
-              console.warn(`[RelationshipOperations] Skipping malformed RELATED key "${key}": Use RELATED[type] format instead. Value type: ${valueType}`);
+              console.warn(`[RelationshipOperations] Skipping malformed RELATED key "${key}": Use RELATED.type format. Value type: ${valueType}`);
               continue;
             }
           }
@@ -284,10 +282,18 @@ export class RelationshipOperations extends BaseMarkdownSectionOperations {
 
   /**
    * Extract relationship type from RELATED key format
+   * Supports both dot notation (RELATED.type, RELATED.type.1) and legacy bracket notation
    */
   extractRelationshipType(key: string): string {
-    const typeMatch = key.match(/RELATED(?:\[(?:\d+:)?([^\]]+)\])?/);
-    return typeMatch ? typeMatch[1] || 'related' : 'related';
+    // Try dot notation first (RELATED.type or RELATED.type.1)
+    const dotMatch = key.match(/^RELATED\.([^.]+)(?:\.\d+)?$/);
+    if (dotMatch) {
+      return dotMatch[1];
+    }
+    
+    // Fall back to bracket notation for backward compatibility
+    const bracketMatch = key.match(/RELATED(?:\[(?:\d+:)?([^\]]+)\])?/);
+    return bracketMatch ? bracketMatch[1] || 'related' : 'related';
   }
 
   // === Contact Resolution (co-located with relationship operations) ===

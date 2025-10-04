@@ -130,17 +130,17 @@ export const RelatedOtherProcessor: CuratorProcessor = {
       existingUpdates: Record<string, string>,
       currentFrontmatter: Record<string, any>
     ): string => {
-      const baseKey = `RELATED[${relationshipType}]`;
+      const baseKey = `RELATED.${relationshipType}`;
       let key = baseKey;
       
       // If base key exists, use indexed format
       if (currentFrontmatter[baseKey] || existingUpdates[baseKey]) {
         let index = 1;
-        key = `RELATED[${index}:${relationshipType}]`;
+        key = `RELATED.${relationshipType}.${index}`;
         
         while (currentFrontmatter[key] || existingUpdates[key]) {
           index++;
-          key = `RELATED[${index}:${relationshipType}]`;
+          key = `RELATED.${relationshipType}.${index}`;
         }
       }
       
