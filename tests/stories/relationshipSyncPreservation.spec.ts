@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { App, TFile } from 'obsidian';
+import { parse as parseYaml } from 'yaml';
 import { ContactsPluginSettings } from 'src/plugin/settings';
 import { RelatedListProcessor } from '../../src/curators/relatedList';
 import { RelatedFrontMatterProcessor } from '../../src/curators/relatedFrontMatter';
@@ -113,15 +114,7 @@ FN: Bob Jones
       const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
       if (frontmatterMatch) {
         try {
-          const yaml = frontmatterMatch[1];
-          const frontmatter: any = {};
-          const lines = yaml.split('\n');
-          lines.forEach(line => {
-            const match = line.match(/^([^:]+?):\s*(.+)$/);
-            if (match) {
-              frontmatter[match[1].trim()] = match[2].trim();
-            }
-          });
+          const frontmatter = parseYaml(frontmatterMatch[1]) ?? {};
           return { frontmatter };
         } catch (error) {
           return null;
@@ -138,16 +131,7 @@ FN: Bob Jones
       const frontmatterMatch = newContent.match(/^---\n([\s\S]*?)\n---/);
       if (frontmatterMatch) {
         const frontmatterText = frontmatterMatch[1];
-        const lines = frontmatterText.split('\n');
-        updatedFrontmatter = {};
-        lines.forEach(line => {
-          const match = line.match(/^"?([^":]+(?:\[[^\]]*\])?)"?:\s*(.+)$/);
-          if (match) {
-            const key = match[1].trim();
-            const value = match[2].trim();
-            updatedFrontmatter[key] = value;
-          }
-        });
+        updatedFrontmatter = parseYaml(frontmatterText) ?? {};
       }
       return Promise.resolve();
     });
@@ -229,15 +213,7 @@ FN: Diana White
       const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
       if (frontmatterMatch) {
         try {
-          const yaml = frontmatterMatch[1];
-          const frontmatter: any = {};
-          const lines = yaml.split('\n');
-          lines.forEach(line => {
-            const match = line.match(/^([^:]+?):\s*(.+)$/);
-            if (match) {
-              frontmatter[match[1].trim()] = match[2].trim();
-            }
-          });
+          const frontmatter = parseYaml(frontmatterMatch[1]) ?? {};
           return { frontmatter };
         } catch (error) {
           return null;
@@ -254,16 +230,7 @@ FN: Diana White
       const frontmatterMatch = newContent.match(/^---\n([\s\S]*?)\n---/);
       if (frontmatterMatch) {
         const frontmatterText = frontmatterMatch[1];
-        const lines = frontmatterText.split('\n');
-        updatedFrontmatter = {};
-        lines.forEach(line => {
-          const match = line.match(/^"?([^":]+(?:\[[^\]]*\])?)"?:\s*(.+)$/);
-          if (match) {
-            const key = match[1].trim();
-            const value = match[2].trim();
-            updatedFrontmatter[key] = value;
-          }
-        });
+        updatedFrontmatter = parseYaml(frontmatterText) ?? {};
       }
       return Promise.resolve();
     });
@@ -350,15 +317,7 @@ FN: Charlie Wilson
       const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
       if (frontmatterMatch) {
         try {
-          const yaml = frontmatterMatch[1];
-          const frontmatter: any = {};
-          const lines = yaml.split('\n');
-          lines.forEach(line => {
-            const match = line.match(/^([^:]+?):\s*(.+)$/);
-            if (match) {
-              frontmatter[match[1].trim()] = match[2].trim();
-            }
-          });
+          const frontmatter = parseYaml(frontmatterMatch[1]) ?? {};
           return { frontmatter };
         } catch (error) {
           return null;
@@ -439,15 +398,7 @@ FN: Frank Miller
       const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
       if (frontmatterMatch) {
         try {
-          const yaml = frontmatterMatch[1];
-          const frontmatter: any = {};
-          const lines = yaml.split('\n');
-          lines.forEach(line => {
-            const match = line.match(/^([^:]+?):\s*(.+)$/);
-            if (match) {
-              frontmatter[match[1].trim()] = match[2].trim();
-            }
-          });
+          const frontmatter = parseYaml(frontmatterMatch[1]) ?? {};
           return { frontmatter };
         } catch (error) {
           return null;
@@ -553,15 +504,7 @@ FN: Kevin Singh
       const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
       if (frontmatterMatch) {
         try {
-          const yaml = frontmatterMatch[1];
-          const frontmatter: any = {};
-          const lines = yaml.split('\n');
-          lines.forEach(line => {
-            const match = line.match(/^([^:]+?):\s*(.+)$/);
-            if (match) {
-              frontmatter[match[1].trim()] = match[2].trim();
-            }
-          });
+          const frontmatter = parseYaml(frontmatterMatch[1]) ?? {};
           return { frontmatter };
         } catch (error) {
           return null;

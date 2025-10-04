@@ -1,8 +1,63 @@
-# Documentation Update Summary
+# Project Plans Summary
+
+## Active Plans
+
+### 1. Frontmatter YAML Migration ✅ COMPLETE
+**File**: `frontmatter-yaml-migration.md`  
+**Status**: All 3 Phases Complete  
+**Goal**: Eliminate manual regex parsing of frontmatter in favor of the YAML library
+
+**Key Finding**: Production code already uses YAML correctly! The opportunity was in simplifying test code.
+
+**Completed Work**:
+- ✅ Phase 1: Comprehensive analysis and planning
+- ✅ Phase 2: Replaced 15 instances of manual parsing (~195 line reduction)
+- ✅ Phase 3: Updated documentation and added library references
+
+**Results**:
+- Simplified test code from ~250 lines of regex to ~15 lines using `parseYaml()`
+- Enhanced specifications with yaml/flat library references
+- Added JSDoc comments explaining library usage in source code
+- All tests now use same robust parsing as production code
+
+### 2. Documentation Dot Notation Update ✅ COMPLETE
+**File**: `documentation-dot-notation-update.md`  
+**Status**: Complete  
+**Goal**: Update all documentation to use YAML-compatible dot notation
 
 ## Overview
 
-This update ensures all project documentation consistently uses YAML-compatible dot notation instead of the deprecated bracket notation for structured frontmatter keys.
+This directory contains implementation plans for multi-phase projects and migrations.
+
+## Frontmatter Strategy
+
+The project uses a **YAML-first approach** for frontmatter handling:
+
+1. **Libraries Used**:
+   - `yaml` (v2.8.1): Parse and stringify YAML content
+   - `flat` (v6.0.1): Flatten/unflatten objects with dot notation
+
+2. **Current Pattern** (Production Code):
+   ```typescript
+   // ✅ CORRECT: Extract YAML block with regex, parse with yaml library
+   const match = content.match(/^---\n([\s\S]*?)\n---/);
+   const frontmatter = parseYaml(match[1]) ?? {};
+   
+   // ✅ CORRECT: Generate frontmatter with yaml library
+   const yaml = stringifyYaml(frontmatter);
+   const newContent = `---\n${yaml}---\n${body}`;
+   ```
+
+3. **Dot Notation** (Standard):
+   - Use `RELATED.spouse` instead of `RELATED[spouse]`
+   - Use `EMAIL.WORK` instead of `EMAIL[WORK]`
+   - The `flat` library handles this automatically
+
+4. **Migration Goal**:
+   - Source code: ✅ Already using YAML library correctly
+   - Test code: ❌ Still has manual parsing → needs migration to `parseYaml()`
+
+See `frontmatter-yaml-migration.md` for detailed analysis.
 
 ## What Changed
 

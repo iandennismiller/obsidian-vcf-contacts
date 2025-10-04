@@ -142,6 +142,17 @@ ADR.0.STREET: 456 Main St
 ADR.0.LOCALITY: Springfield
 ```
 
+### Library Integration
+
+Frontmatter handling uses the **yaml** library for parsing and generation:
+
+- **Parsing**: `parseYaml()` converts YAML text to JavaScript objects
+- **Generation**: `stringifyYaml()` converts objects to YAML text
+- **Dot Notation**: The yaml library natively supports keys with dots (e.g., `EMAIL.WORK`)
+- **Type Safety**: Preserves types (strings, numbers, booleans, null)
+
+See [Library Integration Specification](library-integration.md#yaml-processing-yaml) for details.
+
 ## Display Format
 
 ### Automatic Emoji Prefixes

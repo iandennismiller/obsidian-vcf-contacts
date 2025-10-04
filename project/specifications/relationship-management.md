@@ -45,9 +45,15 @@ If the user specifies a gendered relationship type:
 
 ### Field Format
 
-The value of RELATED fields in frontmatter conforms to this format:
+The value of RELATED fields in vcard 4.0 conforms to this format:
 ```
 RELATED;TYPE=friend:urn:uuid:03a0e51f-d1aa-4385-8a53-e29025acd8af
+```
+
+This could be represented in flat YAML as:
+
+```yaml
+RELATED.friend.0: :urn:uuid:03a0e51f-d1aa-4385-8a53-e29025acd8af
 ```
 
 ### Namespace Formats
@@ -84,6 +90,17 @@ Relationships are ordered deterministically by:
 3. Maintaining stable array indices
 
 This prevents unnecessary changes when relationships are refreshed.
+
+### Library Integration
+
+The RELATED field handling uses the **yaml** and **flat** libraries:
+
+- **yaml**: Parses and generates YAML frontmatter with dot notation keys
+- **flat**: Converts between flat keys (`RELATED.friend.0`) and nested objects
+- **Dot Notation**: Natively supported by both libraries for hierarchical data
+- **Type Safety**: yaml library preserves value types and handles special characters
+
+See [Library Integration Specification](library-integration.md) for details on yaml and flat library usage.
 
 ## Gender Support
 

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { App, TFile } from 'obsidian';
+import { parse as parseYaml } from 'yaml';
 import { ContactNote } from '../../src/models/contactNote';
 import { ContactsPluginSettings } from 'src/plugin/settings';
 import { RelatedListProcessor } from '../../src/curators/relatedList';
@@ -127,15 +128,7 @@ FN: Bob Jones
       const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
       if (frontmatterMatch) {
         try {
-          const yaml = frontmatterMatch[1];
-          const frontmatter: any = {};
-          const lines = yaml.split('\n');
-          lines.forEach(line => {
-            const match = line.match(/^([^:]+?):\s*(.+)$/);
-            if (match) {
-              frontmatter[match[1].trim()] = match[2].trim();
-            }
-          });
+          const frontmatter = parseYaml(frontmatterMatch[1]) ?? {};
           console.log(`[TEST] metadataCache.getFileCache for ${file.path}, keys: ${Object.keys(frontmatter).join(', ')}`);
           return { frontmatter };
         } catch (error) {
@@ -178,19 +171,7 @@ FN: Bob Jones
       if (frontmatterMatch) {
         const frontmatterText = frontmatterMatch[1];
         console.log(`[TEST] Parsing frontmatter: ${frontmatterText.substring(0, 200)}`);
-        const lines = frontmatterText.split('\n');
-        updatedFrontmatter = {}; // Reset for each modify call
-        lines.forEach(line => {
-          // Match key: value, handling both regular keys and quoted keys (with brackets)
-          // Handles: key: value OR "key": value OR "key[bracket]": value
-          const match = line.match(/^"?([^":]+(?:\[[^\]]*\])?)"?:\s*(.+)$/);
-          if (match) {
-            const key = match[1].trim();
-            const value = match[2].trim();
-            console.log(`[TEST] Parsed frontmatter line: ${key} = ${value}`);
-            updatedFrontmatter[key] = value;
-          }
-        });
+        updatedFrontmatter = parseYaml(frontmatterText) ?? {};
         console.log(`[TEST] Final updatedFrontmatter keys: ${Object.keys(updatedFrontmatter).join(', ')}`);
       } else {
         console.log(`[TEST] No frontmatter found in content - regex didn't match`);
@@ -282,15 +263,7 @@ FN: Diana Evans
           const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
           if (frontmatterMatch) {
             try {
-              const yaml = frontmatterMatch[1];
-              const frontmatter: any = {};
-              const lines = yaml.split('\n');
-              lines.forEach(line => {
-                const match = line.match(/^([^:]+?):\s*(.+)$/);
-                if (match) {
-                  frontmatter[match[1].trim()] = match[2].trim();
-                }
-              });
+              const frontmatter = parseYaml(frontmatterMatch[1]) ?? {};
               return { frontmatter };
             } catch (error) {
               // Fallback to static
@@ -323,17 +296,7 @@ FN: Diana Evans
       const frontmatterMatch = newContent.match(/^---\n([\s\S]*?)\n---/);
       if (frontmatterMatch) {
         const frontmatterText = frontmatterMatch[1];
-        const lines = frontmatterText.split('\n');
-        updatedFrontmatter = {}; // Reset for each modify call
-        lines.forEach(line => {
-          // Match key: value, handling both regular keys and quoted keys (with brackets)
-          const match = line.match(/^"?([^":]+(?:\[[^\]]*\])?)"?:\s*(.+)$/);
-          if (match) {
-            const key = match[1].trim();
-            const value = match[2].trim();
-            updatedFrontmatter[key] = value;
-          }
-        });
+        updatedFrontmatter = parseYaml(frontmatterText) ?? {};
       }
       return Promise.resolve();
     });
@@ -485,17 +448,7 @@ FN: Henry Kim
       const frontmatterMatch = newContent.match(/^---\n([\s\S]*?)\n---/);
       if (frontmatterMatch) {
         const frontmatterText = frontmatterMatch[1];
-        const lines = frontmatterText.split('\n');
-        updatedFrontmatter = {}; // Reset for each modify call
-        lines.forEach(line => {
-          // Match key: value, handling both regular keys and quoted keys (with brackets)
-          const match = line.match(/^"?([^":]+(?:\[[^\]]*\])?)"?:\s*(.+)$/);
-          if (match) {
-            const key = match[1].trim();
-            const value = match[2].trim();
-            updatedFrontmatter[key] = value;
-          }
-        });
+        updatedFrontmatter = parseYaml(frontmatterText) ?? {};
       }
       return Promise.resolve();
     });
@@ -609,15 +562,7 @@ FN: Kelly White
           const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
           if (frontmatterMatch) {
             try {
-              const yaml = frontmatterMatch[1];
-              const frontmatter: any = {};
-              const lines = yaml.split('\n');
-              lines.forEach(line => {
-                const match = line.match(/^([^:]+?):\s*(.+)$/);
-                if (match) {
-                  frontmatter[match[1].trim()] = match[2].trim();
-                }
-              });
+              const frontmatter = parseYaml(frontmatterMatch[1]) ?? {};
               return { frontmatter };
             } catch (error) {
               // Fallback to static
@@ -650,17 +595,7 @@ FN: Kelly White
       const frontmatterMatch = newContent.match(/^---\n([\s\S]*?)\n---/);
       if (frontmatterMatch) {
         const frontmatterText = frontmatterMatch[1];
-        const lines = frontmatterText.split('\n');
-        updatedFrontmatter = {}; // Reset for each modify call
-        lines.forEach(line => {
-          // Match key: value, handling both regular keys and quoted keys (with brackets)
-          const match = line.match(/^"?([^":]+(?:\[[^\]]*\])?)"?:\s*(.+)$/);
-          if (match) {
-            const key = match[1].trim();
-            const value = match[2].trim();
-            updatedFrontmatter[key] = value;
-          }
-        });
+        updatedFrontmatter = parseYaml(frontmatterText) ?? {};
       }
       return Promise.resolve();
     });

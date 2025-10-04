@@ -10,7 +10,15 @@ import { ContactManagerUtils } from "../contactManager/contactManagerUtils";
 
 /**
  * VCard generation operations
- * Uses vcard4 library for RFC 6350 compliant generation
+ * 
+ * Uses external libraries for robust generation and conversion:
+ * - vcard4 library (v4.0.2): RFC 6350 compliant vCard 4.0 generation
+ * - flat library (v6.0.1): Convert flat frontmatter to nested vCard objects
+ * 
+ * The flat library converts dot notation frontmatter to hierarchical structures:
+ * - Example: `ADR.HOME.STREET` becomes nested {ADR: {HOME: {STREET: value}}}
+ * - Enables seamless conversion between Obsidian frontmatter and vCard format
+ * - Bidirectional with parsing (unflatten here, flatten in parsing)
  */
 export class VCardGenerator {
   /**
@@ -95,12 +103,17 @@ export class VCardGenerator {
 
   /**
    * Convert vCard object to VCF string using vcard4 library
-   * Uses unflatten from flat library to convert dot notation to nested structure
+   * 
+   * Uses unflatten from flat library to convert dot notation to nested structure:
+   * - Converts flat keys like `ADR.HOME.STREET` to nested {ADR: {HOME: {STREET: value}}}
+   * - Enables seamless conversion from Obsidian frontmatter to vCard format
+   * - The delimiter '.' matches the standard used in frontmatter and by the yaml library
    */
   static objectToVcf(vCardObject: Record<string, any>): string {
     const properties: any[] = [];
     
-    // Use unflatten to convert dot notation to nested structure
+    // Use flat library's unflatten to convert dot notation to nested structure
+    // This is the inverse of the flatten operation used during VCF import
     const nested = unflatten(vCardObject, { delimiter: '.' }) as Record<string, any>;
     
     // Helper to handle arrays and extract type parameters

@@ -5,7 +5,15 @@ import { createContactSlug } from '../contactNote';
 
 /**
  * VCard parsing operations
- * Uses vcard4 library for RFC 6350 compliant parsing
+ * 
+ * Uses external libraries for robust parsing and conversion:
+ * - vcard4 library (v4.0.2): RFC 6350 compliant vCard 4.0 parsing
+ * - flat library (v6.0.1): Convert nested vCard objects to flat frontmatter
+ * 
+ * The flat library converts hierarchical vCard data to dot notation:
+ * - Example: `ADR.HOME.STREET` for nested address components
+ * - Standardized approach to nested object handling
+ * - Deterministic key format ensures consistency
  */
 export class VCardParser {
   /**
@@ -156,7 +164,9 @@ export class VCardParser {
       }
     }
     
-    // Use flat to convert nested structure to dot notation
+    // Use flat library to convert nested structure to dot notation
+    // This creates keys like: ADR.HOME.STREET, EMAIL.WORK, RELATED.friend.0
+    // The delimiter '.' is the standard for hierarchical frontmatter keys
     const flattened = flatten(nested, { delimiter: '.' }) as VCardForObsidianRecord;
     
     return flattened;

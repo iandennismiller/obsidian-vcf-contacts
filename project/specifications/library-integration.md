@@ -96,6 +96,8 @@ The yaml library handles:
 4. Comment handling: Preserving comments when possible
 5. Multi-line strings: Proper handling of multi-line values
 6. Special characters: Escaping and quoting as needed
+7. Arrays and nested objects: Full support for YAML data structures
+8. Dot notation: Natively supports keys with dots (e.g., `RELATED.friend`)
 
 ### Scope of Custom Integration
 
@@ -105,9 +107,39 @@ Custom code is limited to:
 
 ### Integration Points
 
-- **Frontmatter Parsing**: yaml parses frontmatter block into flat key-value pairs
-- **Frontmatter Generation**: yaml generates YAML from flat key-value pairs
+- **Frontmatter Parsing**: Regex extracts YAML block; yaml parses into structured data
+- **Frontmatter Generation**: yaml generates YAML from structured data
 - **Validation**: yaml validates YAML syntax; custom code validates vCard field formats
+
+### Migration to YAML Library
+
+The codebase has migrated from manual string parsing to using the yaml library:
+
+**Before (Manual Parsing):**
+```typescript
+const lines = yaml.split('\n');
+lines.forEach(line => {
+  const match = line.match(/^"?([^":]+)"?:\s*(.+)$/);
+  if (match) {
+    frontmatter[match[1].trim()] = match[2].trim();
+  }
+});
+```
+
+**After (Using yaml Library):**
+```typescript
+import { parse as parseYaml } from 'yaml';
+const frontmatter = parseYaml(yaml) ?? {};
+```
+
+**Benefits of Migration:**
+- Handles quoted keys automatically
+- Handles arrays and nested objects
+- Handles multi-line values
+- Handles YAML comments
+- Reduced from ~15 lines to ~1 line per instance
+- Consistent with production code patterns
+- More robust edge case handling
 
 ## Object Flattening: flat
 
