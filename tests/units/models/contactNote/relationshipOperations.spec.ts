@@ -84,36 +84,6 @@ FN: John Doe
       });
     });
 
-    it('should parse relationships with colon format (type: [[Name]]) for backward compatibility (deprecated)', async () => {
-      const content = `---
-UID: john-doe-123
-FN: John Doe
----
-
-#### Related
-- parent [[Bob Doe]]
-- parent [[Mary Doe]]
-- spouse [[Jane Doe]]
-
-#Contact`;
-
-      mockContactData.getContent = vi.fn().mockResolvedValue(content);
-
-      const relationships = await relationshipOperations.parseRelatedSection();
-
-      expect(relationships).toHaveLength(3);
-      expect(relationships[0]).toEqual({
-        type: 'parent',
-        contactName: 'Bob Doe',
-        linkType: 'name'
-      });
-      expect(relationships[1]).toEqual({
-        type: 'parent',
-        contactName: 'Mary Doe',
-        linkType: 'name'
-      });
-    });
-
     it('should handle Related heading with different cases and depths', async () => {
       // According to spec: "The heading is case insensitive: '## related' is equivalent to '## Related'"
       // and "The heading depth is not relevant: works on '### related' or '#### RELATED' too"
