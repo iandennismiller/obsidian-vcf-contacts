@@ -1,6 +1,6 @@
 # Contact Information Display Tests - User Story Mapping
 
-This document maps the new integration tests to their corresponding user stories in `/docs/user-stories.md`.
+This document maps the new integration tests to their corresponding user stories in `/project/user-stories/contact-information-display.md`.
 
 ## Test Files Created
 

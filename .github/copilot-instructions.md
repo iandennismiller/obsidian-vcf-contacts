@@ -17,6 +17,47 @@ This is an Obsidian plugin that manages contacts using the vCard 4.0 standard fo
 - **Target Platform**: Obsidian plugin API
 - **Vcard Version**: 4.0
 
+## Documentation Structure
+
+### `/docs` - User and Developer Documentation
+
+User-facing and developer-facing documentation:
+- **User Guides**: Getting started, features, installation
+- **Development Guides**: Architecture, setup, testing, contributing
+- **Demo Data**: Example contact files for testing
+
+### `/project` - Project Management and Specifications
+
+Internal project documentation:
+
+#### `/project/specifications` - Technical Specifications
+Technical specifications describing **how** the system works:
+- `library-integration-spec.md` - External library usage (marked, vcard4, yaml)
+- `relationship-management-spec.md` - Bidirectional relationship sync
+- `contact-section-spec.md` - Contact section parsing and display
+- `vcf-sync-spec.md` - VCF file synchronization
+- `gender-processing-spec.md` - Gender-aware relationship rendering
+- `curator-pipeline-spec.md` - Processor pipeline architecture
+- `vcard-format-spec.md` - vCard 4.0 format reference
+
+#### `/project/user-stories` - User Stories
+User stories describing **what** users want to accomplish:
+- `vcf-file-management.md` - VCF import/export stories
+- `relationship-management.md` - Relationship sync stories
+- `contact-data-management.md` - Contact CRUD stories
+- `advanced-workflows.md` - Bulk operations and complex workflows
+- `technical-stories.md` - Error handling, performance, reliability
+- `contact-information-display.md` - Contact section UI stories
+- `external-integration.md` - External tool integration
+
+#### `/project/plans` - Implementation Plans
+Multi-stage implementation plans for complex features
+
+#### `/project/references` - Third-Party References
+Documentation for external libraries and APIs (vCard specs, Obsidian API)
+
+**Usage**: When working on a feature, first check user stories to understand what users need, then check specifications for implementation details.
+
 ## Setup Instructions
 
 ### Initial Setup
@@ -253,6 +294,7 @@ Type definitions are organized by their domain:
 
 ## Need Help?
 
-- Review the [Development Documentation](docs/development.md) for comprehensive guidance
+- Review the [Development Documentation](docs/development/) for comprehensive guidance
 - Check [GitHub Issues](https://github.com/iandennismiller/obsidian-vcf-contacts/issues) for known issues
-- See [User Stories](docs/user-stories.md) for usage scenarios and examples
+- See [User Stories](project/user-stories/) for usage scenarios and examples
+- See [Specifications](project/specifications/) for technical implementation details

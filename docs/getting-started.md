@@ -122,23 +122,56 @@ How it works:
 
 ## Exporting Contacts
 
-Export contacts to VCF format:
+The plugin automatically exports contacts to VCF format when VCF sync is enabled:
 
-1. Select a contact or open the plugin interface
-2. Click **Export VCF**
-3. Choose save location
-4. File is generated in standard vCard 4.0 format
+**Single VCF File Mode:**
+1. Enable "Single VCF File" in plugin settings
+2. Set the VCF file path
+3. All contacts are automatically exported to the VCF file
+4. Updates sync in real-time as you edit contacts
+
+**VCF Folder Mode:**
+1. Enable "VCF Folder" in plugin settings  
+2. Set the folder path
+3. Each contact is exported as an individual VCF file
+4. Files are named using the contact's UID
+5. Updates sync automatically when contacts change
 
 ## Creating Contacts
 
-### New Contact
+### Manual Contact Creation
 
-1. Open the plugin interface
-2. Click **New Contact**
-3. Fill in basic information (name, email, phone)
-4. Contact file is created in your contacts folder with:
-   - Automatic UID generation
-   - Proper frontmatter structure
+To create a new contact manually:
+
+1. Create a new markdown file in your contacts folder
+2. Add the required frontmatter fields:
+   ```markdown
+   ---
+   UID: urn:uuid:generated-unique-id
+   VERSION: "4.0"
+   FN: Jane Doe
+   N.GN: Jane
+   N.FN: Doe
+   ---
+   
+   ## Related
+   
+   #Contact
+   ```
+3. The plugin will automatically:
+   - Generate a UID if missing
+   - Add a Related section if needed
+   - Validate and sync the contact data
+
+### Import from VCF
+
+Alternatively, import contacts from VCF files:
+
+1. Place VCF file(s) in your configured VCF watch folder
+2. The plugin automatically creates contact notes for each vCard
+3. Contact files are created in your contacts folder with:
+   - All vCard fields mapped to frontmatter
+   - Automatic UID preservation
    - Empty Related section for adding relationships
 
 ### Contact Template
