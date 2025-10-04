@@ -2,7 +2,34 @@
 
 ## Active Plans
 
-### 1. Frontmatter YAML Migration ✅ COMPLETE
+### 1. ContactNote Model Refactoring 📋 PLANNING
+**File**: `contactnote-model-refactoring.md`  
+**Status**: Analysis and Planning Phase  
+**Goal**: Refactor ContactNote from functional/operations-based to model-based architecture
+
+**Key Documents**:
+- `contactnote-model-refactoring.md` - Comprehensive refactoring plan
+- `contactnote-refactoring-examples.md` - Code examples comparing approaches
+- `contactnote-architecture-diagrams.md` - Architecture diagrams and visualizations
+
+**Objective**: Transform ContactNote from organizing code by operations (RelationshipOperations, SyncOperations, etc.) to organizing code by domain entities (Relationship, ContactField, Contact, etc.).
+
+**Current State**:
+- ✅ Comprehensive analysis of existing structure completed
+- ✅ Identified 8 core domain entities
+- ✅ Designed proposed model-based architecture
+- ✅ Created migration strategy with 5 phases
+- [ ] Stakeholder review pending
+- [ ] Prototype implementation pending
+
+**Benefits**:
+- Better code organization around "things" not "operations"
+- Easier testing (test entities directly, not through operations)
+- Clearer entity lifecycle and behavior
+- Better extensibility (add features to entities)
+- Self-documenting structure (one file per entity)
+
+### 2. Frontmatter YAML Migration ✅ COMPLETE
 **File**: `frontmatter-yaml-migration.md`  
 **Status**: All 3 Phases Complete  
 **Goal**: Eliminate manual regex parsing of frontmatter in favor of the YAML library
@@ -20,7 +47,7 @@
 - Added JSDoc comments explaining library usage in source code
 - All tests now use same robust parsing as production code
 
-### 2. Documentation Dot Notation Update ✅ COMPLETE
+### 3. Documentation Dot Notation Update ✅ COMPLETE
 **File**: `documentation-dot-notation-update.md`  
 **Status**: Complete  
 **Goal**: Update all documentation to use YAML-compatible dot notation
