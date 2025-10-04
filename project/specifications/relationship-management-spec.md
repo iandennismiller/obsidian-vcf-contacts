@@ -109,21 +109,16 @@ To find the UID for a contact, inspect its front matter in the contact note in O
 
 ### Multiple Relationships of Same Type
 
-Obsidian front matter is YAML-like but strictly key-value (not hierarchical). Arrays use specific notation:
-- Within a contact, relationships of the same kind imply a set
-- Although implemented as an array, index is not meaningful
-- When there is one friend (array size is 1), the front matter key is `RELATED[friend]`
-- The next friendship is added with the key `RELATED[1:friend]`
-- A 3-element set would include `RELATED[2:friend]` ... and so on
+When multiple relationships of the same type exist, the flat library automatically handles array indexing using dot notation.
 
-**Technical Note**: The plugin uses the [yaml](https://www.npmjs.com/package/yaml) library for all YAML parsing and generation operations. The yaml library handles the parsing and serialization of these bracket-notation keys as flat key-value pairs, while custom code manages the semantic interpretation and generation of the indexing pattern.
+**Technical Note**: The plugin uses the [flat](https://www.npmjs.com/package/flat) library to convert between nested relationship structures and flat frontmatter. Arrays are automatically indexed with numeric suffixes (e.g., `RELATED.friend.0`, `RELATED.friend.1`).
 
 ### Deterministic Ordering
 
-When a set of relationships is mapped onto front matter:
-1. First sort by key
-2. Then sort by value
-3. The goal is to create a deterministic ordering for serialization
+The flat library ensures deterministic ordering by:
+1. Sorting keys alphabetically
+2. Using consistent dot notation for nested structures
+3. Maintaining stable array indices
 
 This prevents unnecessary changes when relationships (which have no inherent order) are refreshed.
 

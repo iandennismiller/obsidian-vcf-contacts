@@ -38,13 +38,13 @@ VERSION: "4.0"
 FN: John Doe
 N.GN: John
 N.FN: Doe
-EMAIL[1]: john.doe@example.com
-TEL[1:CELL]: +1-555-123-4567
+EMAIL: john.doe@example.com
+TEL.CELL: +1-555-123-4567
 ORG: Acme Corporation
 TITLE: Software Engineer
 GENDER: M
 REV: 20250125T103000Z
-RELATED[colleague]: urn:uuid:jane-smith-uuid-here
+RELATED.colleague: urn:uuid:jane-smith-uuid-here
 ---
 
 # John Doe
@@ -79,11 +79,11 @@ Software engineer at Acme Corporation. Specializes in backend development.
 
 | Field | Description | Example |
 |-------|-------------|---------|
-| `EMAIL[1]` | Primary Email | `john@example.com` |
-| `EMAIL[2:WORK]` | Work Email | `j.doe@company.com` |
-| `TEL[1:CELL]` | Mobile Phone | `+1-555-123-4567` |
-| `TEL[2:WORK]` | Work Phone | `+1-555-987-6543` |
-| `TEL[3:HOME]` | Home Phone | `+1-555-111-2222` |
+| `EMAIL` | Primary Email | `john@example.com` |
+| `EMAIL.WORK` | Work Email | `j.doe@company.com` |
+| `TEL.CELL` | Mobile Phone | `+1-555-123-4567` |
+| `TEL.WORK` | Work Phone | `+1-555-987-6543` |
+| `TEL.HOME` | Home Phone | `+1-555-111-2222` |
 
 **Contact List Input:**
 You can also enter contact information using the Contact List format in the `## Contact` section:
@@ -103,11 +103,11 @@ The parser automatically detects field types and syncs to frontmatter using the 
 
 | Field | Description | Example |
 |-------|-------------|---------|
-| `ADR[1:HOME].STREET` | Home Street | `123 Main St` |
-| `ADR[1:HOME].CITY` | Home City | `Springfield` |
-| `ADR[1:HOME].REGION` | Home State/Region | `IL` |
-| `ADR[1:HOME].POSTAL` | Home ZIP/Postal | `62701` |
-| `ADR[1:HOME].COUNTRY` | Home Country | `United States` |
+| `ADR.HOME.STREET` | Home Street | `123 Main St` |
+| `ADR.HOME.CITY` | Home City | `Springfield` |
+| `ADR.HOME.REGION` | Home State/Region | `IL` |
+| `ADR.HOME.POSTAL` | Home ZIP/Postal | `62701` |
+| `ADR.HOME.COUNTRY` | Home Country | `United States` |
 
 ### 🏢 Professional Information
 
@@ -129,8 +129,8 @@ The parser automatically detects field types and syncs to frontmatter using the 
 | Field | Description | Example |
 |-------|-------------|---------|
 | `URL` | Website | `https://johndoe.com` |
-| `SOCIALPROFILE[1:TWITTER]` | Twitter | `@johndoe` |
-| `SOCIALPROFILE[2:LINKEDIN]` | LinkedIn | `linkedin.com/in/johndoe` |
+| `SOCIALPROFILE.TWITTER` | Twitter | `@johndoe` |
+| `SOCIALPROFILE.LINKEDIN` | LinkedIn | `linkedin.com/in/johndoe` |
 
 ### 🗂️ Organization & Metadata
 
@@ -143,26 +143,32 @@ The parser automatically detects field types and syncs to frontmatter using the 
 
 ### Relationships
 
-The RELATED field uses a special format to reference other contacts:
+The RELATED field uses dot notation to reference other contacts:
 
 | Field | Description | Example |
 |-------|-------------|---------|
-| `RELATED[type]` | Relationship reference | `RELATED[friend]: urn:uuid:12345...` |
-| | | `RELATED[colleague]: uid:custom-id` |
-| | | `RELATED[sibling]: name:Jane Doe` |
+| `RELATED.type` | Relationship reference | `RELATED.friend: urn:uuid:12345...` |
+| | | `RELATED.colleague: uid:custom-id` |
+| | | `RELATED.sibling: name:Jane Doe` |
 
-## Field Indexing
+## Field Organization
 
-For fields that can have multiple values (like phone numbers or emails), use index numbers:
+**Technical Note**: The plugin uses the [flat](https://www.npmjs.com/package/flat) library to convert between hierarchical vCard structures and flat Obsidian frontmatter. This ensures consistent dot notation for all structured fields.
+
+### Multiple Values
+
+For fields that can have multiple values (like phone numbers or emails), the flat library automatically creates array indices:
 
 ```yaml
-EMAIL[1]: primary@example.com      # Primary email
-EMAIL[2:WORK]: work@company.com    # Work email
-EMAIL[3:HOME]: home@personal.com   # Home email
+EMAIL.0: primary@example.com      # First email
+EMAIL.1: work@company.com         # Second email
+EMAIL.2: home@personal.com        # Third email
 
-TEL[1:CELL]: +1-555-123-4567      # Mobile
-TEL[2:WORK]: +1-555-987-6543      # Work phone
-TEL[3:HOME]: +1-555-111-2222      # Home phone
+# With type parameters:
+TEL.CELL.0: +1-555-123-4567       # First mobile
+TEL.CELL.1: +1-555-000-0000       # Second mobile
+TEL.WORK: +1-555-987-6543         # Work phone
+TEL.HOME: +1-555-111-2222         # Home phone
 ```
 
 ### Contact List Alternative
@@ -182,8 +188,8 @@ Instead of manually entering frontmatter fields, you can use the Contact List fo
 The parser will:
 1. Auto-detect field types (email, phone, URL, address)
 2. Extract optional kind labels (`work`, `home`, `cell`, etc.)
-3. Sync to frontmatter with appropriate keys (`EMAIL[WORK]`, `TEL[CELL]`, etc.)
-4. Use bare keys for first field of each type (e.g., `EMAIL`, `TEL`), then indexed for subsequent fields (e.g., `EMAIL[1]`, `EMAIL[2]`)
+3. Sync to frontmatter using dot notation (e.g., `EMAIL.WORK`, `TEL.CELL`)
+4. Use the flat library to ensure consistent key formatting
 
 This provides a more user-friendly way to enter contact information without worrying about exact frontmatter syntax.
 
@@ -226,9 +232,9 @@ The plugin supports relationship tracking between contacts using the vCard 4.0 R
 #### RELATED Field Format
 
 ```yaml
-RELATED[friend]: urn:uuid:03a0e51f-d1aa-4385-8a53-e29025acd8af
-RELATED[colleague]: uid:some-custom-uid
-RELATED[sibling]: name:Jane Doe
+RELATED.friend: urn:uuid:03a0e51f-d1aa-4385-8a53-e29025acd8af
+RELATED.colleague: uid:some-custom-uid
+RELATED.sibling: name:Jane Doe
 ```
 
 The RELATED field value uses three possible namespace formats:
@@ -247,21 +253,15 @@ The RELATED field value uses three possible namespace formats:
 
 #### Multiple Relationships of the Same Type
 
-When you have multiple relationships of the same type (forming a set), the plugin uses indexed keys:
+When you have multiple relationships of the same type (forming a set), the flat library automatically creates array indices:
 
 ```yaml
-RELATED[friend]: urn:uuid:first-friend-uuid       # First friend
-RELATED[1:friend]: urn:uuid:second-friend-uuid    # Second friend
-RELATED[2:friend]: name:Third Friend               # Third friend
+RELATED.friend.0: urn:uuid:first-friend-uuid        # First friend
+RELATED.friend.1: urn:uuid:second-friend-uuid       # Second friend
+RELATED.friend.2: name:Third Friend                  # Third friend
 ```
 
-The indexing follows this pattern:
-- First item: `RELATED[type]`
-- Second item: `RELATED[1:type]`
-- Third item: `RELATED[2:type]`
-- And so on...
-
-**Important**: The order is deterministic - relationships are sorted first by key, then by value, ensuring consistent serialization and preventing unnecessary changes.
+**Important**: The flat library ensures deterministic ordering by sorting keys alphabetically, preventing unnecessary changes when relationships are refreshed.
 
 #### Genderless Relationship Types
 

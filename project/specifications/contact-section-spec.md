@@ -284,18 +284,18 @@ When no kind is specified, fields use bare keys for the first field, then indexe
 
 ### Key Format
 
-Contact list items map to frontmatter keys using this format:
+Contact list items map to frontmatter keys using dot notation for structured fields.
 
-**Technical Note**: The plugin uses the [yaml](https://www.npmjs.com/package/yaml) library for all YAML parsing and generation operations. The yaml library handles the parsing and serialization of these custom key formats as flat key-value pairs, while custom code manages the contact-specific key generation logic.
+**Technical Note**: The plugin uses the [flat](https://www.npmjs.com/package/flat) library to convert between hierarchical vCard structures and flat Obsidian frontmatter. This provides consistent, deterministic key formatting across all contact operations.
 
-**With kind:**
+**With type parameter:**
 ```yaml
-EMAIL[WORK]: contact@example.com
-TEL[HOME]: +1-555-555-5555
-URL[PERSONAL]: http://example.com
+EMAIL.WORK: contact@example.com
+TEL.HOME: +1-555-555-5555
+URL.PERSONAL: http://example.com
 ```
 
-**Without kind (first is bare, then indexed):**
+**Without type (bare keys):**
 ```yaml
 EMAIL: first@example.com
 EMAIL[1]: second@example.com
