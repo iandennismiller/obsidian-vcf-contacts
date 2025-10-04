@@ -100,23 +100,21 @@ export class ValidationOperations {
   }
 
   /**
-   * Identify and remove invalid frontmatter fields
-   * Returns list of removed field keys
+   * Identify invalid contact fields in frontmatter
+   * Returns list of invalid field keys with their values
    */
-  async removeInvalidFrontmatterFields(): Promise<{
-    removed: string[];
+  async identifyInvalidFrontmatterFields(): Promise<{
+    invalidFields: Array<{ key: string; value: string; reason: string }>;
     errors: string[];
   }> {
-    const removed: string[] = [];
+    const invalidFields: Array<{ key: string; value: string; reason: string }> = [];
     const errors: string[] = [];
 
     try {
       const frontmatter = await this.contactData.getFrontmatter();
       if (!frontmatter) {
-        return { removed, errors };
+        return { invalidFields, errors };
       }
-
-      const keysToRemove: string[] = [];
 
       // Check each frontmatter key
       for (const key of Object.keys(frontmatter)) {
@@ -130,43 +128,74 @@ export class ValidationOperations {
         // Check EMAIL fields
         if (key.startsWith('EMAIL')) {
           if (!this.validateEmail(value)) {
-            keysToRemove.push(key);
+            invalidFields.push({ 
+              key, 
+              value, 
+              reason: 'Invalid email format (must contain @ and domain)' 
+            });
           }
         }
         // Check TEL fields
         else if (key.startsWith('TEL')) {
           if (!this.validatePhoneNumber(value)) {
-            keysToRemove.push(key);
+            invalidFields.push({ 
+              key, 
+              value, 
+              reason: 'Invalid phone format (must contain digits)' 
+            });
           }
         }
         // Check URL fields
         else if (key.startsWith('URL')) {
           if (!this.validateURL(value)) {
-            keysToRemove.push(key);
-          }
-        }
-        // Check date fields (BDAY, REV, ANNIVERSARY)
-        else if (key === 'BDAY' || key === 'REV' || key === 'ANNIVERSARY') {
-          if (!this.validateDate(value)) {
-            keysToRemove.push(key);
+            invalidFields.push({ 
+              key, 
+              value, 
+              reason: 'Invalid URL format (must start with http:// or https://)' 
+            });
           }
         }
       }
 
-      // Remove invalid fields
-      if (keysToRemove.length > 0) {
-        for (const key of keysToRemove) {
+    } catch (error: any) {
+      errors.push(`Error identifying invalid fields: ${error.message}`);
+    }
+
+    return { invalidFields, errors };
+  }
+
+  /**
+   * Remove specified fields from frontmatter
+   * Used after user confirmation
+   */
+  async removeFieldsFromFrontmatter(keysToRemove: string[]): Promise<{
+    removed: string[];
+    errors: string[];
+  }> {
+    const removed: string[] = [];
+    const errors: string[] = [];
+
+    try {
+      const frontmatter = await this.contactData.getFrontmatter();
+      if (!frontmatter) {
+        return { removed, errors };
+      }
+
+      // Remove specified fields
+      for (const key of keysToRemove) {
+        if (key in frontmatter) {
           delete frontmatter[key];
           removed.push(key);
         }
+      }
 
-        // Save the updated frontmatter using the private saveFrontmatter method
-        // We need to access the content and reconstruct it
+      // Save the updated frontmatter if any fields were removed
+      if (removed.length > 0) {
         await this.saveFrontmatterDirect(frontmatter);
       }
 
     } catch (error: any) {
-      errors.push(`Error removing invalid fields: ${error.message}`);
+      errors.push(`Error removing fields: ${error.message}`);
     }
 
     return { removed, errors };

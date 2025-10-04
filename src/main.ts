@@ -6,6 +6,7 @@ import { setApp, clearApp } from "src/plugin/context/sharedAppContext";
 import { setSettings, clearSettings } from "src/plugin/context/sharedSettingsContext";
 import { CuratorManager, curatorService } from "./models/curatorManager/curatorManager";
 import { waitForMetadataCache } from "src/plugin/services/metadataCacheWaiter";
+import { RemoveInvalidFieldsModal } from "src/plugin/ui/modals/removeInvalidFieldsModal";
 
 import { ContactNote } from "./models/contactNote";
 import { ContactManager } from "./models/contactManager";
@@ -167,17 +168,51 @@ export default class ContactsPlugin extends Plugin {
 
 		try {
 			const contactNote = new ContactNote(this.app, this.settings, activeFile);
-			const result = await contactNote.removeInvalidFrontmatterFields();
+			const result = await contactNote.identifyInvalidFrontmatterFields();
 
 			if (result.errors.length > 0) {
-				new Notice(`Error removing invalid fields: ${result.errors[0]}`);
+				new Notice(`Error identifying invalid fields: ${result.errors[0]}`);
 				return;
 			}
 
-			if (result.removed.length === 0) {
+			if (result.invalidFields.length === 0) {
 				new Notice('No invalid fields found');
+				return;
+			}
+
+			// Check if confirmation is required
+			if (this.settings.removeInvalidFieldsConfirmation) {
+				// Show modal with preview
+				const modal = new RemoveInvalidFieldsModal(
+					this.app,
+					result.invalidFields,
+					async () => {
+						// User confirmed - remove the fields
+						const keysToRemove = result.invalidFields.map(f => f.key);
+						const removeResult = await contactNote.removeFieldsFromFrontmatter(keysToRemove);
+						
+						if (removeResult.errors.length > 0) {
+							new Notice(`Error removing fields: ${removeResult.errors[0]}`);
+						} else {
+							new Notice(`Removed ${removeResult.removed.length} invalid field(s)`);
+						}
+					},
+					() => {
+						// User cancelled
+						new Notice('Cancelled - no fields removed');
+					}
+				);
+				modal.open();
 			} else {
-				new Notice(`Removed ${result.removed.length} invalid field(s): ${result.removed.join(', ')}`);
+				// No confirmation needed - remove directly
+				const keysToRemove = result.invalidFields.map(f => f.key);
+				const removeResult = await contactNote.removeFieldsFromFrontmatter(keysToRemove);
+				
+				if (removeResult.errors.length > 0) {
+					new Notice(`Error removing fields: ${removeResult.errors[0]}`);
+				} else {
+					new Notice(`Removed ${removeResult.removed.length} invalid field(s): ${removeResult.removed.join(', ')}`);
+				}
 			}
 		} catch (error: any) {
 			console.error('Error removing invalid fields from current contact:', error);
@@ -195,29 +230,107 @@ export default class ContactsPlugin extends Plugin {
 		}
 
 		try {
-			new Notice('Removing invalid fields from all contacts...');
+			new Notice('Scanning all contacts for invalid fields...');
 			
 			const contactFiles = this.contactManager.getAllContactFiles();
-			let totalRemoved = 0;
-			let processedCount = 0;
+			const allInvalidFields: Array<{ file: string; fields: Array<{ key: string; value: string; reason: string }> }> = [];
 
+			// First, identify all invalid fields across all contacts
 			for (const file of contactFiles) {
 				try {
 					const contactNote = new ContactNote(this.app, this.settings, file);
-					const result = await contactNote.removeInvalidFrontmatterFields();
+					const result = await contactNote.identifyInvalidFrontmatterFields();
 					
-					if (result.removed.length > 0) {
-						totalRemoved += result.removed.length;
-						processedCount++;
+					if (result.invalidFields.length > 0) {
+						allInvalidFields.push({
+							file: file.basename,
+							fields: result.invalidFields
+						});
 					}
 				} catch (error: any) {
-					console.error(`Error processing contact ${file.name}:`, error);
+					console.error(`Error scanning contact ${file.name}:`, error);
 				}
 			}
 
-			if (totalRemoved === 0) {
+			if (allInvalidFields.length === 0) {
 				new Notice('No invalid fields found in any contacts');
+				return;
+			}
+
+			// Calculate total invalid fields
+			const totalInvalidFields = allInvalidFields.reduce((sum, item) => sum + item.fields.length, 0);
+
+			// Check if confirmation is required
+			if (this.settings.removeInvalidFieldsConfirmation) {
+				// Flatten all invalid fields for the modal
+				const flattenedFields: Array<{ key: string; value: string; reason: string }> = [];
+				for (const item of allInvalidFields) {
+					for (const field of item.fields) {
+						flattenedFields.push({
+							...field,
+							key: `${item.file}: ${field.key}`
+						});
+					}
+				}
+
+				// Show modal with preview
+				const modal = new RemoveInvalidFieldsModal(
+					this.app,
+					flattenedFields,
+					async () => {
+						// User confirmed - remove all invalid fields
+						let totalRemoved = 0;
+						let processedCount = 0;
+
+						for (const item of allInvalidFields) {
+							const file = contactFiles.find(f => f.basename === item.file);
+							if (!file) continue;
+
+							try {
+								const contactNote = new ContactNote(this.app, this.settings, file);
+								const keysToRemove = item.fields.map(f => f.key);
+								const removeResult = await contactNote.removeFieldsFromFrontmatter(keysToRemove);
+								
+								if (removeResult.removed.length > 0) {
+									totalRemoved += removeResult.removed.length;
+									processedCount++;
+								}
+							} catch (error: any) {
+								console.error(`Error processing contact ${file.name}:`, error);
+							}
+						}
+
+						new Notice(`Removed ${totalRemoved} invalid field(s) from ${processedCount} contact(s)`);
+					},
+					() => {
+						// User cancelled
+						new Notice('Cancelled - no fields removed');
+					}
+				);
+				modal.open();
 			} else {
+				// No confirmation needed - remove directly
+				let totalRemoved = 0;
+				let processedCount = 0;
+
+				for (const item of allInvalidFields) {
+					const file = contactFiles.find(f => f.basename === item.file);
+					if (!file) continue;
+
+					try {
+						const contactNote = new ContactNote(this.app, this.settings, file);
+						const keysToRemove = item.fields.map(f => f.key);
+						const removeResult = await contactNote.removeFieldsFromFrontmatter(keysToRemove);
+						
+						if (removeResult.removed.length > 0) {
+							totalRemoved += removeResult.removed.length;
+							processedCount++;
+						}
+					} catch (error: any) {
+						console.error(`Error processing contact ${file.name}:`, error);
+					}
+				}
+
 				new Notice(`Removed ${totalRemoved} invalid field(s) from ${processedCount} contact(s)`);
 			}
 		} catch (error: any) {

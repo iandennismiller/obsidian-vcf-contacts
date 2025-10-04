@@ -39,8 +39,8 @@ describe('ContactNote - Remove Invalid Fields', () => {
     };
   };
 
-  describe('removeInvalidFrontmatterFields', () => {
-    it('should remove invalid email fields', async () => {
+  describe('identifyInvalidFrontmatterFields', () => {
+    it('should identify invalid email fields', async () => {
       const content = `---
 UID: test-123
 FN: Test Contact
@@ -52,15 +52,17 @@ Test contact`;
 
       mockApp = createMockApp(content);
       const contactNote = new ContactNote(mockApp as App, mockSettings, mockFile);
-      const result = await contactNote.removeInvalidFrontmatterFields();
+      const result = await contactNote.identifyInvalidFrontmatterFields();
 
-      expect(result.removed).toContain('EMAIL[HOME]');
-      expect(result.removed).not.toContain('EMAIL[WORK]');
+      expect(result.invalidFields).toHaveLength(1);
+      expect(result.invalidFields[0].key).toBe('EMAIL[HOME]');
+      expect(result.invalidFields[0].value).toBe('not-an-email');
+      expect(result.invalidFields[0].reason).toContain('email');
       expect(result.errors).toHaveLength(0);
-      expect(mockApp.vault!.modify).toHaveBeenCalled();
+    });
     });
 
-    it('should remove invalid phone number fields', async () => {
+    it('should identify invalid phone number fields', async () => {
       const content = `---
 UID: test-456
 FN: Test Contact
@@ -72,14 +74,15 @@ Test contact`;
 
       mockApp = createMockApp(content);
       const contactNote = new ContactNote(mockApp as App, mockSettings, mockFile);
-      const result = await contactNote.removeInvalidFrontmatterFields();
+      const result = await contactNote.identifyInvalidFrontmatterFields();
 
-      expect(result.removed).toContain('TEL[HOME]');
-      expect(result.removed).not.toContain('TEL[CELL]');
+      expect(result.invalidFields).toHaveLength(1);
+      expect(result.invalidFields[0].key).toBe('TEL[HOME]');
+      expect(result.invalidFields[0].reason).toContain('phone');
       expect(result.errors).toHaveLength(0);
     });
 
-    it('should remove invalid URL fields', async () => {
+    it('should identify invalid URL fields', async () => {
       const content = `---
 UID: test-789
 FN: Test Contact
@@ -91,14 +94,15 @@ Test contact`;
 
       mockApp = createMockApp(content);
       const contactNote = new ContactNote(mockApp as App, mockSettings, mockFile);
-      const result = await contactNote.removeInvalidFrontmatterFields();
+      const result = await contactNote.identifyInvalidFrontmatterFields();
 
-      expect(result.removed).toContain('URL[HOME]');
-      expect(result.removed).not.toContain('URL[WORK]');
+      expect(result.invalidFields).toHaveLength(1);
+      expect(result.invalidFields[0].key).toBe('URL[HOME]');
+      expect(result.invalidFields[0].reason).toContain('URL');
       expect(result.errors).toHaveLength(0);
     });
 
-    it('should remove invalid date fields', async () => {
+    it('should not validate date fields', async () => {
       const content = `---
 UID: test-999
 FN: Test Contact
@@ -111,15 +115,14 @@ Test contact`;
 
       mockApp = createMockApp(content);
       const contactNote = new ContactNote(mockApp as App, mockSettings, mockFile);
-      const result = await contactNote.removeInvalidFrontmatterFields();
+      const result = await contactNote.identifyInvalidFrontmatterFields();
 
-      expect(result.removed).toContain('BDAY');
-      expect(result.removed).toContain('ANNIVERSARY');
-      expect(result.removed).not.toContain('REV');
+      // Date fields should not be validated
+      expect(result.invalidFields).toHaveLength(0);
       expect(result.errors).toHaveLength(0);
     });
 
-    it('should remove multiple invalid fields at once', async () => {
+    it('should identify multiple invalid fields at once', async () => {
       const content = `---
 UID: test-multi
 FN: Test Contact
@@ -134,12 +137,13 @@ Test contact`;
 
       mockApp = createMockApp(content);
       const contactNote = new ContactNote(mockApp as App, mockSettings, mockFile);
-      const result = await contactNote.removeInvalidFrontmatterFields();
+      const result = await contactNote.identifyInvalidFrontmatterFields();
 
-      expect(result.removed).toHaveLength(3);
-      expect(result.removed).toContain('EMAIL[HOME]');
-      expect(result.removed).toContain('TEL[HOME]');
-      expect(result.removed).toContain('URL[HOME]');
+      expect(result.invalidFields).toHaveLength(3);
+      const keys = result.invalidFields.map(f => f.key);
+      expect(keys).toContain('EMAIL[HOME]');
+      expect(keys).toContain('TEL[HOME]');
+      expect(keys).toContain('URL[HOME]');
       expect(result.errors).toHaveLength(0);
     });
 
@@ -156,14 +160,47 @@ Test contact`;
 
       mockApp = createMockApp(content);
       const contactNote = new ContactNote(mockApp as App, mockSettings, mockFile);
-      const result = await contactNote.removeInvalidFrontmatterFields();
+      const result = await contactNote.identifyInvalidFrontmatterFields();
 
-      expect(result.removed).toHaveLength(0);
+      expect(result.invalidFields).toHaveLength(0);
       expect(result.errors).toHaveLength(0);
-      expect(mockApp.vault!.modify).not.toHaveBeenCalled();
     });
 
-    it('should preserve valid fields and only remove invalid ones', async () => {
+    it('should skip non-string values', async () => {
+      const content = `---
+UID: test-nonstring
+FN: Test Contact
+CATEGORIES:
+  - tag1
+  - tag2
+EMAIL[HOME]: valid@example.com
+---
+## Notes
+Test contact`;
+
+      mockApp = createMockApp(content);
+      const contactNote = new ContactNote(mockApp as App, mockSettings, mockFile);
+      const result = await contactNote.identifyInvalidFrontmatterFields();
+
+      expect(result.invalidFields).toHaveLength(0);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('should handle empty frontmatter gracefully', async () => {
+      const content = `## Notes
+Test contact with no frontmatter`;
+
+      mockApp = createMockApp(content);
+      const contactNote = new ContactNote(mockApp as App, mockSettings, mockFile);
+      const result = await contactNote.identifyInvalidFrontmatterFields();
+
+      expect(result.invalidFields).toHaveLength(0);
+      expect(result.errors).toHaveLength(0);
+    });
+  });
+
+  describe('removeFieldsFromFrontmatter', () => {
+    it('should remove specified fields from frontmatter', async () => {
       const content = `---
 UID: test-preserve
 FN: Test Contact
@@ -182,7 +219,7 @@ Test contact`;
 
       mockApp = createMockApp(content, modifyMock);
       const contactNote = new ContactNote(mockApp as App, mockSettings, mockFile);
-      const result = await contactNote.removeInvalidFrontmatterFields();
+      const result = await contactNote.removeFieldsFromFrontmatter(['EMAIL[HOME]']);
 
       expect(result.removed).toContain('EMAIL[HOME]');
       expect(result.removed).toHaveLength(1);
@@ -192,38 +229,6 @@ Test contact`;
       expect(modifiedContent).toContain('TEL[HOME]: 555-1234');
       expect(modifiedContent).toContain('ORG: Test Company');
       expect(modifiedContent).not.toContain('EMAIL[HOME]');
-    });
-
-    it('should skip non-string values', async () => {
-      const content = `---
-UID: test-nonstring
-FN: Test Contact
-CATEGORIES:
-  - tag1
-  - tag2
-EMAIL[HOME]: valid@example.com
----
-## Notes
-Test contact`;
-
-      mockApp = createMockApp(content);
-      const contactNote = new ContactNote(mockApp as App, mockSettings, mockFile);
-      const result = await contactNote.removeInvalidFrontmatterFields();
-
-      expect(result.removed).toHaveLength(0);
-      expect(result.errors).toHaveLength(0);
-    });
-
-    it('should handle empty frontmatter gracefully', async () => {
-      const content = `## Notes
-Test contact with no frontmatter`;
-
-      mockApp = createMockApp(content);
-      const contactNote = new ContactNote(mockApp as App, mockSettings, mockFile);
-      const result = await contactNote.removeInvalidFrontmatterFields();
-
-      expect(result.removed).toHaveLength(0);
-      expect(result.errors).toHaveLength(0);
     });
   });
 });

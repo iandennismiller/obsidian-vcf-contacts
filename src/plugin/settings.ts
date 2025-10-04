@@ -22,6 +22,8 @@ export interface ContactsPluginSettings {
   vcardIgnoreUIDs: string[];
   // Contact Section Sync Settings
   contactSectionSyncConfirmation: boolean;
+  // Remove Invalid Fields Settings
+  removeInvalidFieldsConfirmation: boolean;
   [key: string]: string|boolean|number|string[];
 }
 
@@ -45,6 +47,8 @@ export const DEFAULT_SETTINGS: ContactsPluginSettings = {
   vcardIgnoreUIDs: [],
   // Contact Section Sync Default
   contactSectionSyncConfirmation: true,
+  // Remove Invalid Fields Default
+  removeInvalidFieldsConfirmation: true,
   ...curatorSettingDefaults
 }
 
@@ -315,6 +319,36 @@ export class ContactsSettingTab extends PluginSettingTab {
           textArea.inputEl.style.width = "100%";
         });
     }
+
+    // Data Quality Section
+    const dataQualityTitle = containerEl.createEl("h3", { text: "Data Quality" });
+    dataQualityTitle.style.marginTop = "2em";
+
+    // Contact Section Sync Confirmation
+    new Setting(containerEl)
+      .setName("Confirm before syncing Contact section to frontmatter")
+      .setDesc("When enabled, shows a preview of changes before syncing Contact section data to frontmatter.")
+      .addToggle(toggle =>
+        toggle
+          .setValue(this.plugin.settings.contactSectionSyncConfirmation)
+          .onChange(async (value) => {
+            this.plugin.settings.contactSectionSyncConfirmation = value;
+            await this.plugin.saveSettings();
+            setSettings(this.plugin.settings);
+          }));
+
+    // Remove Invalid Fields Confirmation
+    new Setting(containerEl)
+      .setName("Confirm before removing invalid fields")
+      .setDesc("When enabled, shows a preview of invalid fields before removing them from frontmatter.")
+      .addToggle(toggle =>
+        toggle
+          .setValue(this.plugin.settings.removeInvalidFieldsConfirmation)
+          .onChange(async (value) => {
+            this.plugin.settings.removeInvalidFieldsConfirmation = value;
+            await this.plugin.saveSettings();
+            setSettings(this.plugin.settings);
+          }));
 
   }
 }

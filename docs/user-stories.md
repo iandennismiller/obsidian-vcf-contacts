@@ -504,19 +504,27 @@ Email
 
 - Command to remove invalid fields from current contact
 - Command to remove invalid fields from all contacts
-- Validation of EMAIL, TEL, and URL field formats
-- Preview of fields that will be removed
+- Validation of EMAIL, TEL, and URL field formats (NOT date fields)
+- Preview modal showing fields that will be removed (when confirmation is enabled)
+- Configuration setting to control whether confirmation is required
 - Notification showing number of invalid fields removed
 
 **Validation rules for removal:**
 - EMAIL fields must contain @ symbol and domain (e.g., user@domain.com)
-- TEL fields must contain at least some digits
+- TEL fields must contain at least some digits (7+ characters)
 - URL fields must start with http:// or https://
-- Dates (BDAY, REV, ANNIVERSARY) must be valid date formats
+- Date fields (BDAY, REV, ANNIVERSARY) are NOT validated and will remain even if invalid
+
+**Configuration:**
+- Setting: "Confirm before removing invalid fields"
+- When enabled: Shows preview modal before removing fields
+- When disabled: Removes fields immediately without confirmation
 
 **Expected behavior:**
-- Command shows notice with number of invalid fields found
-- Invalid fields are removed from frontmatter
+- Command identifies invalid fields and shows count
+- If confirmation is enabled, modal shows preview with field details and reasons
+- User can confirm or cancel the removal
+- Invalid fields are removed from frontmatter only after confirmation (if enabled)
 - File is saved with cleaned frontmatter
 - Notice confirms number of fields removed
 - Valid fields are preserved unchanged
@@ -525,8 +533,10 @@ Email
 1. User accidentally enters `EMAIL[HOME]: not-an-email` in frontmatter
 2. User runs "Remove invalid frontmatter fields from current contact" command
 3. Plugin identifies the invalid email field
-4. Plugin removes `EMAIL[HOME]` from frontmatter
-5. Plugin saves the file and shows "Removed 1 invalid field(s)"
+4. If confirmation enabled: Modal shows "EMAIL[HOME]: not-an-email - Invalid email format (must contain @ and domain)"
+5. User clicks "Remove Invalid Fields" to confirm
+6. Plugin removes `EMAIL[HOME]` from frontmatter
+7. Plugin saves the file and shows "Removed 1 invalid field(s)"
 
 ### 39. Contact Section and VCF Sync Integration
 **As a user**, when I export contacts to VCF format or import from VCF files, I expect the Contact section to be synchronized properly. The plugin should:
