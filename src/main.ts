@@ -83,6 +83,9 @@ export default class ContactsPlugin extends Plugin {
 			// Register validation commands
 			this.registerValidationCommands();
 
+			// Register external integration commands
+			this.registerExternalIntegrationCommands();
+
 			console.debug('[ContactsPlugin] Plugin initialization complete');
 		} catch (error: any) {
 			console.error(`[ContactsPlugin] Error during async initialization: ${error.message}`);
@@ -146,6 +149,33 @@ export default class ContactsPlugin extends Plugin {
 			name: "Remove invalid frontmatter fields from all contacts",
 			callback: async () => {
 				await this.removeInvalidFieldsFromAll();
+			},
+		});
+	}
+
+	/**
+	 * Register external integration commands
+	 */
+	private registerExternalIntegrationCommands(): void {
+		// Command to open vdirsyncer config editor
+		this.addCommand({
+			id: 'edit-vdirsyncer-config',
+			name: 'Edit vdirsyncer config',
+			callback: async () => {
+				const { VdirsyncerService } = await import('./plugin/services/vdirsyncerService');
+				const { VdirsyncerConfigModal } = await import('./plugin/ui/modals/vdirsyncerConfigModal');
+				
+				const configPath = this.settings.vdirsyncerCustomFilename
+					? this.settings.vdirsyncerConfigPath
+					: DEFAULT_SETTINGS.vdirsyncerConfigPath;
+				
+				const exists = await VdirsyncerService.checkConfigExists(configPath);
+				if (!exists) {
+					new Notice('vdirsyncer config file not found');
+					return;
+				}
+				
+				new VdirsyncerConfigModal(this.app, configPath).open();
 			},
 		});
 	}

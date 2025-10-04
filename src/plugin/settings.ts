@@ -24,6 +24,9 @@ export interface ContactsPluginSettings {
   contactSectionSyncConfirmation: boolean;
   // Remove Invalid Fields Settings
   removeInvalidFieldsConfirmation: boolean;
+  // vdirsyncer Configuration Settings
+  vdirsyncerCustomFilename: boolean;
+  vdirsyncerConfigPath: string;
   [key: string]: string|boolean|number|string[];
 }
 
@@ -49,6 +52,9 @@ export const DEFAULT_SETTINGS: ContactsPluginSettings = {
   contactSectionSyncConfirmation: true,
   // Remove Invalid Fields Default
   removeInvalidFieldsConfirmation: true,
+  // vdirsyncer Configuration Defaults
+  vdirsyncerCustomFilename: false,
+  vdirsyncerConfigPath: "$HOME/.config/vdirsyncer/config",
   ...curatorSettingDefaults
 }
 
@@ -319,6 +325,87 @@ export class ContactsSettingTab extends PluginSettingTab {
           textArea.inputEl.style.width = "100%";
         });
     }
+
+    // External Integrations Section
+    const externalIntegrationsTitle = containerEl.createEl("h3", { text: "External Integrations" });
+    externalIntegrationsTitle.style.marginTop = "2em";
+
+    // vdirsyncer Configuration
+    const vdirsyncerDesc = document.createDocumentFragment();
+    vdirsyncerDesc.append(
+      "vdirsyncer is a command-line tool that syncs vCard files with CardDAV servers.",
+      vdirsyncerDesc.createEl("br"),
+      "Use these settings to view and edit your vdirsyncer configuration file from within Obsidian."
+    );
+
+    new Setting(containerEl)
+      .setName("vdirsyncer Integration")
+      .setDesc(vdirsyncerDesc)
+      .setHeading();
+
+    // Custom vdirsyncer Filename Toggle
+    new Setting(containerEl)
+      .setName("Custom vdirsyncer filename")
+      .setDesc("Enable to customize the path to your vdirsyncer config file.")
+      .addToggle(toggle =>
+        toggle
+          .setValue(this.plugin.settings.vdirsyncerCustomFilename)
+          .onChange(async (value) => {
+            this.plugin.settings.vdirsyncerCustomFilename = value;
+            if (!value) {
+              // Reset to default when disabled
+              this.plugin.settings.vdirsyncerConfigPath = DEFAULT_SETTINGS.vdirsyncerConfigPath;
+            }
+            await this.plugin.saveSettings();
+            setSettings(this.plugin.settings);
+            // Refresh display to show/hide text field
+            this.display();
+          }));
+
+    // vdirsyncer Config Path (only shown when customization is enabled)
+    if (this.plugin.settings.vdirsyncerCustomFilename) {
+      new Setting(containerEl)
+        .setName("vdirsyncer Config Filename")
+        .setDesc("Path to your vdirsyncer config file. Use $HOME for your home directory.")
+        .addText(text => text
+          .setPlaceholder("$HOME/.config/vdirsyncer/config")
+          .setValue(this.plugin.settings.vdirsyncerConfigPath)
+          .onChange(async (value) => {
+            this.plugin.settings.vdirsyncerConfigPath = value;
+            await this.plugin.saveSettings();
+            setSettings(this.plugin.settings);
+            // Trigger file existence check and update button state
+            this.display();
+          }));
+    }
+
+    // Edit vdirsyncer Config Button
+    const buttonDesc = document.createDocumentFragment();
+    buttonDesc.append(
+      "Opens a modal to view and edit your vdirsyncer configuration file.",
+      buttonDesc.createEl("br"),
+      "The button is only enabled when the config file exists."
+    );
+
+    new Setting(containerEl)
+      .setName("Edit vdirsyncer Config")
+      .setDesc(buttonDesc)
+      .addButton(async (button) => {
+        const { VdirsyncerService } = await import('./services/vdirsyncerService');
+        const configPath = this.plugin.settings.vdirsyncerCustomFilename
+          ? this.plugin.settings.vdirsyncerConfigPath
+          : DEFAULT_SETTINGS.vdirsyncerConfigPath;
+        
+        const exists = await VdirsyncerService.checkConfigExists(configPath);
+        
+        button
+          .setButtonText("Open Config")
+          .setDisabled(!exists)
+          .onClick(async () => {
+            const { VdirsyncerConfigModal } = await import('./ui/modals/vdirsyncerConfigModal');
+            new VdirsyncerConfigModal(this.app, configPath).open();
+          });
+      });
 
     // Data Quality Section
     const dataQualityTitle = containerEl.createEl("h3", { text: "Data Quality" });
