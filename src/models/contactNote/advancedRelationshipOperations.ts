@@ -374,8 +374,8 @@ export class AdvancedRelationshipOperations {
             
             if (targetUID) {
               const key = relationshipIndex === 0 && !hasFrontmatterEntry
-                ? `RELATED[${relationship.type}]`
-                : `RELATED[${relationshipIndex}:${relationship.type}]`;
+                ? `RELATED.${relationship.type}`
+                : `RELATED.${relationship.type}.${relationshipIndex}`;
               
               updates[key] = this.relationshipOps.formatRelatedValue(targetUID, relationship.contactName);
               result.upgradedRelationships.push({
