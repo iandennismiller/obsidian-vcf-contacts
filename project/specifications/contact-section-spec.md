@@ -63,7 +63,7 @@ The parser leverages the marked library for markdown structure, then applies con
    - Identify field type: Use pattern matching to determine type (EMAIL, TEL, URL, ADR)
    - Extract components: Separate optional kind prefix from value
    - Validate: Ensure the value matches the detected pattern
-   - Create frontmatter key: Generate key like `EMAIL[WORK]` or bare `TEL` (first field) or indexed `TEL[1]` (second field)
+   - Generate frontmatter key: Create key using dot notation like `EMAIL.WORK` or `TEL.CELL`
 
 **Benefit**: By delegating markdown parsing to marked, the plugin eliminates the need for custom handling of:
 - Different list marker styles
@@ -274,11 +274,13 @@ The kind/type prefix is **optional** and can be any string:
 
 ### Auto-Indexing
 
-When no kind is specified, fields use bare keys for the first field, then indexed:
+When no kind is specified, the flat library handles indexing automatically:
 
-- First field without kind: bare `EMAIL`, `TEL`, `URL`, `ADR`
-- Second field without kind: `EMAIL[1]`, `TEL[1]`, `URL[1]`, `ADR[1]`
-- Third field without kind: `EMAIL[2]`, `TEL[2]`, etc.
+- First field without kind: `EMAIL.0`, `TEL.0`, `URL.0`, `ADR.0`
+- Second field without kind: `EMAIL.1`, `TEL.1`, `URL.1`, `ADR.1`
+- Third field without kind: `EMAIL.2`, `TEL.2`, etc.
+
+**Note**: The flat library determines whether to use bare keys or indexed keys based on the structure of the data.
 
 ## Frontmatter Mapping
 
@@ -295,25 +297,25 @@ TEL.HOME: +1-555-555-5555
 URL.PERSONAL: http://example.com
 ```
 
-**Without type (bare keys):**
+**Without type (indexed by flat library):**
 ```yaml
-EMAIL: first@example.com
-EMAIL[1]: second@example.com
-EMAIL[2]: third@example.com
-TEL: +1-555-111-1111
-TEL[1]: +1-555-222-2222
+EMAIL.0: first@example.com
+EMAIL.1: second@example.com
+EMAIL.2: third@example.com
+TEL.0: +1-555-111-1111
+TEL.1: +1-555-222-2222
 ```
 
 **Address components:**
 ```yaml
-ADR[HOME].STREET: 123 Some street
-ADR[HOME].LOCALITY: Town
-ADR[HOME].REGION: State
-ADR[HOME].POSTAL: 12345
-ADR[HOME].COUNTRY: USA
-# First address without kind is bare:
-ADR.STREET: 456 Main St
-ADR.LOCALITY: Springfield
+ADR.HOME.STREET: 123 Some street
+ADR.HOME.LOCALITY: Town
+ADR.HOME.REGION: State
+ADR.HOME.POSTAL: 12345
+ADR.HOME.COUNTRY: USA
+# Indexed address
+ADR.0.STREET: 456 Main St
+ADR.0.LOCALITY: Springfield
 ```
 
 ### Parsing Examples
@@ -329,11 +331,11 @@ ADR.LOCALITY: Springfield
 1. Detect type: EMAIL
 2. Extract kind: `work`
 3. Extract value: `contact@example.com`
-4. Create key: `EMAIL[WORK]`
+4. Generate key using flat library: `EMAIL.WORK`
 
 **Frontmatter:**
 ```yaml
-EMAIL[WORK]: contact@example.com
+EMAIL.WORK: contact@example.com
 ```
 
 #### Example 2: Phone without Kind
@@ -347,11 +349,11 @@ EMAIL[WORK]: contact@example.com
 1. Detect type: TEL
 2. Extract kind: null (auto-index)
 3. Normalize value: `+1-555-555-5555`
-4. Create key: `TEL` (first phone field is bare)
+4. Generate key using flat library: `TEL.0` (first phone field)
 
 **Frontmatter:**
 ```yaml
-TEL: +1-555-555-5555
+TEL.0: +1-555-555-5555
 ```
 
 #### Example 3: URL with Kind
@@ -365,11 +367,11 @@ TEL: +1-555-555-5555
 1. Detect type: URL
 2. Extract kind: `personal`
 3. Extract value: `http://example.com`
-4. Create key: `URL[PERSONAL]`
+4. Generate key using flat library: `URL.PERSONAL`
 
 **Frontmatter:**
 ```yaml
-URL[PERSONAL]: http://example.com
+URL.PERSONAL: http://example.com
 ```
 
 #### Example 4: Address with Components
@@ -385,12 +387,12 @@ URL[PERSONAL]: http://example.com
 3. Parse components:
    - STREET: `123 Some street`
    - LOCALITY: `Town`
-4. Create keys: `ADR.STREET`, `ADR.LOCALITY` (first address is bare)
+4. Generate keys using flat library: `ADR.0.STREET`, `ADR.0.LOCALITY`
 
 **Frontmatter:**
 ```yaml
-ADR.STREET: 123 Some street
-ADR.LOCALITY: Town
+ADR.0.STREET: 123 Some street
+ADR.0.LOCALITY: Town
 ```
 
 ## Display and Emoji Prefixes
@@ -473,8 +475,10 @@ Contact list data integrates with VCF sync:
 - `ADR` frontmatter → vCard `ADR` field (with components)
 
 Kind labels map to vCard TYPE parameters:
-- `EMAIL[WORK]` → `EMAIL;TYPE=WORK:...`
-- `TEL[HOME]` → `TEL;TYPE=HOME:...`
+- `EMAIL.WORK` → `EMAIL;TYPE=WORK:...`
+- `TEL.HOME` → `TEL;TYPE=HOME:...`
+
+**Technical Note**: The vcard4 library handles the conversion between flat frontmatter keys (with dot notation) and vCard property parameters.
 
 ## Validation and Error Handling
 

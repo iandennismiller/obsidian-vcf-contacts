@@ -111,7 +111,13 @@ To find the UID for a contact, inspect its front matter in the contact note in O
 
 When multiple relationships of the same type exist, the flat library automatically handles array indexing using dot notation.
 
-**Technical Note**: The plugin uses the [flat](https://www.npmjs.com/package/flat) library to convert between nested relationship structures and flat frontmatter. Arrays are automatically indexed with numeric suffixes (e.g., `RELATED.friend.0`, `RELATED.friend.1`).
+**Technical Note**: The plugin uses the [flat](https://www.npmjs.com/package/flat) library to convert between nested relationship structures and flat frontmatter. Arrays are automatically indexed with numeric suffixes:
+
+```yaml
+RELATED.friend.0: urn:uuid:first-friend-uuid
+RELATED.friend.1: urn:uuid:second-friend-uuid
+RELATED.friend.2: name:Third Friend
+```
 
 ### Deterministic Ordering
 

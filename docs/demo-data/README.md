@@ -86,11 +86,11 @@ RELATED.friend: name:Alex Chen
 The markdown Related list shows gender-specific terms based on the GENDER field:
 
 For Noah (GENDER: M) with Sarah (GENDER: F):
-- Front matter stores: `RELATED[parent]`
+- Front matter stores: `RELATED.parent`
 - Related list renders as: `- mother [[Sarah Johnson]]`
 
 For Emma (GENDER: F) with Jennifer (GENDER: F):
-- Front matter stores: `RELATED[aunt-uncle]`
+- Front matter stores: `RELATED.aunt-uncle`
 - Related list renders as: `- aunt [[Jennifer Martinez]]` (because Jennifer's GENDER is F)
 
 ### 5. Bidirectional Relationships

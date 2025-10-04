@@ -147,9 +147,11 @@ The RELATED field uses dot notation to reference other contacts:
 
 | Field | Description | Example |
 |-------|-------------|---------|
-| `RELATED.type` | Relationship reference | `RELATED.friend: urn:uuid:12345...` |
+| `RELATED.type` | Single relationship | `RELATED.friend: urn:uuid:12345...` |
 | | | `RELATED.colleague: uid:custom-id` |
 | | | `RELATED.sibling: name:Jane Doe` |
+| `RELATED.type.N` | Multiple relationships | `RELATED.friend.0: urn:uuid:12345...` |
+| | | `RELATED.friend.1: urn:uuid:67890...` |
 
 ## Field Organization
 

@@ -92,9 +92,9 @@ The plugin provides comprehensive bidirectional relationship tracking:
 - mother [[Jane Doe]]
 - colleague [[John Smith]]
 
-// And synchronized to frontmatter
-RELATED[parent]: urn:uuid:jane-doe-uuid
-RELATED[colleague]: urn:uuid:john-smith-uuid
+// And synchronized to frontmatter using dot notation
+RELATED.parent: urn:uuid:jane-doe-uuid
+RELATED.colleague: urn:uuid:john-smith-uuid
 ```
 
 Key features:

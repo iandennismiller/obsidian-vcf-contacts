@@ -29,7 +29,7 @@ GENDER: M
 The plugin stores relationship types in a genderless form in frontmatter and vCard RELATED fields, but renders them with gender-specific terms in the Related list.
 
 **Example:**
-- Frontmatter: `RELATED[parent]: urn:uuid:jane-uid-456`
+- Frontmatter: `RELATED.parent: urn:uuid:jane-uid-456`
 - Contact Jane has `GENDER: F`
 - Related list displays: `- mother [[Jane Doe]]`
 
@@ -76,8 +76,10 @@ When a user specifies a gendered relationship term, the plugin infers the contac
 3. Plugin infers Jane's gender: `F`
 4. Plugin updates Jane's frontmatter: `GENDER: F`
 5. Plugin converts relationship to genderless type: `parent`
-6. Plugin stores in frontmatter: `RELATED[parent]: urn:uuid:jane-uid-456`
+6. Plugin stores in frontmatter using dot notation: `RELATED.parent: urn:uuid:jane-uid-456`
 7. Plugin updates REV field on Jane's contact
+
+**Technical Note**: The yaml library handles serialization of the frontmatter using dot notation.
 
 ## Bidirectional Consistency
 
