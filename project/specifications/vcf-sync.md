@@ -93,3 +93,23 @@ Sync operations are optimized for efficiency:
 - Debounce file system events
 - Background processing to avoid blocking UI
 - Progress indicators for long operations
+
+### Deterministic Ordering
+
+To prevent unnecessary updates from data reordering:
+
+**Frontmatter Ordering:**
+- Relationships sorted first by key, then by value
+- Creates deterministic YAML serialization
+- Prevents shuffling of inherently unordered data
+
+**VCF Field Ordering:**
+- vCard fields ordered consistently
+- RELATED fields maintain stable order
+- Enables byte-for-byte comparison
+
+**REV Field Updates:**
+- Only update REV when content actually changes
+- Compare normalized representations
+- Reduces unnecessary sync triggers
+- Minimizes version control noise

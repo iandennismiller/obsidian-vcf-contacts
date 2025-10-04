@@ -174,38 +174,6 @@ Alternatively, import contacts from VCF files:
    - Automatic UID preservation
    - Empty Related section for adding relationships
 
-### Contact Template
-
-Each contact follows this structure:
-
-```markdown
----
-UID: urn:uuid:generated-unique-id
-VERSION: "4.0"
-FN: Jane Doe
-N.GN: Jane
-N.FN: Doe
-EMAIL: jane@example.com
-TEL[CELL]: +1-555-123-4567
-GENDER: F
-REV: 20250925T141344Z
----
-
-## Contact
-
-- jane@example.com
-- cell 555-123-4567
-
-## Related
-
-#Contact
-```
-
-**Key Fields:**
-- **UID**: Unique identifier in UUID format (preferred) with `urn:uuid:` prefix
-- **REV**: Revision timestamp in format `YYYYMMDDTHHMMSSZ` - automatically updated when data changes
-- **GENDER**: M, F, NB, or U for relationship rendering
-
 ## Managing Contact Information
 
 ### Contact Section (Recommended)
