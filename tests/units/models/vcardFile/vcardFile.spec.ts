@@ -23,8 +23,7 @@ vi.mock('../../../../src/models/vcardFile/parsing', () => ({
           EMAIL: 'john@example.com'
         }];
       }
-    },
-    photoLineFromV3toV4: vi.fn((line: string) => line.replace('v3', 'v4'))
+    }
   }
 }));
 

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { VCardParser } from '../../src/models/vcardFile/parsing';
 import { VcardFile } from '../../src/models/vcardFile/vcardFile';
 import { VCardFileOperations } from '../../src/models/vcardFile/fileOperations';
-import { parseKey, mdRender, createNameSlug } from '../../src/models/contactNote';
+import { mdRender, createNameSlug } from '../../src/models/contactNote';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
@@ -45,12 +45,6 @@ describe('Demo Data Integration Tests', () => {
         const generatedSlug = createNameSlug(contact);
         expect(generatedSlug).toBeDefined();
         expect(typeof generatedSlug).toBe('string');
-
-        // Test parsing key fields  
-        const keysToTest = Object.keys(contact).slice(0, 5); // Test first 5 keys
-        keysToTest.forEach(key => {
-          expect(() => parseKey(key)).not.toThrow();
-        });
 
         // Test markdown rendering (skip since it needs Obsidian context)
         const hashtags = contact.CATEGORIES ? 
