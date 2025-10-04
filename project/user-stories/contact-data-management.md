@@ -10,15 +10,19 @@ Stories related to creating and managing individual contact data.
 
 ## 13. Gender-Aware Relationship Processing
 
-**As a user**, I want the plugin to use gender information to create appropriate relationship labels (e.g., "son" vs "daughter" when rendering a "child" relationship). The plugin stores genderless relationship types internally (e.g., "parent", "child", "sibling") in frontmatter and vCard RELATED fields, but renders them with gender-specific terms in the Related list based on the GENDER field (M, F, NB, U). When I specify gendered terms like "mother", "father", "son", "daughter", the plugin infers the contact's gender and updates the GENDER field accordingly.
+**As a user**, I want the plugin to use gender information to create appropriate relationship labels so that relationships are displayed naturally (e.g., "mother" instead of "parent", "son" instead of "child") when gender is known.
 
 **Test Location**: `tests/stories/genderAwareProcessing.spec.ts`
 
+**Related Specifications**: [Gender Processing Specification](../specifications/gender-processing.md)
+
 ## 14. UID-Based Contact Linking
 
-**As a user**, I want contacts to be linked by their unique UIDs rather than just names, so that contact name changes don't break relationships. In the frontmatter and vCard RELATED fields, relationships use the format `urn:uuid:` for valid UUID identifiers, `uid:` for non-UUID unique identifiers, or `name:` when the contact doesn't exist yet. However, in the Related list, contacts are always displayed using their human-readable names with Obsidian wiki-link syntax `[[Contact Name]]`.
+**As a user**, I want contacts to be linked by their unique UIDs rather than just names, so that contact name changes don't break relationships and I can reliably maintain my contact network.
 
 **Test Location**: `tests/stories/uidBasedLinking.spec.ts`
+
+**Related Specifications**: [Relationship Management Specification](../specifications/relationship-management.md)
 
 ## 15. Contact Metadata Sync
 
@@ -34,9 +38,11 @@ Stories related to creating and managing individual contact data.
 
 ## 17. Efficient VCF Updates
 
-**As a user**, I expect VCFs will only be updated when the data actually changes; the plugin should ensure vcard and front matter are always sorted to prevent relationships, which inherently have no "order," from shuffling around chaotically when refreshed. Specifically, when mapping relationships to frontmatter, the plugin sorts first by key, then by value, creating a deterministic ordering for serialization. The REV field is only updated when frontmatter actually changes.
+**As a user**, I expect VCFs will only be updated when the data actually changes, so that I don't see unnecessary file modifications that trigger syncing and version control noise.
 
 **Test Location**: `tests/stories/efficientVcfUpdates.spec.ts`
+
+**Related Specifications**: [VCF Sync Specification](../specifications/vcf-sync.md)
 
 ---
 
