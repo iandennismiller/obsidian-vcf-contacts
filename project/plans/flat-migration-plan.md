@@ -310,15 +310,25 @@ npm install --save-dev @types/flat
 
 See Step 2 above - this step is already complete.
 
-#### Step 4: Refactor VCardGenerator (NEXT)
+#### Step 4: Refactor VCardGenerator ✅ COMPLETE
 **File**: `src/models/vcardFile/generation.ts`
 
-1. Add `unflatten` import from flat
-2. Replace `objectToVcf()` with flat-based implementation
-3. Remove `parseKey()` usage
-4. Update tests
+1. ✅ Added `unflatten` import from flat library
+2. ✅ Replaced `objectToVcf()` with flat-based implementation
+3. ✅ Removed custom `parseObsidianKey()` helper function
+4. ✅ Uses `unflatten()` directly - no adapter layer needed
+5. ✅ Updated `createEmpty()` to use dot notation
 
-#### Step 5: Remove Deprecated Code
+**Key Changes**:
+- Removed custom bracket notation parsing (`parseObsidianKey`)
+- Removed manual field grouping logic
+- Now uses `unflatten()` to convert dot notation to nested objects
+- Processes nested structure to create vcard4 properties
+- Handles type parameters and arrays automatically via unflatten
+
+**Impact**: High - core functionality, tests will need updates for new format
+
+#### Step 5: Remove Deprecated Code (NEXT)
 1. Remove `parseKey()` from `utilityFunctions.ts`
 2. Remove `ParsedKey` type from `types.ts`
 3. Update exports in `index.ts` files
