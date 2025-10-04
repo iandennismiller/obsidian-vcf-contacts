@@ -165,8 +165,15 @@ export class MarkdownOperations extends BaseMarkdownSectionOperations {
   // === Helper Methods (grouped with related functionality) ===
 
   private extractRelationshipTypeFromKey(key: string): string {
-    const typeMatch = key.match(/RELATED(?:\[(?:\d+:)?([^\]]+)\])?/);
-    return typeMatch ? typeMatch[1] || 'related' : 'related';
+    // Try dot notation first (RELATED.type or RELATED.type.1)
+    const dotMatch = key.match(/^RELATED\.([^.]+)(?:\.\d+)?$/);
+    if (dotMatch) {
+      return dotMatch[1];
+    }
+    
+    // Fall back to bracket notation for backward compatibility
+    const bracketMatch = key.match(/RELATED(?:\[(?:\d+:)?([^\]]+)\])?/);
+    return bracketMatch ? bracketMatch[1] || 'related' : 'related';
   }
 
   private parseRelatedValue(value: string): { type: 'uuid' | 'uid' | 'name'; value: string } | null {

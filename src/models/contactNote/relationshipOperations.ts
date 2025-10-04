@@ -282,10 +282,18 @@ export class RelationshipOperations extends BaseMarkdownSectionOperations {
 
   /**
    * Extract relationship type from RELATED key format
+   * Supports both dot notation (RELATED.type, RELATED.type.1) and legacy bracket notation
    */
   extractRelationshipType(key: string): string {
-    const typeMatch = key.match(/RELATED(?:\[(?:\d+:)?([^\]]+)\])?/);
-    return typeMatch ? typeMatch[1] || 'related' : 'related';
+    // Try dot notation first (RELATED.type or RELATED.type.1)
+    const dotMatch = key.match(/^RELATED\.([^.]+)(?:\.\d+)?$/);
+    if (dotMatch) {
+      return dotMatch[1];
+    }
+    
+    // Fall back to bracket notation for backward compatibility
+    const bracketMatch = key.match(/RELATED(?:\[(?:\d+:)?([^\]]+)\])?/);
+    return bracketMatch ? bracketMatch[1] || 'related' : 'related';
   }
 
   // === Contact Resolution (co-located with relationship operations) ===
