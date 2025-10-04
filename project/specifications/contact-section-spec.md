@@ -83,39 +83,22 @@ Patterns are checked in this order (most specific first):
 
 ### Email Detection
 
-**Pattern**: `/^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/`
+**Validation**: Uses RFC 5322 simplified email pattern - must contain `@` symbol with valid domain structure.
 
 **Valid examples:**
 - `contact@example.com`
 - `user+tag@domain.co.uk`
 - `first.last@company.com`
 
-**Detection logic:**
-```typescript
-function isEmail(value: string): boolean {
-  const emailPattern = /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[...]/;
-  return emailPattern.test(value.trim());
-}
-```
-
 ### Phone Number Detection
 
-**Pattern**: Phone numbers with 7-15 digits after removing formatting characters
+**Validation**: Phone numbers with 7-15 digits after removing formatting characters.
 
 **Valid examples:**
 - `555-555-5555`
 - `(555) 123-4567`
 - `+1-555-123-4567`
 - `555 123 4567`
-
-**Detection logic:**
-```typescript
-function isPhoneNumber(value: string): boolean {
-  const cleaned = value.replace(/[\s\-\(\)\.]/g, '');
-  const phonePattern = /^[\+]?[0-9]{7,15}$/;
-  return phonePattern.test(cleaned);
-}
-```
 
 **Normalization:**
 - 10-digit US numbers: Convert to `+1-XXX-XXX-XXXX`
@@ -125,21 +108,13 @@ function isPhoneNumber(value: string): boolean {
 
 ### URL Detection
 
-**Pattern**: Valid domain with optional protocol
+**Validation**: Valid domain structure with optional protocol.
 
 **Valid examples:**
 - `https://example.com`
 - `www.example.com`
 - `example.com`
 - `http://subdomain.example.co.uk/path`
-
-**Detection logic:**
-```typescript
-function isUrl(value: string): boolean {
-  const urlPattern = /^(https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b[...]/;
-  return urlPattern.test(trimmed);
-}
-```
 
 **Normalization:**
 - Add `https://` if no protocol specified
@@ -164,104 +139,32 @@ Addresses are detected by exclusion - if not email, URL, or phone, treat as addr
 
 ### General Method
 
-For each detected field type, use separate methods to parse the line and extract the kind:
+For each detected field type, the parser extracts the optional kind/type prefix:
 
-#### Email Line Parsing
+#### Parsing Process
 
-```typescript
-function parseEmailLine(line: string): { kind: string, value: string } {
-  // Try to split on first space
-  const parts = line.split(' ');
-  
-  // If we have 2+ parts and second part is valid email
-  if (parts.length >= 2 && isEmail(parts.slice(1).join(' '))) {
-    return {
-      kind: parts[0],
-      value: parts.slice(1).join(' ')
-    };
-  }
-  
-  // Whole line is email, auto-index
-  return {
-    kind: null, // Will be auto-indexed as 1, 2, 3...
-    value: line
-  };
-}
-```
+1. **Split on first space**: Separate potential kind label from value
+2. **Validate value**: Check if remaining text matches the field type pattern
+3. **Extract kind**: If validation succeeds and there are 2+ parts, first word is the kind
+4. **Auto-index**: If no kind specified, use bare key for first field, then numeric indices
 
-#### Phone Line Parsing
+#### Examples
 
-```typescript
-function parsePhoneLine(line: string): { kind: string, value: string } {
-  const parts = line.split(' ');
-  
-  // Try parsing with first word as kind
-  if (parts.length >= 2 && isPhoneNumber(parts.slice(1).join(' '))) {
-    return {
-      kind: parts[0],
-      value: normalizePhoneNumber(parts.slice(1).join(' '))
-    };
-  }
-  
-  // Whole line is phone
-  return {
-    kind: null,
-    value: normalizePhoneNumber(line)
-  };
-}
-```
+**Email with kind:**
+- Input: `work contact@example.com`
+- Result: kind=`work`, value=`contact@example.com` → `EMAIL.WORK`
 
-#### URL Line Parsing
+**Phone without kind:**
+- Input: `555-555-5555`
+- Result: kind=null, value=`+1-555-555-5555` → `TEL` (or `TEL.1` if second phone)
 
-```typescript
-function parseUrlLine(line: string): { kind: string, value: string } {
-  const parts = line.split(' ');
-  
-  // Check if first word is kind and rest is URL
-  if (parts.length >= 2 && isUrl(parts.slice(1).join(' '))) {
-    return {
-      kind: parts[0],
-      value: normalizeUrl(parts.slice(1).join(' '))
-    };
-  }
-  
-  // Whole line is URL
-  return {
-    kind: null,
-    value: normalizeUrl(line)
-  };
-}
-```
+**URL with kind:**
+- Input: `personal http://example.com`
+- Result: kind=`personal`, value=`http://example.com` → `URL.PERSONAL`
 
-#### Address Line Parsing
-
-Addresses are more complex due to multi-line support:
-
-```typescript
-function parseAddressLines(lines: string[]): { kind: string, components: AddressComponents } {
-  // First line may have kind prefix
-  const firstLine = lines[0];
-  const parts = firstLine.split(' ');
-  
-  let kind = null;
-  let addressLines = lines;
-  
-  // Check if first word looks like a kind (not a number)
-  if (parts.length >= 2 && !/^\d/.test(parts[0])) {
-    // Could be a kind
-    const restOfLine = parts.slice(1).join(' ');
-    if (restOfLine.length > 0) {
-      kind = parts[0];
-      addressLines = [restOfLine, ...lines.slice(1)];
-    }
-  }
-  
-  return {
-    kind: kind,
-    components: parseAddressComponents(addressLines)
-  };
-}
-```
+**Address with kind:**
+- Input: `home 123 Main St, Springfield`
+- Result: kind=`home`, components parsed → `ADR.HOME.STREET`, `ADR.HOME.LOCALITY`
 
 ### Kind Label Flexibility
 
@@ -270,7 +173,9 @@ The kind/type prefix is **optional** and can be any string:
 - **Supported kinds**: Any label the user wants
 - **Common examples**: `home`, `work`, `personal`, `cell`, `mobile`, `vacation`
 - **Custom examples**: `emergency`, `backup`, `temporary`, `old`
-- **Case handling**: Converted to uppercase for frontmatter keys (e.g., `work` → `WORK`)
+- **Case handling**: Preserved in dot notation (e.g., `work` → `EMAIL.WORK`)
+
+**Note**: The vCard export converts these to TYPE parameters (e.g., `EMAIL;TYPE=WORK:...`)
 
 ### Auto-Indexing
 

@@ -54,16 +54,19 @@ The plugin maps between vCard fields and Obsidian frontmatter:
 
 ### Standard Fields
 - `FN` → `FN` (Full Name)
-- `N` → `N.GN`, `N.FN`, etc. (Name components)
-- `EMAIL` → `EMAIL`, `EMAIL[HOME]`, etc.
-- `TEL` → `TEL`, `TEL[CELL]`, etc.
-- `ADR` → `ADR.STREET`, `ADR.LOCALITY`, etc.
+- `N` → `N.GN`, `N.FN`, etc. (Name components via flat library)
+- `EMAIL` → `EMAIL`, `EMAIL.HOME`, `EMAIL.WORK`, etc. (via flat library)
+- `TEL` → `TEL`, `TEL.CELL`, `TEL.HOME`, etc. (via flat library)
+- `ADR` → `ADR.STREET`, `ADR.HOME.STREET`, etc. (via flat library)
+- `URL` → `URL`, `URL.HOME`, `URL.WORK`, etc. (via flat library)
 - `UID` → `UID` (Unique identifier)
 - `REV` → `REV` (Revision timestamp)
 - `GENDER` → `GENDER` (Gender field)
 
+**Note**: Fields using dot notation (N, ADR, EMAIL, TEL, URL) are handled by the flat library for conversion between nested vCard structures and flat frontmatter.
+
 ### Relationship Fields
-- `RELATED` → `RELATED[type]` with UID-based values
+- `RELATED` → `"RELATED[type]"` with UID-based values (custom implementation)
 - Bidirectional sync ensures reciprocal relationships
 
 ## Conflict Resolution
