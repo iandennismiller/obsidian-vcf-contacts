@@ -58,14 +58,6 @@ Stories related to displaying and managing contact information in the Contact se
 
 **Related Specifications**: [Contact Section Specification](../specifications/contact-section.md#bidirectional-sync)
 
-## 36. Contact Section Template Customization
-
-**As a user**, I want to customize how contact information is displayed in the Contact section so that I can control the appearance and organization to match my preferences.
-
-**Test Location**: `tests/stories/contactTemplateCustomization.spec.ts`
-
-**Related Specifications**: [Contact Section Specification](../specifications/contact-section.md)
-
 ## 37. Contact Section Creation from User Input
 
 **As a user**, when I manually create or edit a Contact section in markdown, I want the plugin to recognize and parse it even if formatting isn't perfect, so that I have flexibility in how I enter data.
@@ -105,14 +97,6 @@ Stories related to displaying and managing contact information in the Contact se
 **As a user**, I expect the Contact section sync to be efficient and not slow down my editing experience, even with large contact lists.
 
 **Test Location**: `tests/stories/contactSectionPerformance.spec.ts`
-
-**Related Specifications**: [Contact Section Specification](../specifications/contact-section.md)
-
-## 41. Contact Template Customization
-
-**As a user**, I want to customize the Contact section template in plugin settings using template variables so that I can control how contact information is displayed and which fields appear.
-
-**Test Location**: `tests/stories/contactTemplateCustomization.spec.ts`
 
 **Related Specifications**: [Contact Section Specification](../specifications/contact-section.md)
 
