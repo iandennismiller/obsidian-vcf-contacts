@@ -27,6 +27,7 @@ Manage contacts in Obsidian using the vCard 4.0 standard format. This plugin int
 - **Import/Export**: Standards-compliant VCF file import and export functionality
 - **UID-Based Linking**: Contact references use unique identifiers to maintain integrity across name changes
 - **Gender-Aware Processing**: Automatic relationship term conversion based on contact gender
+- **vdirsyncer Integration**: View and edit [vdirsyncer](https://github.com/pimutils/vdirsyncer) configuration from within Obsidian for CardDAV synchronization
 
 ## Architecture
 
