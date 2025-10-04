@@ -63,18 +63,7 @@ describe('Curator Pipeline Integration', () => {
           const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
           if (frontmatterMatch) {
             try {
-              const yaml = frontmatterMatch[1];
-              const frontmatter: any = {};
-              const lines = yaml.split('\n');
-              lines.forEach(line => {
-                // Handle both quoted and unquoted keys
-                const match = line.match(/^"?([^":]+)"?:\s*(.+)$/);
-                if (match) {
-                  const key = match[1].trim();
-                  const value = match[2].trim();
-                  frontmatter[key] = value;
-                }
-              });
+              const frontmatter = parseYaml(frontmatterMatch[1]) ?? {};
               console.log(`[TEST] metadataCache.getFileCache(${file.path}): keys = ${Object.keys(frontmatter).join(', ')}`);
               return { frontmatter };
             } catch (error) {
