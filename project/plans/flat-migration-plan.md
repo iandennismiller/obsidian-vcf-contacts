@@ -343,9 +343,12 @@ export class FlatAdapter {
 #### Step 6: Update Demo Data
 **Files**: `docs/demo-data/markdown/*.md`
 
-1. Convert frontmatter from bracket to dot notation
+1. Convert frontmatter from bracket to dot notation in all demo contact files
 2. Update demo VCF files if needed
 3. Verify data integrity tests still pass
+4. Test bidirectional sync with updated format
+
+**Note**: Demo data files currently use bracket notation and will be migrated during implementation. There are approximately 20+ contact files that need frontmatter updates.
 
 #### Step 7: Update Migration Documentation
 **File**: `docs/migration-guide.md` (new)
