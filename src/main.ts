@@ -79,6 +79,9 @@ export default class ContactsPlugin extends Plugin {
 				this.curatorManager.registerCommands(this);
 			}
 
+			// Register validation commands
+			this.registerValidationCommands();
+
 			console.debug('[ContactsPlugin] Plugin initialization complete');
 		} catch (error: any) {
 			console.error(`[ContactsPlugin] Error during async initialization: ${error.message}`);
@@ -121,6 +124,106 @@ export default class ContactsPlugin extends Plugin {
 		await this.saveData(this.settings);
 		// Update shared settings context to keep it in sync
 		setSettings(this.settings);
+	}
+
+	/**
+	 * Register validation commands for removing invalid frontmatter fields
+	 */
+	private registerValidationCommands(): void {
+		// Command to remove invalid fields from current contact
+		this.addCommand({
+			id: 'remove-invalid-fields-current',
+			name: "Remove invalid frontmatter fields from current contact",
+			callback: async () => {
+				await this.removeInvalidFieldsFromCurrent();
+			},
+		});
+
+		// Command to remove invalid fields from all contacts
+		this.addCommand({
+			id: 'remove-invalid-fields-all',
+			name: "Remove invalid frontmatter fields from all contacts",
+			callback: async () => {
+				await this.removeInvalidFieldsFromAll();
+			},
+		});
+	}
+
+	/**
+	 * Remove invalid frontmatter fields from the current active contact
+	 */
+	private async removeInvalidFieldsFromCurrent(): Promise<void> {
+		const activeFile = this.app.workspace.getActiveFile();
+		if (!activeFile) {
+			new Notice('No active file found');
+			return;
+		}
+
+		// Check if the file is in the contacts folder
+		if (!activeFile.path.startsWith(this.settings.contactsFolder)) {
+			new Notice('Active file is not in the contacts folder');
+			return;
+		}
+
+		try {
+			const contactNote = new ContactNote(this.app, this.settings, activeFile);
+			const result = await contactNote.removeInvalidFrontmatterFields();
+
+			if (result.errors.length > 0) {
+				new Notice(`Error removing invalid fields: ${result.errors[0]}`);
+				return;
+			}
+
+			if (result.removed.length === 0) {
+				new Notice('No invalid fields found');
+			} else {
+				new Notice(`Removed ${result.removed.length} invalid field(s): ${result.removed.join(', ')}`);
+			}
+		} catch (error: any) {
+			console.error('Error removing invalid fields from current contact:', error);
+			new Notice('Error removing invalid fields');
+		}
+	}
+
+	/**
+	 * Remove invalid frontmatter fields from all contacts
+	 */
+	private async removeInvalidFieldsFromAll(): Promise<void> {
+		if (!this.contactManager) {
+			new Notice('Contact manager not initialized');
+			return;
+		}
+
+		try {
+			new Notice('Removing invalid fields from all contacts...');
+			
+			const contactFiles = this.contactManager.getAllContactFiles();
+			let totalRemoved = 0;
+			let processedCount = 0;
+
+			for (const file of contactFiles) {
+				try {
+					const contactNote = new ContactNote(this.app, this.settings, file);
+					const result = await contactNote.removeInvalidFrontmatterFields();
+					
+					if (result.removed.length > 0) {
+						totalRemoved += result.removed.length;
+						processedCount++;
+					}
+				} catch (error: any) {
+					console.error(`Error processing contact ${file.name}:`, error);
+				}
+			}
+
+			if (totalRemoved === 0) {
+				new Notice('No invalid fields found in any contacts');
+			} else {
+				new Notice(`Removed ${totalRemoved} invalid field(s) from ${processedCount} contact(s)`);
+			}
+		} catch (error: any) {
+			console.error('Error removing invalid fields from all contacts:', error);
+			new Notice('Error removing invalid fields from all contacts');
+		}
 	}
 
 }

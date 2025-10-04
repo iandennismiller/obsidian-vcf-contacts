@@ -499,6 +499,35 @@ Email
 - User is notified about validation issues
 - Seriously malformed data may be skipped
 
+### 38a. Remove Invalid Frontmatter Fields
+**As a user**, I want to automatically clean up invalid contact fields from frontmatter so I can fix data quality issues caused by accidentally entering bad data. The plugin should provide:
+
+- Command to remove invalid fields from current contact
+- Command to remove invalid fields from all contacts
+- Validation of EMAIL, TEL, and URL field formats
+- Preview of fields that will be removed
+- Notification showing number of invalid fields removed
+
+**Validation rules for removal:**
+- EMAIL fields must contain @ symbol and domain (e.g., user@domain.com)
+- TEL fields must contain at least some digits
+- URL fields must start with http:// or https://
+- Dates (BDAY, REV, ANNIVERSARY) must be valid date formats
+
+**Expected behavior:**
+- Command shows notice with number of invalid fields found
+- Invalid fields are removed from frontmatter
+- File is saved with cleaned frontmatter
+- Notice confirms number of fields removed
+- Valid fields are preserved unchanged
+
+**Example scenario:**
+1. User accidentally enters `EMAIL[HOME]: not-an-email` in frontmatter
+2. User runs "Remove invalid frontmatter fields from current contact" command
+3. Plugin identifies the invalid email field
+4. Plugin removes `EMAIL[HOME]` from frontmatter
+5. Plugin saves the file and shows "Removed 1 invalid field(s)"
+
 ### 39. Contact Section and VCF Sync Integration
 **As a user**, when I export contacts to VCF format or import from VCF files, I expect the Contact section to be synchronized properly. The plugin should:
 

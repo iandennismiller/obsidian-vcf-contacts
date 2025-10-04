@@ -350,6 +350,17 @@ export class ContactNote {
     return this.validationOps.sanitizeInput(input);
   }
 
+  /**
+   * Remove invalid frontmatter fields
+   * Returns list of removed field keys and any errors
+   */
+  async removeInvalidFrontmatterFields(): Promise<{
+    removed: string[];
+    errors: string[];
+  }> {
+    return this.validationOps.removeInvalidFrontmatterFields();
+  }
+
   // === Advanced Relationship Operations ===
 
   /**
