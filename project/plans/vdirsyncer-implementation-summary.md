@@ -129,7 +129,7 @@ Status automatically updates when:
 ## Documentation
 
 ### User Documentation
-- **User Story 43** added to `docs/user-stories.md`
+- **User Story 43** added to `project/user-stories/external-integration.md`
 - Comprehensive description of feature
 - Complete workflow examples
 - Configuration options documented
@@ -202,7 +202,7 @@ The following were considered but deemed out of scope:
 ### Modified Files
 - `src/plugin/settings.ts` (+89 lines)
 - `src/main.ts` (+28 lines)
-- `docs/user-stories.md` (+153 lines)
+- `project/user-stories/external-integration.md` (+153 lines)
 - `README.md` (+1 line)
 - `styles.css` (+73 lines)
 
