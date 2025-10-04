@@ -8,5 +8,5 @@
 export { Gender, UID, Revision } from './valueObjects';
 
 // Fields
-export { ContactField, ValidationResult, FrontmatterEntry, EmailField } from './fields';
+export { ContactField, ValidationResult, FrontmatterEntry, EmailField, TelephoneField } from './fields';
 // More entities will be added as they are implemented
