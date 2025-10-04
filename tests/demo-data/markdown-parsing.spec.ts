@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { parseKey, mdRender, createNameSlug, createFileName } from '../../src/models/contactNote';
+import { mdRender, createNameSlug, createFileName } from '../../src/models/contactNote';
 import { parse as parseYaml } from 'yaml';
 import * as fs from 'fs/promises';
 import * as path from 'path';
@@ -107,48 +107,6 @@ describe('Demo Markdown Data Validation', () => {
         const slug = createNameSlug(records as any);
         expect(slug).toBeDefined();
         expect(slug.length).toBeGreaterThan(0);
-      });
-    });
-  });
-
-  describe('parseKey utility function', () => {
-    it('should parse various key formats from demo data', () => {
-      const keyTestCases = [
-        'N.GN',
-        'N.FN', 
-        'EMAIL[HOME]',
-        'EMAIL[WORK]',
-        'TEL[CELL]',
-        'ADR[HOME].STREET',
-        'ADR[HOME].LOCALITY',
-        'ADR[HOME].POSTAL',
-        'ADR[HOME].COUNTRY',
-        'URL[HOME]',
-        'URL[WORK]'
-      ];
-
-      keyTestCases.forEach(keyStr => {
-        expect(() => parseKey(keyStr)).not.toThrow();
-        const parsed = parseKey(keyStr);
-        expect(parsed).toBeDefined();
-        expect(parsed.key).toBeDefined();
-      });
-    });
-
-    it('should handle complex key formats correctly', () => {
-      const complexKeys = [
-        'TEL[CELL]',
-        'EMAIL[HOME]', 
-        'ADR[HOME].STREET',
-        'N.GN'
-      ];
-
-      complexKeys.forEach(key => {
-        const parsed = parseKey(key);
-        expect(parsed).toBeDefined();
-        expect(parsed.key).toBeDefined();
-        expect(typeof parsed.key).toBe('string');
-        // Don't test specific internal structure since it may vary
       });
     });
   });

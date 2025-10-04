@@ -228,7 +228,7 @@ FN: Batch Contact
       return Promise.resolve(`---
 UID: ${contacts[index].uid}
 FN: Network ${index}
-RELATED[colleague]: urn:uuid:${contacts[nextIndex].uid}
+RELATED.colleague: urn:uuid:${contacts[nextIndex].uid}
 ---
 
 #### Related
@@ -245,7 +245,7 @@ RELATED[colleague]: urn:uuid:${contacts[nextIndex].uid}
         frontmatter: {
           UID: contacts[index].uid,
           FN: `Network ${index}`,
-          'RELATED[colleague]': `urn:uuid:${contacts[nextIndex].uid}`
+          'RELATED.colleague': `urn:uuid:${contacts[nextIndex].uid}`
         }
       };
     });

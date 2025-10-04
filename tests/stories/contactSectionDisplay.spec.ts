@@ -49,8 +49,8 @@ describe('Contact Section Display in Markdown Story', () => {
     const content = `---
 UID: bruce-wayne-123
 FN: Bruce Wayne
-EMAIL[HOME]: bruce.wayne@wayneenterprises.com
-EMAIL[WORK]: batman@batcave.org
+EMAIL.HOME: bruce.wayne@wayneenterprises.com
+EMAIL.WORK: batman@batcave.org
 ---
 
 #### Notes
@@ -63,8 +63,8 @@ Bruce Wayne is a billionaire philanthropist.
       frontmatter: {
         UID: 'bruce-wayne-123',
         FN: 'Bruce Wayne',
-        'EMAIL[HOME]': 'bruce.wayne@wayneenterprises.com',
-        'EMAIL[WORK]': 'batman@batcave.org'
+        'EMAIL.HOME': 'bruce.wayne@wayneenterprises.com',
+        'EMAIL.WORK': 'batman@batcave.org'
       }
     });
 
@@ -73,8 +73,8 @@ Bruce Wayne is a billionaire philanthropist.
     // Future implementation should generate Contact section from frontmatter
     // For now, verify that frontmatter contains email fields
     const frontmatter = await contactNote.getFrontmatter();
-    expect(frontmatter['EMAIL[HOME]']).toBe('bruce.wayne@wayneenterprises.com');
-    expect(frontmatter['EMAIL[WORK]']).toBe('batman@batcave.org');
+    expect(frontmatter['EMAIL.HOME']).toBe('bruce.wayne@wayneenterprises.com');
+    expect(frontmatter['EMAIL.WORK']).toBe('batman@batcave.org');
   });
 
   it('should display phone numbers in Contact section', async () => {
@@ -82,8 +82,8 @@ Bruce Wayne is a billionaire philanthropist.
     const content = `---
 UID: bruce-wayne-123
 FN: Bruce Wayne
-TEL[CELL]: +12125550000
-TEL[BATPHONE]: +12125550001
+TEL.CELL: +12125550000
+TEL.BATPHONE: +12125550001
 ---
 
 #### Notes
@@ -96,8 +96,8 @@ Bruce Wayne is a billionaire philanthropist.
       frontmatter: {
         UID: 'bruce-wayne-123',
         FN: 'Bruce Wayne',
-        'TEL[CELL]': '+12125550000',
-        'TEL[BATPHONE]': '+12125550001'
+        'TEL.CELL': '+12125550000',
+        'TEL.BATPHONE': '+12125550001'
       }
     });
 
@@ -106,8 +106,8 @@ Bruce Wayne is a billionaire philanthropist.
     // Future implementation should generate Contact section from frontmatter
     // For now, verify that frontmatter contains phone fields
     const frontmatter = await contactNote.getFrontmatter();
-    expect(frontmatter['TEL[CELL]']).toBe('+12125550000');
-    expect(frontmatter['TEL[BATPHONE]']).toBe('+12125550001');
+    expect(frontmatter['TEL.CELL']).toBe('+12125550000');
+    expect(frontmatter['TEL.BATPHONE']).toBe('+12125550001');
   });
 
   it('should display addresses in Contact section', async () => {
@@ -115,10 +115,10 @@ Bruce Wayne is a billionaire philanthropist.
     const content = `---
 UID: bruce-wayne-123
 FN: Bruce Wayne
-ADR[HOME].STREET: 1007 Mountain Drive
-ADR[HOME].LOCALITY: Gotham
-ADR[HOME].POSTAL: 10001
-ADR[HOME].COUNTRY: USA
+ADR.HOME.STREET: 1007 Mountain Drive
+ADR.HOME.LOCALITY: Gotham
+ADR.HOME.POSTAL: 10001
+ADR.HOME.COUNTRY: USA
 ---
 
 #### Notes
@@ -131,10 +131,10 @@ Bruce Wayne is a billionaire philanthropist.
       frontmatter: {
         UID: 'bruce-wayne-123',
         FN: 'Bruce Wayne',
-        'ADR[HOME].STREET': '1007 Mountain Drive',
-        'ADR[HOME].LOCALITY': 'Gotham',
-        'ADR[HOME].POSTAL': '10001',
-        'ADR[HOME].COUNTRY': 'USA'
+        'ADR.HOME.STREET': '1007 Mountain Drive',
+        'ADR.HOME.LOCALITY': 'Gotham',
+        'ADR.HOME.POSTAL': '10001',
+        'ADR.HOME.COUNTRY': 'USA'
       }
     });
 
@@ -143,10 +143,10 @@ Bruce Wayne is a billionaire philanthropist.
     // Future implementation should generate Contact section from frontmatter
     // For now, verify that frontmatter contains address fields
     const frontmatter = await contactNote.getFrontmatter();
-    expect(frontmatter['ADR[HOME].STREET']).toBe('1007 Mountain Drive');
-    expect(frontmatter['ADR[HOME].LOCALITY']).toBe('Gotham');
-    expect(frontmatter['ADR[HOME].POSTAL']).toBe('10001');
-    expect(frontmatter['ADR[HOME].COUNTRY']).toBe('USA');
+    expect(frontmatter['ADR.HOME.STREET']).toBe('1007 Mountain Drive');
+    expect(frontmatter['ADR.HOME.LOCALITY']).toBe('Gotham');
+    expect(frontmatter['ADR.HOME.POSTAL']).toBe('10001');
+    expect(frontmatter['ADR.HOME.COUNTRY']).toBe('USA');
   });
 
   it('should display websites/URLs in Contact section', async () => {
@@ -154,8 +154,8 @@ Bruce Wayne is a billionaire philanthropist.
     const content = `---
 UID: bruce-wayne-123
 FN: Bruce Wayne
-URL[HOME]: https://wayneenterprises.com/bruce
-URL[WORK]: https://batcave.org/batman
+URL.HOME: https://wayneenterprises.com/bruce
+URL.WORK: https://batcave.org/batman
 ---
 
 #### Notes
@@ -168,8 +168,8 @@ Bruce Wayne is a billionaire philanthropist.
       frontmatter: {
         UID: 'bruce-wayne-123',
         FN: 'Bruce Wayne',
-        'URL[HOME]': 'https://wayneenterprises.com/bruce',
-        'URL[WORK]': 'https://batcave.org/batman'
+        'URL.HOME': 'https://wayneenterprises.com/bruce',
+        'URL.WORK': 'https://batcave.org/batman'
       }
     });
 
@@ -178,8 +178,8 @@ Bruce Wayne is a billionaire philanthropist.
     // Future implementation should generate Contact section from frontmatter
     // For now, verify that frontmatter contains URL fields
     const frontmatter = await contactNote.getFrontmatter();
-    expect(frontmatter['URL[HOME]']).toBe('https://wayneenterprises.com/bruce');
-    expect(frontmatter['URL[WORK]']).toBe('https://batcave.org/batman');
+    expect(frontmatter['URL.HOME']).toBe('https://wayneenterprises.com/bruce');
+    expect(frontmatter['URL.WORK']).toBe('https://batcave.org/batman');
   });
 
   it('should handle multiple contact fields of different types', async () => {
@@ -187,16 +187,16 @@ Bruce Wayne is a billionaire philanthropist.
     const content = `---
 UID: bruce-wayne-123
 FN: Bruce Wayne
-EMAIL[HOME]: bruce.wayne@wayneenterprises.com
-EMAIL[WORK]: batman@batcave.org
-TEL[CELL]: +12125550000
-TEL[BATPHONE]: +12125550001
-ADR[HOME].STREET: 1007 Mountain Drive
-ADR[HOME].LOCALITY: Gotham
-ADR[HOME].POSTAL: 10001
-ADR[HOME].COUNTRY: USA
-URL[HOME]: https://wayneenterprises.com/bruce
-URL[WORK]: https://batcave.org/batman
+EMAIL.HOME: bruce.wayne@wayneenterprises.com
+EMAIL.WORK: batman@batcave.org
+TEL.CELL: +12125550000
+TEL.BATPHONE: +12125550001
+ADR.HOME.STREET: 1007 Mountain Drive
+ADR.HOME.LOCALITY: Gotham
+ADR.HOME.POSTAL: 10001
+ADR.HOME.COUNTRY: USA
+URL.HOME: https://wayneenterprises.com/bruce
+URL.WORK: https://batcave.org/batman
 ---
 
 #### Notes
@@ -209,16 +209,16 @@ Bruce Wayne is a billionaire philanthropist.
       frontmatter: {
         UID: 'bruce-wayne-123',
         FN: 'Bruce Wayne',
-        'EMAIL[HOME]': 'bruce.wayne@wayneenterprises.com',
-        'EMAIL[WORK]': 'batman@batcave.org',
-        'TEL[CELL]': '+12125550000',
-        'TEL[BATPHONE]': '+12125550001',
-        'ADR[HOME].STREET': '1007 Mountain Drive',
-        'ADR[HOME].LOCALITY': 'Gotham',
-        'ADR[HOME].POSTAL': '10001',
-        'ADR[HOME].COUNTRY': 'USA',
-        'URL[HOME]': 'https://wayneenterprises.com/bruce',
-        'URL[WORK]': 'https://batcave.org/batman'
+        'EMAIL.HOME': 'bruce.wayne@wayneenterprises.com',
+        'EMAIL.WORK': 'batman@batcave.org',
+        'TEL.CELL': '+12125550000',
+        'TEL.BATPHONE': '+12125550001',
+        'ADR.HOME.STREET': '1007 Mountain Drive',
+        'ADR.HOME.LOCALITY': 'Gotham',
+        'ADR.HOME.POSTAL': '10001',
+        'ADR.HOME.COUNTRY': 'USA',
+        'URL.HOME': 'https://wayneenterprises.com/bruce',
+        'URL.WORK': 'https://batcave.org/batman'
       }
     });
 
@@ -227,10 +227,10 @@ Bruce Wayne is a billionaire philanthropist.
     // Future implementation should generate Contact section from all frontmatter fields
     // For now, verify that frontmatter contains all contact fields
     const frontmatter = await contactNote.getFrontmatter();
-    expect(frontmatter['EMAIL[HOME]']).toBe('bruce.wayne@wayneenterprises.com');
-    expect(frontmatter['TEL[CELL]']).toBe('+12125550000');
-    expect(frontmatter['ADR[HOME].STREET']).toBe('1007 Mountain Drive');
-    expect(frontmatter['URL[HOME]']).toBe('https://wayneenterprises.com/bruce');
+    expect(frontmatter['EMAIL.HOME']).toBe('bruce.wayne@wayneenterprises.com');
+    expect(frontmatter['TEL.CELL']).toBe('+12125550000');
+    expect(frontmatter['ADR.HOME.STREET']).toBe('1007 Mountain Drive');
+    expect(frontmatter['URL.HOME']).toBe('https://wayneenterprises.com/bruce');
   });
 
   it('should organize contact information in a readable format', async () => {
@@ -238,9 +238,9 @@ Bruce Wayne is a billionaire philanthropist.
     const content = `---
 UID: tony-stark-456
 FN: Tony Stark
-EMAIL[HOME]: tony.stark@starkindustries.com
-EMAIL[WORKSHOP]: ironman@avengers.com
-TEL[CELL]: +13105551234
+EMAIL.HOME: tony.stark@starkindustries.com
+EMAIL.WORKSHOP: ironman@avengers.com
+TEL.CELL: +13105551234
 ---
 
 #### Notes
@@ -253,9 +253,9 @@ Tony Stark is a genius inventor.
       frontmatter: {
         UID: 'tony-stark-456',
         FN: 'Tony Stark',
-        'EMAIL[HOME]': 'tony.stark@starkindustries.com',
-        'EMAIL[WORKSHOP]': 'ironman@avengers.com',
-        'TEL[CELL]': '+13105551234'
+        'EMAIL.HOME': 'tony.stark@starkindustries.com',
+        'EMAIL.WORKSHOP': 'ironman@avengers.com',
+        'TEL.CELL': '+13105551234'
       }
     });
 
@@ -266,8 +266,8 @@ Tony Stark is a genius inventor.
     // 2. Use visual indicators to separate field types
     // 3. Display fields in predictable order
     const frontmatter = await contactNote.getFrontmatter();
-    expect(frontmatter['EMAIL[HOME]']).toBe('tony.stark@starkindustries.com');
-    expect(frontmatter['EMAIL[WORKSHOP]']).toBe('ironman@avengers.com');
-    expect(frontmatter['TEL[CELL]']).toBe('+13105551234');
+    expect(frontmatter['EMAIL.HOME']).toBe('tony.stark@starkindustries.com');
+    expect(frontmatter['EMAIL.WORKSHOP']).toBe('ironman@avengers.com');
+    expect(frontmatter['TEL.CELL']).toBe('+13105551234');
   });
 });

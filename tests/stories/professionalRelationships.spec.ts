@@ -47,8 +47,8 @@ describe('Professional Relationships Story', () => {
     const content = `---
 UID: worker-one-123
 FN: Worker One
-RELATED[colleague]: name:Colleague Name
-RELATED[1:colleague]: name:Another Colleague
+RELATED.colleague: name:Colleague Name
+RELATED.colleague.1: name:Another Colleague
 ---
 
 #### Related
@@ -62,8 +62,8 @@ RELATED[1:colleague]: name:Another Colleague
       frontmatter: {
         UID: 'worker-one-123',
         FN: 'Worker One',
-        'RELATED[colleague]': 'name:Colleague Name',
-        'RELATED[1:colleague]': 'name:Another Colleague'
+        'RELATED.colleague': 'name:Colleague Name',
+        'RELATED.colleague.1': 'name:Another Colleague'
       }
     });
 
@@ -79,7 +79,7 @@ RELATED[1:colleague]: name:Another Colleague
     const content = `---
 UID: employee-contact-456
 FN: Employee Contact
-RELATED[boss]: name:Manager Name
+RELATED.boss: name:Manager Name
 ---
 
 #### Related
@@ -92,7 +92,7 @@ RELATED[boss]: name:Manager Name
       frontmatter: {
         UID: 'employee-contact-456',
         FN: 'Employee Contact',
-        'RELATED[boss]': 'name:Manager Name'
+        'RELATED.boss': 'name:Manager Name'
       }
     });
 
@@ -109,9 +109,9 @@ RELATED[boss]: name:Manager Name
     const content = `---
 UID: manager-contact-789
 FN: Manager Contact
-RELATED[employee]: name:Employee One
-RELATED[1:employee]: name:Employee Two
-RELATED[2:employee]: name:Employee Three
+RELATED.employee: name:Employee One
+RELATED.employee.1: name:Employee Two
+RELATED.employee.2: name:Employee Three
 ---
 
 #### Related
@@ -126,9 +126,9 @@ RELATED[2:employee]: name:Employee Three
       frontmatter: {
         UID: 'manager-contact-789',
         FN: 'Manager Contact',
-        'RELATED[employee]': 'name:Employee One',
-        'RELATED[1:employee]': 'name:Employee Two',
-        'RELATED[2:employee]': 'name:Employee Three'
+        'RELATED.employee': 'name:Employee One',
+        'RELATED.employee.1': 'name:Employee Two',
+        'RELATED.employee.2': 'name:Employee Three'
       }
     });
 
@@ -144,8 +144,8 @@ RELATED[2:employee]: name:Employee Three
     const content = `---
 UID: business-contact-111
 FN: Business Contact
-RELATED[client]: name:Client Company
-RELATED[1:client]: name:Another Client
+RELATED.client: name:Client Company
+RELATED.client.1: name:Another Client
 ---
 
 #### Related
@@ -159,8 +159,8 @@ RELATED[1:client]: name:Another Client
       frontmatter: {
         UID: 'business-contact-111',
         FN: 'Business Contact',
-        'RELATED[client]': 'name:Client Company',
-        'RELATED[1:client]': 'name:Another Client'
+        'RELATED.client': 'name:Client Company',
+        'RELATED.client.1': 'name:Another Client'
       }
     });
 
@@ -176,8 +176,8 @@ RELATED[1:client]: name:Another Client
     const content = `---
 UID: buyer-contact-222
 FN: Buyer Contact
-RELATED[vendor]: name:Supplier One
-RELATED[1:vendor]: name:Supplier Two
+RELATED.vendor: name:Supplier One
+RELATED.vendor.1: name:Supplier Two
 ---
 
 #### Related
@@ -191,8 +191,8 @@ RELATED[1:vendor]: name:Supplier Two
       frontmatter: {
         UID: 'buyer-contact-222',
         FN: 'Buyer Contact',
-        'RELATED[vendor]': 'name:Supplier One',
-        'RELATED[1:vendor]': 'name:Supplier Two'
+        'RELATED.vendor': 'name:Supplier One',
+        'RELATED.vendor.1': 'name:Supplier Two'
       }
     });
 
@@ -208,10 +208,10 @@ RELATED[1:vendor]: name:Supplier Two
     const content = `---
 UID: business-person-333
 FN: Business Person
-RELATED[colleague]: name:Coworker Name
-RELATED[boss]: name:Manager Name
-RELATED[client]: name:Client Name
-RELATED[vendor]: name:Supplier Name
+RELATED.colleague: name:Coworker Name
+RELATED.boss: name:Manager Name
+RELATED.client: name:Client Name
+RELATED.vendor: name:Supplier Name
 ---
 
 #### Related
@@ -227,10 +227,10 @@ RELATED[vendor]: name:Supplier Name
       frontmatter: {
         UID: 'business-person-333',
         FN: 'Business Person',
-        'RELATED[colleague]': 'name:Coworker Name',
-        'RELATED[boss]': 'name:Manager Name',
-        'RELATED[client]': 'name:Client Name',
-        'RELATED[vendor]': 'name:Supplier Name'
+        'RELATED.colleague': 'name:Coworker Name',
+        'RELATED.boss': 'name:Manager Name',
+        'RELATED.client': 'name:Client Name',
+        'RELATED.vendor': 'name:Supplier Name'
       }
     });
 
@@ -249,8 +249,8 @@ RELATED[vendor]: name:Supplier Name
     const content = `---
 UID: mentorship-contact-444
 FN: Mentorship Contact
-RELATED[mentor]: name:Experienced Person
-RELATED[mentee]: name:Junior Person
+RELATED.mentor: name:Experienced Person
+RELATED.mentee: name:Junior Person
 ---
 
 #### Related
@@ -264,8 +264,8 @@ RELATED[mentee]: name:Junior Person
       frontmatter: {
         UID: 'mentorship-contact-444',
         FN: 'Mentorship Contact',
-        'RELATED[mentor]': 'name:Experienced Person',
-        'RELATED[mentee]': 'name:Junior Person'
+        'RELATED.mentor': 'name:Experienced Person',
+        'RELATED.mentee': 'name:Junior Person'
       }
     });
 
@@ -309,7 +309,7 @@ FN: Sync Professional Contact
     const content = `---
 UID: partner-contact-666
 FN: Partner Contact
-RELATED[business-partner]: name:Partner Name
+RELATED.business-partner: name:Partner Name
 ---
 
 #### Related
@@ -322,7 +322,7 @@ RELATED[business-partner]: name:Partner Name
       frontmatter: {
         UID: 'partner-contact-666',
         FN: 'Partner Contact',
-        'RELATED[business-partner]': 'name:Partner Name'
+        'RELATED.business-partner': 'name:Partner Name'
       }
     });
 

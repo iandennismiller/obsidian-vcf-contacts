@@ -207,9 +207,9 @@ FN: Source Contact
             frontmatter: {
               UID: 'uid-refs-123',
               FN: 'UID Refs Contact',
-              'RELATED[friend]': 'urn:uuid:valid-target-456', // Valid UID
-              'RELATED[colleague]': 'urn:uuid:missing-uid-789', // Broken UID
-              'RELATED[1:family]': 'urn:uuid:another-missing-111' // Another broken UID
+              'RELATED.friend': 'urn:uuid:valid-target-456', // Valid UID
+              'RELATED.colleague': 'urn:uuid:missing-uid-789', // Broken UID
+              'RELATED.family.1': 'urn:uuid:another-missing-111' // Another broken UID
             }
           };
         }
@@ -229,8 +229,8 @@ FN: Source Contact
     
     // Extract UID-based relationships
     const uidRelationships = Object.entries(frontmatter || {})
-      .filter(([key]) => key.startsWith('RELATED['))
-      .map(([key, value]) => ({ key, value: value as string }))
+      .filter(([key]) => key.startsWith('RELATED.'))
+      .map(([key, value) => ({ key, value: value as string }))
       .filter(({ value }) => value.startsWith('urn:uuid:'));
 
     // Validate UID references
@@ -350,7 +350,7 @@ FN: Source Contact
             frontmatter: {
               UID: 'contact-a-123',
               FN: 'Contact A',
-              'RELATED[friend]': 'urn:uuid:contact-b-456'
+              'RELATED.friend': 'urn:uuid:contact-b-456'
             }
           };
         }
@@ -359,7 +359,7 @@ FN: Source Contact
             frontmatter: {
               UID: 'contact-b-456',
               FN: 'Contact B',
-              'RELATED[friend]': 'urn:uuid:contact-c-789'
+              'RELATED.friend': 'urn:uuid:contact-c-789'
             }
           };
         }
@@ -368,7 +368,7 @@ FN: Source Contact
             frontmatter: {
               UID: 'contact-c-789',
               FN: 'Contact C',
-              'RELATED[friend]': 'urn:uuid:contact-a-123' // Back to A!
+              'RELATED.friend': 'urn:uuid:contact-a-123' // Back to A!
             }
           };
         }
@@ -479,7 +479,7 @@ FN: Source Contact
             frontmatter: {
               UID: 'parent-123',
               FN: 'Parent Contact',
-              'RELATED[child]': 'urn:uuid:child-456'
+              'RELATED.child': 'urn:uuid:child-456'
             }
           };
         }
@@ -504,8 +504,8 @@ FN: Source Contact
 
     // Extract parent's relationships
     const parentRelationships = Object.entries(parentFrontmatter || {})
-      .filter(([key]) => key.startsWith('RELATED['))
-      .map(([key, value]) => ({
+      .filter(([key]) => key.startsWith('RELATED.'))
+      .map(([key, value) => ({
         type: key.match(/RELATED\[([^\]]+)\]/)?.[1] || '',
         target: (value as string).replace('urn:uuid:', ''),
         sourceUID: parentFrontmatter?.UID
@@ -518,7 +518,7 @@ FN: Source Contact
         // Check if child has reciprocal parent relationship
         const hasReciprocalParent = Object.entries(childFrontmatter || {})
           .some(([key, value]) => 
-            key.startsWith('RELATED[') && 
+            key.startsWith('RELATED.') && 
             key.includes('parent') &&
             (value as string).includes('parent-123')
           );
@@ -535,7 +535,7 @@ FN: Source Contact
     }
 
     expect(consistencyIssues).toHaveLength(1);
-    expect(consistencyIssues[0].issue).toBe('missing-reciprocal');
+    expect(consistencyIssues[0.issue).toBe('missing-reciprocal');
     expect(consistencyIssues[0].relationshipType).toBe('child');
   });
 

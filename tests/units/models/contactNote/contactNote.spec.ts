@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { 
   ContactNote, 
-  parseKey, 
   createNameSlug, 
   createContactSlug, 
   isKind, 
@@ -271,8 +270,8 @@ EMAIL: john@example.com
 
   describe('relationship type conversions', () => {
     it('should extract relationship type from key', () => {
-      expect(contactNote.extractRelationshipType('RELATED[Spouse]')).toBe('Spouse');
-      expect(contactNote.extractRelationshipType('RELATED[Parent]')).toBe('Parent');
+      expect(contactNote.extractRelationshipType('RELATED.Spouse')).toBe('Spouse');
+      expect(contactNote.extractRelationshipType('RELATED.Parent')).toBe('Parent');
       expect(contactNote.extractRelationshipType('RELATED')).toBe('related');
       expect(contactNote.extractRelationshipType('NoMatch')).toBe('related');
     });
@@ -507,7 +506,7 @@ EMAIL: john@example.com
       mockApp.vault!.read = vi.fn().mockResolvedValue(`---
 UID: test-uid-123
 FN: John Doe
-RELATED[spouse]: urn:uuid:spouse-uid
+RELATED.spouse: urn:uuid:spouse-uid
 ---`);
 
       const janeFile = {
@@ -522,7 +521,7 @@ RELATED[spouse]: urn:uuid:spouse-uid
             frontmatter: {
               UID: 'test-uid-123',
               FN: 'John Doe',
-              'RELATED[spouse]': 'urn:uuid:spouse-uid'
+              'RELATED.spouse': 'urn:uuid:spouse-uid'
             }
           };
         }
@@ -576,7 +575,7 @@ RELATED[spouse]: urn:uuid:spouse-uid
       mockApp.vault!.read = vi.fn().mockResolvedValue(`---
 UID: test-uid-123
 FN: John Doe
-RELATED[spouse]: urn:uuid:spouse-uid
+RELATED.spouse: urn:uuid:spouse-uid
 ---
 
 #### Related
@@ -589,7 +588,7 @@ RELATED[spouse]: urn:uuid:spouse-uid
             frontmatter: {
               UID: 'test-uid-123',
               FN: 'John Doe',
-              'RELATED[spouse]': 'urn:uuid:spouse-uid'
+              'RELATED.spouse': 'urn:uuid:spouse-uid'
             }
           };
         }
@@ -607,7 +606,7 @@ RELATED[spouse]: urn:uuid:spouse-uid
       mockApp.vault!.read = vi.fn().mockResolvedValue(`---
 UID: test-uid-123
 FN: John Doe
-RELATED[spouse]: name:Jane Doe
+RELATED.spouse: name:Jane Doe
 ---`);
       contactNote.invalidateCache();
 
@@ -615,7 +614,7 @@ RELATED[spouse]: name:Jane Doe
         frontmatter: {
           UID: 'test-uid-123',
           FN: 'John Doe',
-          'RELATED[spouse]': 'name:Jane Doe'
+          'RELATED.spouse': 'name:Jane Doe'
         }
       });
 
@@ -676,13 +675,13 @@ FN: John Doe
       mockApp.vault!.read = vi.fn().mockResolvedValue(`---
 UID: test-uid-123
 FN: John Doe
-RELATED[spouse]: urn:uuid:old-uid
+RELATED.spouse: urn:uuid:old-uid
 ---`);
       mockApp.metadataCache!.getFileCache = vi.fn().mockReturnValue({
         frontmatter: {
           UID: 'test-uid-123',
           FN: 'John Doe',
-          'RELATED[spouse]': 'urn:uuid:old-uid'
+          'RELATED.spouse': 'urn:uuid:old-uid'
         }
       });
 
@@ -720,7 +719,7 @@ RELATED[spouse]: urn:uuid:old-uid
       mockApp.vault!.read = vi.fn().mockResolvedValue(`---
 UID: test-uid-123
 FN: John Doe
-RELATED[spouse]: name:Jane Doe
+RELATED.spouse: name:Jane Doe
 ---`);
       contactNote.invalidateCache();
 
@@ -734,7 +733,7 @@ RELATED[spouse]: name:Jane Doe
       mockApp.vault!.read = vi.fn().mockResolvedValue(`---
 UID: test-uid-123
 FN: John Doe
-RELATED[spouse]: name:Jane Doe
+RELATED.spouse: name:Jane Doe
 ---`);
       contactNote.invalidateCache();
 
@@ -759,7 +758,7 @@ RELATED[spouse]: name:Jane Doe
       mockApp.vault!.read = vi.fn().mockResolvedValue(`---
 UID: test-uid-123
 FN: John Doe
-RELATED[spouse]: name:Jane Doe
+RELATED.spouse: name:Jane Doe
 ---`);
       contactNote.invalidateCache();
 
@@ -781,7 +780,7 @@ RELATED[spouse]: name:Jane Doe
           frontmatter: {
             UID: 'test-uid-123',
             FN: 'John Doe',
-            'RELATED[spouse]': 'name:Jane Doe'
+            'RELATED.spouse': 'name:Jane Doe'
           }
         };
       });
@@ -794,7 +793,7 @@ RELATED[spouse]: name:Jane Doe
       mockApp.vault!.read = vi.fn().mockResolvedValue(`---
 UID: test-uid-123
 FN: John Doe
-RELATED[spouse]: name:Jane Doe
+RELATED.spouse: name:Jane Doe
 ---`);
       contactNote.invalidateCache();
 
@@ -924,41 +923,6 @@ FN: John Doe
   });
 
   describe('utility functions', () => {
-    it('should parse frontmatter keys with parseKey', () => {
-      // Simple key
-      let result = parseKey('EMAIL');
-      expect(result.key).toBe('EMAIL');
-      expect(result.index).toBeUndefined();
-      expect(result.type).toBeUndefined();
-      
-      // Key with type
-      result = parseKey('RELATED[spouse]');
-      expect(result.key).toBe('RELATED');
-      expect(result.type).toBe('spouse');
-      
-      // Key with index and type
-      result = parseKey('RELATED[1:spouse]');
-      expect(result.key).toBe('RELATED');
-      expect(result.index).toBe('1');
-      expect(result.type).toBe('spouse');
-      
-      // Key with just index
-      result = parseKey('TEL[0]');
-      expect(result.key).toBe('TEL');
-      expect(result.index).toBe('0');
-      
-      // Key with bracket and subkey
-      result = parseKey('TEL[0].TYPE');
-      expect(result.key).toBe('TEL');
-      expect(result.index).toBe('0');
-      expect(result.subkey).toBe('TYPE');
-      
-      // Key with dot but no brackets splits into key and subkey
-      result = parseKey('N.GN');
-      expect(result.key).toBe('N');
-      expect(result.subkey).toBe('GN');
-    });
-
     it('should create name slug with createNameSlug', () => {
       const record: any = {
         KIND: VCardKinds.Individual,

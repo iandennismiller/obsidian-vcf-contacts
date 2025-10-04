@@ -131,9 +131,9 @@ describe('VCF Export from Obsidian Story', () => {
         UID: 'family-head-123',
         FN: 'Sarah Johnson',
         EMAIL: 'sarah@example.com',
-        'RELATED[spouse]': 'urn:uuid:michael-johnson-456',
-        'RELATED[child]': 'name:Emma Johnson',
-        'RELATED[1:child]': 'name:Alex Johnson'
+        'RELATED.spouse': 'urn:uuid:michael-johnson-456',
+        'RELATED.child': 'name:Emma Johnson',
+        'RELATED.child.1': 'name:Alex Johnson'
       }
     });
 
@@ -156,10 +156,10 @@ describe('VCF Export from Obsidian Story', () => {
         FN: 'Dr. Robert Wilson',
         N: 'Wilson;Robert;Dr.;;',
         'ADR[HOME]': ';;456 Oak Ave;Springfield;IL;62701;USA',
-        'EMAIL[HOME]': 'dr.wilson@personal.com',
-        'EMAIL[WORK]': 'dr.wilson@hospital.com',
-        'TEL[CELL]': '+1-555-123-4567',
-        'TEL[WORK]': '+1-555-987-6543',
+        'EMAIL.HOME': 'dr.wilson@personal.com',
+        'EMAIL.WORK': 'dr.wilson@hospital.com',
+        'TEL.CELL': '+1-555-123-4567',
+        'TEL.WORK': '+1-555-987-6543',
         ORG: 'Springfield Medical Center;Cardiology Department'
       }
     });

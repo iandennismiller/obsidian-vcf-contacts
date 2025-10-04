@@ -78,7 +78,7 @@ describe('Contact Before Related Section Ordering Story', () => {
     const initialContent = `---
 UID: john-doe-123
 FN: John Doe
-EMAIL[HOME]: john@home.com
+EMAIL.HOME: john@home.com
 ---
 
 #### Related
@@ -91,7 +91,7 @@ EMAIL[HOME]: john@home.com
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'EMAIL[HOME]': 'john@home.com'
+        'EMAIL.HOME': 'john@home.com'
       }
     });
 
@@ -122,8 +122,8 @@ EMAIL[HOME]: john@home.com
     const initialContent = `---
 UID: john-doe-123
 FN: John Doe
-EMAIL[HOME]: john@home.com
-RELATED[friend]: urn:uuid:jane-doe-456
+EMAIL.HOME: john@home.com
+RELATED.friend: urn:uuid:jane-doe-456
 ---
 
 ## Contact
@@ -138,8 +138,8 @@ RELATED[friend]: urn:uuid:jane-doe-456
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'EMAIL[HOME]': 'john@home.com',
-        'RELATED[friend]': 'urn:uuid:jane-doe-456'
+        'EMAIL.HOME': 'john@home.com',
+        'RELATED.friend': 'urn:uuid:jane-doe-456'
       }
     });
 
@@ -180,8 +180,8 @@ RELATED[friend]: urn:uuid:jane-doe-456
     const initialContent = `---
 UID: john-doe-123
 FN: John Doe
-EMAIL[HOME]: john@home.com
-EMAIL[WORK]: john@work.com
+EMAIL.HOME: john@home.com
+EMAIL.WORK: john@work.com
 ---
 
 ## Contact
@@ -199,8 +199,8 @@ EMAIL[WORK]: john@work.com
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'EMAIL[HOME]': 'john@home.com',
-        'EMAIL[WORK]': 'john@work.com'
+        'EMAIL.HOME': 'john@home.com',
+        'EMAIL.WORK': 'john@work.com'
       }
     });
 
@@ -232,7 +232,7 @@ EMAIL[WORK]: john@work.com
     const initialContent = `---
 UID: john-doe-123
 FN: John Doe
-EMAIL[HOME]: john@home.com
+EMAIL.HOME: john@home.com
 ---
 
 Some notes here.
@@ -244,7 +244,7 @@ Some notes here.
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'EMAIL[HOME]': 'john@home.com'
+        'EMAIL.HOME': 'john@home.com'
       }
     });
 
@@ -328,7 +328,7 @@ Notes here.
     const initialContent = `---
 UID: john-doe-123
 FN: John Doe
-EMAIL[HOME]: john@home.com
+EMAIL.HOME: john@home.com
 ---
 
 Notes here.
@@ -340,7 +340,7 @@ Notes here.
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'EMAIL[HOME]': 'john@home.com'
+        'EMAIL.HOME': 'john@home.com'
       }
     });
 
@@ -372,8 +372,8 @@ Notes here.
     const initialContent = `---
 UID: john-doe-123
 FN: John Doe
-EMAIL[HOME]: john@home.com
-EMAIL[WORK]: john@work.com
+EMAIL.HOME: john@home.com
+EMAIL.WORK: john@work.com
 ---
 
 #### Related
@@ -391,8 +391,8 @@ EMAIL[WORK]: john@work.com
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'EMAIL[HOME]': 'john@home.com',
-        'EMAIL[WORK]': 'john@work.com'
+        'EMAIL.HOME': 'john@home.com',
+        'EMAIL.WORK': 'john@work.com'
       }
     });
 
@@ -424,7 +424,7 @@ EMAIL[WORK]: john@work.com
     const initialContent = `---
 UID: john-doe-123
 FN: John Doe
-EMAIL[HOME]: john@home.com
+EMAIL.HOME: john@home.com
 ---
 
 #### Related
@@ -442,7 +442,7 @@ EMAIL[HOME]: john@home.com
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'EMAIL[HOME]': 'john@home.com'
+        'EMAIL.HOME': 'john@home.com'
       }
     });
 

@@ -1,4 +1,5 @@
 import { TFile, App } from "obsidian";
+import { unflatten } from 'flat';
 import { VCARD, FNProperty, NProperty, EmailProperty, TelProperty, AdrProperty, 
          TextType, URIType, SpecialValueType, TypeParameter, ParameterValueType,
          BdayProperty, GenderProperty, PhotoProperty, OrgProperty, TitleProperty, RoleProperty,
@@ -46,18 +47,18 @@ export class VCardGenerator {
       "N.MN": "",
       "N.FN": "",
       "N.SUFFIX": "",
-      "TEL[CELL]": "",
-      "TEL[HOME]": "",
-      "TEL[WORK]": "",
-      "EMAIL[HOME]": "",
-      "EMAIL[WORK]": "",
+      "TEL.CELL": "",
+      "TEL.HOME": "",
+      "TEL.WORK": "",
+      "EMAIL.HOME": "",
+      "EMAIL.WORK": "",
       "BDAY": "",
       "PHOTO": "",
-      "ADR[HOME].STREET": "",
-      "ADR[HOME].LOCALITY": "",
-      "ADR[HOME].POSTAL": "",
-      "ADR[HOME].COUNTRY": "",
-      "URL[WORK]": "",
+      "ADR.HOME.STREET": "",
+      "ADR.HOME.LOCALITY": "",
+      "ADR.HOME.POSTAL": "",
+      "ADR.HOME.COUNTRY": "",
+      "URL.WORK": "",
       "ORG": "",
       "ROLE": "",
       "CATEGORIES": "",
@@ -94,162 +95,172 @@ export class VCardGenerator {
 
   /**
    * Convert vCard object to VCF string using vcard4 library
+   * Uses unflatten from flat library to convert dot notation to nested structure
    */
   static objectToVcf(vCardObject: Record<string, any>): string {
     const properties: any[] = [];
-    const processedKeys = new Set<string>();
     
-    // Helper to parse Obsidian key format
-    function parseObsidianKey(key: string): { base: string; type?: string; subfield?: string } {
-      const typeMatch = key.match(/^([A-Z]+)\[([^\]]+)\](?:\.(.+))?$/);
-      if (typeMatch) {
-        return { 
-          base: typeMatch[1], 
-          type: typeMatch[2].includes(':') ? typeMatch[2].split(':')[1] : typeMatch[2],
-          subfield: typeMatch[3]
-        };
+    // Use unflatten to convert dot notation to nested structure
+    const nested = unflatten(vCardObject, { delimiter: '.' }) as Record<string, any>;
+    
+    // Helper to handle arrays and extract type parameters
+    const processField = (fieldName: string, fieldValue: any): Array<{ value: any; type?: string }> => {
+      const results: Array<{ value: any; type?: string }> = [];
+      
+      if (typeof fieldValue === 'object' && !Array.isArray(fieldValue) && fieldValue !== null) {
+        // Check if it's a structured object with type parameters
+        for (const [key, value] of Object.entries(fieldValue)) {
+          if (Array.isArray(value)) {
+            // Multiple values with same type
+            value.forEach(v => results.push({ value: v, type: key }));
+          } else if (value !== undefined && value !== null && value !== '') {
+            results.push({ value, type: key });
+          }
+        }
+      } else if (Array.isArray(fieldValue)) {
+        // Array without type parameters
+        fieldValue.forEach(v => results.push({ value: v }));
+      } else if (fieldValue !== undefined && fieldValue !== null && fieldValue !== '') {
+        // Simple value
+        results.push({ value: fieldValue });
       }
       
-      const dotMatch = key.match(/^([A-Z]+)\.(.+)$/);
-      if (dotMatch) {
-        return { base: dotMatch[1], subfield: dotMatch[2] };
+      return results;
+    };
+    
+    // Process N (structured name) field
+    if (nested.N) {
+      const nData = nested.N;
+      
+      // Check if N has type parameters (like N.HOME, N.WORK, etc.)
+      const hasTypeParams = Object.keys(nData).some(key => 
+        typeof nData[key] === 'object' && !['FN', 'GN', 'MN', 'PREFIX', 'SUFFIX'].includes(key)
+      );
+      
+      if (hasTypeParams) {
+        // Process each type
+        for (const [typeKey, typeData] of Object.entries(nData)) {
+          if (typeof typeData === 'object' && typeData !== null) {
+            const data = typeData as Record<string, any>;
+            const nArr = new Array(5);
+            nArr[0] = data.FN ? new TextType(data.FN) : new TextType('');
+            nArr[1] = data.GN ? new TextType(data.GN) : new TextType('');
+            nArr[2] = data.MN ? new TextType(data.MN) : new TextType('');
+            nArr[3] = data.PREFIX ? new TextType(data.PREFIX) : new TextType('');
+            nArr[4] = data.SUFFIX ? new TextType(data.SUFFIX) : new TextType('');
+            
+            const params = typeKey !== 'default' ? [new TypeParameter('NProperty', new ParameterValueType(typeKey))] : [];
+            properties.push(new NProperty(params, new SpecialValueType('NProperty', nArr)));
+          }
+        }
+      } else {
+        // Simple N without type parameters
+        const data = nData as Record<string, any>;
+        const nArr = new Array(5);
+        nArr[0] = data.FN ? new TextType(data.FN) : new TextType('');
+        nArr[1] = data.GN ? new TextType(data.GN) : new TextType('');
+        nArr[2] = data.MN ? new TextType(data.MN) : new TextType('');
+        nArr[3] = data.PREFIX ? new TextType(data.PREFIX) : new TextType('');
+        nArr[4] = data.SUFFIX ? new TextType(data.SUFFIX) : new TextType('');
+        
+        properties.push(new NProperty([], new SpecialValueType('NProperty', nArr)));
       }
-      
-      return { base: key };
     }
     
-    // First pass: handle structured fields (N, ADR)
-    const nFields: Map<string, any> = new Map();
-    const adrFields: Map<string, any> = new Map();
-    
-    for (const [key, value] of Object.entries(vCardObject)) {
-      const parsed = parseObsidianKey(key);
+    // Process ADR (structured address) field
+    if (nested.ADR) {
+      const adrData = nested.ADR;
       
-      if (parsed.base === 'N' && parsed.subfield) {
-        const typeKey = parsed.type || 'default';
-        if (!nFields.has(typeKey)) {
-          nFields.set(typeKey, { type: parsed.type });
+      for (const [typeKey, typeData] of Object.entries(adrData)) {
+        if (typeof typeData === 'object' && typeData !== null) {
+          const data = typeData as Record<string, any>;
+          const adrArr = new Array(7);
+          adrArr[0] = new TextType(data.PO || '');
+          adrArr[1] = new TextType(data.EXT || '');
+          adrArr[2] = new TextType(data.STREET || '');
+          adrArr[3] = new TextType(data.LOCALITY || '');
+          adrArr[4] = new TextType(data.REGION || '');
+          adrArr[5] = new TextType(data.POSTAL || '');
+          adrArr[6] = new TextType(data.COUNTRY || '');
+          
+          const params = typeKey !== 'default' ? [new TypeParameter('AdrProperty', new ParameterValueType(typeKey))] : [];
+          properties.push(new AdrProperty(params, new SpecialValueType('AdrProperty', adrArr)));
         }
-        // Only add non-empty values
-        if (value) {
-          nFields.get(typeKey)[parsed.subfield] = value;
-        }
-        processedKeys.add(key);
-      } else if (parsed.base === 'ADR' && parsed.subfield) {
-        const typeKey = parsed.type || 'default';
-        if (!adrFields.has(typeKey)) {
-          adrFields.set(typeKey, { type: parsed.type });
-        }
-        // Only add non-empty values
-        if (value) {
-          adrFields.get(typeKey)[parsed.subfield] = value;
-        }
-        processedKeys.add(key);
       }
     }
     
-    // Create N properties
-    for (const [typeKey, fields] of nFields) {
-      const nArr = new Array(5);
-      nArr[0] = fields.FN ? new TextType(fields.FN) : new TextType('');
-      nArr[1] = fields.GN ? new TextType(fields.GN) : new TextType('');
-      nArr[2] = fields.MN ? new TextType(fields.MN) : new TextType('');
-      nArr[3] = fields.PREFIX ? new TextType(fields.PREFIX) : new TextType('');
-      nArr[4] = fields.SUFFIX ? new TextType(fields.SUFFIX) : new TextType('');
+    // Process other fields
+    for (const [fieldName, fieldValue] of Object.entries(nested)) {
+      if (fieldName === 'N' || fieldName === 'ADR' || fieldName === 'VERSION') continue;
       
-      const params = fields.type ? [new TypeParameter('NProperty', new ParameterValueType(fields.type))] : [];
-      properties.push(new NProperty(params, new SpecialValueType('NProperty', nArr)));
-    }
-    
-    // Create ADR properties
-    for (const [typeKey, fields] of adrFields) {
-      const adrArr = new Array(7);
-      adrArr[0] = new TextType(fields.PO || '');
-      adrArr[1] = new TextType(fields.EXT || '');
-      adrArr[2] = new TextType(fields.STREET || '');
-      adrArr[3] = new TextType(fields.LOCALITY || '');
-      adrArr[4] = new TextType(fields.REGION || '');
-      adrArr[5] = new TextType(fields.POSTAL || '');
-      adrArr[6] = new TextType(fields.COUNTRY || '');
+      const items = processField(fieldName, fieldValue);
       
-      const params = fields.type ? [new TypeParameter('AdrProperty', new ParameterValueType(fields.type))] : [];
-      properties.push(new AdrProperty(params, new SpecialValueType('AdrProperty', adrArr)));
-    }
-    
-    // Second pass: handle regular fields
-    for (const [key, value] of Object.entries(vCardObject)) {
-      if (processedKeys.has(key)) continue;
-      
-      // Skip empty values but process non-empty ones
-      if (!value && value !== 0 && value !== false) continue;
-      
-      const parsed = parseObsidianKey(key);
-      const params = parsed.type ? [new TypeParameter(`${parsed.base}Property`, new ParameterValueType(parsed.type))] : [];
-      
-      try {
-        switch (parsed.base) {
-          case 'FN':
-            properties.push(new FNProperty(params, new TextType(String(value))));
-            break;
-          case 'EMAIL':
-            properties.push(new EmailProperty(params, new TextType(String(value))));
-            break;
-          case 'TEL':
-            const telValue = String(value);
-            const telUri = telValue.startsWith('tel:') || telValue.startsWith('+') ? telValue : `tel:${telValue}`;
-            properties.push(new TelProperty(params, new URIType(telUri)));
-            break;
-          case 'BDAY':
-          case 'ANNIVERSARY':
-            const PropClass = parsed.base === 'BDAY' ? BdayProperty : require('vcard4').AnniversaryProperty;
-            properties.push(new PropClass(params, new TextType(String(value))));
-            break;
-          case 'GENDER':
-            properties.push(new GenderProperty([], new SpecialValueType('GenderProperty', [
-              new TextType(String(value)),
-              new TextType('')
-            ])));
-            break;
-          case 'PHOTO':
-            properties.push(new PhotoProperty(params, new URIType(String(value))));
-            break;
-          case 'ORG':
-            const orgValue = String(value);
-            const orgParts = orgValue.split(';').map(part => new TextType(part.trim()));
-            const OrgTextListType = require('vcard4').TextListType;
-            properties.push(new OrgProperty(params, new OrgTextListType(orgParts)));
-            break;
-          case 'TITLE':
-            properties.push(new TitleProperty(params, new TextType(String(value))));
-            break;
-          case 'ROLE':
-            properties.push(new RoleProperty(params, new TextType(String(value))));
-            break;
-          case 'UID':
-            properties.push(new UIDProperty(params, new TextType(String(value))));
-            break;
-          case 'REV':
-            const RevTimestampType = require('vcard4').TimestampType;
-            properties.push(new RevProperty(params, new RevTimestampType(String(value))));
-            break;
-          case 'RELATED':
-            properties.push(new RelatedProperty(params, new URIType(String(value))));
-            break;
-          case 'CATEGORIES':
-            properties.push(new CategoriesProperty(params, new TextType(String(value))));
-            break;
-          case 'NOTE':
-            properties.push(new NoteProperty(params, new TextType(String(value))));
-            break;
-          case 'URL':
-            properties.push(new URLProperty(params, new URIType(String(value))));
-            break;
-          case 'VERSION':
-            // VERSION is handled automatically by VCARD
-            break;
+      for (const item of items) {
+        const params = item.type ? [new TypeParameter(`${fieldName}Property`, new ParameterValueType(item.type))] : [];
+        const value = item.value;
+        
+        try {
+          switch (fieldName) {
+            case 'FN':
+              properties.push(new FNProperty(params, new TextType(String(value))));
+              break;
+            case 'EMAIL':
+              properties.push(new EmailProperty(params, new TextType(String(value))));
+              break;
+            case 'TEL':
+              const telValue = String(value);
+              const telUri = telValue.startsWith('tel:') || telValue.startsWith('+') ? telValue : `tel:${telValue}`;
+              properties.push(new TelProperty(params, new URIType(telUri)));
+              break;
+            case 'BDAY':
+            case 'ANNIVERSARY':
+              const PropClass = fieldName === 'BDAY' ? BdayProperty : require('vcard4').AnniversaryProperty;
+              properties.push(new PropClass(params, new TextType(String(value))));
+              break;
+            case 'GENDER':
+              properties.push(new GenderProperty([], new SpecialValueType('GenderProperty', [
+                new TextType(String(value)),
+                new TextType('')
+              ])));
+              break;
+            case 'PHOTO':
+              properties.push(new PhotoProperty(params, new URIType(String(value))));
+              break;
+            case 'ORG':
+              const orgValue = String(value);
+              const orgParts = orgValue.split(';').map(part => new TextType(part.trim()));
+              const OrgTextListType = require('vcard4').TextListType;
+              properties.push(new OrgProperty(params, new OrgTextListType(orgParts)));
+              break;
+            case 'TITLE':
+              properties.push(new TitleProperty(params, new TextType(String(value))));
+              break;
+            case 'ROLE':
+              properties.push(new RoleProperty(params, new TextType(String(value))));
+              break;
+            case 'UID':
+              properties.push(new UIDProperty(params, new TextType(String(value))));
+              break;
+            case 'REV':
+              const RevTimestampType = require('vcard4').TimestampType;
+              properties.push(new RevProperty(params, new RevTimestampType(String(value))));
+              break;
+            case 'RELATED':
+              properties.push(new RelatedProperty(params, new URIType(String(value))));
+              break;
+            case 'CATEGORIES':
+              properties.push(new CategoriesProperty(params, new TextType(String(value))));
+              break;
+            case 'NOTE':
+              properties.push(new NoteProperty(params, new TextType(String(value))));
+              break;
+            case 'URL':
+              properties.push(new URLProperty(params, new URIType(String(value))));
+              break;
+          }
+        } catch (error: any) {
+          console.warn(`[VCardGenerator] Error creating property ${fieldName}:`, error.message);
         }
-      } catch (error: any) {
-        console.warn(`[VCardGenerator] Error creating property ${parsed.base}:`, error.message);
       }
     }
     

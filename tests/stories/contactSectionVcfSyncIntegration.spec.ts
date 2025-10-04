@@ -49,12 +49,12 @@ describe('Contact Section and VCF Sync Integration Story', () => {
     const content = `---
 UID: john-doe-123
 FN: John Doe
-EMAIL[HOME]: john@home.com
-EMAIL[WORK]: john@work.com
-TEL[CELL]: +1-555-1234
-ADR[HOME].STREET: 123 Main St
-ADR[HOME].LOCALITY: Springfield
-ADR[HOME].POSTAL: 62701
+EMAIL.HOME: john@home.com
+EMAIL.WORK: john@work.com
+TEL.CELL: +1-555-1234
+ADR.HOME.STREET: 123 Main St
+ADR.HOME.LOCALITY: Springfield
+ADR.HOME.POSTAL: 62701
 ---
 
 #Contact`;
@@ -64,12 +64,12 @@ ADR[HOME].POSTAL: 62701
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'EMAIL[HOME]': 'john@home.com',
-        'EMAIL[WORK]': 'john@work.com',
-        'TEL[CELL]': '+1-555-1234',
-        'ADR[HOME].STREET': '123 Main St',
-        'ADR[HOME].LOCALITY': 'Springfield',
-        'ADR[HOME].POSTAL': '62701'
+        'EMAIL.HOME': 'john@home.com',
+        'EMAIL.WORK': 'john@work.com',
+        'TEL.CELL': '+1-555-1234',
+        'ADR.HOME.STREET': '123 Main St',
+        'ADR.HOME.LOCALITY': 'Springfield',
+        'ADR.HOME.POSTAL': '62701'
       }
     });
 
@@ -117,10 +117,10 @@ FN: John Doe
     const content = `---
 UID: john-doe-123
 FN: John Doe
-EMAIL[HOME]: john@home.com
-EMAIL[WORK]: john@work.com
-TEL[CELL]: +1-555-1234
-TEL[HOME]: +1-555-5678
+EMAIL.HOME: john@home.com
+EMAIL.WORK: john@work.com
+TEL.CELL: +1-555-1234
+TEL.HOME: +1-555-5678
 ---
 
 #Contact`;
@@ -130,10 +130,10 @@ TEL[HOME]: +1-555-5678
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'EMAIL[HOME]': 'john@home.com',
-        'EMAIL[WORK]': 'john@work.com',
-        'TEL[CELL]': '+1-555-1234',
-        'TEL[HOME]': '+1-555-5678'
+        'EMAIL.HOME': 'john@home.com',
+        'EMAIL.WORK': 'john@work.com',
+        'TEL.CELL': '+1-555-1234',
+        'TEL.HOME': '+1-555-5678'
       }
     });
 
@@ -154,11 +154,11 @@ TEL[HOME]: +1-555-5678
     const content = `---
 UID: john-doe-123
 FN: John Doe
-ADR[HOME].STREET: 123 Main St
-ADR[HOME].LOCALITY: Springfield
-ADR[HOME].REGION: IL
-ADR[HOME].POSTAL: 62701
-ADR[HOME].COUNTRY: USA
+ADR.HOME.STREET: 123 Main St
+ADR.HOME.LOCALITY: Springfield
+ADR.HOME.REGION: IL
+ADR.HOME.POSTAL: 62701
+ADR.HOME.COUNTRY: USA
 ---
 
 #Contact`;
@@ -168,11 +168,11 @@ ADR[HOME].COUNTRY: USA
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'ADR[HOME].STREET': '123 Main St',
-        'ADR[HOME].LOCALITY': 'Springfield',
-        'ADR[HOME].REGION': 'IL',
-        'ADR[HOME].POSTAL': '62701',
-        'ADR[HOME].COUNTRY': 'USA'
+        'ADR.HOME.STREET': '123 Main St',
+        'ADR.HOME.LOCALITY': 'Springfield',
+        'ADR.HOME.REGION': 'IL',
+        'ADR.HOME.POSTAL': '62701',
+        'ADR.HOME.COUNTRY': 'USA'
       }
     });
 
@@ -193,7 +193,7 @@ ADR[HOME].COUNTRY: USA
     const content = `---
 UID: john-doe-123
 FN: John Doe
-EMAIL[HOME]: john@home.com
+EMAIL.HOME: john@home.com
 ---
 
 #Contact`;
@@ -203,7 +203,7 @@ EMAIL[HOME]: john@home.com
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'EMAIL[HOME]': 'john@home.com'
+        'EMAIL.HOME': 'john@home.com'
       }
     });
 
@@ -220,14 +220,14 @@ EMAIL[HOME]: john@home.com
     const content = `---
 UID: john-doe-123
 FN: John Doe
-EMAIL[HOME]: john@home.com
-EMAIL[WORK]: john@work.com
-TEL[CELL]: +1-555-1234
-TEL[HOME]: +1-555-5678
-ADR[HOME].STREET: 123 Main St
-ADR[HOME].LOCALITY: Springfield
-ADR[HOME].POSTAL: 62701
-URL[HOME]: https://example.com
+EMAIL.HOME: john@home.com
+EMAIL.WORK: john@work.com
+TEL.CELL: +1-555-1234
+TEL.HOME: +1-555-5678
+ADR.HOME.STREET: 123 Main St
+ADR.HOME.LOCALITY: Springfield
+ADR.HOME.POSTAL: 62701
+URL.HOME: https://example.com
 ---
 
 #Contact`;
@@ -237,14 +237,14 @@ URL[HOME]: https://example.com
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'EMAIL[HOME]': 'john@home.com',
-        'EMAIL[WORK]': 'john@work.com',
-        'TEL[CELL]': '+1-555-1234',
-        'TEL[HOME]': '+1-555-5678',
-        'ADR[HOME].STREET': '123 Main St',
-        'ADR[HOME].LOCALITY': 'Springfield',
-        'ADR[HOME].POSTAL': '62701',
-        'URL[HOME]': 'https://example.com'
+        'EMAIL.HOME': 'john@home.com',
+        'EMAIL.WORK': 'john@work.com',
+        'TEL.CELL': '+1-555-1234',
+        'TEL.HOME': '+1-555-5678',
+        'ADR.HOME.STREET': '123 Main St',
+        'ADR.HOME.LOCALITY': 'Springfield',
+        'ADR.HOME.POSTAL': '62701',
+        'URL.HOME': 'https://example.com'
       }
     });
 
@@ -263,7 +263,7 @@ URL[HOME]: https://example.com
     // Future: Import back should preserve all data
   });
 
-  it('should map EMAIL;TYPE=HOME to EMAIL[HOME] on import', async () => {
+  it('should map EMAIL;TYPE=HOME to EMAIL.HOME on import', async () => {
     // Future implementation: VCF import should map type parameters correctly
     
     // This is tested by VCF parsing tests, but Contact section
@@ -272,9 +272,9 @@ URL[HOME]: https://example.com
     expect(true).toBe(true);
   });
 
-  it('should map ADR;TYPE=HOME to ADR[HOME].* components on import', async () => {
+  it('should map ADR;TYPE=HOME to ADR.HOME.* components on import', async () => {
     // Future implementation: VCF address import should create
-    // ADR[HOME].STREET, ADR[HOME].LOCALITY, etc.
+    // ADR.HOME.STREET, ADR.HOME.LOCALITY, etc.
     
     // This is tested by VCF parsing tests
     
@@ -293,7 +293,7 @@ URL[HOME]: https://example.com
     const content = `---
 UID: john-doe-123
 FN: John Doe
-EMAIL[HOME]: john@home.com
+EMAIL.HOME: john@home.com
 ---
 
 #Contact`;
@@ -303,7 +303,7 @@ EMAIL[HOME]: john@home.com
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'EMAIL[HOME]': 'john@home.com'
+        'EMAIL.HOME': 'john@home.com'
       }
     });
 
@@ -323,7 +323,7 @@ EMAIL[HOME]: john@home.com
     const content = `---
 UID: john-doe-123
 FN: John Doe
-EMAIL[HOME]: john@home.com
+EMAIL.HOME: john@home.com
 ---
 
 #Contact`;
@@ -333,7 +333,7 @@ EMAIL[HOME]: john@home.com
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'EMAIL[HOME]': 'john@home.com'
+        'EMAIL.HOME': 'john@home.com'
       }
     });
 

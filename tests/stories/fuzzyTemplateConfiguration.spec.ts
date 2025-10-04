@@ -53,7 +53,7 @@ describe('Fuzzy Template Configuration Story', () => {
     const content = `---
 UID: john-doe-123
 FN: John Doe
-EMAIL[HOME]: email@example.com
+EMAIL.HOME: email@example.com
 ---
 
 #Contact`;
@@ -63,7 +63,7 @@ EMAIL[HOME]: email@example.com
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'EMAIL[HOME]': 'email@example.com'
+        'EMAIL.HOME': 'email@example.com'
       }
     });
 
@@ -71,7 +71,7 @@ EMAIL[HOME]: email@example.com
     const frontmatter = await contactNote.getFrontmatter();
     
     // The email field should be stored with type indicator
-    expect(frontmatter['EMAIL[HOME]']).toBe('email@example.com');
+    expect(frontmatter['EMAIL.HOME']).toBe('email@example.com');
   });
 
   it('should parse phone using {TYPE}: {VALUE} template', async () => {
@@ -83,7 +83,7 @@ EMAIL[HOME]: email@example.com
     const content = `---
 UID: john-doe-123
 FN: John Doe
-TEL[CELL]: +1-555-0000
+TEL.CELL: +1-555-0000
 ---
 
 #Contact`;
@@ -93,14 +93,14 @@ TEL[CELL]: +1-555-0000
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'TEL[CELL]': '+1-555-0000'
+        'TEL.CELL': '+1-555-0000'
       }
     });
 
     const contactNote = new ContactNote(mockApp as App, mockSettings, mockFile);
     const frontmatter = await contactNote.getFrontmatter();
     
-    expect(frontmatter['TEL[CELL]']).toBe('+1-555-0000');
+    expect(frontmatter['TEL.CELL']).toBe('+1-555-0000');
   });
 
   it('should parse URL using {TYPE}: {VALUE} template', async () => {
@@ -109,7 +109,7 @@ TEL[CELL]: +1-555-0000
     const content = `---
 UID: john-doe-123
 FN: John Doe
-URL[WORK]: https://example.com
+URL.WORK: https://example.com
 ---
 
 #Contact`;
@@ -119,27 +119,27 @@ URL[WORK]: https://example.com
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'URL[WORK]': 'https://example.com'
+        'URL.WORK': 'https://example.com'
       }
     });
 
     const contactNote = new ContactNote(mockApp as App, mockSettings, mockFile);
     const frontmatter = await contactNote.getFrontmatter();
     
-    expect(frontmatter['URL[WORK]']).toBe('https://example.com');
+    expect(frontmatter['URL.WORK']).toBe('https://example.com');
   });
 
   it('should handle optional TYPE field in template', async () => {
     const mockFile = { basename: 'john-doe', path: 'Contacts/john-doe.md' } as TFile;
     
     // Future implementation should handle emails without explicit type
-    // and default to numbered index (EMAIL[1], EMAIL[2])
+    // and default to numbered index (EMAIL.1, EMAIL.2)
     
     const content = `---
 UID: john-doe-123
 FN: John Doe
-EMAIL[1]: email1@example.com
-EMAIL[2]: email2@example.com
+EMAIL.1: email1@example.com
+EMAIL.2: email2@example.com
 ---
 
 #Contact`;
@@ -149,16 +149,16 @@ EMAIL[2]: email2@example.com
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'EMAIL[1]': 'email1@example.com',
-        'EMAIL[2]': 'email2@example.com'
+        'EMAIL.1': 'email1@example.com',
+        'EMAIL.2': 'email2@example.com'
       }
     });
 
     const contactNote = new ContactNote(mockApp as App, mockSettings, mockFile);
     const frontmatter = await contactNote.getFrontmatter();
     
-    expect(frontmatter['EMAIL[1]']).toBe('email1@example.com');
-    expect(frontmatter['EMAIL[2]']).toBe('email2@example.com');
+    expect(frontmatter['EMAIL.1']).toBe('email1@example.com');
+    expect(frontmatter['EMAIL.2']).toBe('email2@example.com');
   });
 
   it('should parse multi-line address template', async () => {
@@ -172,11 +172,11 @@ EMAIL[2]: email2@example.com
     const content = `---
 UID: john-doe-123
 FN: John Doe
-ADR[HOME].STREET: 123 Main St
-ADR[HOME].LOCALITY: Springfield
-ADR[HOME].REGION: IL
-ADR[HOME].POSTAL: 62701
-ADR[HOME].COUNTRY: USA
+ADR.HOME.STREET: 123 Main St
+ADR.HOME.LOCALITY: Springfield
+ADR.HOME.REGION: IL
+ADR.HOME.POSTAL: 62701
+ADR.HOME.COUNTRY: USA
 ---
 
 #Contact`;
@@ -186,20 +186,20 @@ ADR[HOME].COUNTRY: USA
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'ADR[HOME].STREET': '123 Main St',
-        'ADR[HOME].LOCALITY': 'Springfield',
-        'ADR[HOME].REGION': 'IL',
-        'ADR[HOME].POSTAL': '62701',
-        'ADR[HOME].COUNTRY': 'USA'
+        'ADR.HOME.STREET': '123 Main St',
+        'ADR.HOME.LOCALITY': 'Springfield',
+        'ADR.HOME.REGION': 'IL',
+        'ADR.HOME.POSTAL': '62701',
+        'ADR.HOME.COUNTRY': 'USA'
       }
     });
 
     const contactNote = new ContactNote(mockApp as App, mockSettings, mockFile);
     const frontmatter = await contactNote.getFrontmatter();
     
-    expect(frontmatter['ADR[HOME].STREET']).toBe('123 Main St');
-    expect(frontmatter['ADR[HOME].LOCALITY']).toBe('Springfield');
-    expect(frontmatter['ADR[HOME].POSTAL']).toBe('62701');
+    expect(frontmatter['ADR.HOME.STREET']).toBe('123 Main St');
+    expect(frontmatter['ADR.HOME.LOCALITY']).toBe('Springfield');
+    expect(frontmatter['ADR.HOME.POSTAL']).toBe('62701');
   });
 
   it('should tolerate formatting variations in templates', async () => {
@@ -213,8 +213,8 @@ ADR[HOME].COUNTRY: USA
     const content = `---
 UID: john-doe-123
 FN: John Doe
-EMAIL[HOME]: email@example.com
-EMAIL[WORK]: work@example.com
+EMAIL.HOME: email@example.com
+EMAIL.WORK: work@example.com
 ---
 
 #Contact`;
@@ -224,30 +224,30 @@ EMAIL[WORK]: work@example.com
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'EMAIL[HOME]': 'email@example.com',
-        'EMAIL[WORK]': 'work@example.com'
+        'EMAIL.HOME': 'email@example.com',
+        'EMAIL.WORK': 'work@example.com'
       }
     });
 
     const contactNote = new ContactNote(mockApp as App, mockSettings, mockFile);
     const frontmatter = await contactNote.getFrontmatter();
     
-    expect(frontmatter['EMAIL[HOME]']).toBe('email@example.com');
-    expect(frontmatter['EMAIL[WORK]']).toBe('work@example.com');
+    expect(frontmatter['EMAIL.HOME']).toBe('email@example.com');
+    expect(frontmatter['EMAIL.WORK']).toBe('work@example.com');
   });
 
   it('should use same template for both display and parsing', async () => {
     const mockFile = { basename: 'john-doe', path: 'Contacts/john-doe.md' } as TFile;
     
     // Future implementation: Template defines both how to display and parse
-    // Display: EMAIL[HOME] -> "Home: email@example.com"
-    // Parse: "Home: email@example.com" -> EMAIL[HOME]
+    // Display: EMAIL.HOME -> "Home: email@example.com"
+    // Parse: "Home: email@example.com" -> EMAIL.HOME
     
     const content = `---
 UID: john-doe-123
 FN: John Doe
-EMAIL[HOME]: email@example.com
-TEL[CELL]: +1-555-1234
+EMAIL.HOME: email@example.com
+TEL.CELL: +1-555-1234
 ---
 
 #Contact`;
@@ -257,8 +257,8 @@ TEL[CELL]: +1-555-1234
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'EMAIL[HOME]': 'email@example.com',
-        'TEL[CELL]': '+1-555-1234'
+        'EMAIL.HOME': 'email@example.com',
+        'TEL.CELL': '+1-555-1234'
       }
     });
 
@@ -266,7 +266,7 @@ TEL[CELL]: +1-555-1234
     const frontmatter = await contactNote.getFrontmatter();
     
     // Verify bidirectional mapping is possible
-    expect(frontmatter['EMAIL[HOME]']).toBe('email@example.com');
-    expect(frontmatter['TEL[CELL]']).toBe('+1-555-1234');
+    expect(frontmatter['EMAIL.HOME']).toBe('email@example.com');
+    expect(frontmatter['TEL.CELL']).toBe('+1-555-1234');
   });
 });

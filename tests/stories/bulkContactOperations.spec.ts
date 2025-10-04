@@ -105,7 +105,7 @@ EMAIL: ${file.basename}@example.com
         return Promise.resolve(`---
 UID: john-uid-123
 FN: John Doe
-RELATED[spouse]: urn:uuid:jane-uid-456
+RELATED.spouse: urn:uuid:jane-uid-456
 ---
 
 #### Related
@@ -116,7 +116,7 @@ RELATED[spouse]: urn:uuid:jane-uid-456
         return Promise.resolve(`---
 UID: jane-uid-456
 FN: Jane Smith
-RELATED[spouse]: urn:uuid:john-uid-123
+RELATED.spouse: urn:uuid:john-uid-123
 ---
 
 #### Related
@@ -132,7 +132,7 @@ RELATED[spouse]: urn:uuid:john-uid-123
           frontmatter: {
             UID: 'john-uid-123',
             FN: 'John Doe',
-            'RELATED[spouse]': 'urn:uuid:jane-uid-456'
+            'RELATED.spouse': 'urn:uuid:jane-uid-456'
           }
         };
       } else {
@@ -140,7 +140,7 @@ RELATED[spouse]: urn:uuid:john-uid-123
           frontmatter: {
             UID: 'jane-uid-456',
             FN: 'Jane Smith',
-            'RELATED[spouse]': 'urn:uuid:john-uid-123'
+            'RELATED.spouse': 'urn:uuid:john-uid-123'
           }
         };
       }

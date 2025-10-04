@@ -51,7 +51,7 @@ describe('Contact Section Template Customization Story', () => {
     const content = `---
 UID: john-doe-123
 FN: John Doe
-EMAIL[HOME]: john@home.com
+EMAIL.HOME: john@home.com
 ---
 
 #Contact`;
@@ -61,7 +61,7 @@ EMAIL[HOME]: john@home.com
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'EMAIL[HOME]': 'john@home.com'
+        'EMAIL.HOME': 'john@home.com'
       }
     });
 
@@ -78,7 +78,7 @@ EMAIL[HOME]: john@home.com
     const content = `---
 UID: john-doe-123
 FN: John Doe
-TEL[CELL]: +1-555-1234
+TEL.CELL: +1-555-1234
 ---
 
 #Contact`;
@@ -88,7 +88,7 @@ TEL[CELL]: +1-555-1234
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'TEL[CELL]': '+1-555-1234'
+        'TEL.CELL': '+1-555-1234'
       }
     });
 
@@ -108,11 +108,11 @@ TEL[CELL]: +1-555-1234
     const content = `---
 UID: john-doe-123
 FN: John Doe
-ADR[HOME].STREET: 123 Main St
-ADR[HOME].LOCALITY: Springfield
-ADR[HOME].REGION: IL
-ADR[HOME].POSTAL: 62701
-ADR[HOME].COUNTRY: USA
+ADR.HOME.STREET: 123 Main St
+ADR.HOME.LOCALITY: Springfield
+ADR.HOME.REGION: IL
+ADR.HOME.POSTAL: 62701
+ADR.HOME.COUNTRY: USA
 ---
 
 #Contact`;
@@ -122,11 +122,11 @@ ADR[HOME].COUNTRY: USA
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'ADR[HOME].STREET': '123 Main St',
-        'ADR[HOME].LOCALITY': 'Springfield',
-        'ADR[HOME].REGION': 'IL',
-        'ADR[HOME].POSTAL': '62701',
-        'ADR[HOME].COUNTRY': 'USA'
+        'ADR.HOME.STREET': '123 Main St',
+        'ADR.HOME.LOCALITY': 'Springfield',
+        'ADR.HOME.REGION': 'IL',
+        'ADR.HOME.POSTAL': '62701',
+        'ADR.HOME.COUNTRY': 'USA'
       }
     });
 
@@ -143,7 +143,7 @@ ADR[HOME].COUNTRY: USA
     const content = `---
 UID: john-doe-123
 FN: John Doe
-URL[HOME]: https://example.com
+URL.HOME: https://example.com
 ---
 
 #Contact`;
@@ -153,7 +153,7 @@ URL[HOME]: https://example.com
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'URL[HOME]': 'https://example.com'
+        'URL.HOME': 'https://example.com'
       }
     });
 
@@ -170,7 +170,7 @@ URL[HOME]: https://example.com
     const content = `---
 UID: john-doe-123
 FN: John Doe
-EMAIL[HOME]: john@home.com
+EMAIL.HOME: john@home.com
 ---
 
 #Contact`;
@@ -180,7 +180,7 @@ EMAIL[HOME]: john@home.com
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'EMAIL[HOME]': 'john@home.com'
+        'EMAIL.HOME': 'john@home.com'
       }
     });
 
@@ -199,8 +199,8 @@ EMAIL[HOME]: john@home.com
     const content = `---
 UID: john-doe-123
 FN: John Doe
-EMAIL[HOME]: john@home.com
-TEL[CELL]: +1-555-1234
+EMAIL.HOME: john@home.com
+TEL.CELL: +1-555-1234
 ---
 
 #Contact`;
@@ -210,8 +210,8 @@ TEL[CELL]: +1-555-1234
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'EMAIL[HOME]': 'john@home.com',
-        'TEL[CELL]': '+1-555-1234'
+        'EMAIL.HOME': 'john@home.com',
+        'TEL.CELL': '+1-555-1234'
       }
     });
 
@@ -231,8 +231,8 @@ TEL[CELL]: +1-555-1234
     const content = `---
 UID: john-doe-123
 FN: John Doe
-EMAIL[HOME]: john@home.com
-TEL[CELL]: +1-555-1234
+EMAIL.HOME: john@home.com
+TEL.CELL: +1-555-1234
 ---
 
 #Contact`;
@@ -242,8 +242,8 @@ TEL[CELL]: +1-555-1234
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'EMAIL[HOME]': 'john@home.com',
-        'TEL[CELL]': '+1-555-1234'
+        'EMAIL.HOME': 'john@home.com',
+        'TEL.CELL': '+1-555-1234'
       }
     });
 
@@ -262,10 +262,10 @@ TEL[CELL]: +1-555-1234
     const content = `---
 UID: john-doe-123
 FN: John Doe
-EMAIL[HOME]: john@home.com
-TEL[CELL]: +1-555-1234
-ADR[HOME].STREET: 123 Main St
-URL[HOME]: https://example.com
+EMAIL.HOME: john@home.com
+TEL.CELL: +1-555-1234
+ADR.HOME.STREET: 123 Main St
+URL.HOME: https://example.com
 ---
 
 #Contact`;
@@ -275,10 +275,10 @@ URL[HOME]: https://example.com
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'EMAIL[HOME]': 'john@home.com',
-        'TEL[CELL]': '+1-555-1234',
-        'ADR[HOME].STREET': '123 Main St',
-        'URL[HOME]': 'https://example.com'
+        'EMAIL.HOME': 'john@home.com',
+        'TEL.CELL': '+1-555-1234',
+        'ADR.HOME.STREET': '123 Main St',
+        'URL.HOME': 'https://example.com'
       }
     });
 
@@ -298,7 +298,7 @@ URL[HOME]: https://example.com
     const content = `---
 UID: john-doe-123
 FN: John Doe
-EMAIL[HOME]: john@home.com
+EMAIL.HOME: john@home.com
 ---
 
 #Contact`;
@@ -308,7 +308,7 @@ EMAIL[HOME]: john@home.com
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'EMAIL[HOME]': 'john@home.com'
+        'EMAIL.HOME': 'john@home.com'
       }
     });
 

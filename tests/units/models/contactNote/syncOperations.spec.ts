@@ -66,7 +66,7 @@ describe('SyncOperations', () => {
       expect(result.success).toBe(true);
       expect(result.errors).toHaveLength(0);
       expect(mockContactData.updateMultipleFrontmatterValues).toHaveBeenCalledWith({
-        'RELATED[spouse]': 'urn:uuid:jane-uid-123',
+        'RELATED.spouse': 'urn:uuid:jane-uid-123',
       });
     });
 
@@ -75,8 +75,8 @@ describe('SyncOperations', () => {
 
       vi.mocked(mockRelationshipOps.parseRelatedSection).mockResolvedValue(mockRelationships);
       vi.mocked(mockContactData.getFrontmatter).mockResolvedValue({
-        'RELATED[spouse]': 'old-value',
-        'RELATED[1:child]': 'another-old-value',
+        'RELATED.spouse': 'old-value',
+        'RELATED.child.1': 'another-old-value',
         FN: 'John Doe',
       });
 
@@ -85,8 +85,8 @@ describe('SyncOperations', () => {
       expect(result.success).toBe(true);
       // Should call update with empty strings to clear RELATED fields
       expect(mockContactData.updateMultipleFrontmatterValues).toHaveBeenCalledWith({
-        'RELATED[spouse]': '',
-        'RELATED[1:child]': '',
+        'RELATED.spouse': '',
+        'RELATED.child.1': '',
       });
     });
 
@@ -109,13 +109,13 @@ describe('SyncOperations', () => {
 
       expect(result.success).toBe(true);
       expect(mockContactData.updateMultipleFrontmatterValues).toHaveBeenCalledWith({
-        'RELATED[child]': 'urn:uuid:alice-uid',
-        'RELATED[1:child]': 'urn:uuid:bob-uid',
+        'RELATED.child': 'urn:uuid:alice-uid',
+        'RELATED.child.1': 'urn:uuid:bob-uid',
       });
     });
 
     it('should handle adding third relationship of same kind', async () => {
-      // According to spec: "A 3-element set would include RELATED[2:friend]"
+      // According to spec: "A 3-element set would include RELATED.friend.2"
       const mockRelationships: ParsedRelationship[] = [
         { type: 'friend', contactName: 'Alice', line: 'friend: [[Alice]]' },
         { type: 'friend', contactName: 'Bob', line: 'friend: [[Bob]]' },
@@ -137,9 +137,9 @@ describe('SyncOperations', () => {
 
       expect(result.success).toBe(true);
       expect(mockContactData.updateMultipleFrontmatterValues).toHaveBeenCalledWith({
-        'RELATED[friend]': 'urn:uuid:alice-uid',
-        'RELATED[1:friend]': 'urn:uuid:bob-uid',
-        'RELATED[2:friend]': 'urn:uuid:charlie-uid',
+        'RELATED.friend': 'urn:uuid:alice-uid',
+        'RELATED.friend.1': 'urn:uuid:bob-uid',
+        'RELATED.friend.2': 'urn:uuid:charlie-uid',
       });
     });
 
@@ -171,11 +171,11 @@ describe('SyncOperations', () => {
 
       expect(result.success).toBe(true);
       expect(mockContactData.updateMultipleFrontmatterValues).toHaveBeenCalledWith({
-        'RELATED[colleague]': 'urn:uuid:person-a-uid',
-        'RELATED[1:colleague]': 'urn:uuid:person-b-uid',
-        'RELATED[2:colleague]': 'urn:uuid:person-c-uid',
-        'RELATED[3:colleague]': 'urn:uuid:person-d-uid',
-        'RELATED[4:colleague]': 'urn:uuid:person-e-uid',
+        'RELATED.colleague': 'urn:uuid:person-a-uid',
+        'RELATED.colleague.1': 'urn:uuid:person-b-uid',
+        'RELATED.colleague.2': 'urn:uuid:person-c-uid',
+        'RELATED.colleague.3': 'urn:uuid:person-d-uid',
+        'RELATED.colleague.4': 'urn:uuid:person-e-uid',
       });
     });
 
@@ -189,9 +189,9 @@ describe('SyncOperations', () => {
       // Old frontmatter had 3 friends
       vi.mocked(mockRelationshipOps.parseRelatedSection).mockResolvedValue(mockRelationships);
       vi.mocked(mockContactData.getFrontmatter).mockResolvedValue({
-        'RELATED[friend]': 'urn:uuid:alice-uid',
-        'RELATED[1:friend]': 'urn:uuid:bob-uid',
-        'RELATED[2:friend]': 'urn:uuid:charlie-uid',
+        'RELATED.friend': 'urn:uuid:alice-uid',
+        'RELATED.friend.1': 'urn:uuid:bob-uid',
+        'RELATED.friend.2': 'urn:uuid:charlie-uid',
       });
       vi.mocked(mockRelationshipOps.resolveContact)
         .mockResolvedValueOnce({ uid: 'alice-uid', name: 'Alice', file: mockFile })
@@ -206,9 +206,9 @@ describe('SyncOperations', () => {
       // Should re-index: Alice stays at [friend], Charlie moves to [1:friend]
       // Also marks old [2:friend] for deletion with empty string
       expect(mockContactData.updateMultipleFrontmatterValues).toHaveBeenCalledWith({
-        'RELATED[friend]': 'urn:uuid:alice-uid',
-        'RELATED[1:friend]': 'urn:uuid:charlie-uid',
-        'RELATED[2:friend]': '', // Marked for deletion
+        'RELATED.friend': 'urn:uuid:alice-uid',
+        'RELATED.friend.1': 'urn:uuid:charlie-uid',
+        'RELATED.friend.2': '', // Marked for deletion
       });
     });
 
@@ -237,9 +237,9 @@ describe('SyncOperations', () => {
       // Implementation should sort by value for deterministic ordering
       const calledWith = vi.mocked(mockContactData.updateMultipleFrontmatterValues).mock.calls[0][0];
       expect(Object.keys(calledWith)).toHaveLength(3);
-      expect(calledWith['RELATED[friend]']).toBeDefined();
-      expect(calledWith['RELATED[1:friend]']).toBeDefined();
-      expect(calledWith['RELATED[2:friend]']).toBeDefined();
+      expect(calledWith['RELATED.friend']).toBeDefined();
+      expect(calledWith['RELATED.friend.1']).toBeDefined();
+      expect(calledWith['RELATED.friend.2']).toBeDefined();
     });
 
     it('should keep unresolved relationships as name references (forward references)', async () => {
@@ -258,7 +258,7 @@ describe('SyncOperations', () => {
       expect(result.success).toBe(true);
       expect(result.errors).toContain('Could not resolve contact: Unknown Person');
       expect(mockContactData.updateMultipleFrontmatterValues).toHaveBeenCalledWith({
-        'RELATED[friend]': 'name:Unknown Person',
+        'RELATED.friend': 'name:Unknown Person',
       });
     });
 
@@ -291,7 +291,7 @@ describe('SyncOperations', () => {
     it('should sync relationships from frontmatter to markdown', async () => {
       const mockFrontmatterRels: FrontmatterRelationship[] = [
         {
-          key: 'RELATED[spouse]',
+          key: 'RELATED.spouse',
           type: 'spouse',
           value: 'name:Jane Doe',
           parsedValue: { type: 'name', value: 'Jane Doe' },
@@ -313,7 +313,7 @@ describe('SyncOperations', () => {
     it('should resolve UID references to contact names', async () => {
       const mockFrontmatterRels: FrontmatterRelationship[] = [
         {
-          key: 'RELATED[spouse]',
+          key: 'RELATED.spouse',
           type: 'spouse',
           value: 'urn:uuid:jane-uid-123',
           parsedValue: { type: 'uid', value: 'jane-uid-123' },
@@ -345,7 +345,7 @@ describe('SyncOperations', () => {
     it('should detect and report name changes for existing UIDs', async () => {
       const mockFrontmatterRels: FrontmatterRelationship[] = [
         {
-          key: 'RELATED[spouse]',
+          key: 'RELATED.spouse',
           type: 'spouse',
           value: 'urn:uuid:jane-uid-123',
           parsedValue: { type: 'uid', value: 'jane-uid-123' },
@@ -371,7 +371,7 @@ describe('SyncOperations', () => {
     it('should handle unresolved UIDs', async () => {
       const mockFrontmatterRels: FrontmatterRelationship[] = [
         {
-          key: 'RELATED[spouse]',
+          key: 'RELATED.spouse',
           type: 'spouse',
           value: 'urn:uuid:nonexistent-uid',
           parsedValue: { type: 'uid', value: 'nonexistent-uid' },
@@ -394,7 +394,7 @@ describe('SyncOperations', () => {
     it('should handle unparseable RELATED values', async () => {
       const mockFrontmatterRels: FrontmatterRelationship[] = [
         {
-          key: 'RELATED[spouse]',
+          key: 'RELATED.spouse',
           type: 'spouse',
           value: 'invalid-format',
           parsedValue: null,
@@ -469,7 +469,7 @@ describe('SyncOperations', () => {
 
       const mockFrontmatterRels: FrontmatterRelationship[] = [
         {
-          key: 'RELATED[spouse]',
+          key: 'RELATED.spouse',
           type: 'spouse',
           value: 'name:Jane Doe',
           parsedValue: { type: 'name', value: 'Jane Doe' },
@@ -499,7 +499,7 @@ describe('SyncOperations', () => {
 
       const mockFrontmatterRels: FrontmatterRelationship[] = [
         {
-          key: 'RELATED[spouse]',
+          key: 'RELATED.spouse',
           type: 'spouse',
           value: 'name:Jane Doe',
           parsedValue: { type: 'name', value: 'Jane Doe' },
@@ -528,7 +528,7 @@ describe('SyncOperations', () => {
 
       const mockFrontmatterRels: FrontmatterRelationship[] = [
         {
-          key: 'RELATED[friend]',
+          key: 'RELATED.friend',
           type: 'friend',
           value: 'name:Unknown Person',
           parsedValue: { type: 'name', value: 'Unknown Person' },
@@ -551,7 +551,7 @@ describe('SyncOperations', () => {
 
       const mockFrontmatterRels: FrontmatterRelationship[] = [
         {
-          key: 'RELATED[spouse]',
+          key: 'RELATED.spouse',
           type: 'spouse',
           value: 'urn:uuid:orphaned-uid',
           parsedValue: { type: 'uid', value: 'orphaned-uid' },
@@ -566,7 +566,7 @@ describe('SyncOperations', () => {
 
       expect(result.isConsistent).toBe(false);
       expect(result.issues).toContain('Orphaned UID in frontmatter: orphaned-uid');
-      expect(result.recommendations).toContain('Remove or update orphaned relationship: RELATED[spouse]');
+      expect(result.recommendations).toContain('Remove or update orphaned relationship: RELATED.spouse');
     });
 
     it('should handle validation failure', async () => {

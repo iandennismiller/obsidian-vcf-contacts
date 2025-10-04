@@ -108,18 +108,53 @@ The yaml library handles:
 ### Scope of Custom Integration
 
 Custom code is limited to:
-1. **Obsidian Constraint Handling**: Ensuring frontmatter keys remain flat (non-nested) as required by Obsidian
-2. **Custom Indexing**: Managing bracket notation for arrays (`RELATED[friend]`, `RELATED[1:friend]`, etc.)
-3. **Key Format Preservation**: Maintaining vCard-style keys with brackets and dots (`EMAIL[WORK]`, `ADR[HOME].STREET`)
-4. **Frontmatter Extraction**: Identifying frontmatter boundaries in markdown files
+1. **Frontmatter Extraction**: Identifying frontmatter boundaries in markdown files
+2. **Validation**: Validating vCard field formats and constraints
 
 ### Integration Points
 
-- **Frontmatter Parsing**: yaml parses frontmatter block; custom code handles Obsidian-specific constraints
-- **Frontmatter Generation**: yaml generates YAML; custom code ensures flat structure with vCard-style keys
+- **Frontmatter Parsing**: yaml parses frontmatter block into flat key-value pairs
+- **Frontmatter Generation**: yaml generates YAML from flat key-value pairs
 - **Validation**: yaml validates YAML syntax; custom code validates vCard field formats
 
 **User Benefit**: More reliable YAML handling with fewer edge cases, better standards compliance, and improved compatibility with other tools that use YAML.
+
+---
+
+## Object Flattening: [flat](https://www.npmjs.com/package/flat)
+
+The plugin uses the flat library to convert between hierarchical vCard structures and flat Obsidian frontmatter.
+
+### Benefits
+
+- **Standardized Flattening**: Industry-standard approach to flattening/unflattening nested objects
+- **Reduced Complexity**: Eliminates custom key parsing and structure handling logic
+- **Deterministic Keys**: Consistent dot-notation key format (e.g., `ADR.HOME.STREET`)
+- **Bidirectional Conversion**: Reliable conversion between nested and flat representations
+- **Lower Maintenance**: Delegates flattening logic to a well-maintained library
+
+### Scope of flat Library Usage
+
+The flat library handles:
+1. **Object Flattening**: Converting nested vCard objects to flat key-value pairs
+2. **Object Unflattening**: Converting flat frontmatter to nested vCard objects
+3. **Delimiter Customization**: Using dot notation for hierarchical keys
+4. **Safe Mode**: Handling special characters and edge cases
+
+### Scope of Custom Integration
+
+Custom code is limited to:
+1. **vCard Property Mapping**: Converting between vcard4 property objects and flat frontmatter
+2. **UID Management**: Generating and tracking unique contact identifiers
+3. **Relationship Extensions**: Custom RELATED field handling for bidirectional relationships
+
+### Integration Points
+
+- **VCF Import**: vcard4 parses VCF → flat converts to frontmatter → yaml serializes
+- **VCF Export**: yaml parses frontmatter → flat converts to nested object → vcard4 generates VCF
+- **Consistency**: flat ensures consistent key format across all contact operations
+
+**User Benefit**: Consistent, predictable frontmatter structure with simplified maintenance and fewer edge cases.
 
 ---
 
@@ -127,7 +162,7 @@ Custom code is limited to:
 
 The plugin follows a clear separation of concerns:
 
-1. **Standard Format Handling**: Delegated to specialized libraries (marked, vcard4, yaml)
+1. **Standard Format Handling**: Delegated to specialized libraries (marked, vcard4, yaml, flat)
 2. **Obsidian Integration**: Handled by custom plugin code
 3. **Domain Logic**: Contact and relationship management in custom code
 
@@ -136,6 +171,13 @@ This architecture ensures:
 - **Reliability**: Battle-tested libraries handle edge cases
 - **Focus**: Plugin code focuses on unique Obsidian integration needs
 - **Compatibility**: Standards compliance ensures interoperability with other tools
+
+### Library Stack
+
+1. **marked**: Standard markdown parsing
+2. **vcard4**: vCard 4.0 parsing and generation
+3. **yaml**: YAML parsing and generation
+4. **flat**: Object flattening/unflattening for vCard ↔ frontmatter conversion
 
 ## Related Specifications
 

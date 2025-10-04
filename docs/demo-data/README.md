@@ -49,36 +49,36 @@ The following contacts form a connected social network demonstrating various rel
 
 ### 1. RELATED Field Format in Front Matter
 
-The front matter shows proper formatting for relationships:
+The front matter shows proper formatting for relationships using dot notation:
 
 ```yaml
-RELATED[spouse]: urn:uuid:b2c3d4e5-f6a7-4b5c-9d0e-1f2a3b4c5d6e
-RELATED[child]: urn:uuid:c3d4e5f6-a7b8-4c5d-0e1f-2a3b4c5d6e7f
-RELATED[1:child]: urn:uuid:d4e5f6a7-b8c9-4d5e-1f2a-3b4c5d6e7f8a
+RELATED.spouse: urn:uuid:b2c3d4e5-f6a7-4b5c-9d0e-1f2a3b4c5d6e
+RELATED.child.0: urn:uuid:c3d4e5f6-a7b8-4c5d-0e1f-2a3b4c5d6e7f
+RELATED.child.1: urn:uuid:d4e5f6a7-b8c9-4d5e-1f2a-3b4c5d6e7f8a
 ```
 
 ### 2. Multiple Relationships of Same Type
 
-When a contact has multiple relationships of the same kind (e.g., multiple children), they are indexed:
-- First: `RELATED[child]`
-- Second: `RELATED[1:child]`
-- Third: `RELATED[2:child]`
+When a contact has multiple relationships of the same kind (e.g., multiple children), the flat library automatically indexes them:
+- First: `RELATED.child.0`
+- Second: `RELATED.child.1`
+- Third: `RELATED.child.2`
 
 ### 3. Three Namespace Formats
 
 **`urn:uuid:`** (Preferred - Used for valid UUIDs)
 ```yaml
-RELATED[spouse]: urn:uuid:b2c3d4e5-f6a7-4b5c-9d0e-1f2a3b4c5d6e
+RELATED.spouse: urn:uuid:b2c3d4e5-f6a7-4b5c-9d0e-1f2a3b4c5d6e
 ```
 
 **`uid:`** (For non-UUID unique identifiers)
 ```yaml
-RELATED[colleague]: uid:olivia-smith-work-id
+RELATED.colleague: uid:olivia-smith-work-id
 ```
 
 **`name:`** (For contacts not yet in the system)
 ```yaml
-RELATED[1:friend]: name:Alex Chen
+RELATED.friend: name:Alex Chen
 ```
 
 ### 4. Gender-Aware Rendering

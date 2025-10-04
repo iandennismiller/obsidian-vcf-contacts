@@ -59,7 +59,7 @@ Notes here.
 #Contact`;
 
     // Future implementation: User adds email to Contact section
-    // The sync should detect "Personal: john@personal.com" and add EMAIL[PERSONAL]
+    // The sync should detect "Personal: john@personal.com" and add EMAIL.PERSONAL
     
     mockApp.vault!.read = vi.fn().mockResolvedValue(initialContent);
     mockApp.metadataCache!.getFileCache = vi.fn().mockReturnValue({
@@ -73,12 +73,12 @@ Notes here.
     const frontmatter = await contactNote.getFrontmatter();
     
     // Initially no email
-    expect(frontmatter['EMAIL[PERSONAL]']).toBeUndefined();
+    expect(frontmatter['EMAIL.PERSONAL']).toBeUndefined();
     
     // After sync (future implementation), should have email
     // await contactNote.syncContactSectionToFrontmatter();
     // const updatedFrontmatter = await contactNote.getFrontmatter();
-    // expect(updatedFrontmatter['EMAIL[PERSONAL]']).toBe('john@personal.com');
+    // expect(updatedFrontmatter['EMAIL.PERSONAL']).toBe('john@personal.com');
   });
 
   it('should update existing phone number in frontmatter when edited in Contact section', async () => {
@@ -87,7 +87,7 @@ Notes here.
     const content = `---
 UID: john-doe-123
 FN: John Doe
-TEL[CELL]: +1-555-0000
+TEL.CELL: +1-555-0000
 ---
 
 #### Notes
@@ -96,26 +96,26 @@ Notes here.
 #Contact`;
 
     // Future implementation: User changes phone to +1-555-9999 in Contact section
-    // The sync should update TEL[CELL] in frontmatter
+    // The sync should update TEL.CELL in frontmatter
     
     mockApp.vault!.read = vi.fn().mockResolvedValue(content);
     mockApp.metadataCache!.getFileCache = vi.fn().mockReturnValue({
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'TEL[CELL]': '+1-555-0000'
+        'TEL.CELL': '+1-555-0000'
       }
     });
 
     const contactNote = new ContactNote(mockApp as App, mockSettings, mockFile);
     const frontmatter = await contactNote.getFrontmatter();
     
-    expect(frontmatter['TEL[CELL]']).toBe('+1-555-0000');
+    expect(frontmatter['TEL.CELL']).toBe('+1-555-0000');
     
     // After edit and sync (future implementation):
     // await contactNote.syncContactSectionToFrontmatter();
     // const updatedFrontmatter = await contactNote.getFrontmatter();
-    // expect(updatedFrontmatter['TEL[CELL]']).toBe('+1-555-9999');
+    // expect(updatedFrontmatter['TEL.CELL']).toBe('+1-555-9999');
   });
 
   it('should remove address field from frontmatter when deleted from Contact section', async () => {
@@ -124,9 +124,9 @@ Notes here.
     const content = `---
 UID: john-doe-123
 FN: John Doe
-ADR[HOME].STREET: 123 Main St
-ADR[HOME].LOCALITY: Springfield
-ADR[HOME].POSTAL: 62701
+ADR.HOME.STREET: 123 Main St
+ADR.HOME.LOCALITY: Springfield
+ADR.HOME.POSTAL: 62701
 ---
 
 #### Notes
@@ -135,28 +135,28 @@ Notes here.
 #Contact`;
 
     // Future implementation: User deletes street address line
-    // The sync should remove ADR[HOME].STREET from frontmatter
+    // The sync should remove ADR.HOME.STREET from frontmatter
     
     mockApp.vault!.read = vi.fn().mockResolvedValue(content);
     mockApp.metadataCache!.getFileCache = vi.fn().mockReturnValue({
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'ADR[HOME].STREET': '123 Main St',
-        'ADR[HOME].LOCALITY': 'Springfield',
-        'ADR[HOME].POSTAL': '62701'
+        'ADR.HOME.STREET': '123 Main St',
+        'ADR.HOME.LOCALITY': 'Springfield',
+        'ADR.HOME.POSTAL': '62701'
       }
     });
 
     const contactNote = new ContactNote(mockApp as App, mockSettings, mockFile);
     const frontmatter = await contactNote.getFrontmatter();
     
-    expect(frontmatter['ADR[HOME].STREET']).toBe('123 Main St');
+    expect(frontmatter['ADR.HOME.STREET']).toBe('123 Main St');
     
     // After deletion and sync (future implementation):
     // await contactNote.syncContactSectionToFrontmatter();
     // const updatedFrontmatter = await contactNote.getFrontmatter();
-    // expect(updatedFrontmatter['ADR[HOME].STREET']).toBeUndefined();
+    // expect(updatedFrontmatter['ADR.HOME.STREET']).toBeUndefined();
   });
 
   it('should not update frontmatter when Contact section matches exactly (no-op)', async () => {
@@ -165,8 +165,8 @@ Notes here.
     const content = `---
 UID: john-doe-123
 FN: John Doe
-EMAIL[HOME]: john@example.com
-TEL[CELL]: +1-555-1234
+EMAIL.HOME: john@example.com
+TEL.CELL: +1-555-1234
 REV: 20250101T120000Z
 ---
 
@@ -183,8 +183,8 @@ Notes here.
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'EMAIL[HOME]': 'john@example.com',
-        'TEL[CELL]': '+1-555-1234',
+        'EMAIL.HOME': 'john@example.com',
+        'TEL.CELL': '+1-555-1234',
         REV: '20250101T120000Z'
       }
     });
@@ -207,7 +207,7 @@ Notes here.
     const content = `---
 UID: john-doe-123
 FN: John Doe
-EMAIL[HOME]: john@example.com
+EMAIL.HOME: john@example.com
 REV: 20250101T120000Z
 ---
 
@@ -224,7 +224,7 @@ Notes here.
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'EMAIL[HOME]': 'john@example.com',
+        'EMAIL.HOME': 'john@example.com',
         REV: '20250101T120000Z'
       }
     });
@@ -247,9 +247,9 @@ Notes here.
     const content = `---
 UID: john-doe-123
 FN: John Doe
-EMAIL[HOME]: john@example.com
-TEL[CELL]: +1-555-0000
-ADR[HOME].STREET: 123 Main St
+EMAIL.HOME: john@example.com
+TEL.CELL: +1-555-0000
+ADR.HOME.STREET: 123 Main St
 ---
 
 #### Notes
@@ -258,34 +258,34 @@ Notes here.
 #Contact`;
 
     // Future implementation: User makes multiple changes:
-    // - Adds EMAIL[WORK]
-    // - Changes TEL[CELL]
-    // - Deletes ADR[HOME].STREET
+    // - Adds EMAIL.WORK
+    // - Changes TEL.CELL
+    // - Deletes ADR.HOME.STREET
     
     mockApp.vault!.read = vi.fn().mockResolvedValue(content);
     mockApp.metadataCache!.getFileCache = vi.fn().mockReturnValue({
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'EMAIL[HOME]': 'john@example.com',
-        'TEL[CELL]': '+1-555-0000',
-        'ADR[HOME].STREET': '123 Main St'
+        'EMAIL.HOME': 'john@example.com',
+        'TEL.CELL': '+1-555-0000',
+        'ADR.HOME.STREET': '123 Main St'
       }
     });
 
     const contactNote = new ContactNote(mockApp as App, mockSettings, mockFile);
     const frontmatter = await contactNote.getFrontmatter();
     
-    expect(frontmatter['EMAIL[HOME]']).toBe('john@example.com');
-    expect(frontmatter['TEL[CELL]']).toBe('+1-555-0000');
-    expect(frontmatter['ADR[HOME].STREET']).toBe('123 Main St');
+    expect(frontmatter['EMAIL.HOME']).toBe('john@example.com');
+    expect(frontmatter['TEL.CELL']).toBe('+1-555-0000');
+    expect(frontmatter['ADR.HOME.STREET']).toBe('123 Main St');
     
     // After multiple changes and sync (future implementation):
     // await contactNote.syncContactSectionToFrontmatter();
     // const updated = await contactNote.getFrontmatter();
-    // expect(updated['EMAIL[WORK]']).toBe('john.work@company.com'); // Added
-    // expect(updated['TEL[CELL]']).toBe('+1-555-9999'); // Modified
-    // expect(updated['ADR[HOME].STREET']).toBeUndefined(); // Deleted
+    // expect(updated['EMAIL.WORK']).toBe('john.work@company.com'); // Added
+    // expect(updated['TEL.CELL']).toBe('+1-555-9999'); // Modified
+    // expect(updated['ADR.HOME.STREET']).toBeUndefined(); // Deleted
   });
 
   it('should use fuzzy template matching to identify fields', async () => {
@@ -329,7 +329,7 @@ Notes here.
     const content = `---
 UID: john-doe-123
 FN: John Doe
-EMAIL[HOME]: john@example.com
+EMAIL.HOME: john@example.com
 ---
 
 #### Notes
@@ -342,13 +342,13 @@ Notes here.
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'EMAIL[HOME]': 'john@example.com'
+        'EMAIL.HOME': 'john@example.com'
       }
     });
 
     const contactNote = new ContactNote(mockApp as App, mockSettings, mockFile);
     const frontmatter = await contactNote.getFrontmatter();
     
-    expect(frontmatter['EMAIL[HOME]']).toBe('john@example.com');
+    expect(frontmatter['EMAIL.HOME']).toBe('john@example.com');
   });
 });

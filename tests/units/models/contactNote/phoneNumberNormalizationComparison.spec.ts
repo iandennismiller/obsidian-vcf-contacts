@@ -50,7 +50,7 @@ describe('Phone Number Normalization in Frontmatter Comparison', () => {
     const content = `---
 UID: john-doe-123
 FN: John Doe
-TEL[WORK]: 555-555-5555
+TEL.WORK: 555-555-5555
 ---`;
 
     mockApp.vault!.read = vi.fn().mockResolvedValue(content);
@@ -58,7 +58,7 @@ TEL[WORK]: 555-555-5555
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'TEL[WORK]': '555-555-5555'
+        'TEL.WORK': '555-555-5555'
       }
     });
 
@@ -66,7 +66,7 @@ TEL[WORK]: 555-555-5555
 
     // Update with normalized version of the same number
     await contactNote.updateMultipleFrontmatterValues({
-      'TEL[WORK]': '+1-555-555-5555'
+      'TEL.WORK': '+1-555-555-5555'
     });
 
     // Should NOT have called modify because the numbers are the same
@@ -79,7 +79,7 @@ TEL[WORK]: 555-555-5555
     const content = `---
 UID: john-doe-123
 FN: John Doe
-TEL[WORK]: +1-555-555-5555
+TEL.WORK: +1-555-555-5555
 ---`;
 
     mockApp.vault!.read = vi.fn().mockResolvedValue(content);
@@ -87,7 +87,7 @@ TEL[WORK]: +1-555-555-5555
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'TEL[WORK]': '+1-555-555-5555'
+        'TEL.WORK': '+1-555-555-5555'
       }
     });
 
@@ -95,7 +95,7 @@ TEL[WORK]: +1-555-555-5555
 
     // Update with a DIFFERENT number
     await contactNote.updateMultipleFrontmatterValues({
-      'TEL[WORK]': '+1-555-555-6666'
+      'TEL.WORK': '+1-555-555-6666'
     });
 
     // SHOULD have called modify because the number changed
@@ -108,7 +108,7 @@ TEL[WORK]: +1-555-555-5555
     const content = `---
 UID: john-doe-123
 FN: John Doe
-TEL[WORK]: (555) 555-5555
+TEL.WORK: (555) 555-5555
 ---`;
 
     mockApp.vault!.read = vi.fn().mockResolvedValue(content);
@@ -116,7 +116,7 @@ TEL[WORK]: (555) 555-5555
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'TEL[WORK]': '(555) 555-5555'
+        'TEL.WORK': '(555) 555-5555'
       }
     });
 
@@ -134,7 +134,7 @@ TEL[WORK]: (555) 555-5555
     for (const format of formats) {
       vi.clearAllMocks();
       await contactNote.updateMultipleFrontmatterValues({
-        'TEL[WORK]': format
+        'TEL.WORK': format
       });
 
       // Should NOT update since it's the same number
@@ -148,7 +148,7 @@ TEL[WORK]: (555) 555-5555
     const content = `---
 UID: john-doe-123
 FN: John Doe
-EMAIL[WORK]: John@Example.COM
+EMAIL.WORK: John@Example.COM
 ---`;
 
     mockApp.vault!.read = vi.fn().mockResolvedValue(content);
@@ -156,7 +156,7 @@ EMAIL[WORK]: John@Example.COM
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'EMAIL[WORK]': 'John@Example.COM'
+        'EMAIL.WORK': 'John@Example.COM'
       }
     });
 
@@ -164,7 +164,7 @@ EMAIL[WORK]: John@Example.COM
 
     // Update with lowercase version (same email, different case)
     await contactNote.updateMultipleFrontmatterValues({
-      'EMAIL[WORK]': 'john@example.com'
+      'EMAIL.WORK': 'john@example.com'
     });
 
     // Should NOT update because email normalization lowercases both
@@ -177,7 +177,7 @@ EMAIL[WORK]: John@Example.COM
     const content = `---
 UID: john-doe-123
 FN: John Doe
-URL[WORK]: example.com
+URL.WORK: example.com
 ---`;
 
     mockApp.vault!.read = vi.fn().mockResolvedValue(content);
@@ -185,7 +185,7 @@ URL[WORK]: example.com
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'URL[WORK]': 'example.com'
+        'URL.WORK': 'example.com'
       }
     });
 
@@ -193,7 +193,7 @@ URL[WORK]: example.com
 
     // Update with protocol-prefixed version (same URL)
     await contactNote.updateMultipleFrontmatterValues({
-      'URL[WORK]': 'https://example.com'
+      'URL.WORK': 'https://example.com'
     });
 
     // Should NOT update because URL normalization adds protocol to both
@@ -206,7 +206,7 @@ URL[WORK]: example.com
     const content = `---
 UID: john-doe-123
 FN: John Doe
-EMAIL[WORK]: old@example.com
+EMAIL.WORK: old@example.com
 ---`;
 
     mockApp.vault!.read = vi.fn().mockResolvedValue(content);
@@ -214,7 +214,7 @@ EMAIL[WORK]: old@example.com
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'EMAIL[WORK]': 'old@example.com'
+        'EMAIL.WORK': 'old@example.com'
       }
     });
 
@@ -222,7 +222,7 @@ EMAIL[WORK]: old@example.com
 
     // Update with a DIFFERENT email
     await contactNote.updateMultipleFrontmatterValues({
-      'EMAIL[WORK]': 'new@example.com'
+      'EMAIL.WORK': 'new@example.com'
     });
 
     // SHOULD update because email changed
@@ -235,9 +235,9 @@ EMAIL[WORK]: old@example.com
     const content = `---
 UID: john-doe-123
 FN: John Doe
-EMAIL[WORK]: john@example.com
-TEL[WORK]: 555-555-5555
-URL[WORK]: example.com
+EMAIL.WORK: john@example.com
+TEL.WORK: 555-555-5555
+URL.WORK: example.com
 ---`;
 
     mockApp.vault!.read = vi.fn().mockResolvedValue(content);
@@ -245,9 +245,9 @@ URL[WORK]: example.com
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'EMAIL[WORK]': 'john@example.com',
-        'TEL[WORK]': '555-555-5555',
-        'URL[WORK]': 'example.com'
+        'EMAIL.WORK': 'john@example.com',
+        'TEL.WORK': '555-555-5555',
+        'URL.WORK': 'example.com'
       }
     });
 
@@ -255,9 +255,9 @@ URL[WORK]: example.com
 
     // Update with normalized versions (no actual changes)
     await contactNote.updateMultipleFrontmatterValues({
-      'EMAIL[WORK]': 'john@example.com',
-      'TEL[WORK]': '+1-555-555-5555',  // Same number, different format
-      'URL[WORK]': 'https://example.com'  // Same URL, different format
+      'EMAIL.WORK': 'john@example.com',
+      'TEL.WORK': '+1-555-555-5555',  // Same number, different format
+      'URL.WORK': 'https://example.com'  // Same URL, different format
     });
 
     // Should NOT update since all values are semantically the same
@@ -270,8 +270,8 @@ URL[WORK]: example.com
     const content = `---
 UID: john-doe-123
 FN: John Doe
-EMAIL[WORK]: john@example.com
-TEL[WORK]: 555-555-5555
+EMAIL.WORK: john@example.com
+TEL.WORK: 555-555-5555
 ---`;
 
     mockApp.vault!.read = vi.fn().mockResolvedValue(content);
@@ -279,8 +279,8 @@ TEL[WORK]: 555-555-5555
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'EMAIL[WORK]': 'john@example.com',
-        'TEL[WORK]': '555-555-5555'
+        'EMAIL.WORK': 'john@example.com',
+        'TEL.WORK': '555-555-5555'
       }
     });
 
@@ -288,8 +288,8 @@ TEL[WORK]: 555-555-5555
 
     // Update with one same value and one changed value
     await contactNote.updateMultipleFrontmatterValues({
-      'EMAIL[WORK]': 'john@example.com',  // Same
-      'TEL[WORK]': '+1-555-555-6666'  // Changed
+      'EMAIL.WORK': 'john@example.com',  // Same
+      'TEL.WORK': '+1-555-555-6666'  // Changed
     });
 
     // SHOULD update because TEL changed
@@ -297,6 +297,6 @@ TEL[WORK]: 555-555-5555
 
     // Verify the phone number was updated
     const modifyCall = (mockApp.vault!.modify as any).mock.calls[0];
-    expect(modifyCall[1]).toContain('TEL[WORK]: +1-555-555-6666');
+    expect(modifyCall[1]).toContain('TEL.WORK: +1-555-555-6666');
   });
 });

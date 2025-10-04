@@ -61,7 +61,7 @@ describe('Manual Relationship Synchronization Story', () => {
         return Promise.resolve(`---
 UID: john-uid-123
 FN: John Doe
-RELATED[spouse]: urn:uuid:jane-uid-456
+RELATED.spouse: urn:uuid:jane-uid-456
 ---
 
 #### Related
@@ -81,7 +81,7 @@ FN: Jane Smith
         return Promise.resolve(`---
 UID: bob-uid-789
 FN: Bob Jones
-RELATED[friend]: urn:uuid:john-uid-123
+RELATED.friend: urn:uuid:john-uid-123
 ---
 
 #### Related
@@ -97,7 +97,7 @@ RELATED[friend]: urn:uuid:john-uid-123
           frontmatter: {
             UID: 'john-uid-123',
             FN: 'John Doe',
-            'RELATED[spouse]': 'urn:uuid:jane-uid-456'
+            'RELATED.spouse': 'urn:uuid:jane-uid-456'
           }
         };
       } else if (file.path === janeFile.path) {
@@ -112,7 +112,7 @@ RELATED[friend]: urn:uuid:john-uid-123
           frontmatter: {
             UID: 'bob-uid-789',
             FN: 'Bob Jones',
-            'RELATED[friend]': 'urn:uuid:john-uid-123'
+            'RELATED.friend': 'urn:uuid:john-uid-123'
           }
         };
       }
@@ -151,7 +151,7 @@ RELATED[friend]: urn:uuid:john-uid-123
         return Promise.resolve(`---
 UID: alice-uid-111
 FN: Alice
-RELATED[colleague]: urn:uuid:charlie-uid-222
+RELATED.colleague: urn:uuid:charlie-uid-222
 ---
 
 #### Related
@@ -162,7 +162,7 @@ RELATED[colleague]: urn:uuid:charlie-uid-222
         return Promise.resolve(`---
 UID: charlie-uid-222
 FN: Charlie
-RELATED[colleague]: urn:uuid:alice-uid-111
+RELATED.colleague: urn:uuid:alice-uid-111
 ---
 
 #### Related
@@ -178,7 +178,7 @@ RELATED[colleague]: urn:uuid:alice-uid-111
           frontmatter: {
             UID: 'alice-uid-111',
             FN: 'Alice',
-            'RELATED[colleague]': 'urn:uuid:charlie-uid-222'
+            'RELATED.colleague': 'urn:uuid:charlie-uid-222'
           }
         };
       } else {
@@ -186,7 +186,7 @@ RELATED[colleague]: urn:uuid:alice-uid-111
           frontmatter: {
             UID: 'charlie-uid-222',
             FN: 'Charlie',
-            'RELATED[colleague]': 'urn:uuid:alice-uid-111'
+            'RELATED.colleague': 'urn:uuid:alice-uid-111'
           }
         };
       }
@@ -217,7 +217,7 @@ RELATED[colleague]: urn:uuid:alice-uid-111
         return Promise.resolve(`---
 UID: david-uid-333
 FN: David
-RELATED[spouse]: urn:uuid:emily-uid-444
+RELATED.spouse: urn:uuid:emily-uid-444
 ---
 
 #### Related
@@ -242,7 +242,7 @@ FN: Emily
           frontmatter: {
             UID: 'david-uid-333',
             FN: 'David',
-            'RELATED[spouse]': 'urn:uuid:emily-uid-444'
+            'RELATED.spouse': 'urn:uuid:emily-uid-444'
           }
         };
       } else {
@@ -274,7 +274,7 @@ FN: Emily
     mockApp.vault!.read = vi.fn().mockResolvedValue(`---
 UID: frank-uid-555
 FN: Frank
-RELATED[friend]: urn:uuid:nonexistent-uid-999
+RELATED.friend: urn:uuid:nonexistent-uid-999
 ---
 
 #### Related
@@ -286,7 +286,7 @@ RELATED[friend]: urn:uuid:nonexistent-uid-999
       frontmatter: {
         UID: 'frank-uid-555',
         FN: 'Frank',
-        'RELATED[friend]': 'urn:uuid:nonexistent-uid-999'
+        'RELATED.friend': 'urn:uuid:nonexistent-uid-999'
       }
     });
 

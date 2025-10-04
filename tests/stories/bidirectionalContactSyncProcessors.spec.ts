@@ -73,7 +73,7 @@ FN: John Doe
     const contactNote = new ContactNote(mockApp as App, mockSettings, mockFile);
     
     // Future: Run ContactToFrontMatterProcessor
-    // Should add EMAIL[HOME] and EMAIL[WORK] to frontmatter
+    // Should add EMAIL.HOME and EMAIL.WORK to frontmatter
   });
 
   it('should have FrontMatterToContactProcessor that generates Contact section', async () => {
@@ -87,8 +87,8 @@ FN: John Doe
     const content = `---
 UID: john-doe-123
 FN: John Doe
-EMAIL[HOME]: john@home.com
-EMAIL[WORK]: john@work.com
+EMAIL.HOME: john@home.com
+EMAIL.WORK: john@work.com
 ---
 
 #### Notes
@@ -101,8 +101,8 @@ Notes here.
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'EMAIL[HOME]': 'john@home.com',
-        'EMAIL[WORK]': 'john@work.com'
+        'EMAIL.HOME': 'john@home.com',
+        'EMAIL.WORK': 'john@work.com'
       }
     });
 
@@ -121,7 +121,7 @@ Notes here.
     const content = `---
 UID: john-doe-123
 FN: John Doe
-EMAIL[HOME]: john@home.com
+EMAIL.HOME: john@home.com
 ---
 
 #Contact`;
@@ -131,7 +131,7 @@ EMAIL[HOME]: john@home.com
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'EMAIL[HOME]': 'john@home.com'
+        'EMAIL.HOME': 'john@home.com'
       }
     });
 
@@ -144,13 +144,13 @@ EMAIL[HOME]: john@home.com
     const mockFile = { basename: 'john-doe', path: 'Contacts/john-doe.md' } as TFile;
     
     // Future implementation: Processing should merge data, not replace
-    // If Contact section has EMAIL[HOME] and frontmatter has EMAIL[WORK],
+    // If Contact section has EMAIL.HOME and frontmatter has EMAIL.WORK,
     // result should have both
     
     const content = `---
 UID: john-doe-123
 FN: John Doe
-EMAIL[WORK]: john@work.com
+EMAIL.WORK: john@work.com
 ---
 
 #### Contact
@@ -164,7 +164,7 @@ EMAIL[WORK]: john@work.com
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'EMAIL[WORK]': 'john@work.com'
+        'EMAIL.WORK': 'john@work.com'
       }
     });
 
@@ -180,7 +180,7 @@ EMAIL[WORK]: john@work.com
     const content = `---
 UID: john-doe-123
 FN: John Doe
-EMAIL[HOME]: john@home.com
+EMAIL.HOME: john@home.com
 REV: 20250101T120000Z
 ---
 
@@ -198,7 +198,7 @@ REV: 20250101T120000Z
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'EMAIL[HOME]': 'john@home.com',
+        'EMAIL.HOME': 'john@home.com',
         REV: '20250101T120000Z'
       }
     });
@@ -220,7 +220,7 @@ REV: 20250101T120000Z
     const content = `---
 UID: john-doe-123
 FN: John Doe
-EMAIL[HOME]: john@home.com
+EMAIL.HOME: john@home.com
 REV: 20250101T120000Z
 ---
 
@@ -239,7 +239,7 @@ REV: 20250101T120000Z
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'EMAIL[HOME]': 'john@home.com',
+        'EMAIL.HOME': 'john@home.com',
         REV: '20250101T120000Z'
       }
     });
@@ -292,8 +292,8 @@ FN: John Doe
     const content = `---
 UID: john-doe-123
 FN: John Doe
-EMAIL[WORK]: john@work.com
-TEL[CELL]: +1-555-1234
+EMAIL.WORK: john@work.com
+TEL.CELL: +1-555-1234
 ---
 
 #### Contact
@@ -310,16 +310,16 @@ TEL[CELL]: +1-555-1234
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'EMAIL[WORK]': 'john@work.com',
-        'TEL[CELL]': '+1-555-1234'
+        'EMAIL.WORK': 'john@work.com',
+        'TEL.CELL': '+1-555-1234'
       }
     });
 
     const contactNote = new ContactNote(mockApp as App, mockSettings, mockFile);
     
     // Future: After bidirectional sync:
-    // - Frontmatter should have EMAIL[HOME] and TEL[WORK] (from Contact section)
-    // - Contact section should have EMAIL[WORK] and TEL[CELL] (from frontmatter)
+    // - Frontmatter should have EMAIL.HOME and TEL.WORK (from Contact section)
+    // - Contact section should have EMAIL.WORK and TEL.CELL (from frontmatter)
   });
 
   it('should handle edits from both directions', async () => {
@@ -331,7 +331,7 @@ TEL[CELL]: +1-555-1234
     const content = `---
 UID: john-doe-123
 FN: John Doe
-EMAIL[HOME]: old@example.com
+EMAIL.HOME: old@example.com
 ---
 
 #### Contact
@@ -345,7 +345,7 @@ EMAIL[HOME]: old@example.com
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'EMAIL[HOME]': 'old@example.com'
+        'EMAIL.HOME': 'old@example.com'
       }
     });
 
@@ -363,8 +363,8 @@ EMAIL[HOME]: old@example.com
     const content = `---
 UID: john-doe-123
 FN: John Doe
-EMAIL[HOME]: john@home.com
-EMAIL[WORK]: john@work.com
+EMAIL.HOME: john@home.com
+EMAIL.WORK: john@work.com
 ---
 
 #### Contact
@@ -378,14 +378,14 @@ EMAIL[WORK]: john@work.com
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'EMAIL[HOME]': 'john@home.com',
-        'EMAIL[WORK]': 'john@work.com'
+        'EMAIL.HOME': 'john@home.com',
+        'EMAIL.WORK': 'john@work.com'
       }
     });
 
     const contactNote = new ContactNote(mockApp as App, mockSettings, mockFile);
     
-    // Future: After sync, EMAIL[HOME] should be removed from both
+    // Future: After sync, EMAIL.HOME should be removed from both
     // (deleted from Contact section, so sync removes from frontmatter)
   });
 });

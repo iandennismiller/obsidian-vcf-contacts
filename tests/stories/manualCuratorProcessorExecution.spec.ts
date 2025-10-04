@@ -218,10 +218,10 @@ FN: Bob Jones
     expect(mockApp.vault!.modify).toHaveBeenCalled();
     
     // Verify the updated frontmatter contains the relationships
-    expect(updatedFrontmatter['RELATED[spouse]']).toBeDefined();
-    expect(updatedFrontmatter['RELATED[spouse]']).toContain('jane-uid-456');
-    expect(updatedFrontmatter['RELATED[friend]']).toBeDefined();
-    expect(updatedFrontmatter['RELATED[friend]']).toContain('bob-uid-789');
+    expect(updatedFrontmatter['RELATED.spouse']).toBeDefined();
+    expect(updatedFrontmatter['RELATED.spouse']).toContain('jane-uid-456');
+    expect(updatedFrontmatter['RELATED.friend']).toBeDefined();
+    expect(updatedFrontmatter['RELATED.friend']).toContain('bob-uid-789');
   });
 
   it('should handle partial sync where some relationships exist and some are missing', async () => {
@@ -237,7 +237,7 @@ FN: Bob Jones
     const aliceContent = `---
 UID: alice-uid-111
 FN: Alice Brown
-RELATED[colleague]: urn:uuid:charlie-uid-222
+RELATED.colleague: urn:uuid:charlie-uid-222
 REV: 20240101T120000Z
 ---
 
@@ -302,7 +302,7 @@ FN: Diana Evans
           frontmatter: {
             UID: 'alice-uid-111',
             FN: 'Alice Brown',
-            'RELATED[colleague]': 'urn:uuid:charlie-uid-222',
+            'RELATED.colleague': 'urn:uuid:charlie-uid-222',
             REV: '20240101T120000Z'
           }
         };
@@ -353,8 +353,8 @@ FN: Diana Evans
     expect(mockApp.vault!.modify).toHaveBeenCalled();
     
     // Both relationships should be in the updated frontmatter
-    expect(updatedFrontmatter['RELATED[colleague]']).toBeDefined();
-    expect(updatedFrontmatter['RELATED[friend]']).toBeDefined();
+    expect(updatedFrontmatter['RELATED.colleague']).toBeDefined();
+    expect(updatedFrontmatter['RELATED.friend']).toBeDefined();
   });
 
   it('should return undefined when all relationships are already synced', async () => {
@@ -368,7 +368,7 @@ FN: Diana Evans
     const eveContent = `---
 UID: eve-uid-444
 FN: Eve Wilson
-RELATED[spouse]: urn:uuid:frank-uid-555
+RELATED.spouse: urn:uuid:frank-uid-555
 REV: 20240101T120000Z
 ---
 
@@ -396,7 +396,7 @@ FN: Frank Miller
           frontmatter: {
             UID: 'eve-uid-444',
             FN: 'Eve Wilson',
-            'RELATED[spouse]': 'urn:uuid:frank-uid-555',
+            'RELATED.spouse': 'urn:uuid:frank-uid-555',
             REV: '20240101T120000Z'
           }
         };
@@ -567,7 +567,7 @@ Some notes about Isabel.
     mockContactFiles.set(jasonFile.path, jasonFile);
     mockContactFiles.set(kellyFile.path, kellyFile);
 
-    // Jason has malformed frontmatter with RELATED.friend (should be RELATED[friend])
+    // Jason has malformed frontmatter with RELATED.friend (should be RELATED.friend)
     const jasonContent = `---
 UID: jason-uid-999
 FN: Jason Brown
@@ -680,12 +680,12 @@ FN: Kelly White
     expect(mockApp.vault!.modify).toHaveBeenCalled();
     
     // Verify the frontmatter was updated with correct format
-    // Should have RELATED[friend] not RELATED.friend
-    expect(updatedFrontmatter['RELATED[friend]']).toBeDefined();
-    expect(updatedFrontmatter['RELATED[friend]']).toContain('kelly-uid-000');
+    // Should have RELATED.friend not RELATED.friend
+    expect(updatedFrontmatter['RELATED.friend']).toBeDefined();
+    expect(updatedFrontmatter['RELATED.friend']).toContain('kelly-uid-000');
     
     // Should NOT have the old malformed key
     expect(updatedContent).not.toContain('RELATED.friend');
-    expect(updatedContent).toContain('RELATED[friend]');
+    expect(updatedContent).toContain('RELATED.friend');
   });
 });

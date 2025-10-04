@@ -5,8 +5,8 @@ import { ContactsPluginSettings } from 'src/plugin/settings';
 
 /**
  * User Story 33: Frontmatter to Contact Section Sync
- * As a user, when frontmatter contains contact fields like EMAIL[HOME], TEL[WORK], 
- * ADR[HOME].STREET, etc., I want those fields to automatically appear in the 
+ * As a user, when frontmatter contains contact fields like EMAIL.HOME, TEL.WORK, 
+ * ADR.HOME.STREET, etc., I want those fields to automatically appear in the 
  * "## Contact" section. This curator processor should generate Contact section 
  * content using fuzzy templates.
  */
@@ -50,8 +50,8 @@ describe('Frontmatter to Contact Section Sync Story', () => {
     const content = `---
 UID: john-doe-123
 FN: John Doe
-EMAIL[HOME]: john@home.com
-EMAIL[WORK]: john@work.com
+EMAIL.HOME: john@home.com
+EMAIL.WORK: john@work.com
 ---
 
 #### Notes
@@ -70,16 +70,16 @@ Notes here.
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'EMAIL[HOME]': 'john@home.com',
-        'EMAIL[WORK]': 'john@work.com'
+        'EMAIL.HOME': 'john@home.com',
+        'EMAIL.WORK': 'john@work.com'
       }
     });
 
     const contactNote = new ContactNote(mockApp as App, mockSettings, mockFile);
     const frontmatter = await contactNote.getFrontmatter();
     
-    expect(frontmatter['EMAIL[HOME]']).toBe('john@home.com');
-    expect(frontmatter['EMAIL[WORK]']).toBe('john@work.com');
+    expect(frontmatter['EMAIL.HOME']).toBe('john@home.com');
+    expect(frontmatter['EMAIL.WORK']).toBe('john@work.com');
   });
 
   it('should format address fields as complete postal address', async () => {
@@ -88,11 +88,11 @@ Notes here.
     const content = `---
 UID: john-doe-123
 FN: John Doe
-ADR[HOME].STREET: 123 Main St
-ADR[HOME].LOCALITY: Springfield
-ADR[HOME].REGION: IL
-ADR[HOME].POSTAL: 62701
-ADR[HOME].COUNTRY: USA
+ADR.HOME.STREET: 123 Main St
+ADR.HOME.LOCALITY: Springfield
+ADR.HOME.REGION: IL
+ADR.HOME.POSTAL: 62701
+ADR.HOME.COUNTRY: USA
 ---
 
 #### Notes
@@ -112,19 +112,19 @@ Notes here.
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'ADR[HOME].STREET': '123 Main St',
-        'ADR[HOME].LOCALITY': 'Springfield',
-        'ADR[HOME].REGION': 'IL',
-        'ADR[HOME].POSTAL': '62701',
-        'ADR[HOME].COUNTRY': 'USA'
+        'ADR.HOME.STREET': '123 Main St',
+        'ADR.HOME.LOCALITY': 'Springfield',
+        'ADR.HOME.REGION': 'IL',
+        'ADR.HOME.POSTAL': '62701',
+        'ADR.HOME.COUNTRY': 'USA'
       }
     });
 
     const contactNote = new ContactNote(mockApp as App, mockSettings, mockFile);
     const frontmatter = await contactNote.getFrontmatter();
     
-    expect(frontmatter['ADR[HOME].STREET']).toBe('123 Main St');
-    expect(frontmatter['ADR[HOME].LOCALITY']).toBe('Springfield');
+    expect(frontmatter['ADR.HOME.STREET']).toBe('123 Main St');
+    expect(frontmatter['ADR.HOME.LOCALITY']).toBe('Springfield');
   });
 
   it('should group phone numbers together with their types', async () => {
@@ -133,9 +133,9 @@ Notes here.
     const content = `---
 UID: john-doe-123
 FN: John Doe
-TEL[CELL]: +1-555-1234
-TEL[HOME]: +1-555-5678
-TEL[WORK]: +1-555-9999
+TEL.CELL: +1-555-1234
+TEL.HOME: +1-555-5678
+TEL.WORK: +1-555-9999
 ---
 
 #### Notes
@@ -155,18 +155,18 @@ Notes here.
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'TEL[CELL]': '+1-555-1234',
-        'TEL[HOME]': '+1-555-5678',
-        'TEL[WORK]': '+1-555-9999'
+        'TEL.CELL': '+1-555-1234',
+        'TEL.HOME': '+1-555-5678',
+        'TEL.WORK': '+1-555-9999'
       }
     });
 
     const contactNote = new ContactNote(mockApp as App, mockSettings, mockFile);
     const frontmatter = await contactNote.getFrontmatter();
     
-    expect(frontmatter['TEL[CELL]']).toBe('+1-555-1234');
-    expect(frontmatter['TEL[HOME]']).toBe('+1-555-5678');
-    expect(frontmatter['TEL[WORK]']).toBe('+1-555-9999');
+    expect(frontmatter['TEL.CELL']).toBe('+1-555-1234');
+    expect(frontmatter['TEL.HOME']).toBe('+1-555-5678');
+    expect(frontmatter['TEL.WORK']).toBe('+1-555-9999');
   });
 
   it('should list URLs/websites together', async () => {
@@ -175,9 +175,9 @@ Notes here.
     const content = `---
 UID: john-doe-123
 FN: John Doe
-URL[HOME]: https://johndoe.com
-URL[WORK]: https://company.com/john
-URL[BLOG]: https://blog.johndoe.com
+URL.HOME: https://johndoe.com
+URL.WORK: https://company.com/john
+URL.BLOG: https://blog.johndoe.com
 ---
 
 #### Notes
@@ -197,18 +197,18 @@ Notes here.
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'URL[HOME]': 'https://johndoe.com',
-        'URL[WORK]': 'https://company.com/john',
-        'URL[BLOG]': 'https://blog.johndoe.com'
+        'URL.HOME': 'https://johndoe.com',
+        'URL.WORK': 'https://company.com/john',
+        'URL.BLOG': 'https://blog.johndoe.com'
       }
     });
 
     const contactNote = new ContactNote(mockApp as App, mockSettings, mockFile);
     const frontmatter = await contactNote.getFrontmatter();
     
-    expect(frontmatter['URL[HOME]']).toBe('https://johndoe.com');
-    expect(frontmatter['URL[WORK]']).toBe('https://company.com/john');
-    expect(frontmatter['URL[BLOG]']).toBe('https://blog.johndoe.com');
+    expect(frontmatter['URL.HOME']).toBe('https://johndoe.com');
+    expect(frontmatter['URL.WORK']).toBe('https://company.com/john');
+    expect(frontmatter['URL.BLOG']).toBe('https://blog.johndoe.com');
   });
 
   it('should create Contact section if it does not exist', async () => {
@@ -217,7 +217,7 @@ Notes here.
     const content = `---
 UID: john-doe-123
 FN: John Doe
-EMAIL[HOME]: john@example.com
+EMAIL.HOME: john@example.com
 ---
 
 #### Notes
@@ -233,7 +233,7 @@ Notes here.
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'EMAIL[HOME]': 'john@example.com'
+        'EMAIL.HOME': 'john@example.com'
       }
     });
 
@@ -254,7 +254,7 @@ Notes here.
     const content = `---
 UID: john-doe-123
 FN: John Doe
-EMAIL[HOME]: john@example.com
+EMAIL.HOME: john@example.com
 ---
 
 #### Notes
@@ -262,7 +262,7 @@ Notes here.
 
 #Contact`;
 
-    // Future implementation: When frontmatter is updated (e.g., EMAIL[WORK] added),
+    // Future implementation: When frontmatter is updated (e.g., EMAIL.WORK added),
     // the Contact section should be regenerated/updated
     
     mockApp.vault!.read = vi.fn().mockResolvedValue(content);
@@ -270,17 +270,17 @@ Notes here.
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'EMAIL[HOME]': 'john@example.com'
+        'EMAIL.HOME': 'john@example.com'
       }
     });
 
     const contactNote = new ContactNote(mockApp as App, mockSettings, mockFile);
     const frontmatter = await contactNote.getFrontmatter();
     
-    expect(frontmatter['EMAIL[HOME]']).toBe('john@example.com');
+    expect(frontmatter['EMAIL.HOME']).toBe('john@example.com');
     
     // Future: After updating frontmatter
-    // await contactNote.updateFrontmatterValue('EMAIL[WORK]', 'john@work.com');
+    // await contactNote.updateFrontmatterValue('EMAIL.WORK', 'john@work.com');
     // await contactNote.syncFrontmatterToContactSection();
     // Contact section should now include both emails
   });
@@ -291,10 +291,10 @@ Notes here.
     const content = `---
 UID: john-doe-123
 FN: John Doe
-URL[HOME]: https://example.com
-TEL[CELL]: +1-555-1234
-EMAIL[HOME]: john@example.com
-ADR[HOME].STREET: 123 Main St
+URL.HOME: https://example.com
+TEL.CELL: +1-555-1234
+EMAIL.HOME: john@example.com
+ADR.HOME.STREET: 123 Main St
 ---
 
 #### Notes
@@ -313,10 +313,10 @@ Notes here.
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'URL[HOME]': 'https://example.com',
-        'TEL[CELL]': '+1-555-1234',
-        'EMAIL[HOME]': 'john@example.com',
-        'ADR[HOME].STREET': '123 Main St'
+        'URL.HOME': 'https://example.com',
+        'TEL.CELL': '+1-555-1234',
+        'EMAIL.HOME': 'john@example.com',
+        'ADR.HOME.STREET': '123 Main St'
       }
     });
 
@@ -324,10 +324,10 @@ Notes here.
     const frontmatter = await contactNote.getFrontmatter();
     
     // Verify fields exist (ordering will be in future Contact section implementation)
-    expect(frontmatter['EMAIL[HOME]']).toBe('john@example.com');
-    expect(frontmatter['TEL[CELL]']).toBe('+1-555-1234');
-    expect(frontmatter['ADR[HOME].STREET']).toBe('123 Main St');
-    expect(frontmatter['URL[HOME]']).toBe('https://example.com');
+    expect(frontmatter['EMAIL.HOME']).toBe('john@example.com');
+    expect(frontmatter['TEL.CELL']).toBe('+1-555-1234');
+    expect(frontmatter['ADR.HOME.STREET']).toBe('123 Main St');
+    expect(frontmatter['URL.HOME']).toBe('https://example.com');
   });
 
   it('should format fields consistently using templates', async () => {
@@ -336,9 +336,9 @@ Notes here.
     const content = `---
 UID: john-doe-123
 FN: John Doe
-EMAIL[HOME]: john@home.com
-EMAIL[WORK]: john@work.com
-TEL[CELL]: +1-555-1234
+EMAIL.HOME: john@home.com
+EMAIL.WORK: john@work.com
+TEL.CELL: +1-555-1234
 ---
 
 #### Notes
@@ -353,16 +353,16 @@ Notes here.
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'EMAIL[HOME]': 'john@home.com',
-        'EMAIL[WORK]': 'john@work.com',
-        'TEL[CELL]': '+1-555-1234'
+        'EMAIL.HOME': 'john@home.com',
+        'EMAIL.WORK': 'john@work.com',
+        'TEL.CELL': '+1-555-1234'
       }
     });
 
     const contactNote = new ContactNote(mockApp as App, mockSettings, mockFile);
     const frontmatter = await contactNote.getFrontmatter();
     
-    expect(frontmatter['EMAIL[HOME]']).toBe('john@home.com');
-    expect(frontmatter['EMAIL[WORK]']).toBe('john@work.com');
+    expect(frontmatter['EMAIL.HOME']).toBe('john@home.com');
+    expect(frontmatter['EMAIL.WORK']).toBe('john@work.com');
   });
 });

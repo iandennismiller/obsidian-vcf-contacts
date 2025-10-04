@@ -60,7 +60,7 @@ describe('Automatic Reverse Relationships Story', () => {
 UID: jane-doe-456
 FN: Jane Doe
 GENDER: F
-RELATED[parent]: urn:uuid:john-doe-123
+RELATED.parent: urn:uuid:john-doe-123
 ---
 
 #### Related

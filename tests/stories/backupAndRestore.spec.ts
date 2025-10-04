@@ -125,7 +125,7 @@ END:VCARD`;
       'N.GN': 'Integrity',
       EMAIL: 'integrity@example.com',
       TEL: '+1-555-999-8888',
-      'RELATED[spouse]': 'urn:uuid:spouse-uid-123',
+      'RELATED.spouse': 'urn:uuid:spouse-uid-123',
       REV: '20240115T100000Z'
     };
 
@@ -167,8 +167,8 @@ END:VCARD`;
 
     // Relationships should be preserved
     expect(results).toHaveLength(2);
-    expect(results[0].record['RELATED[child]']).toBe('urn:uuid:child-uid-222');
-    expect(results[1].record['RELATED[parent]']).toBe('urn:uuid:parent-uid-111');
+    expect(results[0].record['RELATED.child']).toBe('urn:uuid:child-uid-222');
+    expect(results[1].record['RELATED.parent']).toBe('urn:uuid:parent-uid-111');
   });
 
   it('should handle incremental backups with REV timestamps', async () => {

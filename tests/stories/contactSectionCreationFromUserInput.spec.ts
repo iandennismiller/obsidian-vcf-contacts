@@ -68,7 +68,7 @@ john.work@company.com
 
     const contactNote = new ContactNote(mockApp as App, mockSettings, mockFile);
     
-    // Future: Should parse both emails, defaulting to EMAIL[1], EMAIL[2]
+    // Future: Should parse both emails, defaulting to EMAIL.1, EMAIL.2
   });
 
   it('should parse Contact section with emoji headers', async () => {
@@ -97,7 +97,7 @@ Work: john.work@company.com
 
     const contactNote = new ContactNote(mockApp as App, mockSettings, mockFile);
     
-    // Future: Should parse EMAIL[HOME] and EMAIL[WORK]
+    // Future: Should parse EMAIL.HOME and EMAIL.WORK
   });
 
   it('should parse Contact section with parenthetical type labels', async () => {
@@ -126,7 +126,7 @@ Email
 
     const contactNote = new ContactNote(mockApp as App, mockSettings, mockFile);
     
-    // Future: Should parse EMAIL[HOME] and EMAIL[WORK]
+    // Future: Should parse EMAIL.HOME and EMAIL.WORK
   });
 
   it('should tolerate variations in whitespace', async () => {
@@ -243,7 +243,7 @@ jane@example.com
 
     const contactNote = new ContactNote(mockApp as App, mockSettings, mockFile);
     
-    // Future: Should parse as EMAIL[1], EMAIL[2]
+    // Future: Should parse as EMAIL.1, EMAIL.2
   });
 
   it('should parse incomplete information gracefully', async () => {
@@ -278,7 +278,7 @@ Springfield
   it('should default to indexed numbers for untyped fields', async () => {
     const mockFile = { basename: 'john-doe', path: 'Contacts/john-doe.md' } as TFile;
     
-    // Future implementation: EMAIL[1], EMAIL[2] for untyped emails
+    // Future implementation: EMAIL.1, EMAIL.2 for untyped emails
     const content = `---
 UID: john-doe-123
 FN: John Doe
@@ -302,7 +302,7 @@ FN: John Doe
 
     const contactNote = new ContactNote(mockApp as App, mockSettings, mockFile);
     
-    // Future: Should parse as EMAIL[1], EMAIL[2], EMAIL[3]
+    // Future: Should parse as EMAIL.1, EMAIL.2, EMAIL.3
   });
 
   it('should preserve unrecognized content without syncing', async () => {

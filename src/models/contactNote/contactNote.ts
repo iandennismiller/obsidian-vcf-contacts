@@ -5,7 +5,7 @@
 
 import { TFile, App } from 'obsidian';
 import { ContactsPluginSettings } from 'src/plugin/settings';
-import { Gender, Contact, ParsedKey, ParsedRelationship, FrontmatterRelationship, ResolvedContact } from './types';
+import { Gender, Contact, ParsedRelationship, FrontmatterRelationship, ResolvedContact } from './types';
 
 // Import the optimized components
 import { ContactData } from './contactData';
@@ -20,10 +20,10 @@ import { RelationshipHelpers } from './relationshipHelpers';
 import { ContactSectionOperations } from './contactSectionOperations';
 
 // Re-export types for backward compatibility and external use
-export type { Contact, ParsedKey, Gender, ParsedRelationship, FrontmatterRelationship, ResolvedContact };
+export type { Contact, Gender, ParsedRelationship, FrontmatterRelationship, ResolvedContact };
 
 // Re-export utility functions
-export { parseKey, mdRender, createNameSlug, createContactSlug, isKind, fileId, getUiName, uiSafeString, getSortName, createFileName } from './utilityFunctions';
+export { mdRender, createNameSlug, createContactSlug, isKind, fileId, getUiName, uiSafeString, getSortName, createFileName } from './utilityFunctions';
 
 /**
  * Optimized ContactNote class that groups operations by data locality.

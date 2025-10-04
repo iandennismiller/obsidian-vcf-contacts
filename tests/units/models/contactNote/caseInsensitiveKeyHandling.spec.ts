@@ -46,11 +46,11 @@ describe('Case-Insensitive Frontmatter Key Handling', () => {
   it('should update existing key when new key differs only in case', async () => {
     const mockFile = { basename: 'john-doe', path: 'Contacts/john-doe.md' } as TFile;
     
-    // Frontmatter has TEL[WORK] in uppercase
+    // Frontmatter has TEL.WORK in uppercase
     const content = `---
 UID: john-doe-123
 FN: John Doe
-TEL[WORK]: +1-555-555-5555
+TEL.WORK: +1-555-555-5555
 ---`;
 
     mockApp.vault!.read = vi.fn().mockResolvedValue(content);
@@ -58,7 +58,7 @@ TEL[WORK]: +1-555-555-5555
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'TEL[WORK]': '+1-555-555-5555'
+        'TEL.WORK': '+1-555-555-5555'
       }
     });
 
@@ -66,7 +66,7 @@ TEL[WORK]: +1-555-555-5555
 
     // Update with same case - should detect change
     await contactNote.updateMultipleFrontmatterValues({
-      'TEL[WORK]': '+1-555-555-6666'
+      'TEL.WORK': '+1-555-555-6666'
     });
 
     // Should have called modify because the value changed
@@ -79,7 +79,7 @@ TEL[WORK]: +1-555-555-5555
     const content = `---
 UID: john-doe-123
 FN: John Doe
-EMAIL[Home]: john@example.com
+EMAIL.Home: john@example.com
 ---`;
 
     mockApp.vault!.read = vi.fn().mockResolvedValue(content);
@@ -87,7 +87,7 @@ EMAIL[Home]: john@example.com
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'EMAIL[Home]': 'john@example.com'
+        'EMAIL.Home': 'john@example.com'
       }
     });
 
@@ -95,7 +95,7 @@ EMAIL[Home]: john@example.com
 
     // Update with different case - should update value
     await contactNote.updateMultipleFrontmatterValues({
-      'EMAIL[HOME]': 'john.new@example.com'
+      'EMAIL.HOME': 'john.new@example.com'
     });
 
     // Should have called modify because value changed
@@ -108,8 +108,8 @@ EMAIL[Home]: john@example.com
     const content = `---
 UID: john-doe-123
 FN: John Doe
-TEL[WORK]: +1-555-555-5555
-EMAIL[home]: old@example.com
+TEL.WORK: +1-555-555-5555
+EMAIL.home: old@example.com
 ---`;
 
     mockApp.vault!.read = vi.fn().mockResolvedValue(content);
@@ -117,8 +117,8 @@ EMAIL[home]: old@example.com
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'TEL[WORK]': '+1-555-555-5555',
-        'EMAIL[home]': 'old@example.com'
+        'TEL.WORK': '+1-555-555-5555',
+        'EMAIL.home': 'old@example.com'
       }
     });
 
@@ -126,8 +126,8 @@ EMAIL[home]: old@example.com
 
     // Update with normalized uppercase keys
     await contactNote.updateMultipleFrontmatterValues({
-      'TEL[WORK]': '+1-555-555-6666',
-      'EMAIL[HOME]': 'new@example.com'
+      'TEL.WORK': '+1-555-555-6666',
+      'EMAIL.HOME': 'new@example.com'
     });
 
     // Should have called modify because values changed
@@ -140,7 +140,7 @@ EMAIL[home]: old@example.com
     const content = `---
 UID: john-doe-123
 FN: John Doe
-TEL[Work]: 555-555-5555
+TEL.Work: 555-555-5555
 ---`;
 
     mockApp.vault!.read = vi.fn().mockResolvedValue(content);
@@ -148,7 +148,7 @@ TEL[Work]: 555-555-5555
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'TEL[Work]': '555-555-5555'
+        'TEL.Work': '555-555-5555'
       }
     });
 
@@ -156,7 +156,7 @@ TEL[Work]: 555-555-5555
 
     // Try to update with normalized form of same value but uppercase key
     await contactNote.updateMultipleFrontmatterValues({
-      'TEL[WORK]': '+1-555-555-5555' // Normalized version of same number, different case key
+      'TEL.WORK': '+1-555-555-5555' // Normalized version of same number, different case key
     });
 
     // Should NOT update since the value is the same (just normalized)

@@ -50,7 +50,7 @@ describe('Incremental Relationship Management Story', () => {
     const initialContent = `---
 UID: john-doe-123
 FN: John Doe
-RELATED[spouse]: name:Jane Doe
+RELATED.spouse: name:Jane Doe
 ---
 
 ## Notes
@@ -65,7 +65,7 @@ John is a software developer.
     const updatedContent = `---
 UID: john-doe-123
 FN: John Doe
-RELATED[spouse]: name:Jane Doe
+RELATED.spouse: name:Jane Doe
 ---
 
 ## Notes
@@ -83,7 +83,7 @@ John is a software developer.
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'RELATED[spouse]': 'name:Jane Doe'
+        'RELATED.spouse': 'name:Jane Doe'
       }
     });
 
@@ -99,7 +99,7 @@ John is a software developer.
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'RELATED[spouse]': 'name:Jane Doe'
+        'RELATED.spouse': 'name:Jane Doe'
       }
     });
 
@@ -147,7 +147,7 @@ Sarah is a project manager.
 UID: sarah-jones-456
 FN: Sarah Jones
 EMAIL: sarah@example.com
-RELATED[colleague]: name:Mike Smith
+RELATED.colleague: name:Mike Smith
 ---
 
 ## Notes
@@ -186,7 +186,7 @@ Sarah is a project manager.
         UID: 'sarah-jones-456',
         FN: 'Sarah Jones',
         EMAIL: 'sarah@example.com',
-        'RELATED[colleague]': 'name:Mike Smith'
+        'RELATED.colleague': 'name:Mike Smith'
       }
     });
 
@@ -202,7 +202,7 @@ Sarah is a project manager.
     const initialContent = `---
 UID: alex-brown-789
 FN: Alex Brown
-RELATED[friend]: name:Chris Green
+RELATED.friend: name:Chris Green
 ---
 
 #### Related
@@ -214,7 +214,7 @@ RELATED[friend]: name:Chris Green
     const modifiedContent = `---
 UID: alex-brown-789
 FN: Alex Brown
-RELATED[friend]: name:Chris Green
+RELATED.friend: name:Chris Green
 ---
 
 #### Related
@@ -227,7 +227,7 @@ RELATED[friend]: name:Chris Green
       frontmatter: {
         UID: 'alex-brown-789',
         FN: 'Alex Brown',
-        'RELATED[friend]': 'name:Chris Green'
+        'RELATED.friend': 'name:Chris Green'
       }
     });
 
@@ -260,7 +260,7 @@ FN: Parent Contact
     const state2 = `---
 UID: parent-contact-001
 FN: Parent Contact
-RELATED[child]: name:Child One
+RELATED.child: name:Child One
 ---
 
 #### Related
@@ -273,8 +273,8 @@ RELATED[child]: name:Child One
     const state3 = `---
 UID: parent-contact-001
 FN: Parent Contact
-RELATED[child]: name:Child One
-RELATED[1:child]: name:Child Two
+RELATED.child: name:Child One
+RELATED.child.1: name:Child Two
 ---
 
 #### Related
@@ -304,7 +304,7 @@ RELATED[1:child]: name:Child Two
       frontmatter: {
         UID: 'parent-contact-001',
         FN: 'Parent Contact',
-        'RELATED[child]': 'name:Child One'
+        'RELATED.child': 'name:Child One'
       }
     });
 
@@ -318,8 +318,8 @@ RELATED[1:child]: name:Child Two
       frontmatter: {
         UID: 'parent-contact-001',
         FN: 'Parent Contact',
-        'RELATED[child]': 'name:Child One',
-        'RELATED[1:child]': 'name:Child Two'
+        'RELATED.child': 'name:Child One',
+        'RELATED.child.1': 'name:Child Two'
       }
     });
 
@@ -335,9 +335,9 @@ RELATED[1:child]: name:Child Two
     const stableContent = `---
 UID: stable-contact-999
 FN: Stable Contact
-RELATED[spouse]: name:Partner Name
-RELATED[friend]: name:Friend Name
-RELATED[colleague]: name:Colleague Name
+RELATED.spouse: name:Partner Name
+RELATED.friend: name:Friend Name
+RELATED.colleague: name:Colleague Name
 ---
 
 #### Related
@@ -354,9 +354,9 @@ RELATED[colleague]: name:Colleague Name
         frontmatter: {
           UID: 'stable-contact-999',
           FN: 'Stable Contact',
-          'RELATED[spouse]': 'name:Partner Name',
-          'RELATED[friend]': 'name:Friend Name',
-          'RELATED[colleague]': 'name:Colleague Name'
+          'RELATED.spouse': 'name:Partner Name',
+          'RELATED.friend': 'name:Friend Name',
+          'RELATED.colleague': 'name:Colleague Name'
         }
       });
 

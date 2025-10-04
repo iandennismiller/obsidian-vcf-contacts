@@ -5,4 +5,4 @@ export * from './vcardManager';
 export * from './vcardFile';
 
 // Re-export utility functions
-export { parseKey, mdRender, createContactSlug, createNameSlug } from './contactNote';
+export { mdRender, createContactSlug, createNameSlug } from './contactNote';
