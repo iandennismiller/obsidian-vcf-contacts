@@ -9,14 +9,19 @@ Manage contacts in Obsidian using the vCard 4.0 standard format. This plugin int
 
 ## Documentation
 
+### User Documentation
 - [Installation Guide](docs/installation.md)
 - [Getting Started](docs/getting-started.md)
 - [Feature Overview](docs/features.md)
-- [VCard Format Guide](docs/vcard-format.md)
-- [Contact Section Sync](docs/contact-section-sync.md)
-- [Technical Specifications](docs/specifications.md)
-- [Development](docs/development/)
-- [User Stories](docs/user-stories.md)
+
+### Developer Documentation
+- [Development Guide](docs/development/)
+- [Technical Specifications](project/specifications/)
+- [User Stories](project/user-stories/)
+
+### Reference
+- [vCard Format Guide](project/specifications/vcard-format-spec.md)
+- [Library Integration](project/specifications/library-integration-spec.md)
 
 ## Core Features
 
