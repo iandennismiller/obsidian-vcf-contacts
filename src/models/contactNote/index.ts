@@ -53,11 +53,6 @@ export {
 } from './validationOperations';
 
 export {
-  /** Revision and timestamp operations */
-  RevisionOperations
-} from './revisionOperations';
-
-export {
   /** Advanced relationship operations */
   AdvancedRelationshipOperations
 } from './advancedRelationshipOperations';
