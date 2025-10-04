@@ -58,11 +58,6 @@ export {
 } from './revisionOperations';
 
 export {
-  /** UID-based operations and conflict detection */
-  UIDOperations
-} from './uidOperations';
-
-export {
   /** Advanced relationship operations */
   AdvancedRelationshipOperations
 } from './advancedRelationshipOperations';

@@ -14,10 +14,12 @@ import { MarkdownOperations } from './markdownOperations';
 import { SyncOperations } from './syncOperations';
 import { ValidationOperations } from './validationOperations';
 import { RevisionOperations } from './revisionOperations';
-import { UIDOperations } from './uidOperations';
 import { AdvancedRelationshipOperations } from './advancedRelationshipOperations';
 import { RelationshipHelpers } from './relationshipHelpers';
 import { ContactSectionOperations } from './contactSectionOperations';
+
+// Import entities
+import { UID } from './entities/valueObjects/UID';
 
 // Re-export types for backward compatibility and external use
 export type { Contact, Gender, ParsedRelationship, FrontmatterRelationship, ResolvedContact };
@@ -40,7 +42,6 @@ export class ContactNote {
   private syncOps: SyncOperations;
   private validationOps: ValidationOperations;
   private revisionOps: RevisionOperations;
-  private uidOps: UIDOperations;
   private advancedRelationshipOps: AdvancedRelationshipOperations;
   private relationshipHelpers: RelationshipHelpers;
   private contactSectionOps: ContactSectionOperations;
@@ -58,7 +59,6 @@ export class ContactNote {
     this.syncOps = new SyncOperations(this.contactData, this.relationshipOps);
     this.validationOps = new ValidationOperations(this.contactData);
     this.revisionOps = new RevisionOperations(this.contactData);
-    this.uidOps = new UIDOperations(app, settings, this.contactData);
     this.advancedRelationshipOps = new AdvancedRelationshipOperations(app, settings, this.contactData, this.relationshipOps);
     this.relationshipHelpers = new RelationshipHelpers();
     this.contactSectionOps = new ContactSectionOperations(this.contactData, settings);
@@ -394,21 +394,36 @@ export class ContactNote {
    * Resolve a contact by UID - returns object with frontmatter
    */
   async resolveContactByUID(uid: string): Promise<{ file: TFile; frontmatter: any } | null> {
-    return this.uidOps.resolveContactByUID(uid);
+    const allFiles = this.app.vault.getMarkdownFiles();
+    
+    for (const file of allFiles) {
+      if (!file.path.startsWith(this.settings.contactsFolder)) continue;
+      
+      const cache = this.app.metadataCache.getFileCache(file);
+      if (cache?.frontmatter?.UID === uid) {
+        return { file, frontmatter: cache.frontmatter };
+      }
+    }
+    
+    return null;
   }
 
   /**
    * Resolve contact file by UID - returns just the TFile
    */
   async resolveContactFileByUID(uid: string): Promise<TFile | null> {
-    return this.uidOps.resolveContactFileByUID(uid);
+    const result = await this.resolveContactByUID(uid);
+    return result?.file || null;
   }
 
   /**
    * Resolve contact name by UID
    */
   async resolveContactNameByUID(uid: string): Promise<string | null> {
-    return this.uidOps.resolveContactNameByUID(uid);
+    const result = await this.resolveContactByUID(uid);
+    if (!result) return null;
+    
+    return result.frontmatter?.FN || result.file.basename;
   }
 
   /**
@@ -422,7 +437,7 @@ export class ContactNote {
   } | null> {
     return this.advancedRelationshipOps.resolveRelationshipTarget(
       identifierOrType,
-      UIDOperations.isValidUID,
+      (uid: string) => UID.validate(uid),
       this.resolveContactByUID.bind(this),
       this.findContactByName.bind(this)
     );
@@ -477,7 +492,39 @@ export class ContactNote {
       files: string[];
     }>;
   }> {
-    return this.uidOps.detectUIDConflicts();
+    const result: {
+      hasConflicts: boolean;
+      conflicts: Array<{
+        uid: string;
+        files: string[];
+      }>;
+    } = { hasConflicts: false, conflicts: [] };
+    const uidMap = new Map<string, string[]>();
+    
+    const allFiles = this.app.vault.getMarkdownFiles();
+    
+    for (const file of allFiles) {
+      if (!file.path.startsWith(this.settings.contactsFolder)) continue;
+      
+      const cache = this.app.metadataCache.getFileCache(file);
+      const uid = cache?.frontmatter?.UID;
+      
+      if (uid) {
+        if (!uidMap.has(uid)) {
+          uidMap.set(uid, []);
+        }
+        uidMap.get(uid)!.push(file.path);
+      }
+    }
+    
+    for (const [uid, files] of uidMap.entries()) {
+      if (files.length > 1) {
+        result.hasConflicts = true;
+        result.conflicts.push({ uid, files });
+      }
+    }
+    
+    return result;
   }
 
   /**
@@ -491,12 +538,61 @@ export class ContactNote {
       key: string;
     }>;
   }> {
-    return this.uidOps.updateRelationshipUID(
-      oldUID,
-      newUID,
-      this.parseRelatedValue.bind(this),
-      this.formatRelatedValue.bind(this)
-    );
+    const result: {
+      success: boolean;
+      updatedRelationships: Array<{
+        oldUID: string;
+        newUID: string;
+        key: string;
+      }>;
+    } = {
+      success: true,
+      updatedRelationships: []
+    };
+    
+    try {
+      const frontmatter = await this.contactData.getFrontmatter();
+      if (!frontmatter) {
+        result.success = false;
+        return result;
+      }
+
+      const updates: Record<string, string> = {};
+      
+      for (const [key, value] of Object.entries(frontmatter)) {
+        if (key.startsWith('RELATED[') && typeof value === 'string') {
+          const parsedValue = this.parseRelatedValue(value);
+          if (parsedValue && (parsedValue.type === 'uuid' || parsedValue.type === 'uid')) {
+            if (parsedValue.value === oldUID) {
+              // Format with the same prefix style (urn:uuid: or uid:)
+              updates[key] = this.formatRelatedValue(newUID, '');
+              result.updatedRelationships.push({
+                oldUID,
+                newUID,
+                key
+              });
+            }
+          } else if (value === oldUID) {
+            // Direct match without prefix
+            updates[key] = this.formatRelatedValue(newUID, '');
+            result.updatedRelationships.push({
+              oldUID,
+              newUID,
+              key
+            });
+          }
+        }
+      }
+
+      if (Object.keys(updates).length > 0) {
+        await this.contactData.updateMultipleFrontmatterValues(updates);
+      }
+    } catch (error: any) {
+      result.success = false;
+      console.error(`Error updating relationship UID: ${error.message}`);
+    }
+    
+    return result;
   }
 
   /**
@@ -510,11 +606,62 @@ export class ContactNote {
     failedCount: number;
     errors: string[];
   }> {
-    return this.uidOps.bulkUpdateRelationshipUIDs(
-      uidMappings,
-      this.parseRelatedValue.bind(this),
-      this.formatRelatedValue.bind(this)
-    );
+    const result: {
+      success: boolean;
+      updatedCount: number;
+      failedCount: number;
+      errors: string[];
+    } = { success: true, updatedCount: 0, failedCount: 0, errors: [] };
+    
+    try {
+      const frontmatter = await this.contactData.getFrontmatter();
+      if (!frontmatter) return result;
+
+      const updates: Record<string, string> = {};
+      
+      // Convert array format to map if needed
+      const mappingMap = Array.isArray(uidMappings)
+        ? uidMappings.reduce((acc, { name, uid }) => {
+            acc[`name:${name}`] = uid;
+            return acc;
+          }, {} as Record<string, string>)
+        : uidMappings;
+
+      for (const [key, value] of Object.entries(frontmatter)) {
+        if (key.startsWith('RELATED[') && typeof value === 'string') {
+          // Try to match the value directly or parse it
+          let matchedUID = mappingMap[value];
+          
+          if (!matchedUID) {
+            // Try parsing the value
+            const parsedValue = this.parseRelatedValue(value);
+            if (parsedValue) {
+              if (parsedValue.type === 'name') {
+                matchedUID = mappingMap[`name:${parsedValue.value}`] || mappingMap[parsedValue.value];
+              } else {
+                matchedUID = mappingMap[parsedValue.value];
+              }
+            }
+          }
+          
+          if (matchedUID && matchedUID !== value) {
+            updates[key] = this.formatRelatedValue(matchedUID, '');
+            result.updatedCount++;
+          }
+        }
+      }
+
+      if (Object.keys(updates).length > 0) {
+        await this.contactData.updateMultipleFrontmatterValues(updates);
+      }
+    } catch (error: any) {
+      result.success = false;
+      result.failedCount = result.updatedCount;
+      result.updatedCount = 0;
+      result.errors.push(`Error in bulk update: ${error.message}`);
+    }
+
+    return result;
   }
 
   // === Helper Methods for Relationship Operations ===
@@ -539,7 +686,7 @@ export class ContactNote {
    * Validate UID format
    */
   static isValidUID(uid: string): boolean {
-    return UIDOperations.isValidUID(uid);
+    return UID.validate(uid);
   }
 
   // === Debug and Utility Operations ===
