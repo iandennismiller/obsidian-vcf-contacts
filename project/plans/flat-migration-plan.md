@@ -279,59 +279,43 @@ static objectToVcf(vCardObject: Record<string, any>): string {
 
 ### Phase 5: Implementation Steps
 
-#### Step 1: Add flat Dependency
+**Important**: Use `yaml`, `vcard4`, and `flat` functionality directly from model classes - no adapter layer needed. This maintains simplicity and reduces unnecessary abstractions.
+
+#### Step 1: Add flat Dependency ✅ COMPLETE
 ```bash
 npm install --save flat
 npm install --save-dev @types/flat
 ```
 
-#### Step 2: Create Adapter Layer
-**File**: `src/models/vcardFile/flatAdapter.ts`
+**Status**: Complete - `flat` v6.0.1 and `@types/flat` v5.0.5 installed
 
-```typescript
-import { flatten, unflatten } from 'flat';
-import { VCARD, FNProperty, NProperty, /* ... */ } from 'vcard4';
-
-export class FlatAdapter {
-  /**
-   * Convert vcard4 parsed object to flat frontmatter
-   */
-  static vcard4ToFrontmatter(parsedVcard: any): Record<string, any> {
-    const nested = this.vcard4ToNested(parsedVcard);
-    return flatten(nested, { delimiter: '.' });
-  }
-
-  /**
-   * Convert flat frontmatter to vcard4 properties
-   */
-  static frontmatterToVcard4(frontmatter: Record<string, any>): any[] {
-    const nested = unflatten(frontmatter, { delimiter: '.' });
-    return this.nestedToVcard4(nested);
-  }
-
-  private static vcard4ToNested(parsedVcard: any): Record<string, any> {
-    // Implementation
-  }
-
-  private static nestedToVcard4(nested: Record<string, any>): any[] {
-    // Implementation
-  }
-}
-```
-
-#### Step 3: Refactor VCardParser
+#### Step 2: Refactor VCardParser ✅ COMPLETE
 **File**: `src/models/vcardFile/parsing.ts`
 
-1. Replace `convertToFrontmatter()` with flat-based implementation
-2. Remove manual key construction
-3. Update tests
+1. ✅ Added `flat` library import
+2. ✅ Replaced `convertToFrontmatter()` with flat-based implementation
+3. ✅ Uses `flatten()` directly - no adapter layer needed
+4. ✅ Builds nested object from vcard4 properties, then flattens with dot notation
 
-#### Step 4: Refactor VCardGenerator
+**Key Changes**:
+- Removed custom bracket notation key generation
+- Removed field counting logic
+- Now uses nested objects + `flatten()` from flat library
+- Generates proper dot notation: `EMAIL.WORK`, `ADR.HOME.STREET`, etc.
+
+**Impact**: Medium - well-isolated method, existing tests need updates for new format
+
+#### Step 3: Refactor VCardParser ✅ COMPLETE
+**File**: `src/models/vcardFile/parsing.ts`
+
+See Step 2 above - this step is already complete.
+
+#### Step 4: Refactor VCardGenerator (NEXT)
 **File**: `src/models/vcardFile/generation.ts`
 
-1. Replace `objectToVcf()` with flat-based implementation
-2. Remove `parseKey()` usage
-3. Remove custom sorting logic
+1. Add `unflatten` import from flat
+2. Replace `objectToVcf()` with flat-based implementation
+3. Remove `parseKey()` usage
 4. Update tests
 
 #### Step 5: Remove Deprecated Code

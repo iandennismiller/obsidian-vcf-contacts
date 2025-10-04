@@ -1,4 +1,5 @@
 import { parse } from 'vcard4';
+import { flatten } from 'flat';
 import { VCardForObsidianRecord } from './types';
 import { createContactSlug } from '../contactNote';
 
@@ -77,70 +78,88 @@ export class VCardParser {
   }
 
   /**
-   * Convert vcard4 parsed object to Obsidian frontmatter format
+   * Convert vcard4 parsed object to Obsidian frontmatter format using flat library
    * @private
    */
   private static convertToFrontmatter(parsedVcard: any): VCardForObsidianRecord {
-    const frontmatter: VCardForObsidianRecord = {};
     const parsedVcardArray = parsedVcard.parsedVcard || [];
-    const fieldCounts: Map<string, number> = new Map();
+    
+    // Build a nested object structure from vcard4 properties
+    const nested: Record<string, any> = {};
     
     for (const prop of parsedVcardArray) {
       const { property, parameters, value } = prop;
       
-      // Handle structured fields (N, ADR)
+      // Handle structured fields (N, ADR) - create nested objects
       if (property === 'N' && typeof value === 'object') {
         const typeParam = parameters.TYPE || '';
-        const typeStr = typeParam ? `[${typeParam}]` : '';
         
-        if (value.familyNames) frontmatter[`N${typeStr}.FN`] = value.familyNames;
-        if (value.givenNames) frontmatter[`N${typeStr}.GN`] = value.givenNames;
-        if (value.additionalNames) frontmatter[`N${typeStr}.MN`] = value.additionalNames;
-        if (value.honorificPrefixes) frontmatter[`N${typeStr}.PREFIX`] = value.honorificPrefixes;
-        if (value.honorificSuffixes) frontmatter[`N${typeStr}.SUFFIX`] = value.honorificSuffixes;
+        if (!nested.N) nested.N = {};
+        const nObj: Record<string, any> = typeParam ? (nested.N[typeParam] || (nested.N[typeParam] = {})) : nested.N;
+        
+        if (value.familyNames) nObj.FN = value.familyNames;
+        if (value.givenNames) nObj.GN = value.givenNames;
+        if (value.additionalNames) nObj.MN = value.additionalNames;
+        if (value.honorificPrefixes) nObj.PREFIX = value.honorificPrefixes;
+        if (value.honorificSuffixes) nObj.SUFFIX = value.honorificSuffixes;
+        
       } else if (property === 'ADR' && typeof value === 'object') {
         const typeParam = parameters.TYPE || '';
-        const typeStr = typeParam ? `[${typeParam}]` : '';
         
-        if (value.postOfficeBox) frontmatter[`ADR${typeStr}.PO`] = value.postOfficeBox;
-        if (value.extendedAddress) frontmatter[`ADR${typeStr}.EXT`] = value.extendedAddress;
-        if (value.streetAddress) frontmatter[`ADR${typeStr}.STREET`] = value.streetAddress;
-        if (value.locality) frontmatter[`ADR${typeStr}.LOCALITY`] = value.locality;
-        if (value.region) frontmatter[`ADR${typeStr}.REGION`] = value.region;
-        if (value.postalCode) frontmatter[`ADR${typeStr}.POSTAL`] = value.postalCode;
-        if (value.countryName) frontmatter[`ADR${typeStr}.COUNTRY`] = value.countryName;
+        if (!nested.ADR) nested.ADR = {};
+        const adrObj: Record<string, any> = typeParam ? (nested.ADR[typeParam] || (nested.ADR[typeParam] = {})) : (nested.ADR.default || (nested.ADR.default = {}));
+        
+        if (value.postOfficeBox) adrObj.PO = value.postOfficeBox;
+        if (value.extendedAddress) adrObj.EXT = value.extendedAddress;
+        if (value.streetAddress) adrObj.STREET = value.streetAddress;
+        if (value.locality) adrObj.LOCALITY = value.locality;
+        if (value.region) adrObj.REGION = value.region;
+        if (value.postalCode) adrObj.POSTAL = value.postalCode;
+        if (value.countryName) adrObj.COUNTRY = value.countryName;
+        
       } else if (property === 'GENDER' && typeof value === 'object') {
-        if (value.sex) frontmatter.GENDER = value.sex;
+        if (value.sex) nested.GENDER = value.sex;
+        
       } else {
         // Handle regular fields with TYPE parameters
         const typeParam = parameters.TYPE;
-        let key = property;
+        const stringValue = typeof value === 'string' ? value : String(value);
         
         if (typeParam) {
           const typeValue = Array.isArray(typeParam) ? typeParam[0] : typeParam;
-          key = `${property}[${typeValue}]`;
-        }
-        
-        // Handle duplicate fields by adding index
-        if (frontmatter.hasOwnProperty(key)) {
-          const count = fieldCounts.get(property) || 1;
-          fieldCounts.set(property, count + 1);
           
-          if (typeParam) {
-            const typeValue = Array.isArray(typeParam) ? typeParam[0] : typeParam;
-            key = `${property}[${count}:${typeValue}]`;
+          // Create nested structure for typed fields
+          if (!nested[property]) nested[property] = {};
+          
+          // If this type already exists, create an array
+          if (nested[property][typeValue] !== undefined) {
+            // Convert to array if not already
+            if (!Array.isArray(nested[property][typeValue])) {
+              nested[property][typeValue] = [nested[property][typeValue]];
+            }
+            nested[property][typeValue].push(stringValue);
           } else {
-            key = `${property}[${count}:]`;
+            nested[property][typeValue] = stringValue;
           }
         } else {
-          fieldCounts.set(property, 1);
+          // No type parameter - use bare key
+          // If key already exists, create an array
+          if (nested[property] !== undefined) {
+            if (!Array.isArray(nested[property])) {
+              nested[property] = [nested[property]];
+            }
+            nested[property].push(stringValue);
+          } else {
+            nested[property] = stringValue;
+          }
         }
-        
-        frontmatter[key] = typeof value === 'string' ? value : String(value);
       }
     }
     
-    return frontmatter;
+    // Use flat to convert nested structure to dot notation
+    const flattened = flatten(nested, { delimiter: '.' }) as VCardForObsidianRecord;
+    
+    return flattened;
   }
 
   /**
