@@ -28,4 +28,10 @@ export {
   RelationshipValidation
 } from './relationships';
 
-// More entities will be added as they are implemented
+// Document entities
+export {
+  Frontmatter,
+  FrontmatterValidationResult,
+  MarkdownSection,
+  SectionValidationResult
+} from './document';
