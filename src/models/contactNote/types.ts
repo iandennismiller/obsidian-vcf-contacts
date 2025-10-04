@@ -62,44 +62,6 @@ export type Contact = {
 }
 
 /**
- * Parsed key structure for frontmatter field parsing.
- * 
- * Represents the components of a parsed frontmatter key, supporting
- * complex field structures with types, indices, and sub-keys.
- * 
- * @interface ParsedKey
- * 
- * @example
- * ```typescript
- * // For a key like "TEL[WORK]" 
- * const parsedKey: ParsedKey = {
- *   key: "TEL",
- *   type: "WORK",
- *   index: undefined,
- *   subkey: undefined
- * };
- * 
- * // For a key like "ADR[HOME].STREET"
- * const parsedKey: ParsedKey = {
- *   key: "ADR",
- *   type: "HOME", 
- *   index: undefined,
- *   subkey: "STREET"
- * };
- * ```
- */
-export interface ParsedKey {
-  /** Base field name (e.g., "TEL", "EMAIL", "ADR") */
-  key: string;
-  /** Optional index for multiple values of same type */
-  index?: string;
-  /** Optional type specifier (e.g., "HOME", "WORK", "CELL") */
-  type?: string;
-  /** Optional sub-field name for structured fields */
-  subkey?: string;
-}
-
-/**
  * Parsed relationship data structure.
  * 
  * Represents a relationship between contacts, including metadata

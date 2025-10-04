@@ -2,10 +2,10 @@
 KIND: org
 FN: Snip & Sip AB
 EMAIL: rajiv.colors@rangmail.in
-EMAIL[WORK]: rajiv@masala.in
+EMAIL.WORK: rajiv@masala.in
 TEL: "+919811112222"
-URL[HOME]: https://snipnsip.se
-URL[BOOKING]: https://snipnsip.se/boka
+URL.HOME: https://snipnsip.se
+URL.BOOKING: https://snipnsip.se/boka
 ADR.STREET: Nybrogatan 12
 ADR.LOCALITY: Stockholm
 ADR.POSTAL: 114 34

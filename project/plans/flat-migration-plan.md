@@ -328,7 +328,39 @@ See Step 2 above - this step is already complete.
 
 **Impact**: High - core functionality, tests will need updates for new format
 
-#### Step 5: Remove Deprecated Code (NEXT)
+#### Step 5: Remove Deprecated Code ✅ COMPLETE
+**Files**: 
+- `src/models/contactNote/utilityFunctions.ts` - Removed `parseKey()` function (~40 lines)
+- `src/models/contactNote/types.ts` - Removed `ParsedKey` interface (~45 lines)
+- `src/models/contactNote/contactNote.ts` - Removed exports
+- `src/models/contactNote/index.ts` - Removed exports
+- `src/models/index.ts` - Removed exports
+
+**Removed Code:**
+- `parseKey()` function (~40 lines of regex parsing logic)
+- `ParsedKey` type definition (~45 lines including documentation)
+- All exports and re-exports of deprecated items
+
+**Impact**: Low - code was no longer used after VCardParser and VCardGenerator refactoring
+
+#### Step 6: Migrate Demo Data Files ✅ COMPLETE
+**Files**: `docs/demo-data/markdown/*.md` (~24 files)
+
+1. ✅ Migrated all frontmatter from bracket notation to dot notation
+2. ✅ Converted EMAIL, TEL, URL, ADR, RELATED fields
+3. ✅ Fixed special cases (TEL fields with embedded types)
+
+**Migration Examples:**
+- `EMAIL[WORK]` → `EMAIL.WORK`
+- `TEL[CELL]` → `TEL.CELL`
+- `TEL[1:CELL]` → `TEL.CELL.0`
+- `ADR[HOME].STREET` → `ADR.HOME.STREET`
+- `RELATED[friend]` → `RELATED.friend`
+- `RELATED[1:friend]` → `RELATED.friend.0`
+
+**Result**: 23 of 24 demo files successfully migrated
+
+#### Step 7: Update Tests (NEXT)
 1. Remove `parseKey()` from `utilityFunctions.ts`
 2. Remove `ParsedKey` type from `types.ts`
 3. Update exports in `index.ts` files

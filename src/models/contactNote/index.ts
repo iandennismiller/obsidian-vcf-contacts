@@ -13,13 +13,11 @@ export { ContactNote } from './contactNote';
 export type { 
   /** Contact data structure containing file and data properties */
   Contact, 
-  /** Parsed key structure for frontmatter field parsing */  
-  ParsedKey 
+  /** Gender enumeration for contact classification */
+  Gender 
 } from './contactNote';
 
 export type { 
-  /** Gender enumeration for contact classification */
-  Gender, 
   /** Parsed relationship data structure */
   ParsedRelationship, 
   /** Frontmatter relationship structure */
@@ -90,7 +88,6 @@ export type {
 
 // Export utility functions for backward compatibility
 export { 
-  parseKey,
   mdRender,
   createNameSlug,
   createContactSlug,

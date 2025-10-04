@@ -4,42 +4,9 @@
 
 import { TFile } from 'obsidian';
 import { VCardForObsidianRecord, VCardKind, VCardKinds } from '../vcardFile';
-import { Contact, ParsedKey, Gender } from './types';
+import { Contact, Gender } from './types';
 import { ContactData } from './contactData';
 import { MarkdownOperations } from './markdownOperations';
-
-/**
- * Parse a frontmatter key into its components
- */
-export function parseKey(key: string): ParsedKey {
-  const match = key.match(/^([^.[]+)(?:\[([^\]]*)\])?(?:\.(.+))?$/);
-  if (!match) {
-    return { key };
-  }
-
-  const [, baseKey, indexOrType, subkey] = match;
-  
-  // Check if the bracket contains a number (index) or type
-  let index: string | undefined;
-  let type: string | undefined;
-  
-  if (indexOrType) {
-    if (indexOrType.includes(':')) {
-      [index, type] = indexOrType.split(':', 2);
-    } else if (/^\d+$/.test(indexOrType)) {
-      index = indexOrType;
-    } else {
-      type = indexOrType;
-    }
-  }
-
-  return {
-    key: baseKey,
-    index,
-    type,
-    subkey
-  };
-}
 
 /**
  * Render markdown from vCard record data (standalone function for compatibility)

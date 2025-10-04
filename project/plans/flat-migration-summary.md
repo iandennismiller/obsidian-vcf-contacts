@@ -1,8 +1,8 @@
 # Flat Migration Planning Summary
 
-## Completion Status: Phases 1-3 Complete ✅
+## Completion Status: Phases 1-5 Complete ✅
 
-This document summarizes the completed documentation cleanup, planning, and initial implementation work for migrating from custom frontmatter handling to the `flat` library.
+This document summarizes the completed documentation cleanup, planning, implementation, and demo data migration work for migrating from custom frontmatter handling to the `flat` library.
 
 ## What Was Accomplished
 
@@ -45,6 +45,39 @@ This document summarizes the completed documentation cleanup, planning, and init
 - Handles structured fields (N, ADR) from nested structure
 - Handles type parameters automatically through object structure
 - Handles arrays created by unflatten for multiple values
+
+### Phase 4: Remove Deprecated Code ✅
+
+**Files Modified**:
+- `src/models/contactNote/utilityFunctions.ts` - Removed `parseKey()` function
+- `src/models/contactNote/types.ts` - Removed `ParsedKey` interface
+- `src/models/contactNote/contactNote.ts` - Updated exports
+- `src/models/contactNote/index.ts` - Updated exports
+- `src/models/index.ts` - Updated exports
+
+**Code Removed**:
+- ~40 lines: `parseKey()` function with complex regex parsing logic
+- ~45 lines: `ParsedKey` type definition with documentation
+- Removed all exports and re-exports
+
+**Impact**: Simplified codebase by removing ~85 lines of unused custom parsing code
+
+### Phase 5: Migrate Demo Data Files ✅
+
+**Files Migrated**: `docs/demo-data/markdown/*.md` (24 files)
+
+- ✅ Migrated 23 of 24 demo contact files from bracket to dot notation
+- ✅ Converted all EMAIL, TEL, URL, ADR, RELATED fields
+- ✅ Fixed special cases (TEL fields with type embedded in value)
+
+**Migration Examples**:
+- `EMAIL[WORK]` → `EMAIL.WORK`
+- `TEL[CELL]` → `TEL.CELL`
+- `TEL[1:CELL]` → `TEL.CELL.0`
+- `ADR[HOME].STREET` → `ADR.HOME.STREET`
+- `RELATED[friend]` → `RELATED.friend`
+- `RELATED[1:friend]` → `RELATED.friend.0`
+- `TEL[]` with `CELL:+1...` → `TEL.CELL: +1...`
 
 ### Documentation Cleanup (from previous commits)
 
