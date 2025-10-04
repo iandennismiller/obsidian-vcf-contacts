@@ -231,7 +231,13 @@ export function parseContactListItem(line: string): ParsedContactLine {
   }
   
   // Remove list marker if present
-  const withoutMarker = trimmed.replace(/^-\s*/, '');
+  let withoutMarker = trimmed.replace(/^-\s*/, '');
+  
+  // Remove emoji/icon prefix if present (e.g., "📧 work email@example.com" → "work email@example.com")
+  // Match common emoji characters in the range U+1F300 to U+1F9FF (most common emojis)
+  // Also match variation selector U+FE0F
+  // This is more conservative than \p{Emoji} which incorrectly matches digits
+  withoutMarker = withoutMarker.replace(/^[\u{1F300}-\u{1F9FF}\uFE0F]+\s*/u, '');
   
   // First, try to identify if the entire line is a recognized field type
   const wholeLineType = identifyFieldType(withoutMarker);

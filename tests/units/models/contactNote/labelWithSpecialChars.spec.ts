@@ -215,4 +215,58 @@ FN: John Doe
     expect(fields[2].fieldLabel).toBe('cell');
     expect(fields[2].value).toBe('555-555-6666');
   });
+
+  it('should strip emoji from labels in individual list items', async () => {
+    const mockFile = { basename: 'john-doe', path: 'Contacts/john-doe.md' } as TFile;
+    
+    const content = `---
+UID: john-doe-123
+FN: John Doe
+---
+
+## Contact
+
+📧 Email
+- 📧 personal user@example.com
+- 📞 office,pref info@example.org
+
+📞 Phone
+- 📞 mobile,text 555-123-4567
+
+#Contact`;
+
+    mockApp.vault!.read = vi.fn().mockResolvedValue(content);
+    mockApp.metadataCache!.getFileCache = vi.fn().mockReturnValue({
+      frontmatter: {
+        UID: 'john-doe-123',
+        FN: 'John Doe'
+      }
+    });
+
+    const contactNote = new ContactNote(mockApp as App, mockSettings, mockFile);
+    const fields = await contactNote.parseContactSection();
+
+    expect(fields).toHaveLength(3);
+    
+    // First email - emoji should be stripped from the label
+    expect(fields[0].fieldType).toBe('EMAIL');
+    expect(fields[0].fieldLabel).toBe('personal');
+    expect(fields[0].value).toBe('user@example.com');
+    expect(fields[0].value).not.toContain('📧');
+    expect(fields[0].fieldLabel).not.toContain('📧');
+    
+    // Second email - emoji and different field type emoji should be stripped
+    expect(fields[1].fieldType).toBe('EMAIL');
+    expect(fields[1].fieldLabel).toBe('office,pref');
+    expect(fields[1].value).toBe('info@example.org');
+    expect(fields[1].value).not.toContain('📞');
+    expect(fields[1].fieldLabel).not.toContain('📞');
+    
+    // Phone - emoji should be stripped
+    expect(fields[2].fieldType).toBe('TEL');
+    expect(fields[2].fieldLabel).toBe('mobile,text');
+    expect(fields[2].value).toBe('555-123-4567');
+    expect(fields[2].value).not.toContain('📞');
+    expect(fields[2].fieldLabel).not.toContain('📞');
+  });
 });
