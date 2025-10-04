@@ -693,22 +693,23 @@ export class ContactSectionOperations extends BaseMarkdownSectionOperations {
    */
   validateContactFields(fields: ParsedContactField[]): string[] {
     const warnings: string[] = [];
+    const contactName = this.contactData.getFile().basename;
 
     for (const field of fields) {
       switch (field.fieldType) {
         case 'EMAIL':
           if (!this.isValidEmail(field.value)) {
-            warnings.push(`Invalid email format: ${field.value}`);
+            warnings.push(`[${contactName}] Invalid email format: ${field.value}`);
           }
           break;
         case 'TEL':
           if (!this.isValidPhone(field.value)) {
-            warnings.push(`Invalid phone format: ${field.value}`);
+            warnings.push(`[${contactName}] Invalid phone format: ${field.value}`);
           }
           break;
         case 'URL':
           if (!this.isValidURL(field.value)) {
-            warnings.push(`Invalid URL format: ${field.value}`);
+            warnings.push(`[${contactName}] Invalid URL format: ${field.value}`);
           }
           break;
       }

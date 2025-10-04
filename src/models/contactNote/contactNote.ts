@@ -350,6 +350,28 @@ export class ContactNote {
     return this.validationOps.sanitizeInput(input);
   }
 
+  /**
+   * Identify invalid frontmatter fields
+   * Returns list of invalid fields with their values and reasons
+   */
+  async identifyInvalidFrontmatterFields(): Promise<{
+    invalidFields: Array<{ key: string; value: string; reason: string }>;
+    errors: string[];
+  }> {
+    return this.validationOps.identifyInvalidFrontmatterFields();
+  }
+
+  /**
+   * Remove specified fields from frontmatter
+   * Used after user confirmation
+   */
+  async removeFieldsFromFrontmatter(keysToRemove: string[]): Promise<{
+    removed: string[];
+    errors: string[];
+  }> {
+    return this.validationOps.removeFieldsFromFrontmatter(keysToRemove);
+  }
+
   // === Advanced Relationship Operations ===
 
   /**
