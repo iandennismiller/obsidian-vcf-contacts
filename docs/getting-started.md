@@ -230,33 +230,33 @@ The plugin supports a flexible Contact List format for entering contact informat
 - Emoji prefixes (📧, 📞, 🌐, 🏠) are added automatically when displaying
 
 **Detection examples:**
-- `- work contact@example.com` → `EMAIL[WORK]: contact@example.com`
-- `- home 555-555-5555` → `TEL[HOME]: +1-555-555-5555` (normalized)
-- `- personal http://example.com` → `URL[PERSONAL]: http://example.com`
+- `- work contact@example.com` → `EMAIL.WORK: contact@example.com`
+- `- home 555-555-5555` → `TEL.HOME: +1-555-555-5555` (normalized)
+- `- personal http://example.com` → `URL.PERSONAL: http://example.com`
 - Fields without kind use bare keys for first field: `EMAIL`, `TEL`, `URL`, `ADR`
-- Second field of same type uses indexed key: `EMAIL[1]`, `TEL[1]`, etc.
+- Additional fields of same type use array indexing: `EMAIL.0`, `EMAIL.1`, etc.
 
 See the [Contact List Parsing Specification](specifications.md#contact-list-parsing) for complete details.
 
 ### Direct Frontmatter Editing
 
-You can also edit contact fields directly in frontmatter:
+You can also edit contact fields directly in frontmatter using dot notation:
 
 ```yaml
 EMAIL: first@email.com
-EMAIL[1]: second@email.com
-EMAIL[HOME]: jane@example.com
-EMAIL[WORK]: jane.work@company.com
-TEL[CELL]: +1-555-123-4567
-URL[PERSONAL]: https://jane.example.com
-ADR[HOME].STREET: 123 Main St
-ADR[HOME].LOCALITY: Springfield
-ADR[HOME].POSTAL: 62701
+EMAIL.0: second@email.com
+EMAIL.HOME: jane@example.com
+EMAIL.WORK: jane.work@company.com
+TEL.CELL: +1-555-123-4567
+URL.PERSONAL: https://jane.example.com
+ADR.HOME.STREET: 123 Main St
+ADR.HOME.LOCALITY: Springfield
+ADR.HOME.POSTAL: 62701
 ```
 
 Changes in frontmatter automatically sync to the Contact section.
 
-**Note on indexing**: The first field of each type without a kind uses a bare key (e.g., `EMAIL`, `TEL`). Subsequent fields use indexed keys (`EMAIL[1]`, `EMAIL[2]`, etc.).
+**Note on structure**: The plugin uses the [flat](https://www.npmjs.com/package/flat) library to convert between hierarchical vCard structures and flat Obsidian frontmatter, ensuring consistent dot notation for all fields.
 
 ## Data Synchronization
 
@@ -266,8 +266,8 @@ The plugin maintains bidirectional synchronization between the Related list and 
 
 **Markdown to Frontmatter:**
 - Relationships in the "## Related" section sync to RELATED fields in frontmatter
-- Format: `RELATED[type]: urn:uuid:target-uid` or `uid:custom-id` or `name:Contact Name`
-- Multiple relationships of same type are indexed: `RELATED[friend]`, `RELATED[1:friend]`, etc.
+- Format: `RELATED.type: urn:uuid:target-uid` or `uid:custom-id` or `name:Contact Name`
+- Multiple relationships of same type use array indexing: `RELATED.friend.0`, `RELATED.friend.1`, etc.
 - Changes propagate to related contacts automatically
 - Genderless types stored in frontmatter
 

@@ -231,53 +231,63 @@ The YAML processing is integrated throughout the codebase wherever frontmatter i
 
 **Custom Integration Code (Obsidian-Specific):**
 - **Flat Structure Enforcement**: Ensures frontmatter remains flat (non-nested) as required by Obsidian
-- **Custom Key Format Handling**: Manages vCard-style keys with brackets and dots (`EMAIL[WORK]`, `ADR[HOME].STREET`, `RELATED[friend]`)
-- **Custom Indexing Logic**: Implements array indexing pattern (`RELATED[1:friend]`, `EMAIL[1]`)
+- **Object Flattening/Unflattening**: Uses the [flat](https://www.npmjs.com/package/flat) library to convert between hierarchical vCard structures and flat frontmatter
+- **vCard Property Mapping**: Converts between vcard4 property objects and flat frontmatter fields
 - **Frontmatter Boundary Detection**: Identifies YAML frontmatter delimiters (`---`) in markdown
 
 ### yaml Usage Pattern
 
 ```typescript
 import { parse, stringify } from 'yaml';
+import { flatten, unflatten } from 'flat';
 
 // Parsing YAML frontmatter
 const frontmatterContent = extractFrontmatter(markdownContent);
 const frontmatter = parse(frontmatterContent);
 // frontmatter is a JavaScript object with all parsed fields
 
-// Generating YAML frontmatter
-const frontmatter = {
+// Converting to nested object for vCard processing
+const nested = unflatten(frontmatter, { delimiter: '.' });
+
+// Generating YAML frontmatter from nested object
+const nested = {
   UID: 'uuid-123',
   FN: 'John Doe',
-  'EMAIL[WORK]': 'john@example.com',
-  'RELATED[friend]': 'urn:uuid:jane-456'
+  EMAIL: {
+    WORK: 'john@example.com'
+  },
+  RELATED: {
+    friend: 'urn:uuid:jane-456'
+  }
 };
+const frontmatter = flatten(nested, { delimiter: '.' });
 const yamlContent = stringify(frontmatter);
-// yamlContent is valid YAML string
+// yamlContent is valid YAML string with dot notation keys
 ```
 
-### Benefits of yaml Integration
+### Benefits of yaml + flat Integration
 
 This architecture:
 - **Eliminates custom parsing**: All YAML parsing edge cases handled by yaml library
-- **Ensures spec compliance**: Full YAML 1.2 implementation guaranteed
-- **Improves reliability**: Battle-tested library with comprehensive test coverage
-- **Reduces maintenance**: Delegates YAML format concerns to maintained library
+- **Standardized flattening**: Industry-standard approach using flat library
+- **Ensures spec compliance**: Full YAML 1.2 and vCard 4.0 implementation guaranteed
+- **Improves reliability**: Battle-tested libraries with comprehensive test coverage
+- **Reduces maintenance**: Delegates format concerns to maintained libraries
 - **Better type handling**: Automatic type inference and preservation
-- **Future-proof**: Can leverage yaml library updates and features
 - **Consistent behavior**: Same YAML handling as other YAML-based tools
+- **Deterministic ordering**: flat library ensures consistent key ordering
 
 ### Obsidian Constraints
 
 **Important**: Obsidian's frontmatter has specific constraints:
 1. **Flat Structure**: Keys and values may not be nested; all keys must be at the root level
 2. **String Keys**: All keys are strings (though values can be various types)
-3. **No Complex Types**: Arrays are represented through custom indexing patterns
+3. **Dot Notation**: Hierarchical data represented through dot notation
 
-The plugin maintains these constraints through custom key formatting:
+The plugin maintains these constraints using the flat library:
 - Single values: `EMAIL: john@example.com`
-- First of multiple: `RELATED[friend]: urn:uuid:jane-456`
-- Additional values: `RELATED[1:friend]: urn:uuid:bob-789`
-- Dotted subfields: `ADR[HOME].STREET: 123 Main St`
+- Structured fields: `EMAIL.WORK: john@example.com`
+- Array values: `RELATED.friend.0: urn:uuid:jane-456`, `RELATED.friend.1: urn:uuid:bob-789`
+- Nested structures: `ADR.HOME.STREET: 123 Main St`
 
-The yaml library handles parsing and generating these as flat key-value pairs, while custom code manages the semantic interpretation of the bracket and dot notation.
+The flat library handles conversion between nested objects and dot notation, while yaml handles YAML serialization.

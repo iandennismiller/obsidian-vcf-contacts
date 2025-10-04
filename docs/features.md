@@ -90,9 +90,9 @@ Standard vCard field support:
 ```
 
 **Parsing behavior:**
-- `work contact@example.com` → `EMAIL[WORK]: contact@example.com`
-- `home 555-555-5555` → `TEL[HOME]: +1-555-555-5555` (normalized)
-- `personal http://example.com` → `URL[PERSONAL]: http://example.com`
+- `work contact@example.com` → `EMAIL.WORK: contact@example.com`
+- `home 555-555-5555` → `TEL.HOME: +1-555-555-5555` (normalized)
+- `personal http://example.com` → `URL.PERSONAL: http://example.com`
 
 #### Metadata
 - Birthday and anniversary tracking

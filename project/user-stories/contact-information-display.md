@@ -4,7 +4,7 @@ Stories related to displaying and managing contact information in the Contact se
 
 ## 30. Contact Section Display in Markdown
 
-**As a user**, when I view a contact note, I want to see contact information like addresses, emails, and phone numbers displayed in a dedicated "## Contact" section in the markdown. This section should render the frontmatter fields (like `ADR[HOME].STREET`, `EMAIL[WORK]`, `TEL[CELL]`) in a human-readable format, making it easy to view contact details without parsing YAML frontmatter.
+**As a user**, when I view a contact note, I want to see contact information like addresses, emails, and phone numbers displayed in a dedicated "## Contact" section in the markdown. This section should render the frontmatter fields (using dot notation like `ADR.HOME.STREET`, `EMAIL.WORK`, `TEL.CELL`) in a human-readable format, making it easy to view contact details without parsing YAML frontmatter.
 
 **Expected behavior:**
 - Contact information appears under a `## Contact` heading
@@ -73,9 +73,9 @@ USA
 - Preserve formatting where possible
 
 **Test scenarios:**
-1. **Adding new email**: When I add "Personal: john@personal.com" to the Email section, the frontmatter should add `EMAIL[PERSONAL]: john@personal.com`
-2. **Editing existing phone**: When I change "Cell: +1-555-0000" to "Cell: +1-555-9999", the frontmatter `TEL[CELL]` should update to the new number
-3. **Removing address field**: When I delete the street address line, the corresponding `ADR[HOME].STREET` frontmatter field should be removed
+1. **Adding new email**: When I add "Personal: john@personal.com" to the Email section, the frontmatter should add `EMAIL.PERSONAL: john@personal.com`
+2. **Editing existing phone**: When I change "Cell: +1-555-0000" to "Cell: +1-555-9999", the frontmatter `TEL.CELL` should update to the new number
+3. **Removing address field**: When I delete the street address line, the corresponding `ADR.HOME.STREET` frontmatter field should be removed
 4. **No-Op**: When the Contact section matches frontmatter exactly, no updates should occur
 5. **REV Update**: When contact information changes, REV timestamp should update
 
@@ -83,7 +83,7 @@ USA
 
 ## 33. Frontmatter to Contact Section Sync
 
-**As a user**, when frontmatter contains contact fields like `EMAIL[HOME]`, `TEL[WORK]`, `ADR[HOME].STREET`, etc., I want those fields to automatically appear in the "## Contact" section. This curator processor should:
+**As a user**, when frontmatter contains contact fields like `EMAIL.HOME`, `TEL.WORK`, `ADR.HOME.STREET`, etc., I want those fields to automatically appear in the "## Contact" section. This curator processor should:
 
 - Detect contact-related frontmatter fields
 - Generate Contact section content using fuzzy templates
@@ -93,7 +93,7 @@ USA
 - Sort fields in a logical order
 
 **Expected behavior:**
-- When a contact has `EMAIL[HOME]` and `EMAIL[WORK]` in frontmatter, both appear in the Email subsection
+- When a contact has `EMAIL.HOME` and `EMAIL.WORK` in frontmatter, both appear in the Email subsection
 - When a contact has address fields, they're formatted as a complete postal address
 - Phone numbers are grouped together with their types
 - URLs/websites are listed together
@@ -239,7 +239,7 @@ Email
 
 **Expected behavior:**
 - Fuzzy matching identifies contact fields from parsed markdown structure
-- Missing type labels default to bare for first (EMAIL), then indexed (EMAIL[1], EMAIL[2])
+- Missing type labels default to bare for first field (EMAIL), then indexed (EMAIL.0, EMAIL.1, etc.)
 - Extra whitespace is ignored
 - Common formatting variations are recognized
 - Unrecognized content is preserved but not synced
