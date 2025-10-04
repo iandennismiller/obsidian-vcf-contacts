@@ -127,7 +127,7 @@ Updated notes.
         UID: 'john-doe-123',
         FN: 'John Doe',
         EMAIL: 'john@example.com',
-        'RELATED[spouse]': 'name:Jane Doe'
+        'RELATED.spouse': 'name:Jane Doe'
       };
 
       mockApp.metadataCache!.getFileCache = vi.fn().mockReturnValue({

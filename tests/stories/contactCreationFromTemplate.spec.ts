@@ -146,9 +146,9 @@ describe('Contact Creation from Template Story', () => {
     const contactWithRelationships = {
       UID: 'family-123',
       FN: 'Sarah Johnson',
-      'RELATED[spouse]': 'name:Michael Johnson',
-      'RELATED[child]': 'name:Emma Johnson',
-      'RELATED[1:child]': 'name:Alex Johnson'
+      'RELATED.spouse': 'name:Michael Johnson',
+      'RELATED.child': 'name:Emma Johnson',
+      'RELATED.child.1': 'name:Alex Johnson'
     };
 
     const mockFile = { basename: 'sarah-johnson', path: 'Contacts/sarah-johnson.md' } as TFile;
@@ -157,9 +157,9 @@ describe('Contact Creation from Template Story', () => {
     const markdown = contactNote.mdRender(contactWithRelationships, mockSettings.defaultHashtag);
     
     // Should include relationship fields in frontmatter
-    expect(markdown).toContain('RELATED[spouse]: name:Michael Johnson');
-    expect(markdown).toContain('RELATED[child]: name:Emma Johnson');
-    expect(markdown).toContain('RELATED[1:child]: name:Alex Johnson');
+    expect(markdown).toContain('RELATED.spouse: name:Michael Johnson');
+    expect(markdown).toContain('RELATED.child: name:Emma Johnson');
+    expect(markdown).toContain('RELATED.child.1: name:Alex Johnson');
   });
 
   it('should apply consistent formatting across all contacts', () => {
@@ -221,7 +221,7 @@ describe('Contact Creation from Template Story', () => {
       FN: 'Test Contact',
       EMAIL: 'test@example.com',
       NOTE: 'This is a multi-line\nnote with special characters: @#$%',
-      'RELATED[spouse]': 'name:Spouse Name'
+      'RELATED.spouse': 'name:Spouse Name'
     };
 
     const mockFile = { basename: 'complex', path: 'Contacts/complex.md' } as TFile;

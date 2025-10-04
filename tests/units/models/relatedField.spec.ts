@@ -19,9 +19,9 @@ END:VCARD`;
     expect(results).toHaveLength(1);
     const { record } = results[0];
     
-    expect(record['RELATED[friend]']).toBe('urn:uuid:03a0e51f-d1aa-4385-8a53-e29025acd8af');
-    expect(record['RELATED[colleague]']).toBe('uid:some-custom-uid');
-    expect(record['RELATED[sibling]']).toBe('name:Jane Doe');
+    expect(record['RELATED.friend']).toBe('urn:uuid:03a0e51f-d1aa-4385-8a53-e29025acd8af');
+    expect(record['RELATED.colleague']).toBe('uid:some-custom-uid');
+    expect(record['RELATED.sibling']).toBe('name:Jane Doe');
   });
 
   it('should handle indexed RELATED fields', async () => {
@@ -40,12 +40,12 @@ END:VCARD`;
     expect(results).toHaveLength(1);
     const { record } = results[0];
     
-    expect(record['RELATED[friend]']).toBe('urn:uuid:03a0e51f-d1aa-4385-8a53-e29025acd8af');
-    expect(record['RELATED[1:friend]']).toBe('name:Another Friend');
+    expect(record['RELATED.friend']).toBe('urn:uuid:03a0e51f-d1aa-4385-8a53-e29025acd8af');
+    expect(record['RELATED.friend.1']).toBe('name:Another Friend');
   });
 
   it('should handle multiple relationships of same kind (3 friends)', async () => {
-    // According to spec: "A 3-element set would include RELATED[2:friend] ... and so on"
+    // According to spec: "A 3-element set would include RELATED.friend.2 ... and so on"
     const vcardData = `BEGIN:VCARD
 VERSION:4.0
 FN:Social Person
@@ -62,10 +62,10 @@ END:VCARD`;
     expect(results).toHaveLength(1);
     const { record } = results[0];
     
-    // Should use correct indexing: RELATED[friend], RELATED[1:friend], RELATED[2:friend]
-    expect(record['RELATED[friend]']).toBe('urn:uuid:friend-1-uid');
-    expect(record['RELATED[1:friend]']).toBe('urn:uuid:friend-2-uid');
-    expect(record['RELATED[2:friend]']).toBe('name:Friend Three');
+    // Should use correct indexing: RELATED.friend, RELATED.friend.1, RELATED.friend.2
+    expect(record['RELATED.friend']).toBe('urn:uuid:friend-1-uid');
+    expect(record['RELATED.friend.1']).toBe('urn:uuid:friend-2-uid');
+    expect(record['RELATED.friend.2']).toBe('name:Friend Three');
   });
 
   it('should handle multiple relationships of same kind (5 colleagues)', async () => {
@@ -88,11 +88,11 @@ END:VCARD`;
     const { record } = results[0];
     
     // Should handle 5 relationships of same type with proper indexing
-    expect(record['RELATED[colleague]']).toBe('urn:uuid:colleague-1');
-    expect(record['RELATED[1:colleague]']).toBe('urn:uuid:colleague-2');
-    expect(record['RELATED[2:colleague]']).toBe('urn:uuid:colleague-3');
-    expect(record['RELATED[3:colleague]']).toBe('name:Colleague Four');
-    expect(record['RELATED[4:colleague]']).toBe('name:Colleague Five');
+    expect(record['RELATED.colleague']).toBe('urn:uuid:colleague-1');
+    expect(record['RELATED.colleague.1']).toBe('urn:uuid:colleague-2');
+    expect(record['RELATED.colleague.2']).toBe('urn:uuid:colleague-3');
+    expect(record['RELATED.colleague.3']).toBe('name:Colleague Four');
+    expect(record['RELATED.colleague.4']).toBe('name:Colleague Five');
   });
 
   it('should maintain deterministic ordering for relationships of same kind', async () => {
@@ -114,15 +114,15 @@ END:VCARD`;
     const { record } = results[0];
     
     // Should have 3 friends indexed properly
-    expect(record['RELATED[friend]']).toBeDefined();
-    expect(record['RELATED[1:friend]']).toBeDefined();
-    expect(record['RELATED[2:friend]']).toBeDefined();
+    expect(record['RELATED.friend']).toBeDefined();
+    expect(record['RELATED.friend.1']).toBeDefined();
+    expect(record['RELATED.friend.2']).toBeDefined();
     
     // Keys should be in order
-    const keys = Object.keys(record).filter(k => k.startsWith('RELATED[') && k.includes('friend'));
+    const keys = Object.keys(record).filter(k => k.startsWith('RELATED.') && k.includes('friend'));
     expect(keys).toHaveLength(3);
-    expect(keys[0]).toBe('RELATED[friend]');
-    expect(keys[1]).toBe('RELATED[1:friend]');
-    expect(keys[2]).toBe('RELATED[2:friend]');
+    expect(keys[0).toBe('RELATED.friend');
+    expect(keys[1]).toBe('RELATED.friend.1');
+    expect(keys[2]).toBe('RELATED.friend.2');
   });
 });

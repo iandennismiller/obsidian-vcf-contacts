@@ -88,8 +88,8 @@ describe('Example: Using Test Fixtures', () => {
     it('should create frontmatter with relationships', () => {
       const fm = createMockFrontmatter.withRelationships();
 
-      expect(fm['RELATED[spouse]']).toBeDefined();
-      expect(fm['RELATED[child]']).toBeDefined();
+      expect(fm['RELATED.spouse']).toBeDefined();
+      expect(fm['RELATED.child']).toBeDefined();
     });
 
     it('should support custom overrides', () => {

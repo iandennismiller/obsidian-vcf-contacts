@@ -176,8 +176,8 @@ FN: Bob Jones
     expect(listResult?.message).toContain('Added 1 missing relationship');
     
     // Verify the relationship was added to frontmatter
-    expect(updatedFrontmatter['RELATED[friend]']).toBeDefined();
-    expect(updatedFrontmatter['RELATED[friend]']).toContain('bob-uid-456');
+    expect(updatedFrontmatter['RELATED.friend']).toBeDefined();
+    expect(updatedFrontmatter['RELATED.friend']).toContain('bob-uid-456');
     
     // Verify the Related list still contains the relationship
     expect(updatedContent).toContain('- friend [[Bob Jones]]');
@@ -196,7 +196,7 @@ FN: Bob Jones
     const charlieContent = `---
 UID: charlie-uid-789
 FN: Charlie Brown
-RELATED[colleague]: urn:uuid:diana-uid-012
+RELATED.colleague: urn:uuid:diana-uid-012
 REV: 20240101T120000Z
 ---
 
@@ -289,7 +289,7 @@ FN: Diana White
     expect(updatedContent).toContain('- colleague [[Diana White]]');
     
     // Verify the frontmatter still contains the relationship
-    expect(updatedContent).toContain('RELATED[colleague]: urn:uuid:diana-uid-012');
+    expect(updatedContent).toContain('RELATED.colleague: urn:uuid:diana-uid-012');
   });
 
   it('should not delete Related list items when different frontmatter relationship exists', async () => {
@@ -308,7 +308,7 @@ FN: Diana White
     const gregContent = `---
 UID: greg-uid-999
 FN: Greg Taylor
-RELATED[colleague]: urn:uuid:charlie-uid-888
+RELATED.colleague: urn:uuid:charlie-uid-888
 REV: 20240101T120000Z
 ---
 
@@ -390,7 +390,7 @@ FN: Charlie Wilson
     // Verify both relationships exist in the final content
     expect(updatedContent).toContain('- friend [[Bob Jones]]');  // Should NOT be deleted!
     expect(updatedContent).toContain('- colleague [[Charlie Wilson]]');  // Should be added
-    expect(updatedContent).toContain('RELATED[colleague]: urn:uuid:charlie-uid-888');
+    expect(updatedContent).toContain('RELATED.colleague: urn:uuid:charlie-uid-888');
   });
 
   it('should handle both processors running in sequence without data loss', async () => {
@@ -478,7 +478,7 @@ FN: Frank Miller
     
     // Verify both representations exist in the final content
     expect(updatedContent).toContain('- spouse [[Frank Miller]]');
-    expect(updatedContent).toContain('RELATED[spouse]');
+    expect(updatedContent).toContain('RELATED.spouse');
     expect(updatedContent).toContain('frank-uid-678');
   });
 
@@ -501,8 +501,8 @@ FN: Frank Miller
     const helenContent = `---
 UID: helen-uid-111
 FN: Helen Garcia
-RELATED[colleague]: urn:uuid:julia-uid-333
-RELATED[neighbor]: urn:uuid:kevin-uid-444
+RELATED.colleague: urn:uuid:julia-uid-333
+RELATED.neighbor: urn:uuid:kevin-uid-444
 REV: 20240101T120000Z
 ---
 
@@ -598,11 +598,11 @@ FN: Kevin Singh
     expect(updatedContent).toContain('- neighbor [[Kevin Singh]]');
     
     // Frontmatter should have: friend Ivan, colleague Julia, neighbor Kevin
-    expect(updatedContent).toContain('RELATED[friend]');
+    expect(updatedContent).toContain('RELATED.friend');
     expect(updatedContent).toContain('ivan-uid-222');
-    expect(updatedContent).toContain('RELATED[colleague]');
+    expect(updatedContent).toContain('RELATED.colleague');
     expect(updatedContent).toContain('julia-uid-333');
-    expect(updatedContent).toContain('RELATED[neighbor]');
+    expect(updatedContent).toContain('RELATED.neighbor');
     expect(updatedContent).toContain('kevin-uid-444');
   });
 });

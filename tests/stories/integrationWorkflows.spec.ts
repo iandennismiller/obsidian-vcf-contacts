@@ -146,14 +146,14 @@ END:VCARD`;
       FN: 'Mobile Contact',
       'N.FN': 'Contact',
       'N.GN': 'Mobile',
-      'EMAIL[1]': 'mobile@example.com',
-      'TEL[1:CELL]': '+1-555-444-3333',
-      'TEL[2:HOME]': '+1-555-222-1111',
-      'ADR[1:HOME].STREET': '123 Main St',
-      'ADR[1:HOME].CITY': 'Springfield',
-      'ADR[1:HOME].REGION': 'IL',
-      'ADR[1:HOME].POSTAL': '62701',
-      'ADR[1:HOME].COUNTRY': 'USA'
+      'EMAIL.1': 'mobile@example.com',
+      'TEL.CELL.1': '+1-555-444-3333',
+      'TEL.HOME.2': '+1-555-222-1111',
+      'ADR.1:HOME.STREET': '123 Main St',
+      'ADR.1:HOME.CITY': 'Springfield',
+      'ADR.1:HOME.REGION': 'IL',
+      'ADR.1:HOME.POSTAL': '62701',
+      'ADR.1:HOME.COUNTRY': 'USA'
     };
 
     const mockFile = { basename: 'mobile-contact', path: 'Contacts/mobile-contact.md' } as TFile;
@@ -177,8 +177,8 @@ END:VCARD`;
       FN: 'iOS Contact',
       'N.FN': 'Contact',
       'N.GN': 'iOS',
-      'EMAIL[1]': 'ios@icloud.com',
-      'TEL[1:CELL]': '+1-555-333-2222',
+      'EMAIL.1': 'ios@icloud.com',
+      'TEL.CELL.1': '+1-555-333-2222',
       PHOTO: 'https://example.com/photo.jpg',
       BDAY: '1990-05-15'
     };
@@ -204,8 +204,8 @@ END:VCARD`;
       FN: 'Android Contact',
       'N.FN': 'Contact',
       'N.GN': 'Android',
-      'EMAIL[1]': 'android@gmail.com',
-      'TEL[1:CELL]': '+1-555-666-7777',
+      'EMAIL.1': 'android@gmail.com',
+      'TEL.CELL.1': '+1-555-666-7777',
       ORG: 'Android Company'
     };
 

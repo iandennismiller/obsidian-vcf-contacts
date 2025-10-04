@@ -56,7 +56,7 @@ describe('UID-Based Contact Linking Story', () => {
     const johnContent = `---
 UID: john-doe-123
 FN: John Doe
-RELATED[spouse]: urn:uuid:jane-doe-456
+RELATED.spouse: urn:uuid:jane-doe-456
 ---
 
 #### Related
@@ -72,7 +72,7 @@ RELATED[spouse]: urn:uuid:jane-doe-456
             frontmatter: {
               UID: 'john-doe-123',
               FN: 'John Doe',
-              'RELATED[spouse]': 'urn:uuid:jane-doe-456'
+              'RELATED.spouse': 'urn:uuid:jane-doe-456'
             }
           };
         }
@@ -107,7 +107,7 @@ RELATED[spouse]: urn:uuid:jane-doe-456
     const contactContent = `---
 UID: person-123
 FN: Person Contact
-RELATED[friend]: urn:uuid:related-456
+RELATED.friend: urn:uuid:related-456
 ---
 
 #### Related
@@ -123,7 +123,7 @@ RELATED[friend]: urn:uuid:related-456
             frontmatter: {
               UID: 'person-123',
               FN: 'Person Contact',
-              'RELATED[friend]': 'urn:uuid:related-456'
+              'RELATED.friend': 'urn:uuid:related-456'
             }
           };
         }
@@ -157,7 +157,7 @@ RELATED[friend]: urn:uuid:related-456
     const sourceContent = `---
 UID: source-123
 FN: Source Contact
-RELATED[friend]: urn:uuid:target-456
+RELATED.friend: urn:uuid:target-456
 ---
 
 #### Related
@@ -173,7 +173,7 @@ RELATED[friend]: urn:uuid:target-456
             frontmatter: {
               UID: 'source-123',
               FN: 'Source Contact',
-              'RELATED[friend]': 'urn:uuid:target-456'
+              'RELATED.friend': 'urn:uuid:target-456'
             }
           };
         }
@@ -211,7 +211,7 @@ RELATED[friend]: urn:uuid:target-456
     const contactContent = `---
 UID: dual-link-123
 FN: Dual Link Contact
-RELATED[friend]: urn:uuid:correct-456
+RELATED.friend: urn:uuid:correct-456
 ---
 
 #### Related
@@ -227,7 +227,7 @@ RELATED[friend]: urn:uuid:correct-456
             frontmatter: {
               UID: 'dual-link-123',
               FN: 'Dual Link Contact',
-              'RELATED[friend]': 'urn:uuid:correct-456'
+              'RELATED.friend': 'urn:uuid:correct-456'
             }
           };
         }
@@ -405,7 +405,7 @@ FN: Upgrade Source
     const sourceContent = `---
 UID: integrity-source-123
 FN: Integrity Source
-RELATED[mentor]: urn:uuid:old-target-456
+RELATED.mentor: urn:uuid:old-target-456
 ---
 
 #### Related
@@ -424,7 +424,7 @@ RELATED[mentor]: urn:uuid:old-target-456
             frontmatter: {
               UID: 'integrity-source-123',
               FN: 'Integrity Source',
-              'RELATED[mentor]': `urn:uuid:${oldTargetUID}`
+              'RELATED.mentor': `urn:uuid:${oldTargetUID}`
             }
           };
         }
@@ -483,10 +483,10 @@ RELATED[mentor]: urn:uuid:old-target-456
     const sourceContent = `---
 UID: bulk-source-123
 FN: Bulk Source
-RELATED[friend]: name:Friend One
-RELATED[1:friend]: name:Friend Two
-RELATED[colleague]: name:Colleague One
-RELATED[1:colleague]: name:Colleague Two
+RELATED.friend: name:Friend One
+RELATED.friend.1: name:Friend Two
+RELATED.colleague: name:Colleague One
+RELATED.colleague.1: name:Colleague Two
 ---
 
 #### Related
@@ -509,10 +509,10 @@ RELATED[1:colleague]: name:Colleague Two
       frontmatter: {
         UID: 'bulk-source-123',
         FN: 'Bulk Source',
-        'RELATED[friend]': 'name:Friend One',
-        'RELATED[1:friend]': 'name:Friend Two',
-        'RELATED[colleague]': 'name:Colleague One',
-        'RELATED[1:colleague]': 'name:Colleague Two'
+        'RELATED.friend': 'name:Friend One',
+        'RELATED.friend.1': 'name:Friend Two',
+        'RELATED.colleague': 'name:Colleague One',
+        'RELATED.colleague.1': 'name:Colleague Two'
       }
     });
 

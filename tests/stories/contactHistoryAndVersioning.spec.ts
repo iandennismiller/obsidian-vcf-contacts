@@ -400,7 +400,7 @@ REV: 20240215T120000Z
 UID: relationship-123
 FN: Relationship Contact
 EMAIL: relationship@example.com
-RELATED[friend]: urn:uuid:friend-456
+RELATED.friend: urn:uuid:friend-456
 REV: 20240215T125000Z
 ---
 
@@ -425,7 +425,7 @@ REV: 20240215T125000Z
     
     // REV should be updated when relationships change
     const hasRelationshipChanges = 
-      updatedContent.includes('RELATED[friend]') && 
+      updatedContent.includes('RELATED.friend') && 
       updatedContent.includes('colleague: [[New Colleague]]');
     
     if (hasRelationshipChanges) {

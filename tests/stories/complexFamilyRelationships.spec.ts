@@ -48,7 +48,7 @@ describe('Complex Family Relationships Story', () => {
     const content = `---
 UID: john-smith-123
 FN: John Smith
-RELATED[mother-in-law]: name:Mary Johnson
+RELATED.mother-in-law: name:Mary Johnson
 ---
 
 #### Related
@@ -61,7 +61,7 @@ RELATED[mother-in-law]: name:Mary Johnson
       frontmatter: {
         UID: 'john-smith-123',
         FN: 'John Smith',
-        'RELATED[mother-in-law]': 'name:Mary Johnson'
+        'RELATED.mother-in-law': 'name:Mary Johnson'
       }
     });
 
@@ -78,8 +78,8 @@ RELATED[mother-in-law]: name:Mary Johnson
     const content = `---
 UID: jane-doe-456
 FN: Jane Doe
-RELATED[step-father]: name:Bob Wilson
-RELATED[step-mother]: name:Alice Wilson
+RELATED.step-father: name:Bob Wilson
+RELATED.step-mother: name:Alice Wilson
 ---
 
 #### Related
@@ -93,8 +93,8 @@ RELATED[step-mother]: name:Alice Wilson
       frontmatter: {
         UID: 'jane-doe-456',
         FN: 'Jane Doe',
-        'RELATED[step-father]': 'name:Bob Wilson',
-        'RELATED[step-mother]': 'name:Alice Wilson'
+        'RELATED.step-father': 'name:Bob Wilson',
+        'RELATED.step-mother': 'name:Alice Wilson'
       }
     });
 
@@ -111,8 +111,8 @@ RELATED[step-mother]: name:Alice Wilson
     const content = `---
 UID: parent-contact-789
 FN: Parent Contact
-RELATED[adopted-daughter]: name:Emma Smith
-RELATED[adopted-son]: name:Michael Smith
+RELATED.adopted-daughter: name:Emma Smith
+RELATED.adopted-son: name:Michael Smith
 ---
 
 #### Related
@@ -126,8 +126,8 @@ RELATED[adopted-son]: name:Michael Smith
       frontmatter: {
         UID: 'parent-contact-789',
         FN: 'Parent Contact',
-        'RELATED[adopted-daughter]': 'name:Emma Smith',
-        'RELATED[adopted-son]': 'name:Michael Smith'
+        'RELATED.adopted-daughter': 'name:Emma Smith',
+        'RELATED.adopted-son': 'name:Michael Smith'
       }
     });
 
@@ -144,8 +144,8 @@ RELATED[adopted-son]: name:Michael Smith
     const content = `---
 UID: sibling-contact-111
 FN: Sibling Contact
-RELATED[half-brother]: name:Tom Jones
-RELATED[half-sister]: name:Sarah Jones
+RELATED.half-brother: name:Tom Jones
+RELATED.half-sister: name:Sarah Jones
 ---
 
 #### Related
@@ -159,8 +159,8 @@ RELATED[half-sister]: name:Sarah Jones
       frontmatter: {
         UID: 'sibling-contact-111',
         FN: 'Sibling Contact',
-        'RELATED[half-brother]': 'name:Tom Jones',
-        'RELATED[half-sister]': 'name:Sarah Jones'
+        'RELATED.half-brother': 'name:Tom Jones',
+        'RELATED.half-sister': 'name:Sarah Jones'
       }
     });
 
@@ -177,8 +177,8 @@ RELATED[half-sister]: name:Sarah Jones
     const content = `---
 UID: in-law-contact-222
 FN: In-Law Contact
-RELATED[father-in-law]: name:Richard Brown
-RELATED[son-in-law]: name:David Green
+RELATED.father-in-law: name:Richard Brown
+RELATED.son-in-law: name:David Green
 ---
 
 #### Related
@@ -192,8 +192,8 @@ RELATED[son-in-law]: name:David Green
       frontmatter: {
         UID: 'in-law-contact-222',
         FN: 'In-Law Contact',
-        'RELATED[father-in-law]': 'name:Richard Brown',
-        'RELATED[son-in-law]': 'name:David Green'
+        'RELATED.father-in-law': 'name:Richard Brown',
+        'RELATED.son-in-law': 'name:David Green'
       }
     });
 
@@ -210,10 +210,10 @@ RELATED[son-in-law]: name:David Green
     const content = `---
 UID: complex-family-333
 FN: Complex Family Contact
-RELATED[step-father]: name:John Doe
-RELATED[mother-in-law]: name:Jane Smith
-RELATED[adopted-son]: name:Alex Johnson
-RELATED[half-sister]: name:Emily Wilson
+RELATED.step-father: name:John Doe
+RELATED.mother-in-law: name:Jane Smith
+RELATED.adopted-son: name:Alex Johnson
+RELATED.half-sister: name:Emily Wilson
 ---
 
 #### Related
@@ -229,10 +229,10 @@ RELATED[half-sister]: name:Emily Wilson
       frontmatter: {
         UID: 'complex-family-333',
         FN: 'Complex Family Contact',
-        'RELATED[step-father]': 'name:John Doe',
-        'RELATED[mother-in-law]': 'name:Jane Smith',
-        'RELATED[adopted-son]': 'name:Alex Johnson',
-        'RELATED[half-sister]': 'name:Emily Wilson'
+        'RELATED.step-father': 'name:John Doe',
+        'RELATED.mother-in-law': 'name:Jane Smith',
+        'RELATED.adopted-son': 'name:Alex Johnson',
+        'RELATED.half-sister': 'name:Emily Wilson'
       }
     });
 

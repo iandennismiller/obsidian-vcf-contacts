@@ -51,8 +51,8 @@ describe('Demo VCF Data Parsing', () => {
       expect(chineseContact?.contact.FN).toMatch(/^(伟 李|李伟)$/);
       expect(chineseContact?.contact.ORG).toBe('竹语科技有限公司');
       expect(chineseContact?.contact.ROLE).toBe('首席算法工程师');
-      expect(chineseContact?.contact['ADR[HOME].LOCALITY']).toBe('成都');
-      expect(chineseContact?.contact['ADR[HOME].COUNTRY']).toBe('中国');
+      expect(chineseContact?.contact['ADR.HOME.LOCALITY']).toBe('成都');
+      expect(chineseContact?.contact['ADR.HOME.COUNTRY']).toBe('中国');
     });
 
     it('should handle special characters in names', async () => {
@@ -110,9 +110,9 @@ describe('Demo VCF Data Parsing', () => {
       );
       
       expect(tonyStark).toBeDefined();
-      expect(tonyStark?.contact['EMAIL[HOME]']).toBe('tony.stark@starkindustries.com');
-      expect(tonyStark?.contact['EMAIL[WORKSHOP]']).toBe('ironman@avengers.com');
-      expect(tonyStark?.contact['TEL[CELL]']).toBe('+13105551234');
+      expect(tonyStark?.contact['EMAIL.HOME']).toBe('tony.stark@starkindustries.com');
+      expect(tonyStark?.contact['EMAIL.WORKSHOP']).toBe('ironman@avengers.com');
+      expect(tonyStark?.contact['TEL.CELL']).toBe('+13105551234');
     });
 
     it('should handle address fields correctly', async () => {
@@ -128,10 +128,10 @@ describe('Demo VCF Data Parsing', () => {
       );
       
       expect(bruceWayne).toBeDefined();
-      expect(bruceWayne?.contact['ADR[HOME].STREET']).toBe('1007 Mountain Drive');
-      expect(bruceWayne?.contact['ADR[HOME].LOCALITY']).toBe('Gotham');
-      expect(bruceWayne?.contact['ADR[HOME].POSTAL']).toBe('10001');
-      expect(bruceWayne?.contact['ADR[HOME].COUNTRY']).toBe('USA');
+      expect(bruceWayne?.contact['ADR.HOME.STREET']).toBe('1007 Mountain Drive');
+      expect(bruceWayne?.contact['ADR.HOME.LOCALITY']).toBe('Gotham');
+      expect(bruceWayne?.contact['ADR.HOME.POSTAL']).toBe('10001');
+      expect(bruceWayne?.contact['ADR.HOME.COUNTRY']).toBe('USA');
     });
   });
 

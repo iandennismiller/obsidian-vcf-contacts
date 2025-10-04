@@ -278,9 +278,9 @@ UID: test-123
       const frontmatter = {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'RELATED[spouse]': 'name:Jane Doe',
-        'RELATED[child]': 'urn:uuid:child-123',
-        'RELATED[1:child]': 'name:Tommy Doe'
+        'RELATED.spouse': 'name:Jane Doe',
+        'RELATED.child': 'urn:uuid:child-123',
+        'RELATED.child.1': 'name:Tommy Doe'
       };
 
       mockContactData.getFrontmatter = vi.fn().mockReturnValue(frontmatter);
@@ -307,7 +307,7 @@ UID: test-123
         UID: 'john-doe-123',
         FN: 'John Doe',
         EMAIL: 'john@example.com',
-        'RELATED[spouse]': 'name:Jane Doe'
+        'RELATED.spouse': 'name:Jane Doe'
       };
 
       mockContactData.getFrontmatter = vi.fn().mockReturnValue(frontmatter);
@@ -355,16 +355,16 @@ UID: test-123
 
       expect(relationships).toHaveLength(2);
       expect(relationships[0].type).toBe('friend');
-      expect(relationships[0].key).toBe('RELATED[friend]');
+      expect(relationships[0].key).toBe('RELATED.friend');
       expect(relationships[0].value).toBe('name:Jane Doe');
       expect(relationships[1].type).toBe('friend');
-      expect(relationships[1].key).toBe('RELATED[1:friend]');
+      expect(relationships[1].key).toBe('RELATED.friend.1');
       expect(relationships[1].value).toBe('name:Bob Smith');
       expect(consoleDebugSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Auto-corrected malformed RELATED.friend[0] to RELATED[friend]')
+        expect.stringContaining('Auto-corrected malformed RELATED.friend[0] to RELATED.friend')
       );
       expect(consoleDebugSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Auto-corrected malformed RELATED.friend[1] to RELATED[1:friend]')
+        expect.stringContaining('Auto-corrected malformed RELATED.friend[1] to RELATED.friend.1')
       );
       
       consoleDebugSpy.mockRestore();
@@ -388,15 +388,15 @@ UID: test-123
       expect(relationships).toHaveLength(3);
       // First friend
       expect(relationships[0].type).toBe('friend');
-      expect(relationships[0].key).toBe('RELATED[friend]');
+      expect(relationships[0].key).toBe('RELATED.friend');
       expect(relationships[0].value).toBe('name:Jane Doe');
       // Second friend
       expect(relationships[1].type).toBe('friend');
-      expect(relationships[1].key).toBe('RELATED[1:friend]');
+      expect(relationships[1].key).toBe('RELATED.friend.1');
       expect(relationships[1].value).toBe('name:Bob Smith');
       // Colleague
       expect(relationships[2].type).toBe('colleague');
-      expect(relationships[2].key).toBe('RELATED[colleague]');
+      expect(relationships[2].key).toBe('RELATED.colleague');
       expect(relationships[2].value).toBe('name:Alice Johnson');
       
       consoleDebugSpy.mockRestore();
@@ -435,10 +435,10 @@ UID: test-123
 
       expect(relationships).toHaveLength(1);
       expect(relationships[0].type).toBe('friend.name');
-      expect(relationships[0].key).toBe('RELATED[friend.name]');
+      expect(relationships[0].key).toBe('RELATED.friend.name');
       expect(relationships[0].value).toBe('name:Jane Doe');
       expect(consoleDebugSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Auto-corrected malformed RELATED.friend.name to RELATED[friend.name]')
+        expect.stringContaining('Auto-corrected malformed RELATED.friend.name to RELATED.friend.name')
       );
       
       consoleDebugSpy.mockRestore();

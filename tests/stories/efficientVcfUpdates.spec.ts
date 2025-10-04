@@ -71,11 +71,11 @@ describe('Efficient VCF Updates Story', () => {
     const contactWithRelationships = {
       UID: 'family-person-456',
       FN: 'Family Person',
-      'RELATED[spouse]': 'name:Spouse Name',
-      'RELATED[child]': 'name:Child One',
-      'RELATED[1:child]': 'name:Child Two',
-      'RELATED[parent]': 'name:Parent Name',
-      'RELATED[sibling]': 'name:Sibling Name'
+      'RELATED.spouse': 'name:Spouse Name',
+      'RELATED.child': 'name:Child One',
+      'RELATED.child.1': 'name:Child Two',
+      'RELATED.parent': 'name:Parent Name',
+      'RELATED.sibling': 'name:Sibling Name'
     };
 
     // Generate VCF multiple times
@@ -96,9 +96,9 @@ describe('Efficient VCF Updates Story', () => {
       FN: 'Test Contact',
       EMAIL: 'test@example.com',
       TEL: '+1-555-987-6543',
-      'RELATED[friend]': 'name:Friend One',
-      'RELATED[colleague]': 'name:Colleague One',
-      'RELATED[family]': 'name:Family One'
+      'RELATED.friend': 'name:Friend One',
+      'RELATED.colleague': 'name:Colleague One',
+      'RELATED.family': 'name:Family One'
     };
 
     const contactNote = new ContactNote(mockApp as App, mockSettings, mockFile);
@@ -116,17 +116,17 @@ describe('Efficient VCF Updates Story', () => {
     const contactData1 = {
       UID: 'multi-rel-001',
       FN: 'Multi Relationship Contact',
-      'RELATED[colleague]': 'name:Person A',
-      'RELATED[friend]': 'name:Person B',
-      'RELATED[family]': 'name:Person C'
+      'RELATED.colleague': 'name:Person A',
+      'RELATED.friend': 'name:Person B',
+      'RELATED.family': 'name:Person C'
     };
 
     const contactData2 = {
       UID: 'multi-rel-001',
       FN: 'Multi Relationship Contact',
-      'RELATED[family]': 'name:Person C',
-      'RELATED[colleague]': 'name:Person A',
-      'RELATED[friend]': 'name:Person B'
+      'RELATED.family': 'name:Person C',
+      'RELATED.colleague': 'name:Person A',
+      'RELATED.friend': 'name:Person B'
     };
 
     const contactNote = new ContactNote(mockApp as App, mockSettings, mockFile);
@@ -134,8 +134,8 @@ describe('Efficient VCF Updates Story', () => {
     const markdown2 = contactNote.mdRender(contactData2, mockSettings.defaultHashtag);
 
     // Extract RELATED lines from both
-    const relatedLines1 = markdown1.split('\n').filter(l => l.includes('RELATED[')).sort();
-    const relatedLines2 = markdown2.split('\n').filter(l => l.includes('RELATED[')).sort();
+    const relatedLines1 = markdown1.split('\n').filter(l => l.includes('RELATED.')).sort();
+    const relatedLines2 = markdown2.split('\n').filter(l => l.includes('RELATED.')).sort();
 
     // After sorting, both should have the same relationship lines
     expect(relatedLines1).toEqual(relatedLines2);
@@ -190,10 +190,10 @@ describe('Efficient VCF Updates Story', () => {
     const contactWithIndexedRelations = {
       UID: 'indexed-rel-789',
       FN: 'Indexed Relations Contact',
-      'RELATED[child]': 'name:First Child',
-      'RELATED[1:child]': 'name:Second Child',
-      'RELATED[2:child]': 'name:Third Child',
-      'RELATED[3:child]': 'name:Fourth Child'
+      'RELATED[child': 'name:First Child',
+      'RELATED.child.1': 'name:Second Child',
+      'RELATED.child.2': 'name:Third Child',
+      'RELATED.child.3': 'name:Fourth Child'
     };
 
     const vcf1 = VCardGenerator.objectToVcf(contactWithIndexedRelations);
@@ -213,8 +213,8 @@ describe('Efficient VCF Updates Story', () => {
 UID: no-change-999
 FN: No Change Contact
 EMAIL: stable@example.com
-RELATED[friend]: name:Friend Name
-RELATED[colleague]: name:Colleague Name
+RELATED[friend: name:Friend Name
+RELATED.colleague: name:Colleague Name
 ---
 
 #### Related
@@ -229,8 +229,8 @@ RELATED[colleague]: name:Colleague Name
         UID: 'no-change-999',
         FN: 'No Change Contact',
         EMAIL: 'stable@example.com',
-        'RELATED[friend]': 'name:Friend Name',
-        'RELATED[colleague]': 'name:Colleague Name'
+        'RELATED.friend': 'name:Friend Name',
+        'RELATED.colleague': 'name:Colleague Name'
       }
     });
 
@@ -250,9 +250,9 @@ RELATED[colleague]: name:Colleague Name
     const contactData = {
       UID: 'alpha-sort-001',
       FN: 'Alpha Sort Contact',
-      'RELATED[zebra]': 'name:Zebra Person',
-      'RELATED[apple]': 'name:Apple Person',
-      'RELATED[middle]': 'name:Middle Person'
+      'RELATED.zebra': 'name:Zebra Person',
+      'RELATED.apple': 'name:Apple Person',
+      'RELATED.middle': 'name:Middle Person'
     };
 
     const vcf = VCardGenerator.objectToVcf(contactData);

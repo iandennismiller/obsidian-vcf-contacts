@@ -84,8 +84,8 @@ John is a software developer.
 UID: john-doe-123
 FN: John Doe
 EMAIL: john@example.com
-RELATED[parent]: name:Bob Doe
-RELATED[1:parent]: name:Mary Doe
+RELATED.parent: name:Bob Doe
+RELATED.parent.1: name:Mary Doe
 ---
 
 ## Notes
@@ -101,8 +101,8 @@ John is a software developer.
         UID: 'john-doe-123',
         FN: 'John Doe',
         EMAIL: 'john@example.com',
-        'RELATED[parent]': 'name:Bob Doe',
-        'RELATED[1:parent]': 'name:Mary Doe'
+        'RELATED.parent': 'name:Bob Doe',
+        'RELATED.parent.1': 'name:Mary Doe'
       }
     });
 
@@ -119,7 +119,7 @@ John is a software developer.
 UID: john-doe-123
 FN: John Doe
 EMAIL: john@example.com
-RELATED[parent]: name:Bob Doe
+RELATED.parent: name:Bob Doe
 ---
 
 ## Notes
@@ -138,7 +138,7 @@ John is a software developer.
         UID: 'john-doe-123',
         FN: 'John Doe',
         EMAIL: 'john@example.com',
-        'RELATED[parent]': 'name:Bob Doe'
+        'RELATED.parent': 'name:Bob Doe'
       }
     });
 
@@ -199,7 +199,7 @@ Some notes about John.
     const contentWithDuplicateRelationships = `---
 UID: john-doe-123
 FN: John Doe
-RELATED[parent]: name:Bob Doe
+RELATED.parent: name:Bob Doe
 ---
 
 #### Related
@@ -212,7 +212,7 @@ RELATED[parent]: name:Bob Doe
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'RELATED[parent]': 'name:Bob Doe'
+        'RELATED.parent': 'name:Bob Doe'
       }
     });
 

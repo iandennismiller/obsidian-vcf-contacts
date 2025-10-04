@@ -47,9 +47,9 @@ describe('Social Relationships Story', () => {
     const content = `---
 UID: social-person-123
 FN: Social Person
-RELATED[friend]: name:Friend One
-RELATED[1:friend]: name:Friend Two
-RELATED[2:friend]: name:Friend Three
+RELATED.friend: name:Friend One
+RELATED.friend.1: name:Friend Two
+RELATED.friend.2: name:Friend Three
 ---
 
 #### Related
@@ -64,9 +64,9 @@ RELATED[2:friend]: name:Friend Three
       frontmatter: {
         UID: 'social-person-123',
         FN: 'Social Person',
-        'RELATED[friend]': 'name:Friend One',
-        'RELATED[1:friend]': 'name:Friend Two',
-        'RELATED[2:friend]': 'name:Friend Three'
+        'RELATED.friend': 'name:Friend One',
+        'RELATED.friend.1': 'name:Friend Two',
+        'RELATED.friend.2': 'name:Friend Three'
       }
     });
 
@@ -82,8 +82,8 @@ RELATED[2:friend]: name:Friend Three
     const content = `---
 UID: resident-contact-456
 FN: Resident Contact
-RELATED[neighbor]: name:Next Door Neighbor
-RELATED[1:neighbor]: name:Across Street Neighbor
+RELATED.neighbor: name:Next Door Neighbor
+RELATED.neighbor.1: name:Across Street Neighbor
 ---
 
 #### Related
@@ -97,8 +97,8 @@ RELATED[1:neighbor]: name:Across Street Neighbor
       frontmatter: {
         UID: 'resident-contact-456',
         FN: 'Resident Contact',
-        'RELATED[neighbor]': 'name:Next Door Neighbor',
-        'RELATED[1:neighbor]': 'name:Across Street Neighbor'
+        'RELATED.neighbor': 'name:Next Door Neighbor',
+        'RELATED.neighbor.1': 'name:Across Street Neighbor'
       }
     });
 
@@ -114,8 +114,8 @@ RELATED[1:neighbor]: name:Across Street Neighbor
     const content = `---
 UID: student-contact-789
 FN: Student Contact
-RELATED[classmate]: name:Classmate One
-RELATED[1:classmate]: name:Classmate Two
+RELATED.classmate: name:Classmate One
+RELATED.classmate.1: name:Classmate Two
 ---
 
 #### Related
@@ -129,8 +129,8 @@ RELATED[1:classmate]: name:Classmate Two
       frontmatter: {
         UID: 'student-contact-789',
         FN: 'Student Contact',
-        'RELATED[classmate]': 'name:Classmate One',
-        'RELATED[1:classmate]': 'name:Classmate Two'
+        'RELATED.classmate': 'name:Classmate One',
+        'RELATED.classmate.1': 'name:Classmate Two'
       }
     });
 
@@ -146,9 +146,9 @@ RELATED[1:classmate]: name:Classmate Two
     const content = `---
 UID: athlete-contact-111
 FN: Athlete Contact
-RELATED[teammate]: name:Teammate One
-RELATED[1:teammate]: name:Teammate Two
-RELATED[2:teammate]: name:Teammate Three
+RELATED.teammate: name:Teammate One
+RELATED.teammate.1: name:Teammate Two
+RELATED.teammate.2: name:Teammate Three
 ---
 
 #### Related
@@ -163,9 +163,9 @@ RELATED[2:teammate]: name:Teammate Three
       frontmatter: {
         UID: 'athlete-contact-111',
         FN: 'Athlete Contact',
-        'RELATED[teammate]': 'name:Teammate One',
-        'RELATED[1:teammate]': 'name:Teammate Two',
-        'RELATED[2:teammate]': 'name:Teammate Three'
+        'RELATED.teammate': 'name:Teammate One',
+        'RELATED.teammate.1': 'name:Teammate Two',
+        'RELATED.teammate.2': 'name:Teammate Three'
       }
     });
 
@@ -181,10 +181,10 @@ RELATED[2:teammate]: name:Teammate Three
     const content = `---
 UID: social-butterfly-222
 FN: Social Butterfly
-RELATED[friend]: name:Best Friend
-RELATED[neighbor]: name:Friendly Neighbor
-RELATED[classmate]: name:Old Classmate
-RELATED[teammate]: name:Soccer Teammate
+RELATED.friend: name:Best Friend
+RELATED.neighbor: name:Friendly Neighbor
+RELATED.classmate: name:Old Classmate
+RELATED.teammate: name:Soccer Teammate
 ---
 
 #### Related
@@ -200,10 +200,10 @@ RELATED[teammate]: name:Soccer Teammate
       frontmatter: {
         UID: 'social-butterfly-222',
         FN: 'Social Butterfly',
-        'RELATED[friend]': 'name:Best Friend',
-        'RELATED[neighbor]': 'name:Friendly Neighbor',
-        'RELATED[classmate]': 'name:Old Classmate',
-        'RELATED[teammate]': 'name:Soccer Teammate'
+        'RELATED.friend': 'name:Best Friend',
+        'RELATED.neighbor': 'name:Friendly Neighbor',
+        'RELATED.classmate': 'name:Old Classmate',
+        'RELATED.teammate': 'name:Soccer Teammate'
       }
     });
 
@@ -222,8 +222,8 @@ RELATED[teammate]: name:Soccer Teammate
     const content = `---
 UID: roommate-contact-333
 FN: Roommate Contact
-RELATED[roommate]: name:Current Roommate
-RELATED[1:roommate]: name:Former Roommate
+RELATED.roommate: name:Current Roommate
+RELATED.roommate.1: name:Former Roommate
 ---
 
 #### Related
@@ -237,8 +237,8 @@ RELATED[1:roommate]: name:Former Roommate
       frontmatter: {
         UID: 'roommate-contact-333',
         FN: 'Roommate Contact',
-        'RELATED[roommate]': 'name:Current Roommate',
-        'RELATED[1:roommate]': 'name:Former Roommate'
+        'RELATED.roommate': 'name:Current Roommate',
+        'RELATED.roommate.1': 'name:Former Roommate'
       }
     });
 
@@ -254,8 +254,8 @@ RELATED[1:roommate]: name:Former Roommate
     const content = `---
 UID: network-contact-444
 FN: Network Contact
-RELATED[acquaintance]: name:Casual Contact One
-RELATED[1:acquaintance]: name:Casual Contact Two
+RELATED.acquaintance: name:Casual Contact One
+RELATED.acquaintance.1: name:Casual Contact Two
 ---
 
 #### Related
@@ -269,8 +269,8 @@ RELATED[1:acquaintance]: name:Casual Contact Two
       frontmatter: {
         UID: 'network-contact-444',
         FN: 'Network Contact',
-        'RELATED[acquaintance]': 'name:Casual Contact One',
-        'RELATED[1:acquaintance]': 'name:Casual Contact Two'
+        'RELATED.acquaintance': 'name:Casual Contact One',
+        'RELATED.acquaintance.1': 'name:Casual Contact Two'
       }
     });
 
@@ -313,7 +313,7 @@ FN: Sync Social Contact
     const content = `---
 UID: club-member-666
 FN: Club Member Contact
-RELATED[club-member]: name:Fellow Member
+RELATED.club-member: name:Fellow Member
 ---
 
 #### Related
@@ -326,7 +326,7 @@ RELATED[club-member]: name:Fellow Member
       frontmatter: {
         UID: 'club-member-666',
         FN: 'Club Member Contact',
-        'RELATED[club-member]': 'name:Fellow Member'
+        'RELATED.club-member': 'name:Fellow Member'
       }
     });
 

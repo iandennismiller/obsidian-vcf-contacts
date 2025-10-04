@@ -44,8 +44,8 @@ describe('ContactNote - Remove Invalid Fields', () => {
       const content = `---
 UID: test-123
 FN: Test Contact
-EMAIL[HOME]: not-an-email
-EMAIL[WORK]: valid@example.com
+EMAIL.HOME: not-an-email
+EMAIL.WORK: valid@example.com
 ---
 ## Notes
 Test contact`;
@@ -55,7 +55,7 @@ Test contact`;
       const result = await contactNote.identifyInvalidFrontmatterFields();
 
       expect(result.invalidFields).toHaveLength(1);
-      expect(result.invalidFields[0].key).toBe('EMAIL[HOME]');
+      expect(result.invalidFields[0].key).toBe('EMAIL.HOME');
       expect(result.invalidFields[0].value).toBe('not-an-email');
       expect(result.invalidFields[0].reason).toContain('email');
       expect(result.errors).toHaveLength(0);
@@ -66,8 +66,8 @@ Test contact`;
       const content = `---
 UID: test-456
 FN: Test Contact
-TEL[HOME]: no-digits-here
-TEL[CELL]: +1-555-555-5555
+TEL.HOME: no-digits-here
+TEL.CELL: +1-555-555-5555
 ---
 ## Notes
 Test contact`;
@@ -77,7 +77,7 @@ Test contact`;
       const result = await contactNote.identifyInvalidFrontmatterFields();
 
       expect(result.invalidFields).toHaveLength(1);
-      expect(result.invalidFields[0].key).toBe('TEL[HOME]');
+      expect(result.invalidFields[0].key).toBe('TEL.HOME');
       expect(result.invalidFields[0].reason).toContain('phone');
       expect(result.errors).toHaveLength(0);
     });
@@ -86,8 +86,8 @@ Test contact`;
       const content = `---
 UID: test-789
 FN: Test Contact
-URL[HOME]: not-a-url
-URL[WORK]: https://example.com
+URL.HOME: not-a-url
+URL.WORK: https://example.com
 ---
 ## Notes
 Test contact`;
@@ -97,7 +97,7 @@ Test contact`;
       const result = await contactNote.identifyInvalidFrontmatterFields();
 
       expect(result.invalidFields).toHaveLength(1);
-      expect(result.invalidFields[0].key).toBe('URL[HOME]');
+      expect(result.invalidFields[0].key).toBe('URL.HOME');
       expect(result.invalidFields[0].reason).toContain('URL');
       expect(result.errors).toHaveLength(0);
     });
@@ -126,11 +126,11 @@ Test contact`;
       const content = `---
 UID: test-multi
 FN: Test Contact
-EMAIL[HOME]: invalid-email
-TEL[HOME]: no-numbers
-URL[HOME]: bad-url
-EMAIL[WORK]: good@example.com
-TEL[WORK]: 555-1234
+EMAIL.HOME: invalid-email
+TEL.HOME: no-numbers
+URL.HOME: bad-url
+EMAIL.WORK: good@example.com
+TEL.WORK: 555-1234
 ---
 ## Notes
 Test contact`;
@@ -141,9 +141,9 @@ Test contact`;
 
       expect(result.invalidFields).toHaveLength(3);
       const keys = result.invalidFields.map(f => f.key);
-      expect(keys).toContain('EMAIL[HOME]');
-      expect(keys).toContain('TEL[HOME]');
-      expect(keys).toContain('URL[HOME]');
+      expect(keys).toContain('EMAIL.HOME');
+      expect(keys).toContain('TEL.HOME');
+      expect(keys).toContain('URL.HOME');
       expect(result.errors).toHaveLength(0);
     });
 
@@ -151,9 +151,9 @@ Test contact`;
       const content = `---
 UID: test-valid
 FN: Test Contact
-EMAIL[HOME]: valid@example.com
-TEL[HOME]: 555-1234
-URL[HOME]: https://example.com
+EMAIL.HOME: valid@example.com
+TEL.HOME: 555-1234
+URL.HOME: https://example.com
 ---
 ## Notes
 Test contact`;
@@ -173,7 +173,7 @@ FN: Test Contact
 CATEGORIES:
   - tag1
   - tag2
-EMAIL[HOME]: valid@example.com
+EMAIL.HOME: valid@example.com
 ---
 ## Notes
 Test contact`;
@@ -204,9 +204,9 @@ Test contact with no frontmatter`;
       const content = `---
 UID: test-preserve
 FN: Test Contact
-EMAIL[HOME]: bad-email
-EMAIL[WORK]: good@example.com
-TEL[HOME]: 555-1234
+EMAIL.HOME: bad-email
+EMAIL.WORK: good@example.com
+TEL.HOME: 555-1234
 ORG: Test Company
 ---
 ## Notes
@@ -219,16 +219,16 @@ Test contact`;
 
       mockApp = createMockApp(content, modifyMock);
       const contactNote = new ContactNote(mockApp as App, mockSettings, mockFile);
-      const result = await contactNote.removeFieldsFromFrontmatter(['EMAIL[HOME]']);
+      const result = await contactNote.removeFieldsFromFrontmatter(['EMAIL.HOME']);
 
-      expect(result.removed).toContain('EMAIL[HOME]');
+      expect(result.removed).toContain('EMAIL.HOME');
       expect(result.removed).toHaveLength(1);
       
       // Check that valid fields are preserved
-      expect(modifiedContent).toContain('EMAIL[WORK]: good@example.com');
-      expect(modifiedContent).toContain('TEL[HOME]: 555-1234');
+      expect(modifiedContent).toContain('EMAIL.WORK: good@example.com');
+      expect(modifiedContent).toContain('TEL.HOME: 555-1234');
       expect(modifiedContent).toContain('ORG: Test Company');
-      expect(modifiedContent).not.toContain('EMAIL[HOME]');
+      expect(modifiedContent).not.toContain('EMAIL.HOME');
     });
   });
 });

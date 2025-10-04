@@ -285,8 +285,8 @@ FN: Test Contact
       const content = `---
 UID: test-123
 FN: Test Contact
-EMAIL[HOME]: test@home.com
-EMAIL[WORK]: test@work.com
+EMAIL.HOME: test@home.com
+EMAIL.WORK: test@work.com
 ---
 
 #Contact`;
@@ -296,8 +296,8 @@ EMAIL[WORK]: test@work.com
         frontmatter: {
           UID: 'test-123',
           FN: 'Test Contact',
-          'EMAIL[HOME]': 'test@home.com',
-          'EMAIL[WORK]': 'test@work.com'
+          'EMAIL.HOME': 'test@home.com',
+          'EMAIL.WORK': 'test@work.com'
         }
       });
 
@@ -312,8 +312,8 @@ EMAIL[WORK]: test@work.com
       const content = `---
 UID: test-123
 FN: Test Contact
-TEL[CELL]: +1-555-1234
-TEL[HOME]: +1-555-5678
+TEL.CELL: +1-555-1234
+TEL.HOME: +1-555-5678
 ---
 
 #Contact`;
@@ -323,8 +323,8 @@ TEL[HOME]: +1-555-5678
         frontmatter: {
           UID: 'test-123',
           FN: 'Test Contact',
-          'TEL[CELL]': '+1-555-1234',
-          'TEL[HOME]': '+1-555-5678'
+          'TEL.CELL': '+1-555-1234',
+          'TEL.HOME': '+1-555-5678'
         }
       });
 
@@ -339,11 +339,11 @@ TEL[HOME]: +1-555-5678
       const content = `---
 UID: test-123
 FN: Test Contact
-ADR[HOME].STREET: 123 Main St
-ADR[HOME].LOCALITY: Springfield
-ADR[HOME].REGION: IL
-ADR[HOME].POSTAL: 62701
-ADR[HOME].COUNTRY: USA
+ADR.HOME.STREET: 123 Main St
+ADR.HOME.LOCALITY: Springfield
+ADR.HOME.REGION: IL
+ADR.HOME.POSTAL: 62701
+ADR.HOME.COUNTRY: USA
 ---
 
 #Contact`;
@@ -353,11 +353,11 @@ ADR[HOME].COUNTRY: USA
         frontmatter: {
           UID: 'test-123',
           FN: 'Test Contact',
-          'ADR[HOME].STREET': '123 Main St',
-          'ADR[HOME].LOCALITY': 'Springfield',
-          'ADR[HOME].REGION': 'IL',
-          'ADR[HOME].POSTAL': '62701',
-          'ADR[HOME].COUNTRY': 'USA'
+          'ADR.HOME.STREET': '123 Main St',
+          'ADR.HOME.LOCALITY': 'Springfield',
+          'ADR.HOME.REGION': 'IL',
+          'ADR.HOME.POSTAL': '62701',
+          'ADR.HOME.COUNTRY': 'USA'
         }
       });
 
@@ -395,10 +395,10 @@ FN: Test Contact
       const content = `---
 UID: test-123
 FN: Test Contact
-URL[HOME]: https://example.com
-ADR[HOME].STREET: 123 Main St
-TEL[CELL]: +1-555-1234
-EMAIL[HOME]: test@example.com
+URL.HOME: https://example.com
+ADR.HOME.STREET: 123 Main St
+TEL.CELL: +1-555-1234
+EMAIL.HOME: test@example.com
 ---
 
 #Contact`;
@@ -408,10 +408,10 @@ EMAIL[HOME]: test@example.com
         frontmatter: {
           UID: 'test-123',
           FN: 'Test Contact',
-          'EMAIL[HOME]': 'test@example.com',
-          'TEL[CELL]': '+1-555-1234',
-          'ADR[HOME].STREET': '123 Main St',
-          'URL[HOME]': 'https://example.com'
+          'EMAIL.HOME': 'test@example.com',
+          'TEL.CELL': '+1-555-1234',
+          'ADR.HOME.STREET': '123 Main St',
+          'URL.HOME': 'https://example.com'
         }
       });
 

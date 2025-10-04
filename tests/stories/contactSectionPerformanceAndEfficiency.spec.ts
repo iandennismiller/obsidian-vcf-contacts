@@ -53,15 +53,15 @@ describe('Contact Section Performance and Efficiency Story', () => {
     
     // Add 10 emails, 10 phones, 5 addresses, 10 URLs
     for (let i = 1; i <= 10; i++) {
-      frontmatterData[`EMAIL[${i}]`] = `email${i}@example.com`;
-      frontmatterData[`TEL[${i}]`] = `+1-555-${1000 + i}`;
-      frontmatterData[`URL[${i}]`] = `https://example${i}.com`;
+      frontmatterData[`EMAIL.${i}`] = `email${i}@example.com`;
+      frontmatterData[`TEL.${i}`] = `+1-555-${1000 + i}`;
+      frontmatterData[`URL.${i}`] = `https://example${i}.com`;
     }
     
     for (let i = 1; i <= 5; i++) {
-      frontmatterData[`ADR[${i}].STREET`] = `${i}00 Main St`;
-      frontmatterData[`ADR[${i}].LOCALITY`] = `City${i}`;
-      frontmatterData[`ADR[${i}].POSTAL`] = `${10000 + i}`;
+      frontmatterData[`ADR.${i}.STREET`] = `${i}00 Main St`;
+      frontmatterData[`ADR.${i}.LOCALITY`] = `City${i}`;
+      frontmatterData[`ADR.${i}.POSTAL`] = `${10000 + i}`;
     }
     
     const content = `---
@@ -82,7 +82,7 @@ ${Object.entries(frontmatterData).map(([k, v]) => `${k}: ${v}`).join('\n')}
     const frontmatter = await contactNote.getFrontmatter();
     const duration = Date.now() - startTime;
     
-    expect(frontmatter['EMAIL[1]']).toBe('email1@example.com');
+    expect(frontmatter['EMAIL.1']).toBe('email1@example.com');
     expect(duration).toBeLessThan(100); // Should be fast
   });
 
@@ -100,8 +100,8 @@ ${Object.entries(frontmatterData).map(([k, v]) => `${k}: ${v}`).join('\n')}
     const content = `---
 UID: john-doe-123
 FN: John Doe
-EMAIL[HOME]: john@home.com
-TEL[CELL]: +1-555-1234
+EMAIL.HOME: john@home.com
+TEL.CELL: +1-555-1234
 ---
 
 #Contact`;
@@ -111,8 +111,8 @@ TEL[CELL]: +1-555-1234
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'EMAIL[HOME]': 'john@home.com',
-        'TEL[CELL]': '+1-555-1234'
+        'EMAIL.HOME': 'john@home.com',
+        'TEL.CELL': '+1-555-1234'
       }
     });
 
@@ -132,7 +132,7 @@ TEL[CELL]: +1-555-1234
     const content = `---
 UID: john-doe-123
 FN: John Doe
-EMAIL[HOME]: john@home.com
+EMAIL.HOME: john@home.com
 REV: 20250101T120000Z
 ---
 
@@ -143,7 +143,7 @@ REV: 20250101T120000Z
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'EMAIL[HOME]': 'john@home.com',
+        'EMAIL.HOME': 'john@home.com',
         REV: '20250101T120000Z'
       }
     });
@@ -160,13 +160,13 @@ REV: 20250101T120000Z
     const content = `---
 UID: john-doe-123
 FN: John Doe
-EMAIL[HOME]: john@home.com
-EMAIL[WORK]: john@work.com
-TEL[CELL]: +1-555-1234
-TEL[HOME]: +1-555-5678
-ADR[HOME].STREET: 123 Main St
-ADR[HOME].LOCALITY: Springfield
-URL[HOME]: https://example.com
+EMAIL.HOME: john@home.com
+EMAIL.WORK: john@work.com
+TEL.CELL: +1-555-1234
+TEL.HOME: +1-555-5678
+ADR.HOME.STREET: 123 Main St
+ADR.HOME.LOCALITY: Springfield
+URL.HOME: https://example.com
 ---
 
 #Contact`;
@@ -176,13 +176,13 @@ URL[HOME]: https://example.com
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'EMAIL[HOME]': 'john@home.com',
-        'EMAIL[WORK]': 'john@work.com',
-        'TEL[CELL]': '+1-555-1234',
-        'TEL[HOME]': '+1-555-5678',
-        'ADR[HOME].STREET': '123 Main St',
-        'ADR[HOME].LOCALITY': 'Springfield',
-        'URL[HOME]': 'https://example.com'
+        'EMAIL.HOME': 'john@home.com',
+        'EMAIL.WORK': 'john@work.com',
+        'TEL.CELL': '+1-555-1234',
+        'TEL.HOME': '+1-555-5678',
+        'ADR.HOME.STREET': '123 Main St',
+        'ADR.HOME.LOCALITY': 'Springfield',
+        'URL.HOME': 'https://example.com'
       }
     });
 
@@ -304,7 +304,7 @@ Email: john@home.com
     const content = `---
 UID: john-doe-123
 FN: John Doe
-EMAIL[HOME]: john@home.com
+EMAIL.HOME: john@home.com
 ---
 
 #Contact`;
@@ -314,7 +314,7 @@ EMAIL[HOME]: john@home.com
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'EMAIL[HOME]': 'john@home.com'
+        'EMAIL.HOME': 'john@home.com'
       }
     });
 
@@ -330,18 +330,18 @@ EMAIL[HOME]: john@home.com
     const content = `---
 UID: john-doe-123
 FN: John Doe
-ADR[HOME].POBOX: PO Box 123
-ADR[HOME].EXTENDED: Apt 4B
-ADR[HOME].STREET: 123 Main St
-ADR[HOME].LOCALITY: Springfield
-ADR[HOME].REGION: IL
-ADR[HOME].POSTAL: 62701
-ADR[HOME].COUNTRY: USA
-ADR[WORK].STREET: 456 Business Blvd
-ADR[WORK].LOCALITY: Chicago
-ADR[WORK].REGION: IL
-ADR[WORK].POSTAL: 60601
-ADR[WORK].COUNTRY: USA
+ADR.HOME.POBOX: PO Box 123
+ADR.HOME.EXTENDED: Apt 4B
+ADR.HOME.STREET: 123 Main St
+ADR.HOME.LOCALITY: Springfield
+ADR.HOME.REGION: IL
+ADR.HOME.POSTAL: 62701
+ADR.HOME.COUNTRY: USA
+ADR.WORK.STREET: 456 Business Blvd
+ADR.WORK.LOCALITY: Chicago
+ADR.WORK.REGION: IL
+ADR.WORK.POSTAL: 60601
+ADR.WORK.COUNTRY: USA
 ---
 
 #Contact`;
@@ -351,18 +351,18 @@ ADR[WORK].COUNTRY: USA
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'ADR[HOME].POBOX': 'PO Box 123',
-        'ADR[HOME].EXTENDED': 'Apt 4B',
-        'ADR[HOME].STREET': '123 Main St',
-        'ADR[HOME].LOCALITY': 'Springfield',
-        'ADR[HOME].REGION': 'IL',
-        'ADR[HOME].POSTAL': '62701',
-        'ADR[HOME].COUNTRY': 'USA',
-        'ADR[WORK].STREET': '456 Business Blvd',
-        'ADR[WORK].LOCALITY': 'Chicago',
-        'ADR[WORK].REGION': 'IL',
-        'ADR[WORK].POSTAL': '60601',
-        'ADR[WORK].COUNTRY': 'USA'
+        'ADR.HOME.POBOX': 'PO Box 123',
+        'ADR.HOME.EXTENDED': 'Apt 4B',
+        'ADR.HOME.STREET': '123 Main St',
+        'ADR.HOME.LOCALITY': 'Springfield',
+        'ADR.HOME.REGION': 'IL',
+        'ADR.HOME.POSTAL': '62701',
+        'ADR.HOME.COUNTRY': 'USA',
+        'ADR.WORK.STREET': '456 Business Blvd',
+        'ADR.WORK.LOCALITY': 'Chicago',
+        'ADR.WORK.REGION': 'IL',
+        'ADR.WORK.POSTAL': '60601',
+        'ADR.WORK.COUNTRY': 'USA'
       }
     });
 
@@ -373,7 +373,7 @@ ADR[WORK].COUNTRY: USA
     const frontmatter = await contactNote.getFrontmatter();
     const duration = Date.now() - startTime;
     
-    expect(frontmatter['ADR[HOME].STREET']).toBe('123 Main St');
+    expect(frontmatter['ADR.HOME.STREET']).toBe('123 Main St');
     expect(duration).toBeLessThan(100);
   });
 });

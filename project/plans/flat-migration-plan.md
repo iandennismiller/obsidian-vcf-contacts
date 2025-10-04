@@ -360,7 +360,30 @@ See Step 2 above - this step is already complete.
 
 **Result**: 23 of 24 demo files successfully migrated
 
-#### Step 7: Update Tests (NEXT)
+#### Step 7: Update Tests ✅ COMPLETE
+**Files**: Various test files across `tests/` directory
+
+1. ✅ Removed `parseKey()` test suite from `tests/demo-data/markdown-parsing.spec.ts` (~40 lines)
+2. ✅ Removed `parseKey()` test from `tests/units/models/contactNote/contactNote.spec.ts` (~35 lines)
+3. ✅ Updated imports to remove `parseKey` and `ParsedKey` references
+4. ✅ Migrated 47 test files from bracket notation to dot notation
+5. ✅ Updated all test assertions to expect dot notation format
+
+**Tests Removed:**
+- `parseKey` utility function tests (~75 lines total)
+  - Tests for bracket notation parsing: `EMAIL[WORK]`, `TEL[1:CELL]`
+  - Tests for complex key formats with indices and types
+  - Tests for subkey extraction from bracket notation
+
+**Tests Updated:**
+- 47 test files migrated to dot notation expectations
+- All assertions now expect: `EMAIL.WORK`, `TEL.CELL.0`, `ADR.HOME.STREET`, `RELATED.friend.0`
+- Test data updated to match new format
+- Mock frontmatter updated to use dot notation
+
+**Impact**: Removed ~75 lines of deprecated test code, updated 47 test files
+
+#### Step 8: Final Validation (NEXT)
 1. Remove `parseKey()` from `utilityFunctions.ts`
 2. Remove `ParsedKey` type from `types.ts`
 3. Update exports in `index.ts` files

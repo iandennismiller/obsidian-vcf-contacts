@@ -125,7 +125,7 @@ UID: malformed-123
 FN: "Unclosed quote
 EMAIL: malformed@example.com
 INVALID: [ unclosed bracket
-RELATED[invalid: missing closing bracket
+RELATED.invalid: missing closing bracket
 ---
 
 #Contact`;
@@ -144,7 +144,7 @@ RELATED[invalid: missing closing bracket
     const mockFiles = [
       { basename: 'valid-contact', path: 'Contacts/valid-contact.md' },
       { basename: 'invalid-contact', path: 'Contacts/invalid-contact.md' }
-    ] as TFile[];
+     as TFile[];
 
     mockApp.metadataCache!.getFileCache = vi.fn()
       .mockImplementation((file: TFile) => {

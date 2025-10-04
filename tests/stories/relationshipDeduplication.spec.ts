@@ -70,7 +70,7 @@ FN: John Doe
 
     expect(result.success).toBe(true);
     // Should have deduplicated the duplicate parent relationship
-    // There should only be one RELATED[parent] entry in frontmatter
+    // There should only be one RELATED.parent entry in frontmatter
   });
 
   it('should prefer gendered term over ungendered when deduplicating', async () => {
@@ -247,7 +247,7 @@ FN: User Test
     const result = await contactNote.syncRelatedListToFrontmatter();
 
     expect(result.success).toBe(true);
-    // Should store as RELATED[sibling] in frontmatter (genderless)
+    // Should store as RELATED.sibling in frontmatter (genderless)
     // But keep "sister" in the Related list (gendered display)
   });
 
@@ -281,7 +281,7 @@ FN: Family User
     // After deduplication, should have:
     // - parent [[Bob Doe]] (kept first ungendered)
     // - mother [[Mary Doe]] (kept gendered over ungendered)
-    // In frontmatter as RELATED[parent] and RELATED[1:parent]
+    // In frontmatter as RELATED.parent and RELATED.parent.1
   });
 
   it('should update Related section to match deduplicated list', async () => {

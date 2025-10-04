@@ -276,7 +276,7 @@ END:VCARD`;
         UID: 'preserve-uid-123',
         FN: 'Preserve Contact',
         EMAIL: 'preserve@example.com',
-        'RELATED[spouse]': 'name:Spouse Name', // Local relationship
+        'RELATED.spouse': 'name:Spouse Name', // Local relationship
         'LOCAL_NOTE': 'This is a local note', // Local field
         'OBSIDIAN_TAG': '#important' // Local tag
       }

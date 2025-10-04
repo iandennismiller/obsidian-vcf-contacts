@@ -237,14 +237,14 @@ GENDER: F
       console.log(`  ${key}: ${currentFrontmatter[key]}`);
     });
 
-    expect(currentFrontmatter['RELATED[spouse]']).toBeDefined();
-    expect(currentFrontmatter['RELATED[friend]']).toBeDefined();
-    expect(currentFrontmatter['RELATED[sibling]']).toBeDefined();
+    expect(currentFrontmatter['RELATED.spouse']).toBeDefined();
+    expect(currentFrontmatter['RELATED.friend']).toBeDefined();
+    expect(currentFrontmatter['RELATED.sibling']).toBeDefined();
 
     // Verify values reference the correct UIDs
-    expect(currentFrontmatter['RELATED[spouse]']).toContain('jane-uid-456');
-    expect(currentFrontmatter['RELATED[friend]']).toContain('bob-uid-789');
-    expect(currentFrontmatter['RELATED[sibling]']).toContain('alice-uid-111');
+    expect(currentFrontmatter['RELATED.spouse']).toContain('jane-uid-456');
+    expect(currentFrontmatter['RELATED.friend']).toContain('bob-uid-789');
+    expect(currentFrontmatter['RELATED.sibling']).toContain('alice-uid-111');
 
     // ==================== STEP 2: Check write history ====================
     console.log(`\n[WRITE-HISTORY] Total writes so far: ${writeHistory.length}`);
@@ -266,9 +266,9 @@ GENDER: F
     const finalFrontmatter = extractFrontmatter(finalContent);
 
     // Verify all RELATED keys are still present and correctly formatted
-    expect(finalFrontmatter['RELATED[spouse]']).toBeDefined();
-    expect(finalFrontmatter['RELATED[friend]']).toBeDefined();
-    expect(finalFrontmatter['RELATED[sibling]']).toBeDefined();
+    expect(finalFrontmatter['RELATED.spouse']).toBeDefined();
+    expect(finalFrontmatter['RELATED.friend']).toBeDefined();
+    expect(finalFrontmatter['RELATED.sibling']).toBeDefined();
 
     // Verify no malformed RELATED structure
     expect(finalFrontmatter['RELATED']).toBeUndefined();
@@ -405,19 +405,19 @@ REV: 20240101T120000Z
     console.log('\n[DEBUG] All frontmatter keys:', Object.keys(finalFrontmatter));
 
     // Verify each relationship type has its own key
-    expect(finalFrontmatter['RELATED[spouse]']).toBeDefined();
-    expect(finalFrontmatter['RELATED[sibling]']).toBeDefined();
-    expect(finalFrontmatter['RELATED[parent]']).toBeDefined();
-    expect(finalFrontmatter['RELATED[friend]']).toBeDefined();
+    expect(finalFrontmatter['RELATED.spouse']).toBeDefined();
+    expect(finalFrontmatter['RELATED.sibling']).toBeDefined();
+    expect(finalFrontmatter['RELATED.parent']).toBeDefined();
+    expect(finalFrontmatter['RELATED.friend']).toBeDefined();
     // Check for the second friend key with any formatting
     const hasSecondFriend = Object.keys(finalFrontmatter).some(k => 
-      k.includes('RELATED[1') && k.includes('friend')
+      k.includes('RELATED.1') && k.includes('friend')
     );
     expect(hasSecondFriend).toBe(true);
 
     // Verify no malformed grouping (all under "friend")
     const friendKeys = Object.keys(finalFrontmatter).filter(k => k.includes('friend'));
-    console.log('\n[DEBUG] Friend-related keys:', friendKeys);
+    console.log('\n[DEBUG Friend-related keys:', friendKeys);
     expect(friendKeys.length).toBe(2); // Should only have 2 friend relationships
 
     console.log('\n[SUCCESS] All relationship types stored correctly!');
@@ -441,8 +441,8 @@ REV: 20240101T120000Z
 UID: existing-uid
 FN: Existing Contact
 REV: 20230101T120000Z
-"RELATED[spouse]": uid:spouse-uid
-"RELATED[friend]": uid:old-friend-uid
+"RELATED.spouse": uid:spouse-uid
+"RELATED.friend": uid:old-friend-uid
 ---
 
 #### Related
@@ -509,8 +509,8 @@ REV: 20230101T120000Z
     finalRelated.forEach(rel => console.log(`  ${rel}`));
 
     // Verify all relationships from Related section are in frontmatter
-    expect(finalFrontmatter['RELATED[spouse]']).toBeDefined();
-    expect(finalFrontmatter['RELATED[spouse]']).toContain('spouse-uid');
+    expect(finalFrontmatter['RELATED.spouse']).toBeDefined();
+    expect(finalFrontmatter['RELATED.spouse']).toContain('spouse-uid');
 
     // Should have 2 friend relationships
     const friendKeys = finalRelatedKeys.filter(k => k.toLowerCase().includes('friend'));
@@ -518,8 +518,8 @@ REV: 20230101T120000Z
     expect(friendKeys.length).toBe(2);
 
     // Should have sibling relationship
-    expect(finalFrontmatter['RELATED[sibling]']).toBeDefined();
-    expect(finalFrontmatter['RELATED[sibling]']).toContain('sibling-uid');
+    expect(finalFrontmatter['RELATED.sibling']).toBeDefined();
+    expect(finalFrontmatter['RELATED.sibling']).toContain('sibling-uid');
 
     // Verify no malformed RELATED structure
     expect(finalFrontmatter['RELATED']).toBeUndefined();
@@ -553,7 +553,7 @@ REV: 20230101T120000Z
 UID: test-uid
 FN: Test Contact
 REV: 20230101T120000Z
-"RELATED[spouse]": uid:spouse-uid
+"RELATED.spouse": uid:spouse-uid
 ---
 
 #### Related
@@ -569,7 +569,7 @@ REV: 20230101T120000Z
 
     console.log('[SETUP] Contact with partial RELATED frontmatter');
     const initialFrontmatter = extractFrontmatter(fileContents.get(testFile.path)!);
-    console.log('[INITIAL] Frontmatter has RELATED[spouse]:', initialFrontmatter['RELATED[spouse]']);
+    console.log('[INITIAL] Frontmatter has RELATED.spouse:', initialFrontmatter['RELATED.spouse']);
 
     await RelatedListProcessor.process(testContact);
 
@@ -577,7 +577,7 @@ REV: 20230101T120000Z
     let spousePreserved = true;
     writeHistory.forEach((write, idx) => {
       const fm = extractFrontmatter(write.content);
-      if (!fm['RELATED[spouse]'] || !fm['RELATED[spouse]'].includes('spouse-uid')) {
+      if (!fm['RELATED.spouse'] || !fm['RELATED.spouse'].includes('spouse-uid')) {
         console.log(`[WARNING] Write #${idx + 1} lost spouse relationship!`);
         spousePreserved = false;
       }
@@ -589,10 +589,10 @@ REV: 20230101T120000Z
     const finalFrontmatter = extractFrontmatter(fileContents.get(testFile.path)!);
     console.log('\n[FINAL] RELATED keys:', Object.keys(finalFrontmatter).filter(k => k.startsWith('RELATED')));
     
-    expect(finalFrontmatter['RELATED[spouse]']).toBeDefined();
-    expect(finalFrontmatter['RELATED[spouse]']).toContain('spouse-uid');
-    expect(finalFrontmatter['RELATED[friend]']).toBeDefined();
-    expect(finalFrontmatter['RELATED[friend]']).toContain('friend-uid');
+    expect(finalFrontmatter['RELATED.spouse']).toBeDefined();
+    expect(finalFrontmatter['RELATED.spouse']).toContain('spouse-uid');
+    expect(finalFrontmatter['RELATED.friend']).toBeDefined();
+    expect(finalFrontmatter['RELATED.friend']).toContain('friend-uid');
 
     console.log('\n[SUCCESS] Existing keys preserved when adding new relationships!');
   });
@@ -614,9 +614,9 @@ REV: 20230101T120000Z
 UID: inconsistent-uid
 FN: Inconsistent Contact
 REV: 20230101T120000Z
-"RELATED[friend]": uid:friend1-uid
-"RELATED[1:friend]": uid:friend2-uid
-"RELATED[2:friend]": uid:friend3-uid
+"RELATED.friend": uid:friend1-uid
+"RELATED.friend.1": uid:friend2-uid
+"RELATED.friend.2": uid:friend3-uid
 ---
 
 #### Related
@@ -677,9 +677,9 @@ REV: 20230101T120000Z
     // The processor should sync to match the Related section (2 friends)
     // and remove the extra friend3 relationship
     expect(run2FriendKeys.length).toBe(2);
-    expect(finalFrontmatter['RELATED[friend]']).toBeDefined();
-    expect(finalFrontmatter['RELATED[1:friend]']).toBeDefined();
-    expect(finalFrontmatter['RELATED[2:friend]']).toBeUndefined(); // Should be removed
+    expect(finalFrontmatter['RELATED.friend']).toBeDefined();
+    expect(finalFrontmatter['RELATED.friend.1']).toBeDefined();
+    expect(finalFrontmatter['RELATED.friend.2']).toBeUndefined(); // Should be removed
 
     console.log('\n[SUCCESS] Inconsistent frontmatter handled correctly!');
   });
@@ -756,8 +756,8 @@ REV: 20230101T120000Z
 
     // After either run, we should have the relationships
     expect(run2Keys.length).toBeGreaterThanOrEqual(2);
-    expect(afterRun2['RELATED[friend]']).toBeDefined();
-    expect(afterRun2['RELATED[sibling]']).toBeDefined();
+    expect(afterRun2['RELATED.friend']).toBeDefined();
+    expect(afterRun2['RELATED.sibling']).toBeDefined();
 
     // Ideally, first run should have created the keys (test for regression)
     if (run1Keys.length > 0) {
@@ -867,8 +867,8 @@ REV: 20230101T120000Z
     // Verify final state has the expected relationships
     const finalContent = fileContents.get(testFile.path)!;
     const finalFrontmatter = extractFrontmatter(finalContent);
-    expect(finalFrontmatter['RELATED[friend]']).toBeDefined();
-    expect(finalFrontmatter['RELATED[1:friend]']).toBeDefined();
+    expect(finalFrontmatter['RELATED.friend']).toBeDefined();
+    expect(finalFrontmatter['RELATED.friend.1']).toBeDefined();
   });
 
   it('should handle multiple processors running concurrently without data loss', async () => {
@@ -931,7 +931,7 @@ REV: 20230101T120000Z
       const newContent = content.replace(/^---\n[\s\S]*?\n---\n/, () => {
         let yaml = '---\n';
         for (const [key, value] of Object.entries(fm)) {
-          if (key.startsWith('RELATED[')) {
+          if (key.startsWith('RELATED.')) {
             yaml += `"${key}": ${value}\n`;
           } else {
             yaml += `${key}: ${value}\n`;
@@ -941,7 +941,7 @@ REV: 20230101T120000Z
         return yaml;
       });
       
-      console.log('[MOCK-PROCESSOR-2] Writing changes...');
+      console.log('[MOCK-PROCESSOR-2 Writing changes...');
       fileContents.set(testFile.path, newContent);
       writeHistory.push({
         timestamp: Date.now(),
@@ -975,7 +975,7 @@ REV: 20230101T120000Z
     const hasTEST_FIELD = 'TEST_FIELD' in finalFrontmatter;
     
     console.log(`\n[DATA-CHECK]`);
-    console.log(`  RELATED[friend] present: ${hasRELATED ? '✓' : '✗ LOST!'}`);
+    console.log(`  RELATED.friend present: ${hasRELATED ? '✓' : '✗ LOST!'}`);
     console.log(`  TEST_FIELD present: ${hasTEST_FIELD ? '✓' : '✗ LOST!'}`);
     
     if (!hasRELATED || !hasTEST_FIELD) {

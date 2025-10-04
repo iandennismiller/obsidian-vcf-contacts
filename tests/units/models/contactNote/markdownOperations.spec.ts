@@ -127,8 +127,8 @@ describe('MarkdownOperations', () => {
     it('should generate Related section from RELATED fields', () => {
       const record = {
         FN: 'John Doe',
-        'RELATED[spouse]': 'name:Jane Doe',
-        'RELATED[1:child]': 'name:Alice Doe',
+        'RELATED.spouse': 'name:Jane Doe',
+        'RELATED.child.1': 'name:Alice Doe',
         UID: 'john-uid',
         VERSION: '4.0',
       };
@@ -143,8 +143,8 @@ describe('MarkdownOperations', () => {
     it('should apply gender-based relationship terms when genderLookup provided', () => {
       const record = {
         FN: 'John Doe',
-        'RELATED[parent]': 'name:Jane Doe',
-        'RELATED[1:parent]': 'name:Bob Doe',
+        'RELATED.parent': 'name:Jane Doe',
+        'RELATED.parent.1': 'name:Bob Doe',
         UID: 'john-uid',
         VERSION: '4.0',
       };
@@ -164,7 +164,7 @@ describe('MarkdownOperations', () => {
     it('should handle RELATED fields with UUID values', () => {
       const record = {
         FN: 'John Doe',
-        'RELATED[spouse]': 'urn:uuid:jane-uid-123',
+        'RELATED.spouse': 'urn:uuid:jane-uid-123',
         UID: 'john-uid',
         VERSION: '4.0',
       };
@@ -177,7 +177,7 @@ describe('MarkdownOperations', () => {
     it('should handle RELATED fields with UID values', () => {
       const record = {
         FN: 'John Doe',
-        'RELATED[friend]': 'uid:friend-uid-456',
+        'RELATED.friend': 'uid:friend-uid-456',
         UID: 'john-uid',
         VERSION: '4.0',
       };
@@ -203,10 +203,10 @@ describe('MarkdownOperations', () => {
     it('should handle gender-aware relationship for various types', () => {
       const record = {
         FN: 'John Doe',
-        'RELATED[child]': 'name:Alice',
-        'RELATED[1:child]': 'name:Bob',
-        'RELATED[2:sibling]': 'name:Carol',
-        'RELATED[3:sibling]': 'name:Dave',
+        'RELATED.child': 'name:Alice',
+        'RELATED.child.1': 'name:Bob',
+        'RELATED.sibling.2': 'name:Carol',
+        'RELATED.sibling.3': 'name:Dave',
         UID: 'john-uid',
         VERSION: '4.0',
       };
@@ -228,7 +228,7 @@ describe('MarkdownOperations', () => {
     it('should use default relationship term when gender is unknown', () => {
       const record = {
         FN: 'John Doe',
-        'RELATED[parent]': 'name:Unknown Person',
+        'RELATED.parent': 'name:Unknown Person',
         UID: 'john-uid',
         VERSION: '4.0',
       };
@@ -243,7 +243,7 @@ describe('MarkdownOperations', () => {
     it('should not apply gender terms for UUID/UID references', () => {
       const record = {
         FN: 'John Doe',
-        'RELATED[parent]': 'urn:uuid:parent-uid',
+        'RELATED.parent': 'urn:uuid:parent-uid',
         UID: 'john-uid',
         VERSION: '4.0',
       };

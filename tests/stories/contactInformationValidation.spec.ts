@@ -49,7 +49,7 @@ describe('Contact Information Validation Story', () => {
     const content = `---
 UID: john-doe-123
 FN: John Doe
-EMAIL[HOME]: john@example.com
+EMAIL.HOME: john@example.com
 ---
 
 #Contact`;
@@ -61,7 +61,7 @@ EMAIL[HOME]: john@example.com
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'EMAIL[HOME]': 'john@example.com'
+        'EMAIL.HOME': 'john@example.com'
       }
     });
 
@@ -105,7 +105,7 @@ FN: John Doe
     const content = `---
 UID: john-doe-123
 FN: John Doe
-TEL[CELL]: +1-555-1234
+TEL.CELL: +1-555-1234
 ---
 
 #Contact`;
@@ -117,7 +117,7 @@ TEL[CELL]: +1-555-1234
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'TEL[CELL]': '+1-555-1234'
+        'TEL.CELL': '+1-555-1234'
       }
     });
 
@@ -137,9 +137,9 @@ TEL[CELL]: +1-555-1234
     const content = `---
 UID: john-doe-123
 FN: John Doe
-TEL[CELL]: (555) 123-4567
-TEL[HOME]: 555.123.4567
-TEL[WORK]: +1 555 123 4567
+TEL.CELL: (555) 123-4567
+TEL.HOME: 555.123.4567
+TEL.WORK: +1 555 123 4567
 ---
 
 #Contact`;
@@ -149,9 +149,9 @@ TEL[WORK]: +1 555 123 4567
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'TEL[CELL]': '(555) 123-4567',
-        'TEL[HOME]': '555.123.4567',
-        'TEL[WORK]': '+1 555 123 4567'
+        'TEL.CELL': '(555) 123-4567',
+        'TEL.HOME': '555.123.4567',
+        'TEL.WORK': '+1 555 123 4567'
       }
     });
 
@@ -166,8 +166,8 @@ TEL[WORK]: +1 555 123 4567
     const content = `---
 UID: john-doe-123
 FN: John Doe
-URL[HOME]: https://example.com
-URL[WORK]: http://company.com
+URL.HOME: https://example.com
+URL.WORK: http://company.com
 ---
 
 #Contact`;
@@ -179,8 +179,8 @@ URL[WORK]: http://company.com
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'URL[HOME]': 'https://example.com',
-        'URL[WORK]': 'http://company.com'
+        'URL.HOME': 'https://example.com',
+        'URL.WORK': 'http://company.com'
       }
     });
 
@@ -224,7 +224,7 @@ FN: John Doe
     const content = `---
 UID: john-doe-123
 FN: John Doe
-ADR[HOME].STREET: 123 Main St
+ADR.HOME.STREET: 123 Main St
 ---
 
 #Contact`;
@@ -236,7 +236,7 @@ ADR[HOME].STREET: 123 Main St
       frontmatter: {
         UID: 'john-doe-123',
         FN: 'John Doe',
-        'ADR[HOME].STREET': '123 Main St'
+        'ADR.HOME.STREET': '123 Main St'
       }
     });
 
