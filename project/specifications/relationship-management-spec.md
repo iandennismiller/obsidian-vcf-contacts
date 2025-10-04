@@ -109,15 +109,23 @@ To find the UID for a contact, inspect its front matter in the contact note in O
 
 ### Multiple Relationships of Same Type
 
-When multiple relationships of the same type exist, the flat library automatically handles array indexing using dot notation.
+When multiple relationships of the same type exist, the plugin uses a custom indexing format with bracket notation.
 
-**Technical Note**: The plugin uses the [flat](https://www.npmjs.com/package/flat) library to convert between nested relationship structures and flat frontmatter. Arrays are automatically indexed with numeric suffixes (e.g., `RELATED.friend.0`, `RELATED.friend.1`).
+**Technical Note**: The plugin uses bracket notation for RELATED fields to maintain compatibility with vCard TYPE parameters. Multiple relationships of the same type use indexed bracket notation:
+- First relationship: `RELATED[type]` (e.g., `RELATED[friend]`)
+- Additional relationships: `RELATED[index:type]` (e.g., `RELATED[1:friend]`, `RELATED[2:friend]`)
+
+This format allows clean mapping to vCard RELATED properties with TYPE parameters:
+```
+RELATED;TYPE=friend:urn:uuid:first-friend
+RELATED;TYPE=friend:urn:uuid:second-friend
+```
 
 ### Deterministic Ordering
 
-The flat library ensures deterministic ordering by:
-1. Sorting keys alphabetically
-2. Using consistent dot notation for nested structures
+The plugin ensures deterministic ordering by:
+1. Sorting relationship keys alphabetically
+2. Using consistent bracket notation format
 3. Maintaining stable array indices
 
 This prevents unnecessary changes when relationships (which have no inherent order) are refreshed.

@@ -44,7 +44,7 @@ ORG: Acme Corporation
 TITLE: Software Engineer
 GENDER: M
 REV: 20250125T103000Z
-RELATED.colleague: urn:uuid:jane-smith-uuid-here
+"RELATED[colleague]": urn:uuid:jane-smith-uuid-here
 ---
 
 # John Doe
@@ -143,32 +143,37 @@ The parser automatically detects field types and syncs to frontmatter using the 
 
 ### Relationships
 
-The RELATED field uses dot notation to reference other contacts:
+The RELATED field uses bracket notation to reference other contacts:
 
 | Field | Description | Example |
 |-------|-------------|---------|
-| `RELATED.type` | Relationship reference | `RELATED.friend: urn:uuid:12345...` |
-| | | `RELATED.colleague: uid:custom-id` |
-| | | `RELATED.sibling: name:Jane Doe` |
+| `"RELATED[type]"` | Relationship reference | `"RELATED[friend]": urn:uuid:12345...` |
+| | | `"RELATED[colleague]": uid:custom-id` |
+| | | `"RELATED[sibling]": name:Jane Doe` |
 
 ## Field Organization
 
-**Technical Note**: The plugin uses the [flat](https://www.npmjs.com/package/flat) library to convert between hierarchical vCard structures and flat Obsidian frontmatter. This ensures consistent dot notation for all structured fields.
+**Technical Note**: The plugin uses the [flat](https://www.npmjs.com/package/flat) library to convert between hierarchical vCard structures and flat Obsidian frontmatter for specific field types (N, ADR, TEL, EMAIL, URL). RELATED fields use a custom bracket notation format for compatibility with vCard TYPE parameters.
 
 ### Multiple Values
 
-For fields that can have multiple values (like phone numbers or emails), the flat library automatically creates array indices:
+For fields that can have multiple values (like phone numbers or emails), use type-specific keys or indexed bracket notation:
 
 ```yaml
-EMAIL.0: primary@example.com      # First email
-EMAIL.1: work@company.com         # Second email
-EMAIL.2: home@personal.com        # Third email
+# Dot notation for typed fields (via flat library):
+EMAIL.HOME: primary@example.com
+EMAIL.WORK: work@company.com
 
-# With type parameters:
-TEL.CELL.0: +1-555-123-4567       # First mobile
-TEL.CELL.1: +1-555-000-0000       # Second mobile
-TEL.WORK: +1-555-987-6543         # Work phone
-TEL.HOME: +1-555-111-2222         # Home phone
+# Alternative bare key with indices:
+EMAIL: primary@example.com      # First email (bare key)
+"EMAIL[1]": work@company.com    # Second email (indexed)
+"EMAIL[2]": home@personal.com   # Third email (indexed)
+
+# Phone numbers with TYPE parameters:
+TEL.CELL: +1-555-123-4567       # First mobile
+"TEL.CELL[1]": +1-555-000-0000  # Second mobile (if needed)
+TEL.WORK: +1-555-987-6543       # Work phone
+TEL.HOME: +1-555-111-2222       # Home phone
 ```
 
 ### Contact List Alternative
@@ -232,9 +237,9 @@ The plugin supports relationship tracking between contacts using the vCard 4.0 R
 #### RELATED Field Format
 
 ```yaml
-RELATED.friend: urn:uuid:03a0e51f-d1aa-4385-8a53-e29025acd8af
-RELATED.colleague: uid:some-custom-uid
-RELATED.sibling: name:Jane Doe
+"RELATED[friend]": urn:uuid:03a0e51f-d1aa-4385-8a53-e29025acd8af
+"RELATED[colleague]": uid:some-custom-uid
+"RELATED[sibling]": name:Jane Doe
 ```
 
 The RELATED field value uses three possible namespace formats:
@@ -253,15 +258,17 @@ The RELATED field value uses three possible namespace formats:
 
 #### Multiple Relationships of the Same Type
 
-When you have multiple relationships of the same type (forming a set), the flat library automatically creates array indices:
+When you have multiple relationships of the same type, use indexed bracket notation:
 
 ```yaml
-RELATED.friend.0: urn:uuid:first-friend-uuid        # First friend
-RELATED.friend.1: urn:uuid:second-friend-uuid       # Second friend
-RELATED.friend.2: name:Third Friend                  # Third friend
+"RELATED[friend]": urn:uuid:first-friend-uuid         # First friend
+"RELATED[1:friend]": urn:uuid:second-friend-uuid      # Second friend
+"RELATED[2:friend]": name:Third Friend                # Third friend
 ```
 
-**Important**: The flat library ensures deterministic ordering by sorting keys alphabetically, preventing unnecessary changes when relationships are refreshed.
+**Important**: The plugin ensures deterministic ordering by sorting relationship keys alphabetically, preventing unnecessary changes when relationships are refreshed.
+
+**Note**: Bracket notation keys must be quoted in YAML to be valid (e.g., `"RELATED[friend]": value`).
 
 #### Genderless Relationship Types
 

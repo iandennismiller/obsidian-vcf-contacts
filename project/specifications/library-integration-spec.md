@@ -123,38 +123,40 @@ Custom code is limited to:
 
 ## Object Flattening: [flat](https://www.npmjs.com/package/flat)
 
-The plugin uses the flat library to convert between hierarchical vCard structures and flat Obsidian frontmatter.
+The plugin uses the flat library to convert between hierarchical vCard structures and flat Obsidian frontmatter for specific field types.
 
 ### Benefits
 
 - **Standardized Flattening**: Industry-standard approach to flattening/unflattening nested objects
-- **Reduced Complexity**: Eliminates custom key parsing and structure handling logic
-- **Deterministic Keys**: Consistent dot-notation key format (e.g., `ADR.HOME.STREET`)
+- **Reduced Complexity**: Eliminates custom key parsing and structure handling logic for supported fields
+- **Deterministic Keys**: Consistent dot-notation key format (e.g., `N.GN`, `ADR.HOME.STREET`)
 - **Bidirectional Conversion**: Reliable conversion between nested and flat representations
 - **Lower Maintenance**: Delegates flattening logic to a well-maintained library
 
 ### Scope of flat Library Usage
 
-The flat library handles:
-1. **Object Flattening**: Converting nested vCard objects to flat key-value pairs
-2. **Object Unflattening**: Converting flat frontmatter to nested vCard objects
-3. **Delimiter Customization**: Using dot notation for hierarchical keys
-4. **Safe Mode**: Handling special characters and edge cases
+The flat library handles flattening/unflattening for these vCard field types:
+1. **Structured Name (N)**: `N.GN`, `N.FN`, `N.MN`, `N.PREFIX`, `N.SUFFIX`
+2. **Structured Address (ADR)**: `ADR.HOME.STREET`, `ADR.WORK.LOCALITY`, etc.
+3. **Communication Fields with TYPE**: `EMAIL.WORK`, `TEL.CELL`, `URL.HOME`, etc.
+4. **Object Flattening**: Converting nested vCard objects to flat key-value pairs using dot notation
+5. **Object Unflattening**: Converting flat frontmatter back to nested vCard objects
+6. **Delimiter Customization**: Using dot (`.`) as the delimiter for hierarchical keys
 
-### Scope of Custom Integration
+### Fields NOT Using flat Library
 
-Custom code is limited to:
-1. **vCard Property Mapping**: Converting between vcard4 property objects and flat frontmatter
-2. **UID Management**: Generating and tracking unique contact identifiers
-3. **Relationship Extensions**: Custom RELATED field handling for bidirectional relationships
+The following use custom implementations:
+1. **RELATED Fields**: Use bracket notation (`RELATED[type]`, `RELATED[index:type]`) for vCard TYPE parameter compatibility
+2. **UID Management**: Custom generation and validation logic
+3. **REV Timestamps**: Custom timestamp generation and validation
 
 ### Integration Points
 
-- **VCF Import**: vcard4 parses VCF → flat converts to frontmatter → yaml serializes
-- **VCF Export**: yaml parses frontmatter → flat converts to nested object → vcard4 generates VCF
-- **Consistency**: flat ensures consistent key format across all contact operations
+- **VCF Import**: vcard4 parses VCF → flat converts N/ADR/TEL/EMAIL to dot notation → yaml serializes frontmatter
+- **VCF Export**: yaml parses frontmatter → flat converts dot notation to nested objects → vcard4 generates VCF
+- **Consistency**: flat ensures consistent key format for supported field types
 
-**User Benefit**: Consistent, predictable frontmatter structure with simplified maintenance and fewer edge cases.
+**User Benefit**: Consistent, predictable frontmatter structure for standard vCard fields with simplified maintenance and fewer edge cases.
 
 ---
 

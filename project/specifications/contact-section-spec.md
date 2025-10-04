@@ -274,11 +274,13 @@ The kind/type prefix is **optional** and can be any string:
 
 ### Auto-Indexing
 
-When no kind is specified, fields use bare keys for the first field, then indexed:
+When no kind is specified, fields use bare keys for the first field, then numeric indices:
 
 - First field without kind: bare `EMAIL`, `TEL`, `URL`, `ADR`
-- Second field without kind: `EMAIL[1]`, `TEL[1]`, `URL[1]`, `ADR[1]`
-- Third field without kind: `EMAIL[2]`, `TEL[2]`, etc.
+- Second field without kind: `EMAIL.1`, `TEL.1`, `URL.1`, `ADR.1`
+- Third field without kind: `EMAIL.2`, `TEL.2`, etc.
+
+**Note**: The flat library automatically handles this indexing when converting from nested to flat format.
 
 ## Frontmatter Mapping
 
@@ -298,22 +300,22 @@ URL.PERSONAL: http://example.com
 **Without type (bare keys):**
 ```yaml
 EMAIL: first@example.com
-EMAIL[1]: second@example.com
-EMAIL[2]: third@example.com
+EMAIL.1: second@example.com
+EMAIL.2: third@example.com
 TEL: +1-555-111-1111
-TEL[1]: +1-555-222-2222
+TEL.1: +1-555-222-2222
 ```
 
 **Address components:**
 ```yaml
-ADR[HOME].STREET: 123 Some street
-ADR[HOME].LOCALITY: Town
-ADR[HOME].REGION: State
-ADR[HOME].POSTAL: 12345
-ADR[HOME].COUNTRY: USA
-# First address without kind is bare:
-ADR.STREET: 456 Main St
-ADR.LOCALITY: Springfield
+"ADR.HOME.STREET": 123 Some street
+"ADR.HOME.LOCALITY": Town
+"ADR.HOME.REGION": State
+"ADR.HOME.POSTAL": "12345"
+"ADR.HOME.COUNTRY": USA
+# First address without type uses bare ADR:
+"ADR.STREET": 456 Main St
+"ADR.LOCALITY": Springfield
 ```
 
 ### Parsing Examples
@@ -354,6 +356,12 @@ EMAIL[WORK]: contact@example.com
 TEL: +1-555-555-5555
 ```
 
+If this is the second phone without a type:
+```yaml
+TEL: +1-555-111-1111
+TEL.1: +1-555-555-5555
+```
+
 #### Example 3: URL with Kind
 
 **Input:**
@@ -389,9 +397,11 @@ URL[PERSONAL]: http://example.com
 
 **Frontmatter:**
 ```yaml
-ADR.STREET: 123 Some street
-ADR.LOCALITY: Town
+"ADR.STREET": 123 Some street
+"ADR.LOCALITY": Town
 ```
+
+**Note**: Keys with dots must be quoted in YAML.
 
 ## Display and Emoji Prefixes
 
