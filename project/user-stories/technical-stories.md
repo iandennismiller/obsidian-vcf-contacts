@@ -23,5 +23,5 @@ Stories related to technical requirements like error handling, performance, and 
 ---
 
 **Related Specifications**: 
-- [Error Handling Specification](../specifications/error-handling-spec.md)
-- [Performance Specification](../specifications/performance-spec.md)
+- [VCF Sync Specification](../specifications/vcf-sync.md)
+- [Curator Pipeline Specification](../specifications/curator-pipeline.md)

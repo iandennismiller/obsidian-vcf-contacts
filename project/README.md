@@ -4,17 +4,15 @@ This directory contains project-level documentation for development, planning, a
 
 ## Directory Structure
 
-### `/specifications` - Legacy Technical Specifications (Deprecated)
+### `/specifications` - Technical Specifications
 
-**Note**: Legacy specifications have been refactored and moved to `/docs/specifications/` without code examples.
-
-Legacy technical specifications with code examples (deprecated). These documents include:
-- Implementation details and algorithms
-- Data structures and interfaces
+Technical specifications describing **what** the system does and the **outcomes** it achieves, without prescribing implementation details. These documents include:
 - Field formats and validation rules
+- Data structures and mappings
+- Expected behaviors and outcomes
 - API contracts and protocols
 
-**For current specifications, see [/docs/specifications/](../docs/specifications/)** which focuses on outcomes without implementation details.
+See [specifications/README.md](specifications/README.md) for the complete specification index.
 
 ### `/user-stories` - User Stories
 
@@ -53,18 +51,17 @@ When working on a feature:
 ## Relationship to /docs
 
 - **`/docs`**: User-facing and general developer documentation
-  - **`/docs/specifications/`**: Technical specifications (current, without code examples)
 - **`/project`**: Project-level documentation for contributors and maintainers
-  - **`/project/specifications/`**: Legacy specifications (deprecated)
+  - **`/project/specifications/`**: Technical specifications (what the system does)
 
 User guides, getting started, and feature overviews belong in `/docs`.  
-Technical specifications belong in `/docs/specifications/`.
+Technical specifications belong in `/project/specifications/`.
 User stories and implementation plans belong in `/project`.
 
 ## Contributing
 
 When adding documentation:
 - Put user stories in `/project/user-stories/`
-- Put technical specs in `/docs/specifications/` (not `/project/specifications/`)
+- Put technical specs in `/project/specifications/`
 - Put implementation plans in `/project/plans/`
 - Put user guides in `/docs/`

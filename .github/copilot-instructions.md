@@ -25,7 +25,6 @@ User-facing and developer-facing documentation:
 - **User Guides**: Getting started, features, installation
 - **Development Guides**: Architecture, setup, testing, contributing
 - **Demo Data**: Example contact files for testing
-- **Specifications**: Technical specifications in `/docs/specifications/`
 
 ### `/project` - Project Management
 
@@ -47,10 +46,10 @@ Multi-stage implementation plans for complex features
 #### `/project/references` - Third-Party References
 Documentation for external libraries and APIs (vCard specs, Obsidian API)
 
-#### `/project/specifications` - Legacy Specifications (Deprecated)
-Legacy technical specifications - see `/docs/specifications/` for current versions
+#### `/project/specifications` - Technical Specifications
+Technical specifications describing **what** the system does and expected outcomes
 
-**Usage**: When working on a feature, first check user stories to understand what users need, then check `/docs/specifications/` for implementation details.
+**Usage**: When working on a feature, first check user stories to understand what users need, then check `/project/specifications/` for technical details.
 
 ## Setup Instructions
 

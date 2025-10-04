@@ -35,5 +35,5 @@ Stories related to importing, exporting, and synchronizing vCard (VCF) files wit
 ---
 
 **Related Specifications**: 
-- [VCF Sync Specification](../specifications/vcf-sync-spec.md)
+- [VCF Sync Specification](../specifications/vcf-sync.md)
 - [vCard Format Guide](../specs/vcard-format.md)
