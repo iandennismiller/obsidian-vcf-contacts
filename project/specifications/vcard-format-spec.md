@@ -164,10 +164,10 @@ For fields that can have multiple values (like phone numbers or emails), use typ
 EMAIL.HOME: primary@example.com
 EMAIL.WORK: work@company.com
 
-# Alternative bare key with indices:
+# Alternative bare key with indices (via flat library):
 EMAIL: primary@example.com      # First email (bare key)
-"EMAIL[1]": work@company.com    # Second email (indexed)
-"EMAIL[2]": home@personal.com   # Third email (indexed)
+EMAIL.1: work@company.com        # Second email (indexed)
+EMAIL.2: home@personal.com       # Third email (indexed)
 
 # Phone numbers with TYPE parameters:
 TEL.CELL: +1-555-123-4567       # First mobile

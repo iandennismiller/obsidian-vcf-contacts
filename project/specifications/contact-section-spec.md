@@ -63,7 +63,7 @@ The parser leverages the marked library for markdown structure, then applies con
    - Identify field type: Use pattern matching to determine type (EMAIL, TEL, URL, ADR)
    - Extract components: Separate optional kind prefix from value
    - Validate: Ensure the value matches the detected pattern
-   - Create frontmatter key: Generate key like `EMAIL[WORK]` or bare `TEL` (first field) or indexed `TEL[1]` (second field)
+   - Create frontmatter key: Generate key like `EMAIL.WORK` or bare `TEL` (first field) or indexed `TEL.1` (second field)
 
 **Benefit**: By delegating markdown parsing to marked, the plugin eliminates the need for custom handling of:
 - Different list marker styles
