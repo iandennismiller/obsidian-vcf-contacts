@@ -20,6 +20,7 @@ import { ContactSectionOperations } from './contactSectionOperations';
 // Import entities
 import { UID } from './entities/valueObjects/UID';
 import { Revision } from './entities/valueObjects/Revision';
+import { Gender as GenderEntity } from './entities/valueObjects/Gender';
 
 // Re-export types for backward compatibility and external use
 export type { Contact, Gender, ParsedRelationship, FrontmatterRelationship, ResolvedContact };
