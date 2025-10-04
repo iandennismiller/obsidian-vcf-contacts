@@ -76,6 +76,12 @@ export class ContactData {
 
   /**
    * Get frontmatter with caching, co-located with frontmatter data
+   * 
+   * Uses the yaml library (v2.8.1) for robust YAML parsing:
+   * - Handles arrays, nested objects, multi-line values
+   * - Natively supports dot notation keys (e.g., RELATED.friend)
+   * - Preserves types (strings, numbers, booleans, null)
+   * - Provides detailed error messages for malformed YAML
    */
   async getFrontmatter(): Promise<Record<string, any> | null> {
     if (this._frontmatter === null) {
@@ -98,11 +104,13 @@ export class ContactData {
       // It will be reset when invalidateAllCaches() is called
 
       try {
-        // Fallback: parse from content
+        // Fallback: parse from content using yaml library
+        // Regex extracts the YAML block; parseYaml() handles the parsing
         const content = await this.getContent();
         const match = content.match(/^---\n([\s\S]*?)\n---/);
         if (match) {
           try {
+            // parseYaml from 'yaml' library handles all YAML edge cases
             this._frontmatter = parseYaml(match[1]) ?? {};
           } catch (error: any) {
             console.debug(`[ContactData] Error parsing frontmatter for ${this.file.path}: ${error.message}`);
@@ -279,11 +287,20 @@ export class ContactData {
     console.debug(`[ContactData] Frontmatter saved successfully`);
   }
 
+  /**
+   * Save frontmatter to file
+   * 
+   * Uses the yaml library (v2.8.1) for robust YAML generation:
+   * - Handles special characters and quoting automatically
+   * - Natively supports dot notation keys (e.g., RELATED.friend)
+   * - Preserves types and handles arrays/objects correctly
+   * - Generates clean, standards-compliant YAML
+   */
   private async saveFrontmatter(frontmatter: Record<string, any>): Promise<void> {
     const content = await this.getContent();
     
-    // Use yaml library to stringify frontmatter
-    // The yaml library natively handles keys with brackets and special characters
+    // stringifyYaml from 'yaml' library handles all YAML edge cases
+    // Natively supports keys with dots, brackets, and special characters
     let frontmatterYaml = stringifyYaml(frontmatter);
     
     // Ensure frontmatter YAML ends with a newline
