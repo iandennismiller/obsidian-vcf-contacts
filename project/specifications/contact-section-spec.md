@@ -37,7 +37,7 @@ Contact information is entered as simple markdown list items:
 - contact@example.com
 - work contact@example.com
 - 123 Some street
-- 123 Some street, Town
+- work 123 Some street, Town
 - http://example.com
 - personal http://example.com
 ```
