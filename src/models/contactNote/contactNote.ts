@@ -15,12 +15,13 @@ import { SyncOperations } from './syncOperations';
 import { ValidationOperations } from './validationOperations';
 import { AdvancedRelationshipOperations } from './advancedRelationshipOperations';
 import { RelationshipHelpers } from './relationshipHelpers';
-import { ContactSectionOperations } from './contactSectionOperations';
 
 // Import entities
 import { UID } from './entities/valueObjects/UID';
 import { Revision } from './entities/valueObjects/Revision';
 import { Gender as GenderEntity } from './entities/valueObjects/Gender';
+import { ContactSection } from './entities/document/ContactSection';
+import type { ContactField } from './entities/fields/ContactField';
 
 // Re-export types for backward compatibility and external use
 export type { Contact, Gender, ParsedRelationship, FrontmatterRelationship, ResolvedContact };
@@ -44,7 +45,6 @@ export class ContactNote {
   private validationOps: ValidationOperations;
   private advancedRelationshipOps: AdvancedRelationshipOperations;
   private relationshipHelpers: RelationshipHelpers;
-  private contactSectionOps: ContactSectionOperations;
 
   constructor(app: App, settings: ContactsPluginSettings, file: TFile) {
     this.app = app;
@@ -60,7 +60,6 @@ export class ContactNote {
     this.validationOps = new ValidationOperations(this.contactData);
     this.advancedRelationshipOps = new AdvancedRelationshipOperations(app, settings, this.contactData, this.relationshipOps);
     this.relationshipHelpers = new RelationshipHelpers();
-    this.contactSectionOps = new ContactSectionOperations(this.contactData, settings);
   }
 
   // === Core File Operations (directly from ContactData) ===
@@ -770,29 +769,258 @@ export class ContactNote {
 
   /**
    * Parse Contact section from markdown
+   * Returns parsed contact fields compatible with existing curators
    */
-  async parseContactSection() {
-    return this.contactSectionOps.parseContactSection();
+  async parseContactSection(): Promise<Array<{
+    fieldType: string;
+    fieldLabel: string;
+    value: string;
+    component?: string;
+  }>> {
+    const content = await this.getContent();
+    
+    // Extract the Contact section using markdown parsing
+    const contactSectionMatch = content.match(/^## Contact\s*\n([\s\S]*?)(?=\n## |\n#Contact|$)/m);
+    
+    if (!contactSectionMatch) {
+      return [];
+    }
+    
+    const contactContent = contactSectionMatch[1];
+    const contactSection = ContactSection.fromMarkdown(contactContent, 'Contact', 2);
+    const fields = contactSection.getFields();
+    
+    // Convert ContactField entities to ParsedContactField format for backward compatibility
+    const parsedFields: Array<{
+      fieldType: string;
+      fieldLabel: string;
+      value: string;
+      component?: string;
+    }> = [];
+    
+    for (const field of fields) {
+      const frontmatter = field.toFrontmatter();
+      
+      // Handle both single entries and arrays
+      const entries = Array.isArray(frontmatter) ? frontmatter : [frontmatter];
+      
+      for (const entry of entries) {
+        // Parse the frontmatter key to extract field type, label, and component
+        // Format examples: "EMAIL[WORK]", "EMAIL", "ADR[HOME].STREET", "ADR.STREET"
+        const keyMatch = entry.key.match(/^([A-Z]+)(?:\[([^\]]+)\])?(?:\.(.+))?$/);
+        
+        if (keyMatch) {
+          parsedFields.push({
+            fieldType: keyMatch[1],
+            fieldLabel: keyMatch[2] || '',
+            value: String(entry.value),
+            component: keyMatch[3]
+          });
+        }
+      }
+    }
+    
+    return parsedFields;
   }
 
   /**
    * Generate Contact section markdown from frontmatter
    */
   async generateContactSection(): Promise<string> {
-    return this.contactSectionOps.generateContactSection();
+    const frontmatter = await this.getFrontmatter();
+    if (!frontmatter) return '';
+    
+    const fields: ContactField[] = [];
+    
+    // Parse frontmatter for contact fields
+    // Look for EMAIL, TEL, URL, ADR fields
+    for (const [key, value] of Object.entries(frontmatter)) {
+      // Match field patterns: EMAIL, EMAIL[WORK], EMAIL.WORK, etc.
+      const bareMatch = key.match(/^(EMAIL|TEL|URL|ADR)$/);
+      const bracketMatch = key.match(/^(EMAIL|TEL|URL|ADR)\[([^\]]+)\](?:\.(.+))?$/);
+      const dotMatch = key.match(/^(EMAIL|TEL|URL|ADR)\.([^.]+)(?:\.(.+))?$/);
+      
+      if (bareMatch) {
+        // Bare field: EMAIL, TEL, etc.
+        const fieldType = bareMatch[1];
+        // For now, convert to simple field format: "- value"
+        // This is a minimal implementation to get tests passing
+        if (fieldType === 'EMAIL' || fieldType === 'TEL' || fieldType === 'URL') {
+          // Will be rendered as "- value"
+          // The entity parsing doesn't need explicit type matching since we're generating simple format
+        }
+      }
+    }
+    
+    // For now, generate a simple list from EMAIL, TEL, URL, ADR fields
+    const lines: string[] = [];
+    
+    // EMAIL fields
+    const emailFields = Object.keys(frontmatter).filter(k => k.startsWith('EMAIL'));
+    for (const key of emailFields) {
+      const match = key.match(/^EMAIL(?:\[([^\]]+)\])?(?:\.(.+))?$/);
+      if (match && !match[2]) { // Not a component field
+        const label = match[1] || '';
+        const value = frontmatter[key];
+        if (label) {
+          lines.push(`- ${label}: ${value}`);
+        } else {
+          lines.push(`- ${value}`);
+        }
+      }
+    }
+    
+    // TEL fields
+    const telFields = Object.keys(frontmatter).filter(k => k.startsWith('TEL'));
+    for (const key of telFields) {
+      const match = key.match(/^TEL(?:\[([^\]]+)\])?(?:\.(.+))?$/);
+      if (match && !match[2]) {
+        const label = match[1] || '';
+        const value = frontmatter[key];
+        if (label) {
+          lines.push(`- ${label}: ${value}`);
+        } else {
+          lines.push(`- ${value}`);
+        }
+      }
+    }
+    
+    // URL fields
+    const urlFields = Object.keys(frontmatter).filter(k => k.startsWith('URL'));
+    for (const key of urlFields) {
+      const match = key.match(/^URL(?:\[([^\]]+)\])?(?:\.(.+))?$/);
+      if (match && !match[2]) {
+        const label = match[1] || '';
+        const value = frontmatter[key];
+        if (label) {
+          lines.push(`- ${label}: ${value}`);
+        } else {
+          lines.push(`- ${value}`);
+        }
+      }
+    }
+    
+    // ADR fields (simplified - just show as single line for now)
+    const adrFields = Object.keys(frontmatter).filter(k => k.match(/^ADR(?:\[([^\]]+)\])?$/));
+    for (const key of adrFields) {
+      const match = key.match(/^ADR(?:\[([^\]]+)\])?$/);
+      if (match) {
+        const label = match[1] || '';
+        // Look for address components
+        const prefix = key;
+        const street = frontmatter[`${prefix}.STREET`];
+        const locality = frontmatter[`${prefix}.LOCALITY`];
+        const region = frontmatter[`${prefix}.REGION`];
+        const postal = frontmatter[`${prefix}.POSTAL`];
+        const country = frontmatter[`${prefix}.COUNTRY`];
+        
+        const parts = [street, locality, region, postal, country].filter(Boolean);
+        if (parts.length > 0) {
+          const addressValue = parts.join(', ');
+          if (label) {
+            lines.push(`- ${label}: ${addressValue}`);
+          } else {
+            lines.push(`- ${addressValue}`);
+          }
+        }
+      }
+    }
+    
+    if (lines.length === 0) {
+      return '';
+    }
+    
+    return lines.join('\n');
   }
 
   /**
    * Update Contact section in markdown content
    */
   async updateContactSectionInContent(contactSection: string): Promise<void> {
-    return this.contactSectionOps.updateContactSectionInContent(contactSection);
+    const content = await this.getContent();
+    
+    // Check if Contact section exists
+    const contactSectionRegex = /^(#{2,4} Contact\s*\n)([\s\S]*?)(?=\n#{2,4} |\n#\w+|$)/m;
+    const contactMatch = content.match(contactSectionRegex);
+    
+    // Check if Related section exists
+    const relatedSectionRegex = /^(#{2,4} Related\s*\n)/m;
+    const relatedMatch = content.match(relatedSectionRegex);
+    
+    if (contactMatch && relatedMatch) {
+      // Both exist - check ordering
+      const contactIndex = content.indexOf(contactMatch[0]);
+      const relatedIndex = content.indexOf(relatedMatch[0]);
+      
+      if (contactIndex > relatedIndex) {
+        // Wrong order! Contact is after Related. Need to move Contact before Related
+        // 1. Remove Contact section from current position
+        const contentWithoutContact = content.replace(contactSectionRegex, '');
+        // 2. Insert Contact before Related
+        const newRelatedMatch = contentWithoutContact.match(relatedSectionRegex);
+        if (newRelatedMatch) {
+          const insertPos = contentWithoutContact.indexOf(newRelatedMatch[0]);
+          const newContent = contentWithoutContact.slice(0, insertPos) + `## Contact\n${contactSection}\n\n` + contentWithoutContact.slice(insertPos);
+          await this.contactData.updateContent(newContent);
+          return;
+        }
+      } else {
+        // Correct order - just replace Contact section
+        const newContent = content.replace(contactSectionRegex, `$1${contactSection}\n`);
+        await this.contactData.updateContent(newContent);
+        return;
+      }
+    }
+    
+    if (contactMatch && !relatedMatch) {
+      // Contact exists, no Related - just replace in-place
+      const newContent = content.replace(contactSectionRegex, `$1${contactSection}\n`);
+      await this.contactData.updateContent(newContent);
+      return;
+    }
+    
+    // Contact doesn't exist - add it in the right place
+    // Priority: before Related section > before hashtags > at end
+    
+    const relatedMatch2 = content.match(/\n(#{2,4} Related)/);
+    const hashtagMatch = content.match(/\n(#\w+)/);
+    
+    let newContent: string;
+    
+    if (relatedMatch2) {
+      // Insert before Related section
+      const insertPos = content.indexOf(relatedMatch2[0]);
+      newContent = content.slice(0, insertPos) + `\n## Contact\n${contactSection}\n` + content.slice(insertPos);
+    } else if (hashtagMatch) {
+      // Insert before hashtags
+      const insertPos = content.indexOf(hashtagMatch[0]);
+      newContent = content.slice(0, insertPos) + `\n## Contact\n${contactSection}\n` + content.slice(insertPos);
+    } else {
+      // Add at end
+      newContent = content + `\n\n## Contact\n${contactSection}\n`;
+    }
+    
+    await this.contactData.updateContent(newContent);
   }
 
   /**
    * Validate contact fields
    */
   validateContactFields(fields: any[]): string[] {
-    return this.contactSectionOps.validateContactFields(fields);
+    const warnings: string[] = [];
+    
+    // Basic validation - this would be replaced with ContactSection.validate()
+    // For now, keep simple validation for backward compatibility
+    for (const field of fields) {
+      if (field.fieldType === 'EMAIL') {
+        // Simple email validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(field.value)) {
+          warnings.push(`Invalid email format: ${field.value}`);
+        }
+      }
+    }
+    
+    return warnings;
   }
 }
