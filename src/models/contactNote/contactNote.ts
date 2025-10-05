@@ -204,7 +204,43 @@ export class ContactNote {
    * Update Related section in markdown content
    */
   async updateRelatedSectionInContent(relationships: { type: string; contactName: string }[]): Promise<void> {
-    return this.relationshipOps.updateRelatedSectionInContent(relationships);
+    const content = await this.getContent();
+    
+    // Convert simple relationship format to Relationship entities
+    const relationshipEntities: Relationship[] = [];
+    for (const rel of relationships) {
+      const relType = RelationshipType.fromString(rel.type);
+      const target = RelationshipReference.fromString(rel.contactName);
+      relationshipEntities.push(Relationship.create(relType, target));
+    }
+    
+    // Create RelatedSection from relationships
+    const relatedSection = RelatedSection.fromRelationships(relationshipEntities, 'Related', 2);
+    const sectionMarkdown = relatedSection.toMarkdown();
+    
+    // Find and replace the Related section if it exists
+    const relatedSectionRegex = /^(#{2,4} Related\s*\n)([\s\S]*?)(?=\n#{2,4} |\n#\w+|$)/m;
+    
+    if (relatedSectionRegex.test(content)) {
+      // Replace existing Related section
+      const newContent = content.replace(relatedSectionRegex, sectionMarkdown + '\n');
+      await this.contactData.updateContent(newContent);
+    } else {
+      // Add Related section before hashtags or at end
+      const hashtagMatch = content.match(/\n(#\w+)/);
+      let newContent: string;
+      
+      if (hashtagMatch) {
+        // Insert before hashtags
+        const insertPos = content.indexOf(hashtagMatch[0]);
+        newContent = content.slice(0, insertPos) + `\n${sectionMarkdown}\n` + content.slice(insertPos);
+      } else {
+        // Add at end
+        newContent = content + `\n\n${sectionMarkdown}\n`;
+      }
+      
+      await this.contactData.updateContent(newContent);
+    }
   }
 
   /**
@@ -283,21 +319,42 @@ export class ContactNote {
    * Get the display term for a relationship based on the contact's gender
    */
   getGenderedRelationshipTerm(relationshipType: string, contactGender: Gender): string {
-    return this.relationshipOps.getGenderedRelationshipTerm(relationshipType, contactGender);
+    const relType = RelationshipType.fromString(relationshipType);
+    // Convert old Gender type to GenderEntity
+    let genderEntity: GenderEntity;
+    if (contactGender === 'M' || contactGender === 'male') {
+      genderEntity = GenderEntity.MALE;
+    } else if (contactGender === 'F' || contactGender === 'female') {
+      genderEntity = GenderEntity.FEMALE;
+    } else if (contactGender === 'NB' || contactGender === 'other') {
+      genderEntity = GenderEntity.OTHER;
+    } else {
+      genderEntity = GenderEntity.UNKNOWN;
+    }
+    return relType.getGenderedTerm(genderEntity);
   }
 
   /**
    * Infer gender from a gendered relationship term
    */
   inferGenderFromRelationship(relationshipType: string): Gender {
-    return this.relationshipOps.inferGenderFromRelationship(relationshipType);
+    const relType = RelationshipType.fromString(relationshipType);
+    const genderEntity = relType.inferGender();
+    
+    // Convert GenderEntity back to legacy Gender type
+    if (!genderEntity) return null;
+    if (genderEntity.isMale()) return 'M';
+    if (genderEntity.isFemale()) return 'F';
+    if (genderEntity.isOther()) return 'NB';
+    return 'U';
   }
 
   /**
    * Convert gendered relationship term to genderless equivalent
    */
   convertToGenderlessType(relationshipType: string): string {
-    return this.relationshipOps.convertToGenderlessType(relationshipType);
+    const relType = RelationshipType.fromString(relationshipType);
+    return relType.getNeutralType();
   }
 
   // === Markdown Operations (delegated to MarkdownOperations) ===
