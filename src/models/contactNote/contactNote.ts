@@ -9,12 +9,6 @@ import { Gender, Contact, ParsedRelationship, FrontmatterRelationship, ResolvedC
 
 // Import the optimized components
 import { ContactData } from './contactData';
-import { RelationshipOperations } from './relationshipOperations';
-import { MarkdownOperations } from './markdownOperations';
-import { SyncOperations } from './syncOperations';
-import { ValidationOperations } from './validationOperations';
-import { AdvancedRelationshipOperations } from './advancedRelationshipOperations';
-import { RelationshipHelpers } from './relationshipHelpers';
 
 // Import entities
 import { UID } from './entities/valueObjects/UID';
@@ -26,6 +20,16 @@ import { RelatedSection } from './entities/document/RelatedSection';
 import { Relationship } from './entities/relationships/Relationship';
 import { RelationshipType } from './entities/relationships/RelationshipType';
 import { RelationshipReference } from './entities/relationships/RelationshipReference';
+
+// Import utilities for markdown rendering
+import { stringify as stringifyYaml } from 'yaml';
+import { marked, Tokens } from 'marked';
+import { 
+  SECTION_NAMES, 
+  HEADING_LEVELS, 
+  FIELD_GROUPS,
+  REGEX_PATTERNS
+} from './markdownConstants';
 
 // Re-export types for backward compatibility and external use
 export type { Contact, Gender, ParsedRelationship, FrontmatterRelationship, ResolvedContact };
@@ -41,14 +45,6 @@ export class ContactNote {
   private app: App;
   private settings: ContactsPluginSettings;
   private contactData: ContactData;
-  
-  // Operation groups - each works closely with ContactData
-  private relationshipOps: RelationshipOperations;
-  private markdownOps: MarkdownOperations;
-  private syncOps: SyncOperations;
-  private validationOps: ValidationOperations;
-  private advancedRelationshipOps: AdvancedRelationshipOperations;
-  private relationshipHelpers: RelationshipHelpers;
 
   constructor(app: App, settings: ContactsPluginSettings, file: TFile) {
     this.app = app;
@@ -56,14 +52,6 @@ export class ContactNote {
     
     // Initialize centralized data store
     this.contactData = new ContactData(app, file);
-    
-    // Initialize operation groups that work with the centralized data
-    this.relationshipOps = new RelationshipOperations(this.contactData);
-    this.markdownOps = new MarkdownOperations(this.contactData);
-    this.syncOps = new SyncOperations(this.contactData, this.relationshipOps);
-    this.validationOps = new ValidationOperations(this.contactData);
-    this.advancedRelationshipOps = new AdvancedRelationshipOperations(app, settings, this.contactData, this.relationshipOps);
-    this.relationshipHelpers = new RelationshipHelpers();
   }
 
   // === Core File Operations (directly from ContactData) ===
@@ -194,121 +182,31 @@ export class ContactNote {
   }
 
   /**
-   * Parse RELATED fields from frontmatter
-   */
-  async parseFrontmatterRelationships(): Promise<FrontmatterRelationship[]> {
-    const frontmatter = await this.getFrontmatter();
-    if (!frontmatter) return [];
-    
-    const relationships: FrontmatterRelationship[] = [];
-    
-    // Parse RELATED fields from frontmatter
-    for (const [key, value] of Object.entries(frontmatter)) {
-      if (key.startsWith('RELATED[')) {
-        // Extract type from key: RELATED[spouse] -> spouse
-        const typeMatch = key.match(/^RELATED\[([^\]]+)\]$/);
-        if (typeMatch && typeof value === 'string') {
-          const type = typeMatch[1];
-          
-          // Parse the value to determine if it's UID or name
-          const parsedValue = this.parseRelatedValue(value);
-          
-          relationships.push({
-            key,
-            type,
-            value,
-            parsedValue: parsedValue || undefined
-          });
-        }
-      }
-    }
-    
-    return relationships;
-  }
-
-  /**
-   * Update Related section in markdown content
-   */
-  async updateRelatedSectionInContent(relationships: { type: string; contactName: string }[]): Promise<void> {
-    const content = await this.getContent();
-    
-    // Convert simple relationship format to Relationship entities
-    const relationshipEntities: Relationship[] = [];
-    for (const rel of relationships) {
-      const relType = RelationshipType.fromString(rel.type);
-      const target = RelationshipReference.fromString(rel.contactName);
-      relationshipEntities.push(Relationship.create(relType, target));
-    }
-    
-    // Create RelatedSection from relationships
-    const relatedSection = RelatedSection.fromRelationships(relationshipEntities, 'Related', 2);
-    const sectionMarkdown = relatedSection.toMarkdown();
-    
-    // Find and replace the Related section if it exists
-    const relatedSectionRegex = /^(#{2,4} Related\s*\n)([\s\S]*?)(?=\n#{2,4} |\n#\w+|$)/m;
-    
-    if (relatedSectionRegex.test(content)) {
-      // Replace existing Related section
-      const newContent = content.replace(relatedSectionRegex, sectionMarkdown + '\n');
-      await this.contactData.updateContent(newContent);
-    } else {
-      // Add Related section before hashtags or at end
-      const hashtagMatch = content.match(/\n(#\w+)/);
-      let newContent: string;
-      
-      if (hashtagMatch) {
-        // Insert before hashtags
-        const insertPos = content.indexOf(hashtagMatch[0]);
-        newContent = content.slice(0, insertPos) + `\n${sectionMarkdown}\n` + content.slice(insertPos);
-      } else {
-        // Add at end
-        newContent = content + `\n\n${sectionMarkdown}\n`;
-      }
-      
-      await this.contactData.updateContent(newContent);
-    }
-  }
-
-  /**
    * Find contact by name in the contacts folder
-   */
-  /**
-   * Find contact by name (override to handle test environment)
    */
   async findContactByName(contactName: string): Promise<TFile | null> {
     try {
-      // First try the delegated method
-      return this.relationshipOps.findContactByName(contactName);
-    } catch (error: any) {
-      // Fallback implementation for test environment
       const contactsFolder = this.settings.contactsFolder || 'Contacts';
       
-      // Try exact path match first
+      // Normalize the contact name
       const normalizedContactName = contactName.toLowerCase().replace(/\s+/g, '-');
-      let contactFile = this.app.vault.getAbstractFileByPath(`${contactsFolder}/${normalizedContactName}.md`);
+      const contactFile = this.app.vault.getAbstractFileByPath(`${contactsFolder}/${normalizedContactName}.md`);
       
-      if (contactFile) {
+      if (contactFile && 'path' in contactFile && 'basename' in contactFile) {
         return contactFile as TFile;
       }
-      
-      // Try basename match
-      contactFile = this.app.vault.getAbstractFileByPath(`${contactsFolder}/${contactName}.md`);
-      if (contactFile) {
-        return contactFile as TFile;
-      }
-      
-      // Search through all markdown files in contacts folder
+
+      // Search for file in contacts folder
       const allFiles = this.app.vault.getMarkdownFiles();
-      for (const file of allFiles) {
-        if (file.path.startsWith(contactsFolder)) {
-          if (file.basename === contactName || 
-              file.basename.toLowerCase() === contactName.toLowerCase() ||
-              file.basename.replace(/\s+/g, '-').toLowerCase() === normalizedContactName) {
-            return file;
-          }
-        }
-      }
-      
+      const matchingFiles = allFiles.filter(file => {
+        const normalizedBasename = file.basename.toLowerCase().replace(/\s+/g, '-');
+        return normalizedBasename === normalizedContactName &&
+          file.path.startsWith(contactsFolder);
+      });
+
+      return matchingFiles.length > 0 ? matchingFiles[0] : null;
+    } catch (error: any) {
+      console.error('Error finding contact by name:', error);
       return null;
     }
   }
@@ -317,19 +215,40 @@ export class ContactNote {
    * Resolve contact information from contact name
    */
   async resolveContact(contactName: string): Promise<ResolvedContact | null> {
-    return this.relationshipOps.resolveContact(contactName);
+    const file = await this.findContactByName(contactName);
+    if (!file) return null;
+    
+    // Create a temporary ContactData for the target contact
+    const targetContactData = new ContactData(this.app, file);
+    
+    try {
+      const uid = await targetContactData.getUID();
+      const gender = await targetContactData.getGender();
+      
+      return {
+        name: contactName,
+        uid: uid || '',
+        file: file,
+        gender: gender
+      };
+    } catch (error: any) {
+      console.debug(`[ContactNote] Error resolving contact ${contactName}: ${error.message}`);
+      return null;
+    }
   }
 
   /**
    * Format a related value for vCard RELATED field
    */
   formatRelatedValue(targetUid: string, targetName: string): string {
-    // Format as UID reference: uid:xxx
-    if (targetUid) {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (uuidRegex.test(targetUid)) {
+      return `urn:uuid:${targetUid}`;
+    } else if (targetUid) {
       return `uid:${targetUid}`;
+    } else {
+      return `name:${targetName}`;
     }
-    // Fallback to name
-    return targetName;
   }
 
   /**
@@ -381,6 +300,180 @@ export class ContactNote {
   }
 
   /**
+   * Parse RELATED fields from frontmatter
+   */
+  async parseFrontmatterRelationships(): Promise<FrontmatterRelationship[]> {
+    const frontmatter = await this.contactData.getFrontmatter();
+    const relationships: FrontmatterRelationship[] = [];
+
+    if (!frontmatter) return relationships;
+
+    for (const [key, value] of Object.entries(frontmatter)) {
+      if (key.startsWith('RELATED')) {
+        // Handle RELATED as an object (from RELATED.type YAML dot notation)
+        if (key === 'RELATED' && typeof value === 'object' && value !== null && !Array.isArray(value)) {
+          for (const [nestedKey, nestedValue] of Object.entries(value)) {
+            if (typeof nestedValue === 'string') {
+              const correctedKey = `RELATED.${nestedKey}`;
+              const type = nestedKey;
+              const parsedValue = this.parseRelatedValue(nestedValue);
+              
+              relationships.push({
+                key: correctedKey,
+                type,
+                value: nestedValue,
+                parsedValue: parsedValue || undefined
+              });
+              
+              console.debug(`[ContactNote] Parsed RELATED.${nestedKey}`);
+            } else if (Array.isArray(nestedValue)) {
+              for (let i = 0; i < nestedValue.length; i++) {
+                const arrayValue = nestedValue[i];
+                if (typeof arrayValue === 'string') {
+                  const correctedKey = i === 0 ? `RELATED.${nestedKey}` : `RELATED.${nestedKey}.${i}`;
+                  const parsedValue = this.parseRelatedValue(arrayValue);
+                  
+                  relationships.push({
+                    key: correctedKey,
+                    type: nestedKey,
+                    value: arrayValue,
+                    parsedValue: parsedValue || undefined
+                  });
+                  
+                  console.debug(`[ContactNote] Parsed RELATED.${nestedKey}${i > 0 ? '.' + i : ''}`);
+                }
+              }
+            }
+          }
+          continue;
+        }
+        
+        // Handle RELATED.type format (dot notation as a key)
+        if (key.includes('.') && key !== 'RELATED') {
+          const parts = key.split('.');
+          if (parts[0] === 'RELATED' && parts.length >= 2) {
+            const typePart = parts.slice(1).join('.');
+            
+            if (typeof value === 'string') {
+              const parsedValue = this.parseRelatedValue(value);
+              
+              relationships.push({
+                key: key,
+                type: typePart,
+                value: value,
+                parsedValue: parsedValue || undefined
+              });
+              
+              console.debug(`[ContactNote] Parsed ${key}`);
+              continue;
+            } else if (Array.isArray(value)) {
+              for (let i = 0; i < value.length; i++) {
+                const arrayValue = value[i];
+                if (typeof arrayValue === 'string') {
+                  const correctedKey = i === 0 ? `RELATED.${typePart}` : `RELATED.${typePart}.${i}`;
+                  const parsedValue = this.parseRelatedValue(arrayValue);
+                  
+                  relationships.push({
+                    key: correctedKey,
+                    type: typePart,
+                    value: arrayValue,
+                    parsedValue: parsedValue || undefined
+                  });
+                  
+                  console.debug(`[ContactNote] Parsed ${correctedKey}`);
+                }
+              }
+              continue;
+            } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+              for (const [nestedKey, nestedValue] of Object.entries(value)) {
+                if (typeof nestedValue === 'string') {
+                  const combinedType = `${typePart}.${nestedKey}`;
+                  const parsedValue = this.parseRelatedValue(nestedValue);
+                  
+                  relationships.push({
+                    key: `RELATED.${combinedType}`,
+                    type: combinedType,
+                    value: nestedValue,
+                    parsedValue: parsedValue || undefined
+                  });
+                  
+                  console.debug(`[ContactNote] Parsed RELATED.${combinedType}`);
+                }
+              }
+              continue;
+            } else {
+              let valueType: string = typeof value;
+              if (value === null) {
+                valueType = 'null';
+              } else if (Array.isArray(value)) {
+                valueType = 'array';
+              }
+              console.warn(`[ContactNote] Skipping malformed RELATED key "${key}": Use RELATED.type format. Value type: ${valueType}`);
+              continue;
+            }
+          }
+        }
+        
+        // Skip non-string values
+        if (typeof value !== 'string') {
+          console.warn(`[ContactNote] Skipping non-string RELATED value for key ${key}: ${typeof value}`);
+          continue;
+        }
+        
+        const type = this.extractRelationshipType(key);
+        const parsedValue = this.parseRelatedValue(value);
+        
+        relationships.push({
+          key,
+          type,
+          value: value,
+          parsedValue: parsedValue || undefined
+        });
+      }
+    }
+
+    return relationships;
+  }
+
+  /**
+   * Update Related section in markdown content using entities
+   */
+  async updateRelatedSectionInContent(relationships: { type: string; contactName: string }[]): Promise<void> {
+    const content = await this.getContent();
+    
+    // Convert to entities
+    const relationshipEntities: Relationship[] = [];
+    for (const rel of relationships) {
+      const relType = RelationshipType.fromString(rel.type);
+      const target = RelationshipReference.fromString(rel.contactName);
+      relationshipEntities.push(Relationship.create(relType, target));
+    }
+    
+    // Create section
+    const relatedSection = RelatedSection.fromRelationships(relationshipEntities, 'Related', 2);
+    const sectionMarkdown = relatedSection.toMarkdown();
+    
+    // Replace section
+    const relatedSectionRegex = /^(#{2,4} Related\s*\n)([\s\S]*?)(?=\n#{2,4} |\n#\w+|$)/m;
+    
+    let newContent: string;
+    if (relatedSectionRegex.test(content)) {
+      newContent = content.replace(relatedSectionRegex, sectionMarkdown + '\n');
+    } else {
+      // Add before hashtags or at end
+      const hashtagMatch = content.match(/\n(#\w+)/);
+      if (hashtagMatch) {
+        const insertPos = content.indexOf(hashtagMatch[0]);
+        newContent = content.slice(0, insertPos) + `\n${sectionMarkdown}\n` + content.slice(insertPos);
+      } else {
+        newContent = content + `\n\n${sectionMarkdown}\n`;
+      }
+    }
+    
+    await this.contactData.updateContent(newContent);
+  }
+
+  /**
    * Get the display term for a relationship based on the contact's gender
    */
   getGenderedRelationshipTerm(relationshipType: string, contactGender: Gender): string {
@@ -428,16 +521,321 @@ export class ContactNote {
    * Render the contact as markdown from vCard record data
    */
   mdRender(record: Record<string, any>, hashtags: string, genderLookup?: (contactRef: string) => Gender): string {
-    return this.markdownOps.mdRender(record, hashtags, genderLookup);
+    const { NOTE, ...recordWithoutNote } = record;
+    const groups = this.groupVCardFields(recordWithoutNote);
+    const myNote = NOTE ? NOTE.replace(/\\n/g, '\n') : '';
+    let additionalTags = '';
+    
+    if (recordWithoutNote.CATEGORIES) {
+      const tempTags = recordWithoutNote.CATEGORIES.split(',');
+      additionalTags = `#${tempTags.join(' #')}`;
+    }
+
+    const frontmatter = {
+      ...this.sortNameItems(groups.name),
+      ...this.sortedPriorityItems(groups.priority),
+      ...groups.address,
+      ...groups.other
+    };
+
+    const relatedSection = this.generateRelatedList(recordWithoutNote, genderLookup);
+
+    return `---\n${stringifyYaml(frontmatter)}---\n${HEADING_LEVELS.SUBSECTION} ${SECTION_NAMES.NOTES}\n${myNote}\n${relatedSection}\n\n${hashtags} ${additionalTags}\n`;
   }
 
-  // === Sync Operations (delegated to SyncOperations) ===
+  private groupVCardFields(record: Record<string, any>) {
+    const nameKeys = FIELD_GROUPS.NAME as readonly string[];
+    const priorityKeys = FIELD_GROUPS.PRIORITY as readonly string[];
+    const addressKeys = FIELD_GROUPS.ADDRESS as readonly string[];
+
+    const groups = {
+      name: {} as Record<string, any>,
+      priority: {} as Record<string, any>,
+      address: {} as Record<string, any>,
+      other: {} as Record<string, any>
+    };
+
+    // Group fields by category for better organization
+    for (const [key, value] of Object.entries(record)) {
+      const baseKey = key.split('[')[0];
+      
+      if (nameKeys.includes(baseKey)) {
+        groups.name[key] = value;
+      } else if (priorityKeys.includes(baseKey)) {
+        groups.priority[key] = value;
+      } else if (addressKeys.includes(baseKey)) {
+        groups.address[key] = value;
+      } else {
+        groups.other[key] = value;
+      }
+    }
+
+    return groups;
+  }
+
+  private sortNameItems(nameItems: Record<string, any>): Record<string, any> {
+    const nameOrder = ["N.PREFIX", "N.GN", "N.MN", "N.FN", "N.SUFFIX", "FN"];
+    const sortedNameItems: Record<string, any> = {};
+
+    // Sort name fields in logical order
+    nameOrder.forEach(key => {
+      if (nameItems[key] !== undefined) {
+        sortedNameItems[key] = nameItems[key];
+      }
+    });
+
+    // Add any remaining name fields
+    Object.keys(nameItems).forEach(key => {
+      if (!nameOrder.includes(key)) {
+        sortedNameItems[key] = nameItems[key];
+      }
+    });
+
+    return sortedNameItems;
+  }
+
+  private sortedPriorityItems(priorityItems: Record<string, any>): Record<string, any> {
+    const priorityOrder = [
+      "EMAIL", "TEL", "BDAY", "URL", "ORG", "TITLE", "ROLE", 
+      "PHOTO", "RELATED", "GENDER"
+    ];
+    const sortedPriorityItems: Record<string, any> = {};
+
+    // Sort priority fields in logical order
+    priorityOrder.forEach(baseKey => {
+      Object.keys(priorityItems).forEach(key => {
+        if (key.startsWith(baseKey)) {
+          sortedPriorityItems[key] = priorityItems[key];
+        }
+      });
+    });
+
+    return sortedPriorityItems;
+  }
+
+  private generateRelatedList(record: Record<string, any>, genderLookup?: (contactRef: string) => Gender): string {
+    const relatedEntries: string[] = [];
+
+    // Process RELATED fields from frontmatter
+    Object.entries(record).forEach(([key, value]) => {
+      if (key.startsWith('RELATED')) {
+        const relationshipType = this.extractRelationshipTypeFromKey(key);
+        const parsedValue = this.parseRelatedValueForMarkdown(value as string);
+        
+        if (parsedValue) {
+          let contactName = parsedValue.value;
+          let displayType = relationshipType;
+          
+          // Apply gender-based relationship terms if gender lookup is available
+          if (genderLookup && parsedValue.type === 'name') {
+            const contactGender = genderLookup(contactName);
+            if (contactGender) {
+              displayType = this.getGenderedRelationshipTermForMarkdown(relationshipType, contactGender);
+            }
+          }
+          
+          relatedEntries.push(`- ${displayType} [[${contactName}]]`);
+        }
+      }
+    });
+
+    if (relatedEntries.length === 0) {
+      return `${HEADING_LEVELS.SECTION} ${SECTION_NAMES.RELATED}\n`;
+    }
+
+    return `${HEADING_LEVELS.SECTION} ${SECTION_NAMES.RELATED}\n${relatedEntries.join('\n')}\n`;
+  }
+
+  private extractRelationshipTypeFromKey(key: string): string {
+    // Try dot notation first (RELATED.type or RELATED.type.1)
+    const dotMatch = key.match(/^RELATED\.([^.]+)(?:\.\d+)?$/);
+    if (dotMatch) {
+      return dotMatch[1];
+    }
+    
+    // Fall back to bracket notation for backward compatibility
+    const bracketMatch = key.match(/RELATED(?:\[(?:\d+:)?([^\]]+)\])?/);
+    return bracketMatch ? bracketMatch[1] || 'related' : 'related';
+  }
+
+  private parseRelatedValueForMarkdown(value: string): { type: 'uuid' | 'uid' | 'name'; value: string } | null {
+    if (value.startsWith('urn:uuid:')) {
+      return { type: 'uuid', value: value.substring(9) };
+    } else if (value.startsWith('uid:')) {
+      return { type: 'uid', value: value.substring(4) };
+    } else if (value.startsWith('name:')) {
+      return { type: 'name', value: value.substring(5) };
+    }
+    return null;
+  }
+
+  private getGenderedRelationshipTermForMarkdown(relationshipType: string, contactGender: Gender): string {
+    const mapping: Record<string, { M: string; F: string; default: string }> = {
+      parent: { M: 'father', F: 'mother', default: 'parent' },
+      auncle: { M: 'uncle', F: 'aunt', default: 'aunt/uncle' },
+      child: { M: 'son', F: 'daughter', default: 'child' },
+      sibling: { M: 'brother', F: 'sister', default: 'sibling' },
+      grandparent: { M: 'grandfather', F: 'grandmother', default: 'grandparent' },
+      grandchild: { M: 'grandson', F: 'granddaughter', default: 'grandchild' },
+      spouse: { M: 'husband', F: 'wife', default: 'spouse' },
+      friend: { M: 'friend', F: 'friend', default: 'friend' },
+      colleague: { M: 'colleague', F: 'colleague', default: 'colleague' },
+      acquaintance: { M: 'acquaintance', F: 'acquaintance', default: 'acquaintance' }
+    };
+
+    const typeMapping = mapping[relationshipType.toLowerCase()];
+    if (!typeMapping) return relationshipType;
+
+    if (contactGender === 'M') return typeMapping.M;
+    if (contactGender === 'F') return typeMapping.F;
+    return typeMapping.default;
+  }
+
+  // === Sync Operations (inlined from SyncOperations) ===
+
+  /**
+   * Deduplicate relationships, preferring gendered terms over ungendered
+   */
+  private deduplicateRelationships(relationships: ParsedRelationship[]): {
+    deduplicated: ParsedRelationship[];
+    inferredGender: Map<string, Gender>;
+  } {
+    const seen = new Map<string, ParsedRelationship>();
+    const inferredGender = new Map<string, Gender>();
+    
+    for (const rel of relationships) {
+      const genderlessType = this.convertToGenderlessType(rel.type);
+      const contactKey = `${genderlessType}:${rel.contactName.toLowerCase()}`;
+      const existing = seen.get(contactKey);
+      
+      if (!existing) {
+        seen.set(contactKey, rel);
+        const gender = this.inferGenderFromRelationship(rel.type);
+        if (gender) {
+          inferredGender.set(rel.contactName, gender);
+        }
+        continue;
+      }
+      
+      const existingGender = this.inferGenderFromRelationship(existing.type);
+      const currentGender = this.inferGenderFromRelationship(rel.type);
+      
+      if (currentGender && !existingGender) {
+        seen.set(contactKey, rel);
+        inferredGender.set(rel.contactName, currentGender);
+      } else if (currentGender) {
+        inferredGender.set(existing.contactName, existingGender!);
+      }
+    }
+    
+    return {
+      deduplicated: Array.from(seen.values()),
+      inferredGender
+    };
+  }
+
+  /**
+   * Find contact by UID
+   */
+  private async findContactByUid(uid: string): Promise<{ name: string; file: any } | null> {
+    const allFiles = this.app.vault.getMarkdownFiles();
+
+    for (const file of allFiles) {
+      try {
+        const tempContactData = new ContactData(this.app, file);
+        const fileUid = await tempContactData.getUID();
+        
+        if (fileUid === uid) {
+          const frontmatter = await tempContactData.getFrontmatter();
+          const contactName = frontmatter?.FN || file.basename;
+          
+          return {
+            name: contactName,
+            file: file
+          };
+        }
+      } catch (error: any) {
+        continue;
+      }
+    }
+
+    return null;
+  }
 
   /**
    * Sync Related list from markdown to frontmatter
    */
   async syncRelatedListToFrontmatter(): Promise<{ success: boolean; errors: string[] }> {
-    return this.syncOps.syncRelatedListToFrontmatter();
+    const errors: string[] = [];
+    
+    try {
+      const relationships = await this.parseRelatedSection();
+      const { deduplicated, inferredGender } = this.deduplicateRelationships(relationships);
+      
+      const frontmatterUpdates: Record<string, string> = {};
+      const typeIndices = new Map<string, number>();
+
+      // Clear existing RELATED fields
+      const frontmatter = await this.contactData.getFrontmatter();
+      if (frontmatter) {
+        Object.keys(frontmatter).forEach(key => {
+          if (key.startsWith('RELATED') || key === 'RELATED') {
+            frontmatterUpdates[key] = '';
+          }
+        });
+      }
+
+      // Process each relationship
+      for (const relationship of deduplicated) {
+        try {
+          const genderlessType = this.convertToGenderlessType(relationship.type);
+          const currentIndex = typeIndices.get(genderlessType) || 0;
+          typeIndices.set(genderlessType, currentIndex + 1);
+          
+          const resolvedContact = await this.resolveContact(relationship.contactName);
+          
+          if (resolvedContact) {
+            const relatedValue = this.formatRelatedValue(
+              resolvedContact.uid, 
+              resolvedContact.name
+            );
+            
+            const key = currentIndex === 0 
+              ? `RELATED.${genderlessType}`
+              : `RELATED.${genderlessType}.${currentIndex}`;
+            
+            frontmatterUpdates[key] = relatedValue;
+          } else {
+            const key = currentIndex === 0 
+              ? `RELATED.${genderlessType}`
+              : `RELATED.${genderlessType}.${currentIndex}`;
+            
+            frontmatterUpdates[key] = `name:${relationship.contactName}`;
+            errors.push(`Could not resolve contact: ${relationship.contactName}`);
+          }
+        } catch (error: any) {
+          errors.push(`Error processing relationship ${relationship.contactName}: ${error.message}`);
+        }
+      }
+
+      if (Object.keys(frontmatterUpdates).length > 0) {
+        await this.contactData.updateMultipleFrontmatterValues(frontmatterUpdates);
+      }
+      
+      if (relationships.length !== deduplicated.length) {
+        await this.updateRelatedSectionInContent(
+          deduplicated.map(rel => ({
+            type: rel.type,
+            contactName: rel.contactName
+          }))
+        );
+      }
+
+      return { success: true, errors };
+    } catch (error: any) {
+      errors.push(`Sync operation failed: ${error.message}`);
+      return { success: false, errors };
+    }
   }
 
   /**
@@ -448,14 +846,99 @@ export class ContactNote {
     errors: string[];
     updatedRelationships?: Array<{ newName: string; uid: string; oldName?: string }>;
   }> {
-    return this.syncOps.syncFrontmatterToRelatedList();
+    const errors: string[] = [];
+    const updatedRelationships: Array<{ newName: string; uid: string; oldName?: string }> = [];
+    
+    try {
+      const frontmatterRelationships = await this.parseFrontmatterRelationships();
+      const existingMarkdownRelationships = await this.parseRelatedSection();
+      
+      const markdownRelationships: { type: string; contactName: string }[] = 
+        existingMarkdownRelationships.map(rel => ({ type: rel.type, contactName: rel.contactName }));
+
+      for (const fmRel of frontmatterRelationships) {
+        try {
+          if (fmRel.parsedValue) {
+            let contactName: string;
+            
+            if (fmRel.parsedValue.type === 'name') {
+              contactName = fmRel.parsedValue.value;
+            } else {
+              const resolvedContact = await this.findContactByUid(fmRel.parsedValue.value);
+              if (resolvedContact) {
+                contactName = resolvedContact.name;
+                
+                const existingRel = existingMarkdownRelationships.find(rel => 
+                  rel.type === fmRel.type
+                );
+                if (existingRel && existingRel.contactName !== contactName) {
+                  updatedRelationships.push({
+                    newName: contactName,
+                    uid: fmRel.parsedValue.value,
+                    oldName: existingRel.contactName
+                  });
+                }
+              } else {
+                contactName = fmRel.parsedValue.value;
+                errors.push(`Could not resolve UID/UUID: ${fmRel.parsedValue.value}`);
+              }
+            }
+            
+            const genderlessFmType = this.convertToGenderlessType(fmRel.type);
+            const alreadyExists = markdownRelationships.some(rel => {
+              const genderlessMdType = this.convertToGenderlessType(rel.type);
+              return genderlessMdType === genderlessFmType && 
+                     rel.contactName.toLowerCase() === contactName.toLowerCase();
+            });
+            
+            if (!alreadyExists) {
+              markdownRelationships.push({
+                type: fmRel.type,
+                contactName: contactName
+              });
+            }
+          } else {
+            errors.push(`Could not parse RELATED value: ${fmRel.value}`);
+          }
+        } catch (error: any) {
+          errors.push(`Error processing frontmatter relationship ${fmRel.key}: ${error.message}`);
+        }
+      }
+
+      await this.updateRelatedSectionInContent(markdownRelationships);
+
+      return { success: true, errors, updatedRelationships };
+    } catch (error: any) {
+      errors.push(`Frontmatter to markdown sync failed: ${error.message}`);
+      return { success: false, errors };
+    }
   }
 
   /**
    * Perform full bidirectional sync between markdown and frontmatter
    */
   async performFullSync(): Promise<{ success: boolean; errors: string[] }> {
-    return this.syncOps.performFullSync();
+    const allErrors: string[] = [];
+    let overallSuccess = true;
+
+    try {
+      const markdownToFm = await this.syncRelatedListToFrontmatter();
+      if (!markdownToFm.success) {
+        overallSuccess = false;
+      }
+      allErrors.push(...markdownToFm.errors);
+
+      const fmToMarkdown = await this.syncFrontmatterToRelatedList();
+      if (!fmToMarkdown.success) {
+        overallSuccess = false;
+      }
+      allErrors.push(...fmToMarkdown.errors);
+
+      return { success: overallSuccess, errors: allErrors };
+    } catch (error: any) {
+      allErrors.push(`Full sync operation failed: ${error.message}`);
+      return { success: false, errors: allErrors };
+    }
   }
 
   /**
@@ -466,7 +949,49 @@ export class ContactNote {
     issues: string[]; 
     recommendations: string[] 
   }> {
-    return this.syncOps.validateRelationshipConsistency();
+    const issues: string[] = [];
+    const recommendations: string[] = [];
+
+    try {
+      const markdownRels = await this.parseRelatedSection();
+      const frontmatterRels = await this.parseFrontmatterRelationships();
+
+      if (markdownRels.length !== frontmatterRels.length) {
+        issues.push(`Relationship count mismatch: ${markdownRels.length} in markdown, ${frontmatterRels.length} in frontmatter`);
+        recommendations.push('Run full sync to resolve count discrepancies');
+      }
+
+      for (const rel of markdownRels) {
+        const resolvedContact = await this.resolveContact(rel.contactName);
+        if (!resolvedContact) {
+          issues.push(`Unresolved contact in markdown: ${rel.contactName}`);
+          recommendations.push(`Check if contact file exists for: ${rel.contactName}`);
+        }
+      }
+
+      for (const fmRel of frontmatterRels) {
+        if (fmRel.parsedValue?.type === 'uid' || fmRel.parsedValue?.type === 'uuid') {
+          const resolvedContact = await this.findContactByUid(fmRel.parsedValue.value);
+          if (!resolvedContact) {
+            issues.push(`Orphaned UID in frontmatter: ${fmRel.parsedValue.value}`);
+            recommendations.push(`Remove or update orphaned relationship: ${fmRel.key}`);
+          }
+        }
+      }
+
+      return {
+        isConsistent: issues.length === 0,
+        issues,
+        recommendations
+      };
+    } catch (error: any) {
+      issues.push(`Validation failed: ${error.message}`);
+      return {
+        isConsistent: false,
+        issues,
+        recommendations: ['Fix validation errors before checking consistency']
+      };
+    }
   }
 
   // === Validation Methods ===
@@ -478,35 +1003,82 @@ export class ContactNote {
     isValid: boolean;
     issues: string[];
   }> {
-    return this.validationOps.validateRequiredFields();
+    const frontmatter = await this.contactData.getFrontmatter();
+    const issues: string[] = [];
+    
+    if (!frontmatter) {
+      issues.push('no-frontmatter');
+      return { isValid: false, issues };
+    }
+    
+    const hasUID = frontmatter.UID && frontmatter.UID.trim() !== '';
+    const hasFN = frontmatter.FN && frontmatter.FN.trim() !== '';
+    
+    if (!frontmatter.UID) {
+      issues.push('missing-uid');
+    } else if (frontmatter.UID.trim() === '') {
+      issues.push('empty-uid');
+    }
+    
+    if (!frontmatter.FN) {
+      issues.push('missing-name');
+    }
+    
+    const isValid = hasUID && hasFN;
+    return { isValid, issues };
   }
 
   /**
    * Validate email format
    */
   validateEmail(email: string): boolean {
-    return this.validationOps.validateEmail(email);
+    if (!email || typeof email !== 'string') return true; // Empty is valid
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
   }
 
   /**
    * Validate phone number format
    */
   validatePhoneNumber(phone: string): boolean {
-    return this.validationOps.validatePhoneNumber(phone);
+    if (!phone || typeof phone !== 'string') return true; // Empty is valid
+    // Allow various phone formats but reject obviously invalid ones
+    const phoneRegex = /^[\+]?[\s\-\(\)0-9]{7,}$/;
+    return phoneRegex.test(phone.replace(/\s/g, ''));
   }
 
   /**
    * Validate date format
    */
   validateDate(dateStr: string): boolean {
-    return this.validationOps.validateDate(dateStr);
+    if (!dateStr || typeof dateStr !== 'string') return true; // Empty is valid
+    
+    // Try various date formats
+    const date = new Date(dateStr);
+    return !isNaN(date.getTime());
   }
 
   /**
    * Sanitize user input to prevent XSS
    */
   sanitizeInput(input: string): string {
-    return this.validationOps.sanitizeInput(input);
+    if (!input || typeof input !== 'string') return '';
+    
+    // Basic XSS prevention - remove script tags and dangerous content
+    return input
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+      .replace(/javascript:/gi, 'removed:')
+      .replace(/on\w+\s*=/gi, 'removed=')
+      .replace(/alert\s*\(/gi, 'removed(');
+  }
+
+  /**
+   * Validate URL format
+   */
+  private validateURL(url: string): boolean {
+    if (!url || typeof url !== 'string') return true; // Empty is valid
+    // Basic URL validation - must start with http:// or https://
+    return /^https?:\/\/.+/.test(url);
   }
 
   /**
@@ -517,7 +1089,61 @@ export class ContactNote {
     invalidFields: Array<{ key: string; value: string; reason: string }>;
     errors: string[];
   }> {
-    return this.validationOps.identifyInvalidFrontmatterFields();
+    const invalidFields: Array<{ key: string; value: string; reason: string }> = [];
+    const errors: string[] = [];
+
+    try {
+      const frontmatter = await this.contactData.getFrontmatter();
+      if (!frontmatter) {
+        return { invalidFields, errors };
+      }
+
+      // Check each frontmatter key
+      for (const key of Object.keys(frontmatter)) {
+        const value = frontmatter[key];
+        
+        // Skip non-string values or empty values
+        if (!value || typeof value !== 'string') {
+          continue;
+        }
+
+        // Check EMAIL fields
+        if (key.startsWith('EMAIL')) {
+          if (!this.validateEmail(value)) {
+            invalidFields.push({ 
+              key, 
+              value, 
+              reason: 'Invalid email format (must contain @ and domain)' 
+            });
+          }
+        }
+        // Check TEL fields
+        else if (key.startsWith('TEL')) {
+          if (!this.validatePhoneNumber(value)) {
+            invalidFields.push({ 
+              key, 
+              value, 
+              reason: 'Invalid phone format (must contain digits)' 
+            });
+          }
+        }
+        // Check URL fields
+        else if (key.startsWith('URL')) {
+          if (!this.validateURL(value)) {
+            invalidFields.push({ 
+              key, 
+              value, 
+              reason: 'Invalid URL format (must start with http:// or https://)' 
+            });
+          }
+        }
+      }
+
+    } catch (error: any) {
+      errors.push(`Error identifying invalid fields: ${error.message}`);
+    }
+
+    return { invalidFields, errors };
   }
 
   /**
@@ -528,7 +1154,68 @@ export class ContactNote {
     removed: string[];
     errors: string[];
   }> {
-    return this.validationOps.removeFieldsFromFrontmatter(keysToRemove);
+    const removed: string[] = [];
+    const errors: string[] = [];
+
+    try {
+      const frontmatter = await this.contactData.getFrontmatter();
+      if (!frontmatter) {
+        return { removed, errors };
+      }
+
+      // Remove specified fields
+      for (const key of keysToRemove) {
+        if (key in frontmatter) {
+          delete frontmatter[key];
+          removed.push(key);
+        }
+      }
+
+      // Save the updated frontmatter if any fields were removed
+      if (removed.length > 0) {
+        await this.saveFrontmatterDirect(frontmatter);
+      }
+
+    } catch (error: any) {
+      errors.push(`Error removing fields: ${error.message}`);
+    }
+
+    return { removed, errors };
+  }
+
+  /**
+   * Save frontmatter directly by reconstructing the file content
+   * This is a helper method for removeFieldsFromFrontmatter
+   */
+  private async saveFrontmatterDirect(frontmatter: Record<string, any>): Promise<void> {
+    // Import yaml library for stringification
+    const { stringify: stringifyYaml } = await import('yaml');
+    
+    const content = await this.contactData.getContent();
+    
+    // Use yaml library to stringify frontmatter
+    let frontmatterYaml = stringifyYaml(frontmatter);
+    
+    // Ensure frontmatter YAML ends with a newline
+    if (!frontmatterYaml.endsWith('\n')) {
+      frontmatterYaml += '\n';
+    }
+    
+    const hasExistingFrontmatter = content.startsWith('---\n');
+    let newContent: string;
+    
+    if (hasExistingFrontmatter) {
+      const endIndex = content.indexOf('---\n', 4);
+      if (endIndex !== -1) {
+        newContent = `---\n${frontmatterYaml}---\n${content.substring(endIndex + 4)}`;
+      } else {
+        newContent = `---\n${frontmatterYaml}---\n${content}`;
+      }
+    } else {
+      newContent = `---\n${frontmatterYaml}---\n${content}`;
+    }
+    
+    await this.contactData.updateContent(newContent);
   }
 
   // === Advanced Relationship Operations ===
@@ -543,10 +1230,76 @@ export class ContactNote {
     linkType: 'uid' | 'name';
     originalType: string;
   }>> {
-    return this.advancedRelationshipOps.getRelationships(
-      this.resolveContact.bind(this),
-      this.resolveContactNameByUID.bind(this)
-    );
+    const relationships = await this.parseRelatedSection();
+    const frontmatterRelationships = await this.parseFrontmatterRelationships();
+    
+    const result: Array<{
+      type: string;
+      contactName: string;
+      targetUID?: string;
+      linkType: 'uid' | 'name';
+      originalType: string;
+    }> = [];
+    const processedTargets = new Set<string>();
+    
+    for (const fmRel of frontmatterRelationships) {
+      if (fmRel.parsedValue && (fmRel.parsedValue.type === 'uuid' || fmRel.parsedValue.type === 'uid')) {
+        const contactName = await this.resolveContactNameByUID(fmRel.parsedValue.value);
+        if (contactName) {
+          result.push({
+            type: fmRel.type,
+            contactName,
+            targetUID: fmRel.parsedValue.value,
+            linkType: 'uid',
+            originalType: fmRel.type
+          });
+          processedTargets.add(contactName.toLowerCase());
+        }
+      } else if (fmRel.parsedValue && fmRel.parsedValue.type === 'name') {
+        const resolved = await this.resolveContact(fmRel.parsedValue.value);
+        const obj: {
+          type: string;
+          contactName: string;
+          targetUID?: string;
+          linkType: 'uid' | 'name';
+          originalType: string;
+        } = {
+          type: fmRel.type,
+          contactName: fmRel.parsedValue.value,
+          linkType: resolved?.uid ? 'uid' : 'name',
+          originalType: fmRel.type
+        };
+        if (resolved?.uid) {
+          obj.targetUID = resolved.uid;
+        }
+        result.push(obj);
+        processedTargets.add(fmRel.parsedValue.value.toLowerCase());
+      }
+    }
+    
+    for (const rel of relationships) {
+      if (!processedTargets.has(rel.contactName.toLowerCase())) {
+        const resolved = await this.resolveContact(rel.contactName);
+        const obj: {
+          type: string;
+          contactName: string;
+          targetUID?: string;
+          linkType: 'uid' | 'name';
+          originalType: string;
+        } = {
+          type: rel.type,
+          contactName: rel.contactName,
+          linkType: resolved?.uid ? 'uid' : 'name',
+          originalType: rel.type
+        };
+        if (resolved?.uid) {
+          obj.targetUID = resolved.uid;
+        }
+        result.push(obj);
+      }
+    }
+    
+    return result;
   }
 
   /**
@@ -594,12 +1347,60 @@ export class ContactNote {
     type: 'uid' | 'name';
     contactName: string;
   } | null> {
-    return this.advancedRelationshipOps.resolveRelationshipTarget(
-      identifierOrType,
-      (uid: string) => UID.validate(uid),
-      this.resolveContactByUID.bind(this),
-      this.findContactByName.bind(this)
-    );
+    // First, check if identifier is a relationship type in frontmatter
+    const frontmatter = await this.contactData.getFrontmatter();
+    if (frontmatter) {
+      for (const [key, value] of Object.entries(frontmatter)) {
+        if (key.startsWith('RELATED[') && typeof value === 'string') {
+          const typeMatch = key.match(/RELATED\[(?:\d+:)?([^\]]+)\]/);
+          const relType = typeMatch ? typeMatch[1] : '';
+          
+          if (relType.toLowerCase() === identifierOrType.toLowerCase()) {
+            const parsedValue = this.parseRelatedValue(value);
+            if (parsedValue && (parsedValue.type === 'uuid' || parsedValue.type === 'uid')) {
+              const result = await this.resolveContactByUID(parsedValue.value);
+              if (result) {
+                const contactName = result.frontmatter?.FN || result.file.basename;
+                return { 
+                  file: result.file, 
+                  frontmatter: result.frontmatter,
+                  type: 'uid', 
+                  contactName 
+                };
+              }
+            }
+          }
+        }
+      }
+    }
+    
+    // Check if it's a UID format
+    if (identifierOrType.startsWith('urn:uuid:') || UID.validate(identifierOrType)) {
+      const result = await this.resolveContactByUID(identifierOrType);
+      if (result) {
+        const contactName = result.frontmatter?.FN || result.file.basename;
+        return { 
+          file: result.file, 
+          frontmatter: result.frontmatter,
+          type: 'uid', 
+          contactName 
+        };
+      }
+    }
+    
+    // Fall back to name resolution
+    const file = await this.findContactByName(identifierOrType);
+    if (file) {
+      const cache = this.app.metadataCache.getFileCache(file);
+      return { 
+        file, 
+        frontmatter: cache?.frontmatter,
+        type: 'name', 
+        contactName: identifierOrType 
+      };
+    }
+    
+    return null;
   }
 
   /**
@@ -616,12 +1417,92 @@ export class ContactNote {
     }>;
     errors: string[];
   }> {
-    return this.advancedRelationshipOps.processReverseRelationships(
-      this.getDisplayName.bind(this),
-      this.getReciprocalRelationshipType.bind(this),
-      this.areRelationshipTypesEquivalent.bind(this),
-      (file: TFile) => new ContactNote(this.app, this.settings, file)
-    );
+    const result: {
+      success: boolean;
+      processedRelationships: Array<{
+        targetContact: string;
+        reverseType: string;
+        added: boolean;
+        reason?: string;
+        error?: string;
+      }>;
+      errors: string[];
+    } = {
+      success: true,
+      processedRelationships: [],
+      errors: []
+    };
+
+    try {
+      const relationships = await this.parseRelatedSection();
+      const sourceContactName = this.getDisplayName();
+      const sourceFrontmatter = await this.contactData.getFrontmatter();
+      const sourceGender = sourceFrontmatter?.GENDER as Gender;
+      
+      for (const relationship of relationships) {
+        const targetFile = await this.findContactByName(relationship.contactName);
+        if (!targetFile) {
+          result.processedRelationships.push({
+            targetContact: relationship.contactName,
+            reverseType: '',
+            added: false,
+            reason: 'target contact not found',
+            error: 'Target contact not found'
+          });
+          continue;
+        }
+
+        const targetContact = new ContactNote(this.app, this.settings, targetFile);
+        const reverseType = this.getReciprocalRelationshipType(relationship.type, sourceGender);
+        
+        if (!reverseType) {
+          result.processedRelationships.push({
+            targetContact: relationship.contactName,
+            reverseType: '',
+            added: false,
+            reason: 'no reciprocal relationship type available',
+            error: 'No reciprocal relationship type available'
+          });
+          continue;
+        }
+
+        const targetRelationships = await targetContact.parseRelatedSection();
+        
+        const reverseExists = targetRelationships.some((rel: any) => {
+          const normalizedRelName = rel.contactName.toLowerCase().replace(/[\s\-]/g, '');
+          const normalizedSourceName = sourceContactName.toLowerCase().replace(/[\s\-]/g, '');
+          return normalizedRelName === normalizedSourceName && 
+            this.areRelationshipTypesEquivalent(rel.type, reverseType);
+        });
+
+        if (!reverseExists) {
+          const newRelationships = [...targetRelationships, {
+            type: reverseType,
+            contactName: sourceContactName
+          }];
+          
+          await targetContact.updateRelatedSectionInContent(newRelationships);
+          
+          result.processedRelationships.push({
+            targetContact: relationship.contactName,
+            reverseType,
+            added: true
+          });
+        } else {
+          result.processedRelationships.push({
+            targetContact: relationship.contactName,
+            reverseType,
+            added: false,
+            reason: 'relationship already exists'
+          });
+        }
+      }
+    } catch (error: any) {
+      result.success = false;
+      result.errors.push(`Error processing reverse relationships: ${error.message}`);
+    }
+
+    return result;
   }
 
   /**
@@ -636,9 +1517,89 @@ export class ContactNote {
     }>;
     errors: string[];
   }> {
-    return this.advancedRelationshipOps.upgradeNameBasedRelationshipsToUID(
-      this.findContactByName.bind(this)
-    );
+    const result: {
+      success: boolean;
+      upgradedRelationships: Array<{
+        targetUID: string;
+        type: string;
+        key: string;
+      }>;
+      errors: string[];
+    } = { success: true, upgradedRelationships: [], errors: [] };
+
+    try {
+      const frontmatter = await this.contactData.getFrontmatter();
+      const updates: Record<string, string> = {};
+      
+      if (frontmatter) {
+        for (const [key, value] of Object.entries(frontmatter)) {
+          if (key.startsWith('RELATED[') && typeof value === 'string') {
+            const parsedValue = this.parseRelatedValue(value);
+            if (parsedValue && parsedValue.type === 'name') {
+              const targetFile = await this.findContactByName(parsedValue.value);
+              if (targetFile) {
+                const targetCache = this.app.metadataCache.getFileCache(targetFile);
+                const targetUID = targetCache?.frontmatter?.UID;
+                
+                if (targetUID) {
+                  updates[key] = this.formatRelatedValue(targetUID, parsedValue.value);
+                  const typeMatch = key.match(/RELATED\[(?:\d+:)?([^\]]+)\]/);
+                  const relType = typeMatch ? typeMatch[1] : 'related';
+                  result.upgradedRelationships.push({
+                    targetUID,
+                    type: relType,
+                    key
+                  });
+                }
+              }
+            }
+          }
+        }
+      }
+
+      const markdownRelationships = await this.parseRelatedSection();
+      let relationshipIndex = 0;
+      
+      for (const relationship of markdownRelationships) {
+        const hasFrontmatterEntry = frontmatter && Object.keys(frontmatter).some(key => {
+          if (!key.startsWith('RELATED[')) return false;
+          const typeMatch = key.match(/RELATED\[(?:\d+:)?([^\]]+)\]/);
+          const relType = typeMatch ? typeMatch[1] : '';
+          return relType.toLowerCase() === relationship.type.toLowerCase();
+        });
+        
+        if (!hasFrontmatterEntry) {
+          const targetFile = await this.findContactByName(relationship.contactName);
+          if (targetFile) {
+            const targetCache = this.app.metadataCache.getFileCache(targetFile);
+            const targetUID = targetCache?.frontmatter?.UID;
+            
+            if (targetUID) {
+              const key = relationshipIndex === 0 && !hasFrontmatterEntry
+                ? `RELATED.${relationship.type}`
+                : `RELATED.${relationship.type}.${relationshipIndex}`;
+              
+              updates[key] = this.formatRelatedValue(targetUID, relationship.contactName);
+              result.upgradedRelationships.push({
+                targetUID,
+                type: relationship.type,
+                key
+              });
+              relationshipIndex++;
+            }
+          }
+        }
+      }
+
+      if (Object.keys(updates).length > 0) {
+        await this.contactData.updateMultipleFrontmatterValues(updates);
+      }
+    } catch (error: any) {
+      result.success = false;
+      result.errors.push(`Error upgrading relationships: ${error.message}`);
+    }
+
+    return result;
   }
 
   /**
@@ -829,14 +1790,180 @@ export class ContactNote {
    * Get reciprocal relationship type with gender awareness
    */
   private getReciprocalRelationshipType(relationshipType: string, targetGender?: Gender): string | null {
-    return this.relationshipHelpers.getReciprocalRelationshipType(relationshipType, targetGender);
+    const reciprocalMap: Record<string, string | Record<string, string>> = {
+      'father': {
+        'M': 'son',
+        'F': 'daughter',
+        'NB': 'child',
+        'O': 'child',
+        'N': 'child',
+        'U': 'child',
+        'default': 'child'
+      },
+      'mother': {
+        'M': 'son',
+        'F': 'daughter',
+        'NB': 'child',
+        'O': 'child',
+        'N': 'child',
+        'U': 'child',
+        'default': 'child'
+      },
+      'parent': {
+        'M': 'son',
+        'F': 'daughter',
+        'NB': 'child',
+        'O': 'child', 
+        'N': 'child',
+        'U': 'child',
+        'default': 'child'
+      },
+      'son': 'parent',
+      'daughter': 'parent',
+      'child': 'parent',
+      'brother': {
+        'M': 'brother',
+        'F': 'sister',
+        'NB': 'sibling',
+        'O': 'sibling',
+        'N': 'sibling', 
+        'U': 'sibling',
+        'default': 'sibling'
+      },
+      'sister': {
+        'M': 'brother',
+        'F': 'sister',
+        'NB': 'sibling',
+        'O': 'sibling',
+        'N': 'sibling',
+        'U': 'sibling', 
+        'default': 'sibling'
+      },
+      'sibling': 'sibling',
+      'spouse': 'spouse',
+      'husband': 'wife',
+      'wife': 'husband',
+      'friend': 'friend',
+      'colleague': 'colleague',
+      'manager': 'employee',
+      'employee': 'manager',
+      'boss': 'employee',
+      'mentor': 'mentee',
+      'mentee': 'mentor',
+      'uncle': {
+        'M': 'nephew',
+        'F': 'niece',
+        'NB': 'nephew',
+        'O': 'nephew',
+        'N': 'nephew',
+        'U': 'nephew',
+        'default': 'nephew'
+      },
+      'aunt': {
+        'M': 'nephew',
+        'F': 'niece',
+        'NB': 'nephew',
+        'O': 'nephew',
+        'N': 'nephew',
+        'U': 'nephew',
+        'default': 'nephew'
+      },
+      'nephew': {
+        'M': 'uncle',
+        'F': 'aunt',
+        'NB': 'uncle',
+        'O': 'uncle',
+        'N': 'uncle',
+        'U': 'uncle',
+        'default': 'uncle'
+      },
+      'niece': {
+        'M': 'uncle',
+        'F': 'aunt',
+        'NB': 'aunt',
+        'O': 'uncle',
+        'N': 'uncle',
+        'U': 'uncle',
+        'default': 'uncle'
+      }
+    };
+    
+    const mapping = reciprocalMap[relationshipType.toLowerCase()];
+    if (!mapping) return null;
+    
+    if (typeof mapping === 'string') {
+      return mapping;
+    }
+    
+    // Use gender-specific mapping if available
+    if (targetGender && mapping[targetGender]) {
+      return mapping[targetGender];
+    }
+    
+    return mapping.default || null;
   }
 
   /**
    * Check if two relationship types are equivalent
    */
   private areRelationshipTypesEquivalent(type1: string, type2: string): boolean {
-    return this.relationshipHelpers.areRelationshipTypesEquivalent(type1, type2, this.convertToGenderlessType.bind(this));
+    const genderless1 = this.convertToGenderlessType(type1);
+    const genderless2 = this.convertToGenderlessType(type2);
+    return genderless1 === genderless2;
+  }
+
+  // === Helper methods from BaseMarkdownSectionOperations ===
+
+  /**
+   * Remove frontmatter from markdown content
+   */
+  private removeFrontmatter(content: string): string {
+    const frontmatterRegex = /^---\n[\s\S]*?\n---\n/;
+    return content.replace(frontmatterRegex, '');
+  }
+
+  /**
+   * Find list tokens after a specific heading
+   */
+  private findListAfterHeading(tokens: Tokens.Generic[], headingName: string): Tokens.List | null {
+    const heading = this.findHeadingByName(tokens, headingName);
+    if (!heading) {
+      return null;
+    }
+    
+    const headingIndex = tokens.indexOf(heading);
+    
+    for (let i = headingIndex + 1; i < tokens.length; i++) {
+      const token = tokens[i];
+      
+      if (token.type === 'heading') {
+        break;
+      }
+      
+      if (token.type === 'list') {
+        return token as Tokens.List;
+      }
+    }
+    
+    return null;
+  }
+
+  /**
+   * Find a heading token by name (case-insensitive)
+   */
+  private findHeadingByName(tokens: Tokens.Generic[], name: string): Tokens.Heading | null {
+    const normalized = name.toLowerCase();
+    
+    for (const token of tokens) {
+      if (token.type === 'heading') {
+        const heading = token as Tokens.Heading;
+        if (heading.text.toLowerCase() === normalized) {
+          return heading;
+        }
+      }
+    }
+    
+    return null;
   }
 
   // === Static Utility Methods ===

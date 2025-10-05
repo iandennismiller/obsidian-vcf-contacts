@@ -32,36 +32,6 @@ export {
   ContactData 
 } from './contactData';
 
-export { 
-  /** Relationship operations with data locality optimization */
-  RelationshipOperations 
-} from './relationshipOperations';
-
-export { 
-  /** Markdown operations optimized for contact rendering */
-  MarkdownOperations 
-} from './markdownOperations';
-
-export { 
-  /** Synchronization operations for contact data */
-  SyncOperations 
-} from './syncOperations';
-
-export {
-  /** Validation operations for contact data */
-  ValidationOperations
-} from './validationOperations';
-
-export {
-  /** Advanced relationship operations */
-  AdvancedRelationshipOperations
-} from './advancedRelationshipOperations';
-
-export {
-  /** Relationship helper methods */
-  RelationshipHelpers
-} from './relationshipHelpers';
-
 // Export utility functions for backward compatibility
 export { 
   mdRender,
