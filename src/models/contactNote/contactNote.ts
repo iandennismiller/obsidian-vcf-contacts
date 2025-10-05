@@ -195,43 +195,29 @@ export class ContactNote {
   /**
    * Find contact by name in the contacts folder
    */
-  /**
-   * Find contact by name (override to handle test environment)
-   */
   async findContactByName(contactName: string): Promise<TFile | null> {
     try {
-      // Use the internal implementation
-      return await this.findContactByNameInternal(contactName);
-    } catch (error: any) {
-      // Fallback implementation for test environment
       const contactsFolder = this.settings.contactsFolder || 'Contacts';
       
-      // Try exact path match first
+      // Normalize the contact name
       const normalizedContactName = contactName.toLowerCase().replace(/\s+/g, '-');
-      let contactFile = this.app.vault.getAbstractFileByPath(`${contactsFolder}/${normalizedContactName}.md`);
+      const contactFile = this.app.vault.getAbstractFileByPath(`${contactsFolder}/${normalizedContactName}.md`);
       
-      if (contactFile) {
+      if (contactFile && 'path' in contactFile && 'basename' in contactFile) {
         return contactFile as TFile;
       }
-      
-      // Try basename match
-      contactFile = this.app.vault.getAbstractFileByPath(`${contactsFolder}/${contactName}.md`);
-      if (contactFile) {
-        return contactFile as TFile;
-      }
-      
-      // Search through all markdown files in contacts folder
+
+      // Search for file in contacts folder
       const allFiles = this.app.vault.getMarkdownFiles();
-      for (const file of allFiles) {
-        if (file.path.startsWith(contactsFolder)) {
-          if (file.basename === contactName || 
-              file.basename.toLowerCase() === contactName.toLowerCase() ||
-              file.basename.replace(/\s+/g, '-').toLowerCase() === normalizedContactName) {
-            return file;
-          }
-        }
-      }
-      
+      const matchingFiles = allFiles.filter(file => {
+        const normalizedBasename = file.basename.toLowerCase().replace(/\s+/g, '-');
+        return normalizedBasename === normalizedContactName &&
+          file.path.startsWith(contactsFolder);
+      });
+
+      return matchingFiles.length > 0 ? matchingFiles[0] : null;
+    } catch (error: any) {
+      console.error('Error finding contact by name:', error);
       return null;
     }
   }
@@ -240,14 +226,40 @@ export class ContactNote {
    * Resolve contact information from contact name
    */
   async resolveContact(contactName: string): Promise<ResolvedContact | null> {
-    return await this.resolveContactInternal(contactName);
+    const file = await this.findContactByName(contactName);
+    if (!file) return null;
+    
+    // Create a temporary ContactData for the target contact
+    const targetContactData = new ContactData(this.app, file);
+    
+    try {
+      const uid = await targetContactData.getUID();
+      const gender = await targetContactData.getGender();
+      
+      return {
+        name: contactName,
+        uid: uid || '',
+        file: file,
+        gender: gender
+      };
+    } catch (error: any) {
+      console.debug(`[ContactNote] Error resolving contact ${contactName}: ${error.message}`);
+      return null;
+    }
   }
 
   /**
    * Format a related value for vCard RELATED field
    */
   formatRelatedValue(targetUid: string, targetName: string): string {
-    return this.formatRelatedValueInternal(targetUid, targetName);
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (uuidRegex.test(targetUid)) {
+      return `urn:uuid:${targetUid}`;
+    } else if (targetUid) {
+      return `uid:${targetUid}`;
+    } else {
+      return `name:${targetName}`;
+    }
   }
 
   /**
@@ -296,6 +308,180 @@ export class ContactNote {
     // Extract type from RELATED[type] format
     const match = key.match(/^RELATED\[([^\]]+)\]$/);
     return match ? match[1] : '';
+  }
+
+  /**
+   * Parse RELATED fields from frontmatter
+   */
+  async parseFrontmatterRelationships(): Promise<FrontmatterRelationship[]> {
+    const frontmatter = await this.contactData.getFrontmatter();
+    const relationships: FrontmatterRelationship[] = [];
+
+    if (!frontmatter) return relationships;
+
+    for (const [key, value] of Object.entries(frontmatter)) {
+      if (key.startsWith('RELATED')) {
+        // Handle RELATED as an object (from RELATED.type YAML dot notation)
+        if (key === 'RELATED' && typeof value === 'object' && value !== null && !Array.isArray(value)) {
+          for (const [nestedKey, nestedValue] of Object.entries(value)) {
+            if (typeof nestedValue === 'string') {
+              const correctedKey = `RELATED.${nestedKey}`;
+              const type = nestedKey;
+              const parsedValue = this.parseRelatedValue(nestedValue);
+              
+              relationships.push({
+                key: correctedKey,
+                type,
+                value: nestedValue,
+                parsedValue: parsedValue || undefined
+              });
+              
+              console.debug(`[ContactNote] Parsed RELATED.${nestedKey}`);
+            } else if (Array.isArray(nestedValue)) {
+              for (let i = 0; i < nestedValue.length; i++) {
+                const arrayValue = nestedValue[i];
+                if (typeof arrayValue === 'string') {
+                  const correctedKey = i === 0 ? `RELATED.${nestedKey}` : `RELATED.${nestedKey}.${i}`;
+                  const parsedValue = this.parseRelatedValue(arrayValue);
+                  
+                  relationships.push({
+                    key: correctedKey,
+                    type: nestedKey,
+                    value: arrayValue,
+                    parsedValue: parsedValue || undefined
+                  });
+                  
+                  console.debug(`[ContactNote] Parsed RELATED.${nestedKey}${i > 0 ? '.' + i : ''}`);
+                }
+              }
+            }
+          }
+          continue;
+        }
+        
+        // Handle RELATED.type format (dot notation as a key)
+        if (key.includes('.') && key !== 'RELATED') {
+          const parts = key.split('.');
+          if (parts[0] === 'RELATED' && parts.length >= 2) {
+            const typePart = parts.slice(1).join('.');
+            
+            if (typeof value === 'string') {
+              const parsedValue = this.parseRelatedValue(value);
+              
+              relationships.push({
+                key: key,
+                type: typePart,
+                value: value,
+                parsedValue: parsedValue || undefined
+              });
+              
+              console.debug(`[ContactNote] Parsed ${key}`);
+              continue;
+            } else if (Array.isArray(value)) {
+              for (let i = 0; i < value.length; i++) {
+                const arrayValue = value[i];
+                if (typeof arrayValue === 'string') {
+                  const correctedKey = i === 0 ? `RELATED.${typePart}` : `RELATED.${typePart}.${i}`;
+                  const parsedValue = this.parseRelatedValue(arrayValue);
+                  
+                  relationships.push({
+                    key: correctedKey,
+                    type: typePart,
+                    value: arrayValue,
+                    parsedValue: parsedValue || undefined
+                  });
+                  
+                  console.debug(`[ContactNote] Parsed ${correctedKey}`);
+                }
+              }
+              continue;
+            } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+              for (const [nestedKey, nestedValue] of Object.entries(value)) {
+                if (typeof nestedValue === 'string') {
+                  const combinedType = `${typePart}.${nestedKey}`;
+                  const parsedValue = this.parseRelatedValue(nestedValue);
+                  
+                  relationships.push({
+                    key: `RELATED.${combinedType}`,
+                    type: combinedType,
+                    value: nestedValue,
+                    parsedValue: parsedValue || undefined
+                  });
+                  
+                  console.debug(`[ContactNote] Parsed RELATED.${combinedType}`);
+                }
+              }
+              continue;
+            } else {
+              let valueType: string = typeof value;
+              if (value === null) {
+                valueType = 'null';
+              } else if (Array.isArray(value)) {
+                valueType = 'array';
+              }
+              console.warn(`[ContactNote] Skipping malformed RELATED key "${key}": Use RELATED.type format. Value type: ${valueType}`);
+              continue;
+            }
+          }
+        }
+        
+        // Skip non-string values
+        if (typeof value !== 'string') {
+          console.warn(`[ContactNote] Skipping non-string RELATED value for key ${key}: ${typeof value}`);
+          continue;
+        }
+        
+        const type = this.extractRelationshipType(key);
+        const parsedValue = this.parseRelatedValue(value);
+        
+        relationships.push({
+          key,
+          type,
+          value: value,
+          parsedValue: parsedValue || undefined
+        });
+      }
+    }
+
+    return relationships;
+  }
+
+  /**
+   * Update Related section in markdown content using entities
+   */
+  async updateRelatedSectionInContent(relationships: { type: string; contactName: string }[]): Promise<void> {
+    const content = await this.getContent();
+    
+    // Convert to entities
+    const relationshipEntities: Relationship[] = [];
+    for (const rel of relationships) {
+      const relType = RelationshipType.fromString(rel.type);
+      const target = RelationshipReference.fromString(rel.contactName);
+      relationshipEntities.push(Relationship.create(relType, target));
+    }
+    
+    // Create section
+    const relatedSection = RelatedSection.fromRelationships(relationshipEntities, 'Related', 2);
+    const sectionMarkdown = relatedSection.toMarkdown();
+    
+    // Replace section
+    const relatedSectionRegex = /^(#{2,4} Related\s*\n)([\s\S]*?)(?=\n#{2,4} |\n#\w+|$)/m;
+    
+    let newContent: string;
+    if (relatedSectionRegex.test(content)) {
+      newContent = content.replace(relatedSectionRegex, sectionMarkdown + '\n');
+    } else {
+      // Add before hashtags or at end
+      const hashtagMatch = content.match(/\n(#\w+)/);
+      if (hashtagMatch) {
+        const insertPos = content.indexOf(hashtagMatch[0]);
+        newContent = content.slice(0, insertPos) + `\n${sectionMarkdown}\n` + content.slice(insertPos);
+      } else {
+        newContent = content + `\n\n${sectionMarkdown}\n`;
+      }
+    }
+    
+    await this.contactData.updateContent(newContent);
   }
 
   /**
