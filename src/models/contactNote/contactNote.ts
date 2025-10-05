@@ -6,9 +6,8 @@
 import { TFile, App } from 'obsidian';
 import { ContactsPluginSettings } from 'src/plugin/settings';
 import { Gender, Contact, ParsedRelationship, FrontmatterRelationship, ResolvedContact } from './types';
-
-// Import the optimized components
-import { ContactData } from './contactData';
+import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
+import { normalizeFieldValue } from './fieldPatternDetection';
 
 // Import entities
 import { UID } from './entities/valueObjects/UID';
@@ -22,7 +21,6 @@ import { RelationshipType } from './entities/relationships/RelationshipType';
 import { RelationshipReference } from './entities/relationships/RelationshipReference';
 
 // Import utilities for markdown rendering
-import { stringify as stringifyYaml } from 'yaml';
 import { marked, Tokens } from 'marked';
 import { 
   SECTION_NAMES, 
@@ -38,103 +36,342 @@ export type { Contact, Gender, ParsedRelationship, FrontmatterRelationship, Reso
 export { mdRender, createNameSlug, createContactSlug, isKind, fileId, getUiName, uiSafeString, getSortName, createFileName } from './utilityFunctions';
 
 /**
- * Optimized ContactNote class that groups operations by data locality.
- * Uses centralized ContactData for better cache performance.
+ * Simplified ContactNote class with direct data access.
+ * Caches frontmatter and content for performance.
  */
 export class ContactNote {
   private app: App;
   private settings: ContactsPluginSettings;
-  private contactData: ContactData;
+  private file: TFile;
+  
+  // Cached data
+  private _frontmatter: Record<string, any> | null = null;
+  private _content: string | null = null;
+  private _gender: Gender | null = null;
+  private _uid: string | null = null;
+  private _displayName: string | null = null;
+  
+  // Flag to skip metadata cache after a write operation
+  private _skipMetadataCache: boolean = false;
 
   constructor(app: App, settings: ContactsPluginSettings, file: TFile) {
     this.app = app;
     this.settings = settings;
-    
-    // Initialize centralized data store
-    this.contactData = new ContactData(app, file);
+    this.file = file;
   }
 
-  // === Core File Operations (directly from ContactData) ===
+  // === Core File Operations ===
 
   /**
    * Get the TFile object for this contact
    */
   getFile(): TFile {
-    return this.contactData.getFile();
+    return this.file;
   }
 
   /**
    * Get the contact's UID from frontmatter
    */
   async getUID(): Promise<string | null> {
-    return this.contactData.getUID();
+    if (this._uid === null) {
+      const frontmatter = await this.getFrontmatter();
+      this._uid = frontmatter?.UID || null;
+    }
+    return this._uid;
   }
 
   /**
    * Get the contact's display name
    */
   getDisplayName(): string {
-    return this.contactData.getDisplayName();
+    if (this._displayName === null) {
+      this._displayName = this.file.basename;
+    }
+    return this._displayName;
   }
 
   /**
    * Get the file content with caching
    */
   async getContent(): Promise<string> {
-    return this.contactData.getContent();
+    if (this._content === null) {
+      this._content = await this.app.vault.read(this.file);
+    }
+    return this._content;
   }
 
   /**
    * Get the frontmatter with caching
    */
   async getFrontmatter(): Promise<Record<string, any> | null> {
-    return this.contactData.getFrontmatter();
+    if (this._frontmatter === null) {
+      // Skip metadata cache if we just wrote to the file
+      if (!this._skipMetadataCache) {
+        try {
+          const cache = this.app.metadataCache.getFileCache(this.file);
+          if (cache?.frontmatter) {
+            this._frontmatter = cache.frontmatter;
+            return this._frontmatter;
+          }
+        } catch (error: any) {
+          console.debug(`[ContactNote] Error accessing metadata cache for ${this.file.path}: ${error.message}`);
+        }
+      }
+
+      try {
+        const content = await this.getContent();
+        const match = content.match(/^---\n([\s\S]*?)\n---/);
+        if (match) {
+          try {
+            this._frontmatter = parseYaml(match[1]) ?? {};
+          } catch (error: any) {
+            console.debug(`[ContactNote] Error parsing frontmatter for ${this.file.path}: ${error.message}`);
+            this._frontmatter = null;
+            return null;
+          }
+        } else {
+          this._frontmatter = {};
+        }
+      } catch (error: any) {
+        console.debug(`[ContactNote] Error reading content for ${this.file.path}: ${error.message}`);
+        this._frontmatter = {};
+      }
+    }
+    return this._frontmatter;
+  }
+
+  /**
+   * Update content and invalidate caches
+   */
+  private async updateContent(newContent: string): Promise<void> {
+    await this.app.vault.modify(this.file, newContent);
+    this._content = null;
+    this._frontmatter = null;
+    this._skipMetadataCache = true;
   }
 
   /**
    * Invalidate caches when file is modified externally
    */
   invalidateCache(): void {
-    this.contactData.invalidateAllCaches();
+    this._frontmatter = null;
+    this._content = null;
+    this._gender = null;
+    this._uid = null;
+    this._displayName = null;
+    this._skipMetadataCache = false;
   }
 
-  // === Gender Operations (directly from ContactData) ===
+  // === Gender Operations ===
 
   /**
    * Parse GENDER field value from vCard
    */
   parseGender(value: string): Gender {
-    return this.contactData.parseGender(value);
+    if (!value || value.trim() === '') {
+      return null;
+    }
+    
+    const normalized = value.trim().toUpperCase();
+    switch (normalized) {
+      case 'M':
+      case 'MALE':
+        return 'M';
+      case 'F':
+      case 'FEMALE':
+        return 'F';
+      case 'NB':
+      case 'NON-BINARY':
+      case 'NONBINARY':
+        return 'NB';
+      case 'U':
+      case 'UNSPECIFIED':
+        return 'U';
+      default:
+        return null;
+    }
   }
 
   /**
    * Get the contact's gender from frontmatter
    */
   async getGender(): Promise<Gender> {
-    return this.contactData.getGender();
+    if (this._gender === null) {
+      const frontmatter = await this.getFrontmatter();
+      const genderValue = frontmatter?.GENDER;
+      this._gender = genderValue ? this.parseGender(genderValue) : null;
+    }
+    return this._gender;
   }
 
   /**
    * Update the contact's gender in frontmatter
    */
   async updateGender(gender: Gender): Promise<void> {
-    return this.contactData.updateGender(gender);
+    const genderValue = gender ? gender : '';
+    await this.updateFrontmatterValue('GENDER', genderValue);
+    this._gender = gender;
   }
 
-  // === Frontmatter Operations (directly from ContactData) ===
+  // === Frontmatter Operations ===
+
+  /**
+   * Generate a revision timestamp in VCF format
+   */
+  generateRevTimestamp(): string {
+    return new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+  }
+
+  /**
+   * Save frontmatter to file
+   */
+  private async saveFrontmatter(frontmatter: Record<string, any>): Promise<void> {
+    const content = await this.getContent();
+    
+    let frontmatterYaml = stringifyYaml(frontmatter);
+    if (!frontmatterYaml.endsWith('\n')) {
+      frontmatterYaml += '\n';
+    }
+    
+    const hasExistingFrontmatter = content.startsWith('---\n');
+    let newContent: string;
+    
+    if (hasExistingFrontmatter) {
+      const endIndex = content.indexOf('---\n', 4);
+      if (endIndex !== -1) {
+        newContent = `---\n${frontmatterYaml}---\n${content.substring(endIndex + 4)}`;
+      } else {
+        newContent = `---\n${frontmatterYaml}---\n${content}`;
+      }
+    } else {
+      newContent = `---\n${frontmatterYaml}---\n${content}`;
+    }
+    
+    await this.updateContent(newContent);
+  }
+
+  /**
+   * Extract field type from a frontmatter key
+   */
+  private extractFieldType(key: string): string | null {
+    const match = key.match(/^(EMAIL|TEL|URL|ADR)(\[|\.)?/);
+    return match ? match[1] : null;
+  }
+
+  /**
+   * Compare two values for a given field type, normalizing both before comparison
+   */
+  private valuesAreEqual(currentValue: any, newValue: string, fieldType: string | null): boolean {
+    if (currentValue === undefined || currentValue === null) {
+      return false;
+    }
+
+    const currentStr = String(currentValue);
+    
+    if (fieldType && (fieldType === 'TEL' || fieldType === 'EMAIL' || fieldType === 'URL')) {
+      const normalizedCurrent = normalizeFieldValue(currentStr, fieldType);
+      const normalizedNew = normalizeFieldValue(newValue, fieldType);
+      return normalizedCurrent === normalizedNew;
+    }
+    
+    return currentStr === newValue;
+  }
+
+  /**
+   * Find an existing frontmatter key that matches the given key, ignoring case
+   */
+  private findFrontmatterKey(frontmatter: Record<string, any>, searchKey: string): string | null {
+    if (searchKey in frontmatter) {
+      return searchKey;
+    }
+    
+    const searchKeyLower = searchKey.toLowerCase();
+    for (const key of Object.keys(frontmatter)) {
+      if (key.toLowerCase() === searchKeyLower) {
+        return key;
+      }
+    }
+    
+    return null;
+  }
 
   /**
    * Update a single frontmatter value
    */
   async updateFrontmatterValue(key: string, value: string, skipRevUpdate = false): Promise<void> {
-    return this.contactData.updateFrontmatterValue(key, value, skipRevUpdate);
+    const frontmatter = await this.getFrontmatter();
+    if (!frontmatter) {
+      return;
+    }
+
+    if (frontmatter[key] === value) {
+      return;
+    }
+
+    if (value === '') {
+      delete frontmatter[key];
+    } else {
+      frontmatter[key] = value;
+    }
+
+    if (!skipRevUpdate && key !== 'REV') {
+      frontmatter['REV'] = this.generateRevTimestamp();
+    }
+
+    await this.saveFrontmatter(frontmatter);
   }
 
   /**
    * Update multiple frontmatter values in a single operation
    */
   async updateMultipleFrontmatterValues(updates: Record<string, string>, skipRevUpdate = false): Promise<void> {
-    return this.contactData.updateMultipleFrontmatterValues(updates, skipRevUpdate);
+    const frontmatter = await this.getFrontmatter();
+    if (!frontmatter) {
+      return;
+    }
+
+    let hasChanges = false;
+    const keyMapping: Record<string, string> = {};
+    
+    for (const [key, value] of Object.entries(updates)) {
+      const actualKey = this.findFrontmatterKey(frontmatter, key);
+      if (actualKey) {
+        keyMapping[key] = actualKey;
+      } else {
+        keyMapping[key] = key;
+      }
+      
+      const currentValue = actualKey ? frontmatter[actualKey] : undefined;
+      const fieldType = this.extractFieldType(key);
+      const valuesMatch = this.valuesAreEqual(currentValue, value, fieldType);
+      if (!valuesMatch) {
+        hasChanges = true;
+      }
+    }
+
+    if (!hasChanges) {
+      return;
+    }
+
+    for (const [key, value] of Object.entries(updates)) {
+      const actualKey = keyMapping[key];
+      
+      if (actualKey !== key && actualKey in frontmatter) {
+        delete frontmatter[actualKey];
+      }
+      
+      if (value === '') {
+        delete frontmatter[key];
+      } else {
+        frontmatter[key] = value;
+      }
+    }
+
+    if (!skipRevUpdate) {
+      frontmatter['REV'] = this.generateRevTimestamp();
+    }
+
+    await this.saveFrontmatter(frontmatter);
   }
 
   // === Relationship Operations (using Relationship entities) ===
@@ -218,12 +455,12 @@ export class ContactNote {
     const file = await this.findContactByName(contactName);
     if (!file) return null;
     
-    // Create a temporary ContactData for the target contact
-    const targetContactData = new ContactData(this.app, file);
+    // Create a temporary ContactNote for the target contact
+    const targetContact = new ContactNote(this.app, this.settings, file);
     
     try {
-      const uid = await targetContactData.getUID();
-      const gender = await targetContactData.getGender();
+      const uid = await targetContact.getUID();
+      const gender = await targetContact.getGender();
       
       return {
         name: contactName,
@@ -303,7 +540,7 @@ export class ContactNote {
    * Parse RELATED fields from frontmatter
    */
   async parseFrontmatterRelationships(): Promise<FrontmatterRelationship[]> {
-    const frontmatter = await this.contactData.getFrontmatter();
+    const frontmatter = await this.getFrontmatter();
     const relationships: FrontmatterRelationship[] = [];
 
     if (!frontmatter) return relationships;
@@ -470,7 +707,7 @@ export class ContactNote {
       }
     }
     
-    await this.contactData.updateContent(newContent);
+    await this.updateContent(newContent);
   }
 
   /**
@@ -742,11 +979,11 @@ export class ContactNote {
 
     for (const file of allFiles) {
       try {
-        const tempContactData = new ContactData(this.app, file);
-        const fileUid = await tempContactData.getUID();
+        const tempContact = new ContactNote(this.app, this.settings, file);
+        const fileUid = await tempContact.getUID();
         
         if (fileUid === uid) {
-          const frontmatter = await tempContactData.getFrontmatter();
+          const frontmatter = await tempContact.getFrontmatter();
           const contactName = frontmatter?.FN || file.basename;
           
           return {
@@ -776,7 +1013,7 @@ export class ContactNote {
       const typeIndices = new Map<string, number>();
 
       // Clear existing RELATED fields
-      const frontmatter = await this.contactData.getFrontmatter();
+      const frontmatter = await this.getFrontmatter();
       if (frontmatter) {
         Object.keys(frontmatter).forEach(key => {
           if (key.startsWith('RELATED') || key === 'RELATED') {
@@ -819,7 +1056,7 @@ export class ContactNote {
       }
 
       if (Object.keys(frontmatterUpdates).length > 0) {
-        await this.contactData.updateMultipleFrontmatterValues(frontmatterUpdates);
+        await this.updateMultipleFrontmatterValues(frontmatterUpdates);
       }
       
       if (relationships.length !== deduplicated.length) {
@@ -1003,7 +1240,7 @@ export class ContactNote {
     isValid: boolean;
     issues: string[];
   }> {
-    const frontmatter = await this.contactData.getFrontmatter();
+    const frontmatter = await this.getFrontmatter();
     const issues: string[] = [];
     
     if (!frontmatter) {
@@ -1093,7 +1330,7 @@ export class ContactNote {
     const errors: string[] = [];
 
     try {
-      const frontmatter = await this.contactData.getFrontmatter();
+      const frontmatter = await this.getFrontmatter();
       if (!frontmatter) {
         return { invalidFields, errors };
       }
@@ -1158,7 +1395,7 @@ export class ContactNote {
     const errors: string[] = [];
 
     try {
-      const frontmatter = await this.contactData.getFrontmatter();
+      const frontmatter = await this.getFrontmatter();
       if (!frontmatter) {
         return { removed, errors };
       }
@@ -1191,7 +1428,7 @@ export class ContactNote {
     // Import yaml library for stringification
     const { stringify: stringifyYaml } = await import('yaml');
     
-    const content = await this.contactData.getContent();
+    const content = await this.getContent();
     
     // Use yaml library to stringify frontmatter
     let frontmatterYaml = stringifyYaml(frontmatter);
@@ -1215,7 +1452,7 @@ export class ContactNote {
       newContent = `---\n${frontmatterYaml}---\n${content}`;
     }
     
-    await this.contactData.updateContent(newContent);
+    await this.updateContent(newContent);
   }
 
   // === Advanced Relationship Operations ===
@@ -1348,7 +1585,7 @@ export class ContactNote {
     contactName: string;
   } | null> {
     // First, check if identifier is a relationship type in frontmatter
-    const frontmatter = await this.contactData.getFrontmatter();
+    const frontmatter = await this.getFrontmatter();
     if (frontmatter) {
       for (const [key, value] of Object.entries(frontmatter)) {
         if (key.startsWith('RELATED[') && typeof value === 'string') {
@@ -1436,7 +1673,7 @@ export class ContactNote {
     try {
       const relationships = await this.parseRelatedSection();
       const sourceContactName = this.getDisplayName();
-      const sourceFrontmatter = await this.contactData.getFrontmatter();
+      const sourceFrontmatter = await this.getFrontmatter();
       const sourceGender = sourceFrontmatter?.GENDER as Gender;
       
       for (const relationship of relationships) {
@@ -1528,7 +1765,7 @@ export class ContactNote {
     } = { success: true, upgradedRelationships: [], errors: [] };
 
     try {
-      const frontmatter = await this.contactData.getFrontmatter();
+      const frontmatter = await this.getFrontmatter();
       const updates: Record<string, string> = {};
       
       if (frontmatter) {
@@ -1592,7 +1829,7 @@ export class ContactNote {
       }
 
       if (Object.keys(updates).length > 0) {
-        await this.contactData.updateMultipleFrontmatterValues(updates);
+        await this.updateMultipleFrontmatterValues(updates);
       }
     } catch (error: any) {
       result.success = false;
@@ -1671,7 +1908,7 @@ export class ContactNote {
     };
     
     try {
-      const frontmatter = await this.contactData.getFrontmatter();
+      const frontmatter = await this.getFrontmatter();
       if (!frontmatter) {
         result.success = false;
         return result;
@@ -1705,7 +1942,7 @@ export class ContactNote {
       }
 
       if (Object.keys(updates).length > 0) {
-        await this.contactData.updateMultipleFrontmatterValues(updates);
+        await this.updateMultipleFrontmatterValues(updates);
       }
     } catch (error: any) {
       result.success = false;
@@ -1734,7 +1971,7 @@ export class ContactNote {
     } = { success: true, updatedCount: 0, failedCount: 0, errors: [] };
     
     try {
-      const frontmatter = await this.contactData.getFrontmatter();
+      const frontmatter = await this.getFrontmatter();
       if (!frontmatter) return result;
 
       const updates: Record<string, string> = {};
@@ -1772,7 +2009,7 @@ export class ContactNote {
       }
 
       if (Object.keys(updates).length > 0) {
-        await this.contactData.updateMultipleFrontmatterValues(updates);
+        await this.updateMultipleFrontmatterValues(updates);
       }
     } catch (error: any) {
       result.success = false;
@@ -1981,17 +2218,16 @@ export class ContactNote {
    * Get cache status for debugging
    */
   getCacheStatus(): { [key: string]: boolean } {
-    return this.contactData.getCacheStatus();
+    return {
+      frontmatter: this._frontmatter !== null,
+      content: this._content !== null,
+      gender: this._gender !== null,
+      uid: this._uid !== null,
+      displayName: this._displayName !== null
+    };
   }
 
   // === Additional utility methods for backward compatibility ===
-
-  /**
-   * Generate REV timestamp for vCard compatibility
-   */
-  generateRevTimestamp(): string {
-    return this.contactData.generateRevTimestamp();
-  }
 
   /**
    * Parse a VCard REV date string into a Date object
@@ -2033,7 +2269,7 @@ export class ContactNote {
    * Check if contact should be updated from vcard based on REV timestamp
    */
   async shouldUpdateFromVcard(record: Record<string, any>): Promise<boolean> {
-    const frontmatter = await this.contactData.getFrontmatter();
+    const frontmatter = await this.getFrontmatter();
     if (!frontmatter) return true;
 
     const contactRev = frontmatter.REV;
@@ -2249,13 +2485,13 @@ export class ContactNote {
         if (newRelatedMatch) {
           const insertPos = contentWithoutContact.indexOf(newRelatedMatch[0]);
           const newContent = contentWithoutContact.slice(0, insertPos) + `## Contact\n${contactSection}\n\n` + contentWithoutContact.slice(insertPos);
-          await this.contactData.updateContent(newContent);
+          await this.updateContent(newContent);
           return;
         }
       } else {
         // Correct order - just replace Contact section
         const newContent = content.replace(contactSectionRegex, `$1${contactSection}\n`);
-        await this.contactData.updateContent(newContent);
+        await this.updateContent(newContent);
         return;
       }
     }
@@ -2263,7 +2499,7 @@ export class ContactNote {
     if (contactMatch && !relatedMatch) {
       // Contact exists, no Related - just replace in-place
       const newContent = content.replace(contactSectionRegex, `$1${contactSection}\n`);
-      await this.contactData.updateContent(newContent);
+      await this.updateContent(newContent);
       return;
     }
     
@@ -2288,7 +2524,7 @@ export class ContactNote {
       newContent = content + `\n\n## Contact\n${contactSection}\n`;
     }
     
-    await this.contactData.updateContent(newContent);
+    await this.updateContent(newContent);
   }
 
   /**

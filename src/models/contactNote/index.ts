@@ -26,12 +26,6 @@ export type {
   ResolvedContact 
 } from './contactNote';
 
-// Export optimized component classes for advanced usage
-export { 
-  /** Centralized contact data management with improved cache locality */
-  ContactData 
-} from './contactData';
-
 // Export utility functions for backward compatibility
 export { 
   mdRender,
