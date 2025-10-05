@@ -1198,6 +1198,60 @@ export class ContactNote {
     return genderless1 === genderless2;
   }
 
+  // === Helper methods from BaseMarkdownSectionOperations ===
+
+  /**
+   * Remove frontmatter from markdown content
+   */
+  private removeFrontmatter(content: string): string {
+    const frontmatterRegex = /^---\n[\s\S]*?\n---\n/;
+    return content.replace(frontmatterRegex, '');
+  }
+
+  /**
+   * Find list tokens after a specific heading
+   */
+  private findListAfterHeading(tokens: Tokens.Generic[], headingName: string): Tokens.List | null {
+    const heading = this.findHeadingByName(tokens, headingName);
+    if (!heading) {
+      return null;
+    }
+    
+    const headingIndex = tokens.indexOf(heading);
+    
+    for (let i = headingIndex + 1; i < tokens.length; i++) {
+      const token = tokens[i];
+      
+      if (token.type === 'heading') {
+        break;
+      }
+      
+      if (token.type === 'list') {
+        return token as Tokens.List;
+      }
+    }
+    
+    return null;
+  }
+
+  /**
+   * Find a heading token by name (case-insensitive)
+   */
+  private findHeadingByName(tokens: Tokens.Generic[], name: string): Tokens.Heading | null {
+    const normalized = name.toLowerCase();
+    
+    for (const token of tokens) {
+      if (token.type === 'heading') {
+        const heading = token as Tokens.Heading;
+        if (heading.text.toLowerCase() === normalized) {
+          return heading;
+        }
+      }
+    }
+    
+    return null;
+  }
+
   // === Static Utility Methods ===
 
   /**
