@@ -32,11 +32,6 @@ export {
   ContactData 
 } from './contactData';
 
-export { 
-  /** Relationship operations with data locality optimization */
-  RelationshipOperations 
-} from './relationshipOperations';
-
 export {
   /** Synchronization operations for contact data */
   SyncOperations

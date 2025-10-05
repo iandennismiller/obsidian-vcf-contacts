@@ -5,8 +5,16 @@
 import { App, TFile } from 'obsidian';
 import { ContactsPluginSettings } from 'src/plugin/settings';
 import { ContactData } from './contactData';
-import { RelationshipOperations } from './relationshipOperations';
 import { Gender, ParsedRelationship, FrontmatterRelationship, ResolvedContact } from './types';
+
+// Define interface for relationship operations needed by AdvancedRelationshipOperations
+interface IRelationshipOps {
+  parseRelatedSection(): Promise<ParsedRelationship[]>;
+  parseFrontmatterRelationships(): Promise<FrontmatterRelationship[]>;
+  parseRelatedValue(value: string): { type: 'uuid' | 'uid' | 'name'; value: string } | null;
+  findContactByName(contactName: string): Promise<TFile | null>;
+  formatRelatedValue(targetUid: string, targetName: string): string;
+}
 
 /**
  * Advanced relationship operations that build on top of basic relationship functionality
@@ -15,9 +23,9 @@ export class AdvancedRelationshipOperations {
   private app: App;
   private settings: ContactsPluginSettings;
   private contactData: ContactData;
-  private relationshipOps: RelationshipOperations;
+  private relationshipOps: IRelationshipOps;
 
-  constructor(app: App, settings: ContactsPluginSettings, contactData: ContactData, relationshipOps: RelationshipOperations) {
+  constructor(app: App, settings: ContactsPluginSettings, contactData: ContactData, relationshipOps: IRelationshipOps) {
     this.app = app;
     this.settings = settings;
     this.contactData = contactData;

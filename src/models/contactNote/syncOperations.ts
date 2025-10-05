@@ -3,18 +3,29 @@
  */
 
 import { ContactData } from './contactData';
-import { RelationshipOperations, ParsedRelationship, FrontmatterRelationship } from './relationshipOperations';
+import { ParsedRelationship, FrontmatterRelationship } from './types';
 import { Gender } from './types';
+
+// Define interface for relationship operations needed by SyncOperations
+interface IRelationshipOps {
+  convertToGenderlessType(relationshipType: string): string;
+  inferGenderFromRelationship(relationshipType: string): Gender;
+  parseRelatedSection(): Promise<ParsedRelationship[]>;
+  parseFrontmatterRelationships(): Promise<FrontmatterRelationship[]>;
+  resolveContact(contactName: string): Promise<any>;
+  formatRelatedValue(targetUid: string, targetName: string): string;
+  updateRelatedSectionInContent(relationships: { type: string; contactName: string }[]): Promise<void>;
+}
 
 /**
  * Synchronization operations that work directly with ContactData
- * and RelationshipOperations for optimal data locality.
+ * and relationship operations for optimal data locality.
  */
 export class SyncOperations {
   private contactData: ContactData;
-  private relationshipOps: RelationshipOperations;
+  private relationshipOps: IRelationshipOps;
 
-  constructor(contactData: ContactData, relationshipOps: RelationshipOperations) {
+  constructor(contactData: ContactData, relationshipOps: IRelationshipOps) {
     this.contactData = contactData;
     this.relationshipOps = relationshipOps;
   }
