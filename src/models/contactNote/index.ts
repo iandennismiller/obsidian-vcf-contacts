@@ -37,11 +37,6 @@ export {
   RelationshipOperations 
 } from './relationshipOperations';
 
-export { 
-  /** Markdown operations optimized for contact rendering */
-  MarkdownOperations 
-} from './markdownOperations';
-
 export {
   /** Synchronization operations for contact data */
   SyncOperations
