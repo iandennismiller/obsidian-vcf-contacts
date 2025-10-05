@@ -9,7 +9,6 @@ import { Gender, Contact, ParsedRelationship, FrontmatterRelationship, ResolvedC
 
 // Import the optimized components
 import { ContactData } from './contactData';
-import { SyncOperations } from './syncOperations';
 import { AdvancedRelationshipOperations } from './advancedRelationshipOperations';
 
 // Import entities
@@ -49,7 +48,6 @@ export class ContactNote {
   private contactData: ContactData;
   
   // Operation groups - each works closely with ContactData
-  private syncOps: SyncOperations;
   private advancedRelationshipOps: AdvancedRelationshipOperations;
 
   constructor(app: App, settings: ContactsPluginSettings, file: TFile) {
@@ -59,9 +57,7 @@ export class ContactNote {
     // Initialize centralized data store
     this.contactData = new ContactData(app, file);
     
-    // Initialize operation groups that work with the centralized data
-    // Pass ContactNote instance (this) instead of relationshipOps
-    this.syncOps = new SyncOperations(this.contactData, this as any);
+    // Initialize advanced relationship operations
     this.advancedRelationshipOps = new AdvancedRelationshipOperations(app, settings, this.contactData, this as any);
   }
 
@@ -702,13 +698,151 @@ export class ContactNote {
     return typeMapping.default;
   }
 
-  // === Sync Operations (delegated to SyncOperations) ===
+  // === Sync Operations (inlined from SyncOperations) ===
+
+  /**
+   * Deduplicate relationships, preferring gendered terms over ungendered
+   */
+  private deduplicateRelationships(relationships: ParsedRelationship[]): {
+    deduplicated: ParsedRelationship[];
+    inferredGender: Map<string, Gender>;
+  } {
+    const seen = new Map<string, ParsedRelationship>();
+    const inferredGender = new Map<string, Gender>();
+    
+    for (const rel of relationships) {
+      const genderlessType = this.convertToGenderlessType(rel.type);
+      const contactKey = `${genderlessType}:${rel.contactName.toLowerCase()}`;
+      const existing = seen.get(contactKey);
+      
+      if (!existing) {
+        seen.set(contactKey, rel);
+        const gender = this.inferGenderFromRelationship(rel.type);
+        if (gender) {
+          inferredGender.set(rel.contactName, gender);
+        }
+        continue;
+      }
+      
+      const existingGender = this.inferGenderFromRelationship(existing.type);
+      const currentGender = this.inferGenderFromRelationship(rel.type);
+      
+      if (currentGender && !existingGender) {
+        seen.set(contactKey, rel);
+        inferredGender.set(rel.contactName, currentGender);
+      } else if (currentGender) {
+        inferredGender.set(existing.contactName, existingGender!);
+      }
+    }
+    
+    return {
+      deduplicated: Array.from(seen.values()),
+      inferredGender
+    };
+  }
+
+  /**
+   * Find contact by UID
+   */
+  private async findContactByUid(uid: string): Promise<{ name: string; file: any } | null> {
+    const allFiles = this.app.vault.getMarkdownFiles();
+
+    for (const file of allFiles) {
+      try {
+        const tempContactData = new ContactData(this.app, file);
+        const fileUid = await tempContactData.getUID();
+        
+        if (fileUid === uid) {
+          const frontmatter = await tempContactData.getFrontmatter();
+          const contactName = frontmatter?.FN || file.basename;
+          
+          return {
+            name: contactName,
+            file: file
+          };
+        }
+      } catch (error: any) {
+        continue;
+      }
+    }
+
+    return null;
+  }
 
   /**
    * Sync Related list from markdown to frontmatter
    */
   async syncRelatedListToFrontmatter(): Promise<{ success: boolean; errors: string[] }> {
-    return this.syncOps.syncRelatedListToFrontmatter();
+    const errors: string[] = [];
+    
+    try {
+      const relationships = await this.parseRelatedSection();
+      const { deduplicated, inferredGender } = this.deduplicateRelationships(relationships);
+      
+      const frontmatterUpdates: Record<string, string> = {};
+      const typeIndices = new Map<string, number>();
+
+      // Clear existing RELATED fields
+      const frontmatter = await this.contactData.getFrontmatter();
+      if (frontmatter) {
+        Object.keys(frontmatter).forEach(key => {
+          if (key.startsWith('RELATED') || key === 'RELATED') {
+            frontmatterUpdates[key] = '';
+          }
+        });
+      }
+
+      // Process each relationship
+      for (const relationship of deduplicated) {
+        try {
+          const genderlessType = this.convertToGenderlessType(relationship.type);
+          const currentIndex = typeIndices.get(genderlessType) || 0;
+          typeIndices.set(genderlessType, currentIndex + 1);
+          
+          const resolvedContact = await this.resolveContact(relationship.contactName);
+          
+          if (resolvedContact) {
+            const relatedValue = this.formatRelatedValue(
+              resolvedContact.uid, 
+              resolvedContact.name
+            );
+            
+            const key = currentIndex === 0 
+              ? `RELATED.${genderlessType}`
+              : `RELATED.${genderlessType}.${currentIndex}`;
+            
+            frontmatterUpdates[key] = relatedValue;
+          } else {
+            const key = currentIndex === 0 
+              ? `RELATED.${genderlessType}`
+              : `RELATED.${genderlessType}.${currentIndex}`;
+            
+            frontmatterUpdates[key] = `name:${relationship.contactName}`;
+            errors.push(`Could not resolve contact: ${relationship.contactName}`);
+          }
+        } catch (error: any) {
+          errors.push(`Error processing relationship ${relationship.contactName}: ${error.message}`);
+        }
+      }
+
+      if (Object.keys(frontmatterUpdates).length > 0) {
+        await this.contactData.updateMultipleFrontmatterValues(frontmatterUpdates);
+      }
+      
+      if (relationships.length !== deduplicated.length) {
+        await this.updateRelatedSectionInContent(
+          deduplicated.map(rel => ({
+            type: rel.type,
+            contactName: rel.contactName
+          }))
+        );
+      }
+
+      return { success: true, errors };
+    } catch (error: any) {
+      errors.push(`Sync operation failed: ${error.message}`);
+      return { success: false, errors };
+    }
   }
 
   /**
@@ -719,14 +853,99 @@ export class ContactNote {
     errors: string[];
     updatedRelationships?: Array<{ newName: string; uid: string; oldName?: string }>;
   }> {
-    return this.syncOps.syncFrontmatterToRelatedList();
+    const errors: string[] = [];
+    const updatedRelationships: Array<{ newName: string; uid: string; oldName?: string }> = [];
+    
+    try {
+      const frontmatterRelationships = await this.parseFrontmatterRelationships();
+      const existingMarkdownRelationships = await this.parseRelatedSection();
+      
+      const markdownRelationships: { type: string; contactName: string }[] = 
+        existingMarkdownRelationships.map(rel => ({ type: rel.type, contactName: rel.contactName }));
+
+      for (const fmRel of frontmatterRelationships) {
+        try {
+          if (fmRel.parsedValue) {
+            let contactName: string;
+            
+            if (fmRel.parsedValue.type === 'name') {
+              contactName = fmRel.parsedValue.value;
+            } else {
+              const resolvedContact = await this.findContactByUid(fmRel.parsedValue.value);
+              if (resolvedContact) {
+                contactName = resolvedContact.name;
+                
+                const existingRel = existingMarkdownRelationships.find(rel => 
+                  rel.type === fmRel.type
+                );
+                if (existingRel && existingRel.contactName !== contactName) {
+                  updatedRelationships.push({
+                    newName: contactName,
+                    uid: fmRel.parsedValue.value,
+                    oldName: existingRel.contactName
+                  });
+                }
+              } else {
+                contactName = fmRel.parsedValue.value;
+                errors.push(`Could not resolve UID/UUID: ${fmRel.parsedValue.value}`);
+              }
+            }
+            
+            const genderlessFmType = this.convertToGenderlessType(fmRel.type);
+            const alreadyExists = markdownRelationships.some(rel => {
+              const genderlessMdType = this.convertToGenderlessType(rel.type);
+              return genderlessMdType === genderlessFmType && 
+                     rel.contactName.toLowerCase() === contactName.toLowerCase();
+            });
+            
+            if (!alreadyExists) {
+              markdownRelationships.push({
+                type: fmRel.type,
+                contactName: contactName
+              });
+            }
+          } else {
+            errors.push(`Could not parse RELATED value: ${fmRel.value}`);
+          }
+        } catch (error: any) {
+          errors.push(`Error processing frontmatter relationship ${fmRel.key}: ${error.message}`);
+        }
+      }
+
+      await this.updateRelatedSectionInContent(markdownRelationships);
+
+      return { success: true, errors, updatedRelationships };
+    } catch (error: any) {
+      errors.push(`Frontmatter to markdown sync failed: ${error.message}`);
+      return { success: false, errors };
+    }
   }
 
   /**
    * Perform full bidirectional sync between markdown and frontmatter
    */
   async performFullSync(): Promise<{ success: boolean; errors: string[] }> {
-    return this.syncOps.performFullSync();
+    const allErrors: string[] = [];
+    let overallSuccess = true;
+
+    try {
+      const markdownToFm = await this.syncRelatedListToFrontmatter();
+      if (!markdownToFm.success) {
+        overallSuccess = false;
+      }
+      allErrors.push(...markdownToFm.errors);
+
+      const fmToMarkdown = await this.syncFrontmatterToRelatedList();
+      if (!fmToMarkdown.success) {
+        overallSuccess = false;
+      }
+      allErrors.push(...fmToMarkdown.errors);
+
+      return { success: overallSuccess, errors: allErrors };
+    } catch (error: any) {
+      allErrors.push(`Full sync operation failed: ${error.message}`);
+      return { success: false, errors: allErrors };
+    }
   }
 
   /**
@@ -737,7 +956,49 @@ export class ContactNote {
     issues: string[]; 
     recommendations: string[] 
   }> {
-    return this.syncOps.validateRelationshipConsistency();
+    const issues: string[] = [];
+    const recommendations: string[] = [];
+
+    try {
+      const markdownRels = await this.parseRelatedSection();
+      const frontmatterRels = await this.parseFrontmatterRelationships();
+
+      if (markdownRels.length !== frontmatterRels.length) {
+        issues.push(`Relationship count mismatch: ${markdownRels.length} in markdown, ${frontmatterRels.length} in frontmatter`);
+        recommendations.push('Run full sync to resolve count discrepancies');
+      }
+
+      for (const rel of markdownRels) {
+        const resolvedContact = await this.resolveContact(rel.contactName);
+        if (!resolvedContact) {
+          issues.push(`Unresolved contact in markdown: ${rel.contactName}`);
+          recommendations.push(`Check if contact file exists for: ${rel.contactName}`);
+        }
+      }
+
+      for (const fmRel of frontmatterRels) {
+        if (fmRel.parsedValue?.type === 'uid' || fmRel.parsedValue?.type === 'uuid') {
+          const resolvedContact = await this.findContactByUid(fmRel.parsedValue.value);
+          if (!resolvedContact) {
+            issues.push(`Orphaned UID in frontmatter: ${fmRel.parsedValue.value}`);
+            recommendations.push(`Remove or update orphaned relationship: ${fmRel.key}`);
+          }
+        }
+      }
+
+      return {
+        isConsistent: issues.length === 0,
+        issues,
+        recommendations
+      };
+    } catch (error: any) {
+      issues.push(`Validation failed: ${error.message}`);
+      return {
+        isConsistent: false,
+        issues,
+        recommendations: ['Fix validation errors before checking consistency']
+      };
+    }
   }
 
   // === Validation Methods ===

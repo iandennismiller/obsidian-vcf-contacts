@@ -33,11 +33,6 @@ export {
 } from './contactData';
 
 export {
-  /** Synchronization operations for contact data */
-  SyncOperations
-} from './syncOperations';
-
-export {
   /** Advanced relationship operations */
   AdvancedRelationshipOperations
 } from './advancedRelationshipOperations';
