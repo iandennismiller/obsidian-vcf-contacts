@@ -32,11 +32,6 @@ export {
   ContactData 
 } from './contactData';
 
-export {
-  /** Advanced relationship operations */
-  AdvancedRelationshipOperations
-} from './advancedRelationshipOperations';
-
 // Export utility functions for backward compatibility
 export { 
   mdRender,
