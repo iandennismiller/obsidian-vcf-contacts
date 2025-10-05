@@ -197,7 +197,33 @@ export class ContactNote {
    * Parse RELATED fields from frontmatter
    */
   async parseFrontmatterRelationships(): Promise<FrontmatterRelationship[]> {
-    return this.relationshipOps.parseFrontmatterRelationships();
+    const frontmatter = await this.getFrontmatter();
+    if (!frontmatter) return [];
+    
+    const relationships: FrontmatterRelationship[] = [];
+    
+    // Parse RELATED fields from frontmatter
+    for (const [key, value] of Object.entries(frontmatter)) {
+      if (key.startsWith('RELATED[')) {
+        // Extract type from key: RELATED[spouse] -> spouse
+        const typeMatch = key.match(/^RELATED\[([^\]]+)\]$/);
+        if (typeMatch && typeof value === 'string') {
+          const type = typeMatch[1];
+          
+          // Parse the value to determine if it's UID or name
+          const parsedValue = this.parseRelatedValue(value);
+          
+          relationships.push({
+            key,
+            type,
+            value,
+            parsedValue: parsedValue || undefined
+          });
+        }
+      }
+    }
+    
+    return relationships;
   }
 
   /**
@@ -298,21 +324,60 @@ export class ContactNote {
    * Format a related value for vCard RELATED field
    */
   formatRelatedValue(targetUid: string, targetName: string): string {
-    return this.relationshipOps.formatRelatedValue(targetUid, targetName);
+    // Format as UID reference: uid:xxx
+    if (targetUid) {
+      return `uid:${targetUid}`;
+    }
+    // Fallback to name
+    return targetName;
   }
 
   /**
    * Parse a vCard RELATED value to extract UID or name
    */
   parseRelatedValue(value: string): { type: 'uuid' | 'uid' | 'name'; value: string } | null {
-    return this.relationshipOps.parseRelatedValue(value);
+    if (!value || typeof value !== 'string') return null;
+    
+    const trimmed = value.trim();
+    
+    // Check for urn:uuid: format
+    if (trimmed.startsWith('urn:uuid:')) {
+      return {
+        type: 'uuid',
+        value: trimmed.substring(9)
+      };
+    }
+    
+    // Check for uid: format
+    if (trimmed.startsWith('uid:')) {
+      return {
+        type: 'uid',
+        value: trimmed.substring(4)
+      };
+    }
+    
+    // Check if it looks like a UID (UUID format)
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(trimmed)) {
+      return {
+        type: 'uuid',
+        value: trimmed
+      };
+    }
+    
+    // Default to name
+    return {
+      type: 'name',
+      value: trimmed
+    };
   }
 
   /**
    * Extract relationship type from RELATED key format
    */
   extractRelationshipType(key: string): string {
-    return this.relationshipOps.extractRelationshipType(key);
+    // Extract type from RELATED[type] format
+    const match = key.match(/^RELATED\[([^\]]+)\]$/);
+    return match ? match[1] : '';
   }
 
   /**
