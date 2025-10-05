@@ -14,7 +14,6 @@ import { MarkdownOperations } from './markdownOperations';
 import { SyncOperations } from './syncOperations';
 import { ValidationOperations } from './validationOperations';
 import { AdvancedRelationshipOperations } from './advancedRelationshipOperations';
-import { RelationshipHelpers } from './relationshipHelpers';
 
 // Import entities
 import { UID } from './entities/valueObjects/UID';
@@ -48,7 +47,6 @@ export class ContactNote {
   private syncOps: SyncOperations;
   private validationOps: ValidationOperations;
   private advancedRelationshipOps: AdvancedRelationshipOperations;
-  private relationshipHelpers: RelationshipHelpers;
 
   constructor(app: App, settings: ContactsPluginSettings, file: TFile) {
     this.app = app;
@@ -63,7 +61,6 @@ export class ContactNote {
     this.syncOps = new SyncOperations(this.contactData, this.relationshipOps);
     this.validationOps = new ValidationOperations(this.contactData);
     this.advancedRelationshipOps = new AdvancedRelationshipOperations(app, settings, this.contactData, this.relationshipOps);
-    this.relationshipHelpers = new RelationshipHelpers();
   }
 
   // === Core File Operations (directly from ContactData) ===
@@ -829,14 +826,126 @@ export class ContactNote {
    * Get reciprocal relationship type with gender awareness
    */
   private getReciprocalRelationshipType(relationshipType: string, targetGender?: Gender): string | null {
-    return this.relationshipHelpers.getReciprocalRelationshipType(relationshipType, targetGender);
+    const reciprocalMap: Record<string, string | Record<string, string>> = {
+      'father': {
+        'M': 'son',
+        'F': 'daughter',
+        'NB': 'child',
+        'O': 'child',
+        'N': 'child',
+        'U': 'child',
+        'default': 'child'
+      },
+      'mother': {
+        'M': 'son',
+        'F': 'daughter',
+        'NB': 'child',
+        'O': 'child',
+        'N': 'child',
+        'U': 'child',
+        'default': 'child'
+      },
+      'parent': {
+        'M': 'son',
+        'F': 'daughter',
+        'NB': 'child',
+        'O': 'child', 
+        'N': 'child',
+        'U': 'child',
+        'default': 'child'
+      },
+      'son': 'parent',
+      'daughter': 'parent',
+      'child': 'parent',
+      'brother': {
+        'M': 'brother',
+        'F': 'sister',
+        'NB': 'sibling',
+        'O': 'sibling',
+        'N': 'sibling', 
+        'U': 'sibling',
+        'default': 'sibling'
+      },
+      'sister': {
+        'M': 'brother',
+        'F': 'sister',
+        'NB': 'sibling',
+        'O': 'sibling',
+        'N': 'sibling',
+        'U': 'sibling', 
+        'default': 'sibling'
+      },
+      'sibling': 'sibling',
+      'spouse': 'spouse',
+      'husband': 'wife',
+      'wife': 'husband',
+      'friend': 'friend',
+      'colleague': 'colleague',
+      'manager': 'employee',
+      'employee': 'manager',
+      'boss': 'employee',
+      'mentor': 'mentee',
+      'mentee': 'mentor',
+      'uncle': {
+        'M': 'nephew',
+        'F': 'niece',
+        'NB': 'nephew',
+        'O': 'nephew',
+        'N': 'nephew',
+        'U': 'nephew',
+        'default': 'nephew'
+      },
+      'aunt': {
+        'M': 'nephew',
+        'F': 'niece',
+        'NB': 'nephew',
+        'O': 'nephew',
+        'N': 'nephew',
+        'U': 'nephew',
+        'default': 'nephew'
+      },
+      'nephew': {
+        'M': 'uncle',
+        'F': 'aunt',
+        'NB': 'uncle',
+        'O': 'uncle',
+        'N': 'uncle',
+        'U': 'uncle',
+        'default': 'uncle'
+      },
+      'niece': {
+        'M': 'uncle',
+        'F': 'aunt',
+        'NB': 'aunt',
+        'O': 'uncle',
+        'N': 'uncle',
+        'U': 'uncle',
+        'default': 'uncle'
+      }
+    };
+    
+    const mapping = reciprocalMap[relationshipType.toLowerCase()];
+    if (!mapping) return null;
+    
+    if (typeof mapping === 'string') {
+      return mapping;
+    }
+    
+    // Use gender-specific mapping if available
+    if (targetGender && mapping[targetGender]) {
+      return mapping[targetGender];
+    }
+    
+    return mapping.default || null;
   }
 
   /**
    * Check if two relationship types are equivalent
    */
   private areRelationshipTypesEquivalent(type1: string, type2: string): boolean {
-    return this.relationshipHelpers.areRelationshipTypesEquivalent(type1, type2, this.convertToGenderlessType.bind(this));
+    const genderless1 = this.convertToGenderlessType(type1);
+    const genderless2 = this.convertToGenderlessType(type2);
+    return genderless1 === genderless2;
   }
 
   // === Static Utility Methods ===

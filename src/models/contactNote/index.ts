@@ -57,11 +57,6 @@ export {
   AdvancedRelationshipOperations
 } from './advancedRelationshipOperations';
 
-export {
-  /** Relationship helper methods */
-  RelationshipHelpers
-} from './relationshipHelpers';
-
 // Export utility functions for backward compatibility
 export { 
   mdRender,
