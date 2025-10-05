@@ -22,6 +22,10 @@ import { Revision } from './entities/valueObjects/Revision';
 import { Gender as GenderEntity } from './entities/valueObjects/Gender';
 import { ContactSection } from './entities/document/ContactSection';
 import type { ContactField } from './entities/fields/ContactField';
+import { RelatedSection } from './entities/document/RelatedSection';
+import { Relationship } from './entities/relationships/Relationship';
+import { RelationshipType } from './entities/relationships/RelationshipType';
+import { RelationshipReference } from './entities/relationships/RelationshipReference';
 
 // Re-export types for backward compatibility and external use
 export type { Contact, Gender, ParsedRelationship, FrontmatterRelationship, ResolvedContact };
@@ -145,13 +149,48 @@ export class ContactNote {
     return this.contactData.updateMultipleFrontmatterValues(updates, skipRevUpdate);
   }
 
-  // === Relationship Operations (delegated to RelationshipOperations) ===
+  // === Relationship Operations (using Relationship entities) ===
 
   /**
    * Parse Related section from markdown content
+   * Returns parsed relationships compatible with existing code
    */
   async parseRelatedSection(): Promise<ParsedRelationship[]> {
-    return this.relationshipOps.parseRelatedSection();
+    const content = await this.getContent();
+    
+    // Extract the Related section using regex
+    const relatedSectionMatch = content.match(/^#{2,4} Related\s*\n([\s\S]*?)(?=\n#{2,4} |\n#\w+|$)/m);
+    
+    if (!relatedSectionMatch) {
+      return [];
+    }
+    
+    const relatedContent = relatedSectionMatch[1];
+    const relatedSection = RelatedSection.fromMarkdown(relatedContent, 'Related', 2);
+    const relationships = relatedSection.getRelationships();
+    
+    // Convert Relationship entities to ParsedRelationship format for backward compatibility
+    const parsedRelationships: ParsedRelationship[] = [];
+    
+    for (const rel of relationships) {
+      const target = rel.getTarget();
+      const type = rel.getType();
+      
+      // Determine if this is a UID or name reference
+      const isUID = target.isUIDReference();
+      
+      parsedRelationships.push({
+        type: type.toString(),
+        contactName: target.getValue(), // This is either the UID or the name
+        linkType: isUID ? 'uid' : 'name',
+        parsedValue: {
+          type: isUID ? 'uid' : 'name',
+          value: target.getValue()
+        }
+      });
+    }
+    
+    return parsedRelationships;
   }
 
   /**
