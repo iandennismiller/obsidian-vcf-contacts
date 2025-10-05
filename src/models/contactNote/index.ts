@@ -42,15 +42,10 @@ export {
   MarkdownOperations 
 } from './markdownOperations';
 
-export { 
-  /** Synchronization operations for contact data */
-  SyncOperations 
-} from './syncOperations';
-
 export {
-  /** Validation operations for contact data */
-  ValidationOperations
-} from './validationOperations';
+  /** Synchronization operations for contact data */
+  SyncOperations
+} from './syncOperations';
 
 export {
   /** Advanced relationship operations */
