@@ -53,16 +53,6 @@ export {
 } from './validationOperations';
 
 export {
-  /** Revision and timestamp operations */
-  RevisionOperations
-} from './revisionOperations';
-
-export {
-  /** UID-based operations and conflict detection */
-  UIDOperations
-} from './uidOperations';
-
-export {
   /** Advanced relationship operations */
   AdvancedRelationshipOperations
 } from './advancedRelationshipOperations';
@@ -71,20 +61,6 @@ export {
   /** Relationship helper methods */
   RelationshipHelpers
 } from './relationshipHelpers';
-
-export {
-  /** Contact Section operations for parsing and generating Contact sections */
-  ContactSectionOperations
-} from './contactSectionOperations';
-
-export type {
-  /** Parsed contact field from Contact section */
-  ParsedContactField,
-  /** Grouped contact fields for display */
-  ContactFieldGroup,
-  /** Template for contact field parsing/formatting */
-  FuzzyTemplate
-} from './contactSectionOperations';
 
 // Export utility functions for backward compatibility
 export { 
