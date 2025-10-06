@@ -500,138 +500,72 @@ export class ContactNote {
 
   /**
    * Parse RELATED fields from frontmatter
+   * Delegates to Frontmatter and Relationship entities
    */
   async parseFrontmatterRelationships(): Promise<FrontmatterRelationship[]> {
     const frontmatter = await this.getFrontmatter();
+    if (!frontmatter) return [];
+
     const relationships: FrontmatterRelationship[] = [];
+    const fm = Frontmatter.fromObject(frontmatter);
 
-    if (!frontmatter) return relationships;
-
-    for (const [key, value] of Object.entries(frontmatter)) {
+    // Get all keys that start with RELATED
+    for (const key of fm.getKeys()) {
       if (key.startsWith('RELATED')) {
-        // Handle RELATED as an object (from RELATED.type YAML dot notation)
-        if (key === 'RELATED' && typeof value === 'object' && value !== null && !Array.isArray(value)) {
+        const value = fm.get(key);
+        
+        // Handle different value types
+        if (typeof value === 'string') {
+          this.addRelationshipFromValue(relationships, key, value);
+        } else if (Array.isArray(value)) {
+          value.forEach((v, i) => {
+            if (typeof v === 'string') {
+              const arrayKey = i === 0 ? key : `${key}.${i}`;
+              this.addRelationshipFromValue(relationships, arrayKey, v);
+            }
+          });
+        } else if (typeof value === 'object' && value !== null) {
+          // Handle nested objects (RELATED.type format)
           for (const [nestedKey, nestedValue] of Object.entries(value)) {
             if (typeof nestedValue === 'string') {
-              const correctedKey = `RELATED.${nestedKey}`;
-              const type = nestedKey;
-              const parsedValue = this.parseRelatedValue(nestedValue);
-              
-              relationships.push({
-                key: correctedKey,
-                type,
-                value: nestedValue,
-                parsedValue: parsedValue || undefined
-              });
-              
-              console.debug(`[ContactNote] Parsed RELATED.${nestedKey}`);
+              this.addRelationshipFromValue(relationships, `${key}.${nestedKey}`, nestedValue);
             } else if (Array.isArray(nestedValue)) {
-              for (let i = 0; i < nestedValue.length; i++) {
-                const arrayValue = nestedValue[i];
-                if (typeof arrayValue === 'string') {
-                  const correctedKey = i === 0 ? `RELATED.${nestedKey}` : `RELATED.${nestedKey}.${i}`;
-                  const parsedValue = this.parseRelatedValue(arrayValue);
-                  
-                  relationships.push({
-                    key: correctedKey,
-                    type: nestedKey,
-                    value: arrayValue,
-                    parsedValue: parsedValue || undefined
-                  });
-                  
-                  console.debug(`[ContactNote] Parsed RELATED.${nestedKey}${i > 0 ? '.' + i : ''}`);
+              nestedValue.forEach((v, i) => {
+                if (typeof v === 'string') {
+                  const arrayKey = i === 0 ? `${key}.${nestedKey}` : `${key}.${nestedKey}.${i}`;
+                  this.addRelationshipFromValue(relationships, arrayKey, v);
                 }
-              }
-            }
-          }
-          continue;
-        }
-        
-        // Handle RELATED.type format (dot notation as a key)
-        if (key.includes('.') && key !== 'RELATED') {
-          const parts = key.split('.');
-          if (parts[0] === 'RELATED' && parts.length >= 2) {
-            const typePart = parts.slice(1).join('.');
-            
-            if (typeof value === 'string') {
-              const parsedValue = this.parseRelatedValue(value);
-              
-              relationships.push({
-                key: key,
-                type: typePart,
-                value: value,
-                parsedValue: parsedValue || undefined
               });
-              
-              console.debug(`[ContactNote] Parsed ${key}`);
-              continue;
-            } else if (Array.isArray(value)) {
-              for (let i = 0; i < value.length; i++) {
-                const arrayValue = value[i];
-                if (typeof arrayValue === 'string') {
-                  const correctedKey = i === 0 ? `RELATED.${typePart}` : `RELATED.${typePart}.${i}`;
-                  const parsedValue = this.parseRelatedValue(arrayValue);
-                  
-                  relationships.push({
-                    key: correctedKey,
-                    type: typePart,
-                    value: arrayValue,
-                    parsedValue: parsedValue || undefined
-                  });
-                  
-                  console.debug(`[ContactNote] Parsed ${correctedKey}`);
-                }
-              }
-              continue;
-            } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-              for (const [nestedKey, nestedValue] of Object.entries(value)) {
-                if (typeof nestedValue === 'string') {
-                  const combinedType = `${typePart}.${nestedKey}`;
-                  const parsedValue = this.parseRelatedValue(nestedValue);
-                  
-                  relationships.push({
-                    key: `RELATED.${combinedType}`,
-                    type: combinedType,
-                    value: nestedValue,
-                    parsedValue: parsedValue || undefined
-                  });
-                  
-                  console.debug(`[ContactNote] Parsed RELATED.${combinedType}`);
-                }
-              }
-              continue;
-            } else {
-              let valueType: string = typeof value;
-              if (value === null) {
-                valueType = 'null';
-              } else if (Array.isArray(value)) {
-                valueType = 'array';
-              }
-              console.warn(`[ContactNote] Skipping malformed RELATED key "${key}": Use RELATED.type format. Value type: ${valueType}`);
-              continue;
             }
           }
         }
-        
-        // Skip non-string values
-        if (typeof value !== 'string') {
-          console.warn(`[ContactNote] Skipping non-string RELATED value for key ${key}: ${typeof value}`);
-          continue;
-        }
-        
-        const type = this.extractRelationshipType(key);
-        const parsedValue = this.parseRelatedValue(value);
-        
-        relationships.push({
-          key,
-          type,
-          value: value,
-          parsedValue: parsedValue || undefined
-        });
       }
     }
 
     return relationships;
+  }
+
+  /**
+   * Helper to add a relationship from a frontmatter value
+   */
+  private addRelationshipFromValue(relationships: FrontmatterRelationship[], key: string, value: string): void {
+    try {
+      const reference = RelationshipReference.fromString(value);
+      const type = this.extractRelationshipType(key);
+      
+      relationships.push({
+        key,
+        type,
+        value,
+        parsedValue: {
+          type: reference.getType() === 'uid' ? 'uid' : 'name',
+          value: reference.getValue()
+        }
+      });
+    } catch (error) {
+      // Skip invalid references
+      console.debug(`[ContactNote] Failed to parse relationship from ${key}: ${value}`);
+    }
   }
 
   /**
