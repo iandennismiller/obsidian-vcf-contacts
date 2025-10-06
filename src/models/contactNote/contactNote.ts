@@ -1700,7 +1700,10 @@ export class ContactNote {
         }
 
         const targetContact = new ContactNote(this.app, this.settings, targetFile);
-        const reverseType = this.getReciprocalRelationshipType(relType, sourceGender);
+        
+        // Use entity method to get reciprocal type
+        const reciprocalType = relationship.getReciprocalType();
+        const reverseType = reciprocalType.toString();
         
         if (!reverseType) {
           result.processedRelationships.push({
@@ -2045,120 +2048,6 @@ export class ContactNote {
   /**
    * Get reciprocal relationship type with gender awareness
    */
-  private getReciprocalRelationshipType(relationshipType: string, targetGender?: Gender): string | null {
-    const reciprocalMap: Record<string, string | Record<string, string>> = {
-      'father': {
-        'M': 'son',
-        'F': 'daughter',
-        'NB': 'child',
-        'O': 'child',
-        'N': 'child',
-        'U': 'child',
-        'default': 'child'
-      },
-      'mother': {
-        'M': 'son',
-        'F': 'daughter',
-        'NB': 'child',
-        'O': 'child',
-        'N': 'child',
-        'U': 'child',
-        'default': 'child'
-      },
-      'parent': {
-        'M': 'son',
-        'F': 'daughter',
-        'NB': 'child',
-        'O': 'child', 
-        'N': 'child',
-        'U': 'child',
-        'default': 'child'
-      },
-      'son': 'parent',
-      'daughter': 'parent',
-      'child': 'parent',
-      'brother': {
-        'M': 'brother',
-        'F': 'sister',
-        'NB': 'sibling',
-        'O': 'sibling',
-        'N': 'sibling', 
-        'U': 'sibling',
-        'default': 'sibling'
-      },
-      'sister': {
-        'M': 'brother',
-        'F': 'sister',
-        'NB': 'sibling',
-        'O': 'sibling',
-        'N': 'sibling',
-        'U': 'sibling', 
-        'default': 'sibling'
-      },
-      'sibling': 'sibling',
-      'spouse': 'spouse',
-      'husband': 'wife',
-      'wife': 'husband',
-      'friend': 'friend',
-      'colleague': 'colleague',
-      'manager': 'employee',
-      'employee': 'manager',
-      'boss': 'employee',
-      'mentor': 'mentee',
-      'mentee': 'mentor',
-      'uncle': {
-        'M': 'nephew',
-        'F': 'niece',
-        'NB': 'nephew',
-        'O': 'nephew',
-        'N': 'nephew',
-        'U': 'nephew',
-        'default': 'nephew'
-      },
-      'aunt': {
-        'M': 'nephew',
-        'F': 'niece',
-        'NB': 'nephew',
-        'O': 'nephew',
-        'N': 'nephew',
-        'U': 'nephew',
-        'default': 'nephew'
-      },
-      'nephew': {
-        'M': 'uncle',
-        'F': 'aunt',
-        'NB': 'uncle',
-        'O': 'uncle',
-        'N': 'uncle',
-        'U': 'uncle',
-        'default': 'uncle'
-      },
-      'niece': {
-        'M': 'uncle',
-        'F': 'aunt',
-        'NB': 'aunt',
-        'O': 'uncle',
-        'N': 'uncle',
-        'U': 'uncle',
-        'default': 'uncle'
-      }
-    };
-    
-    const mapping = reciprocalMap[relationshipType.toLowerCase()];
-    if (!mapping) return null;
-    
-    if (typeof mapping === 'string') {
-      return mapping;
-    }
-    
-    // Use gender-specific mapping if available
-    if (targetGender && mapping[targetGender]) {
-      return mapping[targetGender];
-    }
-    
-    return mapping.default || null;
-  }
-
   /**
    * Check if two relationship types are equivalent
    */
