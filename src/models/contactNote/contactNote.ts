@@ -32,6 +32,7 @@ import { ContactResolver } from './services/ContactResolver';
 import { UIDConflictResolver } from './services/UIDConflictResolver';
 import { MarkdownRenderer } from './services/MarkdownRenderer';
 import { FieldGrouper } from './entities/fields/FieldGrouper';
+import { RelationshipUpgradeService } from './services/RelationshipUpgradeService';
 
 // Import utilities for markdown rendering
 import { marked, Tokens } from 'marked';
@@ -394,29 +395,6 @@ export class ContactNote {
   }
 
   /**
-   * Parse a vCard RELATED value to extract UID or name
-   */
-  /**
-   * Parse a RELATED value using RelationshipReference entity
-   * @deprecated Use RelationshipReference.fromString() directly
-   */
-  parseRelatedValue(value: string): { type: 'uuid' | 'uid' | 'name'; value: string } | null {
-    if (!value || typeof value !== 'string') return null;
-    
-    try {
-      const reference = RelationshipReference.fromString(value);
-      const refType = reference.getType();
-      const uid = reference.getUID();
-      
-      return refType === 'uid' && uid
-        ? { type: 'uuid', value: uid.toString() }
-        : { type: 'name', value: reference.getValue() };
-    } catch (error) {
-      return { type: 'name', value: value.trim() };
-    }
-  }
-
-  /**
    * Parse RELATED fields from frontmatter
    * Delegates to Frontmatter and Relationship entities
    */
@@ -560,76 +538,6 @@ export class ContactNote {
    */
   mdRender(record: Record<string, any>, hashtags: string, genderLookup?: (contactRef: string) => Gender): string {
     return MarkdownRenderer.render(record, hashtags, genderLookup);
-  }
-
-  /**
-   * Group vCard fields into semantic categories
-   * Delegates to FieldGrouper utility
-   * 
-   * @deprecated Use FieldGrouper.groupVCardFields() directly
-   */
-  private groupVCardFields(record: Record<string, any>) {
-    return FieldGrouper.groupVCardFields(record);
-  }
-
-  /**
-   * Sort name fields in logical display order
-   * Delegates to FieldGrouper utility
-   * 
-   * @deprecated Use FieldGrouper.sortNameItems() directly
-   */
-  private sortNameItems(nameItems: Record<string, any>): Record<string, any> {
-    return FieldGrouper.sortNameItems(nameItems);
-  }
-
-  /**
-   * Sort priority fields in logical display order
-   * Delegates to FieldGrouper utility
-   * 
-   * @deprecated Use FieldGrouper.sortedPriorityItems() directly
-   */
-  private sortedPriorityItems(priorityItems: Record<string, any>): Record<string, any> {
-    return FieldGrouper.sortedPriorityItems(priorityItems);
-  }
-
-  /**
-   * Generate Related section markdown
-   * 
-   * @deprecated This method is now private in MarkdownRenderer
-   * @private
-   */
-  private generateRelatedList(record: Record<string, any>, genderLookup?: (contactRef: string) => Gender): string {
-    // This method is kept for backward compatibility but should not be used
-    // The logic is now in MarkdownRenderer.generateRelatedList (private)
-    // For now, we recreate the logic here, but callers should use MarkdownRenderer.render() instead
-    const relatedEntries: string[] = [];
-
-    Object.entries(record).forEach(([key, value]) => {
-      if (key.startsWith('RELATED')) {
-        const relationshipType = this.extractRelationshipTypeFromKey(key);
-        const parsedValue = this.parseRelatedValue(value as string);
-        
-        if (parsedValue) {
-          let contactName = parsedValue.value;
-          let displayType = relationshipType;
-          
-          if (genderLookup && parsedValue.type === 'name') {
-            const contactGender = genderLookup(contactName);
-            if (contactGender) {
-              displayType = this.getGenderedRelationshipTerm(relationshipType, contactGender);
-            }
-          }
-          
-          relatedEntries.push(`- ${displayType} [[${contactName}]]`);
-        }
-      }
-    });
-
-    if (relatedEntries.length === 0) {
-      return `${HEADING_LEVELS.SECTION} ${SECTION_NAMES.RELATED}\n`;
-    }
-
-    return `${HEADING_LEVELS.SECTION} ${SECTION_NAMES.RELATED}\n${relatedEntries.join('\n')}\n`;
   }
 
   /**
@@ -1265,6 +1173,7 @@ export class ContactNote {
 
   /**
    * Upgrade name-based relationships to UID-based when possible
+   * Delegates to RelationshipUpgradeService
    */
   async upgradeNameBasedRelationshipsToUID(): Promise<{
     success: boolean;
@@ -1275,67 +1184,17 @@ export class ContactNote {
     }>;
     errors: string[];
   }> {
-    const result = { success: true, upgradedRelationships: [], errors: [] };
-
-    try {
-      const frontmatter = await this.getFrontmatter();
-      const updates: Record<string, string> = {};
-      
-      // Upgrade existing frontmatter name-based relationships
-      if (frontmatter) {
-        for (const [key, value] of Object.entries(frontmatter)) {
-          if (key.startsWith('RELATED[') && typeof value === 'string') {
-            const ref = RelationshipReference.fromString(value);
-            if (ref.isNameReference()) {
-              const targetFile = await this.findContactByName(ref.getValue());
-              const targetUID = targetFile ? this.app.metadataCache.getFileCache(targetFile)?.frontmatter?.UID : null;
-                
-              if (targetUID) {
-                updates[key] = this.formatRelatedValue(targetUID, ref.getValue());
-                const relType = this.extractRelationshipTypeFromKey(key);
-                result.upgradedRelationships.push({ targetUID, type: relType, key });
-              }
-            }
-          }
-        }
-      }
-
-      // Add missing markdown relationships to frontmatter with UIDs
-      const markdownRelationships = await this.parseRelatedSection();
-      let relationshipIndex = 0;
-      
-      for (const relationship of markdownRelationships) {
-        const relType = relationship.getType().toString();
-        const contactName = relationship.getTarget().getValue();
-        
-        // Skip if already in frontmatter
-        const hasEntry = frontmatter && Object.keys(frontmatter).some(key => 
-          key.startsWith('RELATED[') && 
-          this.extractRelationshipTypeFromKey(key).toLowerCase() === relType.toLowerCase()
-        );
-        
-        if (!hasEntry) {
-          const targetFile = await this.findContactByName(contactName);
-          const targetUID = targetFile ? this.app.metadataCache.getFileCache(targetFile)?.frontmatter?.UID : null;
-            
-          if (targetUID) {
-            const key = relationshipIndex === 0 ? `RELATED.${relType}` : `RELATED.${relType}.${relationshipIndex}`;
-            updates[key] = this.formatRelatedValue(targetUID, contactName);
-            result.upgradedRelationships.push({ targetUID, type: relType, key });
-            relationshipIndex++;
-          }
-        }
-      }
-
-      if (Object.keys(updates).length > 0) {
-        await this.updateMultipleFrontmatterValues(updates);
-      }
-    } catch (error: any) {
-      result.success = false;
-      result.errors.push(`Error upgrading relationships: ${error.message}`);
-    }
-
-    return result;
+    return RelationshipUpgradeService.upgradeRelationships(
+      this.app,
+      this.settings,
+      this.file,
+      () => this.getFrontmatter(),
+      (name: string) => this.findContactByName(name),
+      () => this.parseRelatedSection(),
+      (key: string) => this.extractRelationshipTypeFromKey(key),
+      (uid: string, displayName?: string) => this.formatRelatedValue(uid, displayName),
+      (updates: Record<string, string>) => this.updateMultipleFrontmatterValues(updates)
+    );
   }
 
   /**
@@ -1371,7 +1230,19 @@ export class ContactNote {
         oldUID,
         newUID,
         frontmatter,
-        (value: string) => this.parseRelatedValue(value)
+        (value: string) => {
+          if (!value || typeof value !== 'string') return null;
+          try {
+            const reference = RelationshipReference.fromString(value);
+            const refType = reference.getType();
+            const uid = reference.getUID();
+            return refType === 'uid' && uid
+              ? { type: 'uuid', value: uid.toString() }
+              : { type: 'name', value: reference.getValue() };
+          } catch (error) {
+            return { type: 'name', value: value.trim() };
+          }
+        }
       );
 
       if (result.updatedRelationships.length > 0) {
@@ -1427,14 +1298,21 @@ export class ContactNote {
           let matchedUID = mappingMap[value];
           
           if (!matchedUID) {
-            // Try parsing the value
-            const parsedValue = this.parseRelatedValue(value);
-            if (parsedValue) {
-              if (parsedValue.type === 'name') {
-                matchedUID = mappingMap[`name:${parsedValue.value}`] || mappingMap[parsedValue.value];
-              } else {
-                matchedUID = mappingMap[parsedValue.value];
+            // Try parsing the value using RelationshipReference
+            try {
+              const reference = RelationshipReference.fromString(value);
+              const refValue = reference.getValue();
+              const refType = reference.getType();
+              const uid = reference.getUID();
+              
+              if (refType === 'name') {
+                matchedUID = mappingMap[`name:${refValue}`] || mappingMap[refValue];
+              } else if (uid) {
+                matchedUID = mappingMap[uid.toString()];
               }
+            } catch (error) {
+              // If parsing fails, try matching as plain value
+              matchedUID = mappingMap[value.trim()];
             }
           }
           

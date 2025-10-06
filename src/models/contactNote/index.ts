@@ -69,7 +69,9 @@ export {
   /** UID conflict detection and resolution service */
   UIDConflictResolver,
   /** Markdown rendering service for vCard data */
-  MarkdownRenderer
+  MarkdownRenderer,
+  /** Relationship upgrade service for migrating to UID-based relationships */
+  RelationshipUpgradeService
 } from './services';
 
 export type {
@@ -82,7 +84,9 @@ export type {
   /** Result of UID update operation */
   UIDUpdateResult,
   /** Result of bulk UID update operation */
-  BulkUIDUpdateResult
+  BulkUIDUpdateResult,
+  /** Result of relationship upgrade operation */
+  RelationshipUpgradeResult
 } from './services';
 
 // Export field utilities

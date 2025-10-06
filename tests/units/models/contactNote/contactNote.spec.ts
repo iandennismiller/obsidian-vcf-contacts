@@ -297,22 +297,6 @@ EMAIL: john@example.com
       const formatted = contactNote.formatRelatedValue('uid-123', 'John Doe');
       expect(formatted).toContain('uid-123');
     });
-
-    it('should parse related value - UID format', () => {
-      const parsed = contactNote.parseRelatedValue('urn:uuid:test-uid');
-      expect(parsed).toBeDefined();
-      expect(parsed?.type).toBe('uuid');
-    });
-
-    it('should parse related value - name format', () => {
-      const parsed = contactNote.parseRelatedValue('John Doe');
-      expect(parsed).toBeDefined();
-    });
-
-    it('should return null for invalid related value', () => {
-      const parsed = contactNote.parseRelatedValue('');
-      expect(parsed).toBeNull();
-    });
   });
 
   describe('findContactByName', () => {
