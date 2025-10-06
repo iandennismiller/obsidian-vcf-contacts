@@ -411,15 +411,13 @@ export class ContactNote {
    * Delegates to RelationshipReference entity
    */
   formatRelatedValue(targetUid: string, targetName: string): string {
-    if (targetUid) {
-      try {
-        const uid = UID.fromString(targetUid);
-        return RelationshipReference.fromUID(uid).toString();
-      } catch {
-        return RelationshipReference.fromName(targetName).toString();
-      }
+    try {
+      return targetUid 
+        ? RelationshipReference.fromUID(UID.fromString(targetUid)).toString()
+        : RelationshipReference.fromName(targetName).toString();
+    } catch {
+      return RelationshipReference.fromName(targetName).toString();
     }
-    return RelationshipReference.fromName(targetName).toString();
   }
 
   /**
