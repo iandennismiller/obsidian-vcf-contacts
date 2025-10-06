@@ -1353,49 +1353,47 @@ export class ContactNote {
   /**
    * Resolve relationship target by relationship type or identifier
    */
+  /**
+   * Resolve relationship target by identifier (UID, name, or relationship type)
+   * Uses entity parsing for robust resolution
+   */
   async resolveRelationshipTarget(identifierOrType: string): Promise<{
     file: TFile | null;
     frontmatter?: any;
     type: 'uid' | 'name';
     contactName: string;
   } | null> {
-    // First, check if identifier is a relationship type in frontmatter
-    const frontmatter = await this.getFrontmatter();
-    if (frontmatter) {
-      for (const [key, value] of Object.entries(frontmatter)) {
-        if (key.startsWith('RELATED[') && typeof value === 'string') {
-          const typeMatch = key.match(/RELATED\[(?:\d+:)?([^\]]+)\]/);
-          const relType = typeMatch ? typeMatch[1] : '';
-          
-          if (relType.toLowerCase() === identifierOrType.toLowerCase()) {
-            const parsedValue = this.parseRelatedValue(value);
-            if (parsedValue && (parsedValue.type === 'uuid' || parsedValue.type === 'uid')) {
-              const result = await this.resolveContactByUID(parsedValue.value);
-              if (result) {
-                const contactName = result.frontmatter?.FN || result.file.basename;
-                return { 
-                  file: result.file, 
-                  frontmatter: result.frontmatter,
-                  type: 'uid', 
-                  contactName 
-                };
-              }
+    // Check if identifier matches a relationship type in frontmatter
+    const fm = Frontmatter.fromObject(await this.getFrontmatter() || {});
+    for (const key of fm.getKeys()) {
+      if (key.startsWith('RELATED[')) {
+        const typeMatch = key.match(/RELATED\[(?:\d+:)?([^\]]+)\]/);
+        if (typeMatch && typeMatch[1].toLowerCase() === identifierOrType.toLowerCase()) {
+          const ref = RelationshipReference.fromString(fm.get(key) as string);
+          if (ref.getType() === 'uid') {
+            const result = await this.resolveContactByUID(ref.getUID()!.toString());
+            if (result) {
+              return { 
+                file: result.file, 
+                frontmatter: result.frontmatter,
+                type: 'uid', 
+                contactName: result.frontmatter?.FN || result.file.basename 
+              };
             }
           }
         }
       }
     }
     
-    // Check if it's a UID format
+    // Check if it's a UID
     if (identifierOrType.startsWith('urn:uuid:') || UID.validate(identifierOrType)) {
       const result = await this.resolveContactByUID(identifierOrType);
       if (result) {
-        const contactName = result.frontmatter?.FN || result.file.basename;
         return { 
           file: result.file, 
           frontmatter: result.frontmatter,
           type: 'uid', 
-          contactName 
+          contactName: result.frontmatter?.FN || result.file.basename 
         };
       }
     }
@@ -1404,12 +1402,7 @@ export class ContactNote {
     const file = await this.findContactByName(identifierOrType);
     if (file) {
       const cache = this.app.metadataCache.getFileCache(file);
-      return { 
-        file, 
-        frontmatter: cache?.frontmatter,
-        type: 'name', 
-        contactName: identifierOrType 
-      };
+      return { file, frontmatter: cache?.frontmatter, type: 'name', contactName: identifierOrType };
     }
     
     return null;
@@ -1631,47 +1624,31 @@ export class ContactNote {
 
   /**
    * Detect UID conflicts within the contact system
+   * Simplified using Map operations
    */
   async detectUIDConflicts(): Promise<{
     hasConflicts: boolean;
-    conflicts: Array<{
-      uid: string;
-      files: string[];
-    }>;
+    conflicts: Array<{ uid: string; files: string[] }>;
   }> {
-    const result: {
-      hasConflicts: boolean;
-      conflicts: Array<{
-        uid: string;
-        files: string[];
-      }>;
-    } = { hasConflicts: false, conflicts: [] };
     const uidMap = new Map<string, string[]>();
     
-    const allFiles = this.app.vault.getMarkdownFiles();
-    
-    for (const file of allFiles) {
+    // Collect UIDs from all contact files
+    for (const file of this.app.vault.getMarkdownFiles()) {
       if (!file.path.startsWith(this.settings.contactsFolder)) continue;
       
-      const cache = this.app.metadataCache.getFileCache(file);
-      const uid = cache?.frontmatter?.UID;
-      
+      const uid = this.app.metadataCache.getFileCache(file)?.frontmatter?.UID;
       if (uid) {
-        if (!uidMap.has(uid)) {
-          uidMap.set(uid, []);
-        }
+        if (!uidMap.has(uid)) uidMap.set(uid, []);
         uidMap.get(uid)!.push(file.path);
       }
     }
     
-    for (const [uid, files] of uidMap.entries()) {
-      if (files.length > 1) {
-        result.hasConflicts = true;
-        result.conflicts.push({ uid, files });
-      }
-    }
+    // Find conflicts (UIDs with multiple files)
+    const conflicts = Array.from(uidMap.entries())
+      .filter(([_, files]) => files.length > 1)
+      .map(([uid, files]) => ({ uid, files }));
     
-    return result;
+    return { hasConflicts: conflicts.length > 0, conflicts };
   }
 
   /**
@@ -1907,35 +1884,14 @@ export class ContactNote {
 
   /**
    * Parse a VCard REV date string into a Date object
-   * Handles VCard format: YYYYMMDDTHHMMSSZ
+   * Uses Revision entity for parsing
    */
   parseRevDate(revString: string): Date | null {
-    if (!revString) {
-      return null;
-    }
-
+    if (!revString) return null;
+    
     try {
-      // Only handle VCard format: YYYYMMDDTHHMMSSZ - be strict about format
-      if (/^\d{8}T\d{6}Z$/.test(revString)) {
-        const year = parseInt(revString.substr(0, 4), 10);
-        const month = parseInt(revString.substr(4, 2), 10);
-        const day = parseInt(revString.substr(6, 2), 10);
-        const hour = parseInt(revString.substr(9, 2), 10);
-        const minute = parseInt(revString.substr(11, 2), 10);
-        const second = parseInt(revString.substr(13, 2), 10);
-
-        // Validate ranges
-        if (month < 1 || month > 12 || day < 1 || day > 31 || 
-            hour < 0 || hour > 23 || minute < 0 || minute > 59 || second < 0 || second > 59) {
-          return null;
-        }
-
-        const date = new Date(Date.UTC(year, month - 1, day, hour, minute, second));
-        return isNaN(date.getTime()) ? null : date;
-      }
-
-      // Don't parse ISO format or other formats - return null for non-VCard formats
-      return null;
+      const revision = Revision.fromVCFFormat(revString);
+      return revision.getTimestamp();
     } catch {
       return null;
     }
