@@ -449,15 +449,6 @@ export class ContactNote {
   }
 
   /**
-   * Extract relationship type from RELATED key format
-   */
-  extractRelationshipType(key: string): string {
-    // Extract type from RELATED[type] format
-    const match = key.match(/^RELATED\[([^\]]+)\]$/);
-    return match ? match[1] : '';
-  }
-
-  /**
    * Parse RELATED fields from frontmatter
    * Delegates to Frontmatter and Relationship entities
    */
@@ -510,7 +501,7 @@ export class ContactNote {
   private addRelationshipFromValue(relationships: FrontmatterRelationship[], key: string, value: string): void {
     try {
       const reference = RelationshipReference.fromString(value);
-      const type = this.extractRelationshipType(key);
+      const type = this.extractRelationshipTypeFromKey(key);
       
       relationships.push({
         key,
@@ -714,7 +705,7 @@ export class ContactNote {
     return `${HEADING_LEVELS.SECTION} ${SECTION_NAMES.RELATED}\n${relatedEntries.join('\n')}\n`;
   }
 
-  private extractRelationshipTypeFromKey(key: string): string {
+  extractRelationshipTypeFromKey(key: string): string {
     // Try dot notation first (RELATED.type or RELATED.type.1)
     const dotMatch = key.match(/^RELATED\.([^.]+)(?:\.\d+)?$/);
     if (dotMatch) {
