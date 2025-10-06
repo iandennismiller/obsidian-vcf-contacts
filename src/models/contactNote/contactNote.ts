@@ -289,81 +289,40 @@ export class ContactNote {
 
   /**
    * Update a single frontmatter value
+   * Delegates to Frontmatter entity
    */
   async updateFrontmatterValue(key: string, value: string, skipRevUpdate = false): Promise<void> {
-    const frontmatter = await this.getFrontmatter();
-    if (!frontmatter) {
-      return;
-    }
-
-    if (frontmatter[key] === value) {
-      return;
-    }
-
-    if (value === '') {
-      delete frontmatter[key];
-    } else {
-      frontmatter[key] = value;
-    }
-
+    let fm = Frontmatter.fromObject(await this.getFrontmatter() || {});
+    
+    // Update or delete value
+    fm = value === '' ? fm.delete(key) : fm.set(key, value);
+    
+    // Update revision if needed
     if (!skipRevUpdate && key !== 'REV') {
-      frontmatter['REV'] = this.generateRevTimestamp();
+      fm = fm.set('REV', this.generateRevTimestamp());
     }
-
-    await this.saveFrontmatter(frontmatter);
+    
+    await this.saveFrontmatter(fm.toObject());
   }
 
   /**
    * Update multiple frontmatter values in a single operation
+   * Delegates to Frontmatter entity
    */
   async updateMultipleFrontmatterValues(updates: Record<string, string>, skipRevUpdate = false): Promise<void> {
-    const frontmatter = await this.getFrontmatter();
-    if (!frontmatter) {
-      return;
-    }
-
-    let hasChanges = false;
-    const keyMapping: Record<string, string> = {};
+    let fm = Frontmatter.fromObject(await this.getFrontmatter() || {});
     
+    // Apply all updates
     for (const [key, value] of Object.entries(updates)) {
-      const actualKey = this.findFrontmatterKey(frontmatter, key);
-      if (actualKey) {
-        keyMapping[key] = actualKey;
-      } else {
-        keyMapping[key] = key;
-      }
-      
-      const currentValue = actualKey ? frontmatter[actualKey] : undefined;
-      const fieldType = this.extractFieldType(key);
-      const valuesMatch = this.valuesAreEqual(currentValue, value, fieldType);
-      if (!valuesMatch) {
-        hasChanges = true;
-      }
+      fm = value === '' ? fm.delete(key) : fm.set(key, value);
     }
-
-    if (!hasChanges) {
-      return;
-    }
-
-    for (const [key, value] of Object.entries(updates)) {
-      const actualKey = keyMapping[key];
-      
-      if (actualKey !== key && actualKey in frontmatter) {
-        delete frontmatter[actualKey];
-      }
-      
-      if (value === '') {
-        delete frontmatter[key];
-      } else {
-        frontmatter[key] = value;
-      }
-    }
-
+    
+    // Update revision if needed
     if (!skipRevUpdate) {
-      frontmatter['REV'] = this.generateRevTimestamp();
+      fm = fm.set('REV', this.generateRevTimestamp());
     }
-
-    await this.saveFrontmatter(frontmatter);
+    
+    await this.saveFrontmatter(fm.toObject());
   }
 
   // === Relationship Operations (using Relationship entities) ===
