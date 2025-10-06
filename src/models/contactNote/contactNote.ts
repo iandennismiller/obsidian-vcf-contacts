@@ -170,31 +170,11 @@ export class ContactNote {
 
   /**
    * Parse GENDER field value from vCard
-   * Uses Gender entity for parsing logic
+   * Delegates to Gender entity
    */
   parseGender(value: string): Gender {
-    if (!value || value.trim() === '') {
-      return null;
-    }
-    
     try {
-      // Normalize special cases that the Gender entity doesn't handle
-      const normalized = value.trim().toUpperCase();
-      let valueToparse = value;
-      
-      // Handle NON-BINARY variations
-      if (normalized === 'NON-BINARY' || normalized === 'NONBINARY') {
-        valueToparse = 'nb';
-      }
-      // Handle UNSPECIFIED
-      else if (normalized === 'UNSPECIFIED') {
-        valueToparse = 'u';
-      }
-      
-      // Use Gender entity for parsing
-      const genderEntity = GenderEntity.fromString(valueToparse);
-      // Return legacy format for backward compatibility
-      return genderEntity.toLegacyFormat();
+      return GenderEntity.fromString(value).getValue();
     } catch (error) {
       return null;
     }
@@ -225,12 +205,10 @@ export class ContactNote {
 
   /**
    * Generate a revision timestamp in VCF format
-   * Uses Revision entity
+   * Delegates to Revision entity
    */
   generateRevTimestamp(): string {
-    const revision = Revision.now();
-    // VCF format: remove hyphens and colons from ISO format
-    return revision.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    return Revision.now().toVCFFormat();
   }
 
   /**

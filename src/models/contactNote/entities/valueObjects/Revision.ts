@@ -173,6 +173,17 @@ export class Revision {
   }
   
   /**
+   * Convert to VCF format timestamp
+   * VCF format: YYYYMMDDTHHMMSSZ (no hyphens, no colons)
+   * 
+   * @returns VCF formatted timestamp
+   */
+  toVCFFormat(): string {
+    // VCF format: remove hyphens and colons from ISO format
+    return this.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+  }
+  
+  /**
    * Format for display
    * 
    * @returns Human-readable formatted string
