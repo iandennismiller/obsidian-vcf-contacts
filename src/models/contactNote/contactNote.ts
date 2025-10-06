@@ -1310,33 +1310,16 @@ export class ContactNote {
     }>;
     errors: string[];
   }> {
-    const result: {
-      success: boolean;
-      processedRelationships: Array<{
-        targetContact: string;
-        reverseType: string;
-        added: boolean;
-        reason?: string;
-        error?: string;
-      }>;
-      errors: string[];
-    } = {
-      success: true,
-      processedRelationships: [],
-      errors: []
-    };
+    const result = { success: true, processedRelationships: [], errors: [] };
 
     try {
       const relationships = await this.parseRelatedSection();
       const sourceContactName = this.getDisplayName();
-      const sourceFrontmatter = await this.getFrontmatter();
-      const sourceGender = sourceFrontmatter?.GENDER as Gender;
       
       for (const relationship of relationships) {
         const contactName = relationship.getTarget().getValue();
-        const relType = relationship.getType().toString();
-        
         const targetFile = await this.findContactByName(contactName);
+        
         if (!targetFile) {
           result.processedRelationships.push({
             targetContact: contactName,
@@ -1348,12 +1331,7 @@ export class ContactNote {
           continue;
         }
 
-        const targetContact = new ContactNote(this.app, this.settings, targetFile);
-        
-        // Use entity method to get reciprocal type
-        const reciprocalType = relationship.getReciprocalType();
-        const reverseType = reciprocalType.toString();
-        
+        const reverseType = relationship.getReciprocalType().toString();
         if (!reverseType) {
           result.processedRelationships.push({
             targetContact: contactName,
@@ -1365,15 +1343,16 @@ export class ContactNote {
           continue;
         }
 
+        const targetContact = new ContactNote(this.app, this.settings, targetFile);
         const targetRelationships = await targetContact.parseRelatedSection();
+        const sourceRef = RelationshipReference.fromName(sourceContactName);
         
+        // Check if reverse relationship already exists using entity methods
         const reverseExists = targetRelationships.some((rel: Relationship) => {
-          const relContactName = rel.getTarget().getValue();
-          const relType = rel.getType().toString();
-          const normalizedRelName = relContactName.toLowerCase().replace(/[\s\-]/g, '');
-          const normalizedSourceName = sourceContactName.toLowerCase().replace(/[\s\-]/g, '');
-          return normalizedRelName === normalizedSourceName && 
-            this.areRelationshipTypesEquivalent(relType, reverseType);
+          const relTarget = rel.getTarget();
+          const matchesName = relTarget.getValue().toLowerCase().replace(/[\s\-]/g, '') === 
+                             sourceContactName.toLowerCase().replace(/[\s\-]/g, '');
+          return matchesName && this.areRelationshipTypesEquivalent(rel.getType().toString(), reverseType);
         });
 
         if (!reverseExists) {
@@ -1381,11 +1360,7 @@ export class ContactNote {
             type: r.getType().toString(),
             contactName: r.getTarget().getValue()
           }));
-          newRelationships.push({
-            type: reverseType,
-            contactName: sourceContactName
-          });
-          
+          newRelationships.push({ type: reverseType, contactName: sourceContactName });
           await targetContact.updateRelatedSectionInContent(newRelationships);
           
           result.processedRelationships.push({
@@ -1422,46 +1397,32 @@ export class ContactNote {
     }>;
     errors: string[];
   }> {
-    const result: {
-      success: boolean;
-      upgradedRelationships: Array<{
-        targetUID: string;
-        type: string;
-        key: string;
-      }>;
-      errors: string[];
-    } = { success: true, upgradedRelationships: [], errors: [] };
+    const result = { success: true, upgradedRelationships: [], errors: [] };
 
     try {
       const frontmatter = await this.getFrontmatter();
       const updates: Record<string, string> = {};
       
+      // Upgrade existing frontmatter name-based relationships
       if (frontmatter) {
         for (const [key, value] of Object.entries(frontmatter)) {
           if (key.startsWith('RELATED[') && typeof value === 'string') {
-            const parsedValue = this.parseRelatedValue(value);
-            if (parsedValue && parsedValue.type === 'name') {
-              const targetFile = await this.findContactByName(parsedValue.value);
-              if (targetFile) {
-                const targetCache = this.app.metadataCache.getFileCache(targetFile);
-                const targetUID = targetCache?.frontmatter?.UID;
+            const ref = RelationshipReference.fromString(value);
+            if (ref.isNameReference()) {
+              const targetFile = await this.findContactByName(ref.getValue());
+              const targetUID = targetFile ? this.app.metadataCache.getFileCache(targetFile)?.frontmatter?.UID : null;
                 
-                if (targetUID) {
-                  updates[key] = this.formatRelatedValue(targetUID, parsedValue.value);
-                  const typeMatch = key.match(/RELATED\[(?:\d+:)?([^\]]+)\]/);
-                  const relType = typeMatch ? typeMatch[1] : 'related';
-                  result.upgradedRelationships.push({
-                    targetUID,
-                    type: relType,
-                    key
-                  });
-                }
+              if (targetUID) {
+                updates[key] = this.formatRelatedValue(targetUID, ref.getValue());
+                const relType = this.extractRelationshipTypeFromKey(key);
+                result.upgradedRelationships.push({ targetUID, type: relType, key });
               }
             }
           }
         }
       }
 
+      // Add missing markdown relationships to frontmatter with UIDs
       const markdownRelationships = await this.parseRelatedSection();
       let relationshipIndex = 0;
       
@@ -1469,32 +1430,21 @@ export class ContactNote {
         const relType = relationship.getType().toString();
         const contactName = relationship.getTarget().getValue();
         
-        const hasFrontmatterEntry = frontmatter && Object.keys(frontmatter).some(key => {
-          if (!key.startsWith('RELATED[')) return false;
-          const typeMatch = key.match(/RELATED\[(?:\d+:)?([^\]]+)\]/);
-          const fmRelType = typeMatch ? typeMatch[1] : '';
-          return fmRelType.toLowerCase() === relType.toLowerCase();
-        });
+        // Skip if already in frontmatter
+        const hasEntry = frontmatter && Object.keys(frontmatter).some(key => 
+          key.startsWith('RELATED[') && 
+          this.extractRelationshipTypeFromKey(key).toLowerCase() === relType.toLowerCase()
+        );
         
-        if (!hasFrontmatterEntry) {
+        if (!hasEntry) {
           const targetFile = await this.findContactByName(contactName);
-          if (targetFile) {
-            const targetCache = this.app.metadataCache.getFileCache(targetFile);
-            const targetUID = targetCache?.frontmatter?.UID;
+          const targetUID = targetFile ? this.app.metadataCache.getFileCache(targetFile)?.frontmatter?.UID : null;
             
-            if (targetUID) {
-              const key = relationshipIndex === 0 && !hasFrontmatterEntry
-                ? `RELATED.${relType}`
-                : `RELATED.${relType}.${relationshipIndex}`;
-              
-              updates[key] = this.formatRelatedValue(targetUID, contactName);
-              result.upgradedRelationships.push({
-                targetUID,
-                type: relType,
-                key
-              });
-              relationshipIndex++;
-            }
+          if (targetUID) {
+            const key = relationshipIndex === 0 ? `RELATED.${relType}` : `RELATED.${relType}.${relationshipIndex}`;
+            updates[key] = this.formatRelatedValue(targetUID, contactName);
+            result.upgradedRelationships.push({ targetUID, type: relType, key });
+            relationshipIndex++;
           }
         }
       }
