@@ -225,9 +225,12 @@ export class ContactNote {
 
   /**
    * Generate a revision timestamp in VCF format
+   * Uses Revision entity
    */
   generateRevTimestamp(): string {
-    return new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    const revision = Revision.now();
+    // VCF format: remove hyphens and colons from ISO format
+    return revision.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
   }
 
   /**
