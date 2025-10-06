@@ -688,7 +688,7 @@ export class ContactNote {
     Object.entries(record).forEach(([key, value]) => {
       if (key.startsWith('RELATED')) {
         const relationshipType = this.extractRelationshipTypeFromKey(key);
-        const parsedValue = this.parseRelatedValueForMarkdown(value as string);
+        const parsedValue = this.parseRelatedValue(value as string);
         
         if (parsedValue) {
           let contactName = parsedValue.value;
@@ -724,15 +724,6 @@ export class ContactNote {
     // Fall back to bracket notation for backward compatibility
     const bracketMatch = key.match(/RELATED(?:\[(?:\d+:)?([^\]]+)\])?/);
     return bracketMatch ? bracketMatch[1] || 'related' : 'related';
-  }
-
-  /**
-   * Parse a RELATED value for markdown rendering using RelationshipReference entity
-   * @deprecated Use RelationshipReference.fromString() directly
-   */
-  private parseRelatedValueForMarkdown(value: string): { type: 'uuid' | 'uid' | 'name'; value: string } | null {
-    // Delegate to parseRelatedValue which now uses RelationshipReference entity
-    return this.parseRelatedValue(value);
   }
 
   // === Sync Operations (inlined from SyncOperations) ===
