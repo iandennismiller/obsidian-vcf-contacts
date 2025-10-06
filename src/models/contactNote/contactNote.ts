@@ -449,16 +449,18 @@ export class ContactNote {
 
   /**
    * Format a related value for vCard RELATED field
+   * Delegates to RelationshipReference entity
    */
   formatRelatedValue(targetUid: string, targetName: string): string {
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (uuidRegex.test(targetUid)) {
-      return `urn:uuid:${targetUid}`;
-    } else if (targetUid) {
-      return `uid:${targetUid}`;
-    } else {
-      return `name:${targetName}`;
+    if (targetUid) {
+      try {
+        const uid = UID.fromString(targetUid);
+        return RelationshipReference.fromUID(uid).toString();
+      } catch {
+        return RelationshipReference.fromName(targetName).toString();
+      }
     }
+    return RelationshipReference.fromName(targetName).toString();
   }
 
   /**
@@ -672,44 +674,30 @@ export class ContactNote {
 
   /**
    * Get the display term for a relationship based on the contact's gender
+   * Delegates to RelationshipType entity
    */
   getGenderedRelationshipTerm(relationshipType: string, contactGender: Gender): string {
     const relType = RelationshipType.fromString(relationshipType);
-    // Convert old Gender type to GenderEntity
-    let genderEntity: GenderEntity;
-    if (contactGender === 'M' || contactGender === 'male') {
-      genderEntity = GenderEntity.MALE;
-    } else if (contactGender === 'F' || contactGender === 'female') {
-      genderEntity = GenderEntity.FEMALE;
-    } else if (contactGender === 'NB' || contactGender === 'other') {
-      genderEntity = GenderEntity.OTHER;
-    } else {
-      genderEntity = GenderEntity.UNKNOWN;
-    }
+    const genderEntity = GenderEntity.fromString(contactGender);
     return relType.getGenderedTerm(genderEntity);
   }
 
   /**
    * Infer gender from a gendered relationship term
+   * Delegates to RelationshipType entity
    */
   inferGenderFromRelationship(relationshipType: string): Gender {
     const relType = RelationshipType.fromString(relationshipType);
     const genderEntity = relType.inferGender();
-    
-    // Convert GenderEntity back to legacy Gender type
-    if (!genderEntity) return null;
-    if (genderEntity.isMale()) return 'M';
-    if (genderEntity.isFemale()) return 'F';
-    if (genderEntity.isOther()) return 'NB';
-    return 'U';
+    return genderEntity ? genderEntity.getValue() : null;
   }
 
   /**
    * Convert gendered relationship term to genderless equivalent
+   * Delegates to RelationshipType entity
    */
   convertToGenderlessType(relationshipType: string): string {
-    const relType = RelationshipType.fromString(relationshipType);
-    return relType.getNeutralType();
+    return RelationshipType.fromString(relationshipType).getNeutralType();
   }
 
   // === Markdown Operations (delegated to MarkdownOperations) ===
