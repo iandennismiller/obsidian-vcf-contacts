@@ -30,6 +30,8 @@ import { RelationshipCollection } from './entities/relationships/RelationshipCol
 // Import services
 import { ContactResolver } from './services/ContactResolver';
 import { UIDConflictResolver } from './services/UIDConflictResolver';
+import { MarkdownRenderer } from './services/MarkdownRenderer';
+import { FieldGrouper } from './entities/fields/FieldGrouper';
 
 // Import utilities for markdown rendering
 import { marked, Tokens } from 'marked';
@@ -554,94 +556,54 @@ export class ContactNote {
 
   /**
    * Render the contact as markdown from vCard record data
+   * Delegates to MarkdownRenderer service
    */
   mdRender(record: Record<string, any>, hashtags: string, genderLookup?: (contactRef: string) => Gender): string {
-    const { NOTE, ...recordWithoutNote } = record;
-    const groups = this.groupVCardFields(recordWithoutNote);
-    const myNote = NOTE ? NOTE.replace(/\\n/g, '\n') : '';
-    let additionalTags = '';
-    
-    if (recordWithoutNote.CATEGORIES) {
-      const tempTags = recordWithoutNote.CATEGORIES.split(',');
-      additionalTags = `#${tempTags.join(' #')}`;
-    }
-
-    const frontmatter = {
-      ...this.sortNameItems(groups.name),
-      ...this.sortedPriorityItems(groups.priority),
-      ...groups.address,
-      ...groups.other
-    };
-
-    const relatedSection = this.generateRelatedList(recordWithoutNote, genderLookup);
-
-    return `---\n${stringifyYaml(frontmatter)}---\n${HEADING_LEVELS.SUBSECTION} ${SECTION_NAMES.NOTES}\n${myNote}\n${relatedSection}\n\n${hashtags} ${additionalTags}\n`;
+    return MarkdownRenderer.render(record, hashtags, genderLookup);
   }
 
+  /**
+   * Group vCard fields into semantic categories
+   * Delegates to FieldGrouper utility
+   * 
+   * @deprecated Use FieldGrouper.groupVCardFields() directly
+   */
   private groupVCardFields(record: Record<string, any>) {
-    const nameKeys = FIELD_GROUPS.NAME as readonly string[];
-    const priorityKeys = FIELD_GROUPS.PRIORITY as readonly string[];
-    const addressKeys = FIELD_GROUPS.ADDRESS as readonly string[];
-
-    const groups = {
-      name: {} as Record<string, any>,
-      priority: {} as Record<string, any>,
-      address: {} as Record<string, any>,
-      other: {} as Record<string, any>
-    };
-
-    // Group fields by category
-    for (const [key, value] of Object.entries(record)) {
-      const baseKey = key.split('[')[0];
-      if (nameKeys.includes(baseKey)) groups.name[key] = value;
-      else if (priorityKeys.includes(baseKey)) groups.priority[key] = value;
-      else if (addressKeys.includes(baseKey)) groups.address[key] = value;
-      else groups.other[key] = value;
-    }
-
-    return groups;
+    return FieldGrouper.groupVCardFields(record);
   }
 
+  /**
+   * Sort name fields in logical display order
+   * Delegates to FieldGrouper utility
+   * 
+   * @deprecated Use FieldGrouper.sortNameItems() directly
+   */
   private sortNameItems(nameItems: Record<string, any>): Record<string, any> {
-    const nameOrder = ["N.PREFIX", "N.GN", "N.MN", "N.FN", "N.SUFFIX", "FN"];
-    const sortedNameItems: Record<string, any> = {};
-
-    // Add ordered fields first
-    nameOrder.filter(key => nameItems[key] !== undefined).forEach(key => {
-      sortedNameItems[key] = nameItems[key];
-    });
-
-    // Add remaining fields
-    Object.keys(nameItems).filter(key => !nameOrder.includes(key)).forEach(key => {
-      sortedNameItems[key] = nameItems[key];
-    });
-
-    return sortedNameItems;
+    return FieldGrouper.sortNameItems(nameItems);
   }
 
+  /**
+   * Sort priority fields in logical display order
+   * Delegates to FieldGrouper utility
+   * 
+   * @deprecated Use FieldGrouper.sortedPriorityItems() directly
+   */
   private sortedPriorityItems(priorityItems: Record<string, any>): Record<string, any> {
-    const priorityOrder = [
-      "EMAIL", "TEL", "BDAY", "URL", "ORG", "TITLE", "ROLE", 
-      "PHOTO", "RELATED", "GENDER"
-    ];
-    const sortedPriorityItems: Record<string, any> = {};
-
-    // Sort priority fields in logical order
-    priorityOrder.forEach(baseKey => {
-      Object.keys(priorityItems).forEach(key => {
-        if (key.startsWith(baseKey)) {
-          sortedPriorityItems[key] = priorityItems[key];
-        }
-      });
-    });
-
-    return sortedPriorityItems;
+    return FieldGrouper.sortedPriorityItems(priorityItems);
   }
 
+  /**
+   * Generate Related section markdown
+   * 
+   * @deprecated This method is now private in MarkdownRenderer
+   * @private
+   */
   private generateRelatedList(record: Record<string, any>, genderLookup?: (contactRef: string) => Gender): string {
+    // This method is kept for backward compatibility but should not be used
+    // The logic is now in MarkdownRenderer.generateRelatedList (private)
+    // For now, we recreate the logic here, but callers should use MarkdownRenderer.render() instead
     const relatedEntries: string[] = [];
 
-    // Process RELATED fields from frontmatter
     Object.entries(record).forEach(([key, value]) => {
       if (key.startsWith('RELATED')) {
         const relationshipType = this.extractRelationshipTypeFromKey(key);
@@ -651,7 +613,6 @@ export class ContactNote {
           let contactName = parsedValue.value;
           let displayType = relationshipType;
           
-          // Apply gender-based relationship terms if gender lookup is available
           if (genderLookup && parsedValue.type === 'name') {
             const contactGender = genderLookup(contactName);
             if (contactGender) {

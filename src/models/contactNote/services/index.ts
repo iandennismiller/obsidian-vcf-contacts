@@ -12,3 +12,4 @@ export {
   type UIDUpdateResult, 
   type BulkUIDUpdateResult 
 } from './UIDConflictResolver';
+export { MarkdownRenderer } from './MarkdownRenderer';
