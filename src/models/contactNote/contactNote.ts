@@ -1002,6 +1002,10 @@ export class ContactNote {
   /**
    * Validate relationship consistency
    */
+  /**
+   * Validate relationship consistency between markdown and frontmatter
+   * Uses entity parsing for validation
+   */
   async validateRelationshipConsistency(): Promise<{ 
     isConsistent: boolean; 
     issues: string[]; 
@@ -1014,39 +1018,35 @@ export class ContactNote {
       const markdownRels = await this.parseRelatedSection();
       const frontmatterRels = await this.parseFrontmatterRelationships();
 
+      // Check count mismatch
       if (markdownRels.length !== frontmatterRels.length) {
         issues.push(`Relationship count mismatch: ${markdownRels.length} in markdown, ${frontmatterRels.length} in frontmatter`);
         recommendations.push('Run full sync to resolve count discrepancies');
       }
 
+      // Validate markdown relationships
       for (const rel of markdownRels) {
-        const resolvedContact = await this.resolveContact(rel.contactName);
-        if (!resolvedContact) {
-          issues.push(`Unresolved contact in markdown: ${rel.contactName}`);
-          recommendations.push(`Check if contact file exists for: ${rel.contactName}`);
+        if (!await this.resolveContact(rel.getTarget().getValue())) {
+          issues.push(`Unresolved contact in markdown: ${rel.getTarget().getValue()}`);
+          recommendations.push(`Check if contact file exists for: ${rel.getTarget().getValue()}`);
         }
       }
 
+      // Validate frontmatter UID references
       for (const fmRel of frontmatterRels) {
         if (fmRel.parsedValue?.type === 'uid' || fmRel.parsedValue?.type === 'uuid') {
-          const resolvedContact = await this.findContactByUid(fmRel.parsedValue.value);
-          if (!resolvedContact) {
+          if (!await this.findContactByUid(fmRel.parsedValue.value)) {
             issues.push(`Orphaned UID in frontmatter: ${fmRel.parsedValue.value}`);
             recommendations.push(`Remove or update orphaned relationship: ${fmRel.key}`);
           }
         }
       }
 
-      return {
-        isConsistent: issues.length === 0,
-        issues,
-        recommendations
-      };
+      return { isConsistent: issues.length === 0, issues, recommendations };
     } catch (error: any) {
-      issues.push(`Validation failed: ${error.message}`);
       return {
         isConsistent: false,
-        issues,
+        issues: [`Validation failed: ${error.message}`],
         recommendations: ['Fix validation errors before checking consistency']
       };
     }
@@ -1997,116 +1997,96 @@ export class ContactNote {
    * Generate Contact section markdown from frontmatter
    * Uses ContactSection entity to generate markdown
    */
+  /**
+   * Generate Contact section markdown from frontmatter
+   * Delegates to ContactSection entity
+   */
   async generateContactSection(): Promise<string> {
-    const frontmatter = await this.getFrontmatter();
-    if (!frontmatter) return '';
-    
+    const fm = Frontmatter.fromObject(await this.getFrontmatter() || {});
     const fields: ContactField[] = [];
     
-    // Create ContactField entities from frontmatter
-    // Try to parse EMAIL, TEL, URL, and ADR fields
-    for (const [key, value] of Object.entries(frontmatter)) {
+    // Parse contact fields from frontmatter
+    for (const key of fm.getKeys()) {
+      const value = fm.get(key);
+      if (typeof value !== 'string') continue;
+      
       try {
-        // Import field types dynamically based on key prefix
-        if (key.startsWith('EMAIL') && typeof value === 'string') {
+        if (key.startsWith('EMAIL')) {
           const { EmailField } = await import('./entities/fields/EmailField');
-          const field = EmailField.fromFrontmatter(key, value);
-          fields.push(field);
-        } else if (key.startsWith('TEL') && typeof value === 'string') {
+          fields.push(EmailField.fromFrontmatter(key, value));
+        } else if (key.startsWith('TEL')) {
           const { TelephoneField } = await import('./entities/fields/TelephoneField');
-          const field = TelephoneField.fromFrontmatter(key, value);
-          fields.push(field);
-        } else if (key.startsWith('URL') && typeof value === 'string') {
+          fields.push(TelephoneField.fromFrontmatter(key, value));
+        } else if (key.startsWith('URL')) {
           const { UrlField } = await import('./entities/fields/UrlField');
-          const field = UrlField.fromFrontmatter(key, value);
-          fields.push(field);
+          fields.push(UrlField.fromFrontmatter(key, value));
         }
-        // ADR fields are more complex - need to collect components
-        // For now, skip ADR in this simplified version
       } catch (error) {
-        // Skip fields that fail to parse
         console.debug(`[ContactNote] Failed to parse field ${key}:`, error);
       }
     }
     
-    if (fields.length === 0) {
-      return '';
-    }
+    if (fields.length === 0) return '';
     
-    // Use ContactSection entity to generate markdown
-    const contactSection = ContactSection.fromFields(fields, 'Contact', 2);
-    const markdown = contactSection.toMarkdown();
-    
-    // Extract just the content part (remove header)
-    const lines = markdown.split('\n');
-    const contentLines = lines.filter(line => !line.match(/^#{2,4}\s+Contact/));
-    return contentLines.join('\n').trim();
+    // Generate markdown and strip header
+    const markdown = ContactSection.fromFields(fields, 'Contact', 2).toMarkdown();
+    return markdown.split('\n').filter(line => !line.match(/^#{2,4}\s+Contact/)).join('\n').trim();
   }
 
   /**
    * Update Contact section in markdown content
+   * Ensures Contact section appears before Related section
    */
   async updateContactSectionInContent(contactSection: string): Promise<void> {
     const content = await this.getContent();
+    const contactRegex = /^(#{2,4} Contact\s*\n)([\s\S]*?)(?=\n#{2,4} |\n#\w+|$)/m;
+    const relatedRegex = /^(#{2,4} Related\s*\n)/m;
     
-    // Check if Contact section exists
-    const contactSectionRegex = /^(#{2,4} Contact\s*\n)([\s\S]*?)(?=\n#{2,4} |\n#\w+|$)/m;
-    const contactMatch = content.match(contactSectionRegex);
+    const contactMatch = content.match(contactRegex);
+    const relatedMatch = content.match(relatedRegex);
     
-    // Check if Related section exists
-    const relatedSectionRegex = /^(#{2,4} Related\s*\n)/m;
-    const relatedMatch = content.match(relatedSectionRegex);
-    
+    // If both exist, check ordering
     if (contactMatch && relatedMatch) {
-      // Both exist - check ordering
       const contactIndex = content.indexOf(contactMatch[0]);
       const relatedIndex = content.indexOf(relatedMatch[0]);
       
       if (contactIndex > relatedIndex) {
-        // Wrong order! Contact is after Related. Need to move Contact before Related
-        // 1. Remove Contact section from current position
-        const contentWithoutContact = content.replace(contactSectionRegex, '');
-        // 2. Insert Contact before Related
-        const newRelatedMatch = contentWithoutContact.match(relatedSectionRegex);
+        // Wrong order - move Contact before Related
+        const contentWithoutContact = content.replace(contactRegex, '');
+        const newRelatedMatch = contentWithoutContact.match(relatedRegex);
         if (newRelatedMatch) {
           const insertPos = contentWithoutContact.indexOf(newRelatedMatch[0]);
-          const newContent = contentWithoutContact.slice(0, insertPos) + `## Contact\n${contactSection}\n\n` + contentWithoutContact.slice(insertPos);
-          await this.updateContent(newContent);
+          await this.updateContent(
+            contentWithoutContact.slice(0, insertPos) + 
+            `## Contact\n${contactSection}\n\n` + 
+            contentWithoutContact.slice(insertPos)
+          );
           return;
         }
-      } else {
-        // Correct order - just replace Contact section
-        const newContent = content.replace(contactSectionRegex, `$1${contactSection}\n`);
-        await this.updateContent(newContent);
-        return;
       }
-    }
-    
-    if (contactMatch && !relatedMatch) {
-      // Contact exists, no Related - just replace in-place
-      const newContent = content.replace(contactSectionRegex, `$1${contactSection}\n`);
-      await this.updateContent(newContent);
+      // Correct order - just replace
+      await this.updateContent(content.replace(contactRegex, `$1${contactSection}\n`));
       return;
     }
     
-    // Contact doesn't exist - add it in the right place
-    // Priority: before Related section > before hashtags > at end
+    // Contact exists alone - replace it
+    if (contactMatch) {
+      await this.updateContent(content.replace(contactRegex, `$1${contactSection}\n`));
+      return;
+    }
     
+    // No Contact section - add it (before Related > before hashtags > at end)
     const relatedMatch2 = content.match(/\n(#{2,4} Related)/);
     const hashtagMatch = content.match(/\n(#\w+)/);
     
     let newContent: string;
-    
     if (relatedMatch2) {
-      // Insert before Related section
       const insertPos = content.indexOf(relatedMatch2[0]);
       newContent = content.slice(0, insertPos) + `\n## Contact\n${contactSection}\n` + content.slice(insertPos);
     } else if (hashtagMatch) {
-      // Insert before hashtags
       const insertPos = content.indexOf(hashtagMatch[0]);
       newContent = content.slice(0, insertPos) + `\n## Contact\n${contactSection}\n` + content.slice(insertPos);
     } else {
-      // Add at end
       newContent = content + `\n\n## Contact\n${contactSection}\n`;
     }
     
