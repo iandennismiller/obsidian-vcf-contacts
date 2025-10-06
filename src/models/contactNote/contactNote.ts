@@ -633,19 +633,13 @@ export class ContactNote {
       other: {} as Record<string, any>
     };
 
-    // Group fields by category for better organization
+    // Group fields by category
     for (const [key, value] of Object.entries(record)) {
       const baseKey = key.split('[')[0];
-      
-      if (nameKeys.includes(baseKey)) {
-        groups.name[key] = value;
-      } else if (priorityKeys.includes(baseKey)) {
-        groups.priority[key] = value;
-      } else if (addressKeys.includes(baseKey)) {
-        groups.address[key] = value;
-      } else {
-        groups.other[key] = value;
-      }
+      if (nameKeys.includes(baseKey)) groups.name[key] = value;
+      else if (priorityKeys.includes(baseKey)) groups.priority[key] = value;
+      else if (addressKeys.includes(baseKey)) groups.address[key] = value;
+      else groups.other[key] = value;
     }
 
     return groups;
@@ -655,18 +649,14 @@ export class ContactNote {
     const nameOrder = ["N.PREFIX", "N.GN", "N.MN", "N.FN", "N.SUFFIX", "FN"];
     const sortedNameItems: Record<string, any> = {};
 
-    // Sort name fields in logical order
-    nameOrder.forEach(key => {
-      if (nameItems[key] !== undefined) {
-        sortedNameItems[key] = nameItems[key];
-      }
+    // Add ordered fields first
+    nameOrder.filter(key => nameItems[key] !== undefined).forEach(key => {
+      sortedNameItems[key] = nameItems[key];
     });
 
-    // Add any remaining name fields
-    Object.keys(nameItems).forEach(key => {
-      if (!nameOrder.includes(key)) {
-        sortedNameItems[key] = nameItems[key];
-      }
+    // Add remaining fields
+    Object.keys(nameItems).filter(key => !nameOrder.includes(key)).forEach(key => {
+      sortedNameItems[key] = nameItems[key];
     });
 
     return sortedNameItems;
@@ -1086,86 +1076,7 @@ export class ContactNote {
     return { isValid, issues };
   }
 
-  /**
-   * Validate email format
-   */
-  /**
-   * Validate email format
-   * @deprecated Use EmailField.validate() entity method directly
-   */
-  validateEmail(email: string): boolean {
-    if (!email || typeof email !== 'string') return true; // Empty is valid
-    try {
-      const { EmailField } = require('./entities/fields/EmailField');
-      const field = EmailField.fromMarkdown(`- ${email}`);
-      const result = field?.validate();
-      return result?.isValid ?? true;
-    } catch {
-      // Fallback to basic validation
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      return emailRegex.test(email);
-    }
-  }
 
-  /**
-   * Validate phone number format
-   * @deprecated Use TelephoneField.validate() entity method directly
-   */
-  validatePhoneNumber(phone: string): boolean {
-    if (!phone || typeof phone !== 'string') return true; // Empty is valid
-    try {
-      const { TelephoneField } = require('./entities/fields/TelephoneField');
-      const field = TelephoneField.fromMarkdown(`- ${phone}`);
-      const result = field?.validate();
-      return result?.isValid ?? true;
-    } catch {
-      // Fallback to basic validation
-      const phoneRegex = /^[\+]?[\s\-\(\)0-9]{7,}$/;
-      return phoneRegex.test(phone.replace(/\s/g, ''));
-    }
-  }
-
-  /**
-   * Validate date format
-   */
-  validateDate(dateStr: string): boolean {
-    if (!dateStr || typeof dateStr !== 'string') return true; // Empty is valid
-    
-    // Try various date formats
-    const date = new Date(dateStr);
-    return !isNaN(date.getTime());
-  }
-
-  /**
-   * Sanitize user input to prevent XSS
-   */
-  sanitizeInput(input: string): string {
-    if (!input || typeof input !== 'string') return '';
-    
-    // Basic XSS prevention - remove script tags and dangerous content
-    return input
-      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-      .replace(/javascript:/gi, 'removed:')
-      .replace(/on\w+\s*=/gi, 'removed=')
-      .replace(/alert\s*\(/gi, 'removed(');
-  }
-
-  /**
-   * Validate URL format
-   * @deprecated Use UrlField.validate() entity method directly
-   */
-  private validateURL(url: string): boolean {
-    if (!url || typeof url !== 'string') return true; // Empty is valid
-    try {
-      const { UrlField } = require('./entities/fields/UrlField');
-      const field = UrlField.fromMarkdown(`- ${url}`);
-      const result = field?.validate();
-      return result?.isValid ?? true;
-    } catch {
-      // Fallback to basic validation
-      return /^https?:\/\/.+/.test(url);
-    }
-  }
 
   /**
    * Identify invalid frontmatter fields
