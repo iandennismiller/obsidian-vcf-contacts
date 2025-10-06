@@ -1685,12 +1685,10 @@ export class ContactNote {
    * Get reciprocal relationship type with gender awareness
    */
   /**
-   * Check if two relationship types are equivalent
+   * Check if two relationship types are equivalent (delegates to entity)
    */
   private areRelationshipTypesEquivalent(type1: string, type2: string): boolean {
-    const genderless1 = this.convertToGenderlessType(type1);
-    const genderless2 = this.convertToGenderlessType(type2);
-    return genderless1 === genderless2;
+    return RelationshipType.fromString(type1).equals(RelationshipType.fromString(type2));
   }
 
   // === Helper methods from BaseMarkdownSectionOperations ===
