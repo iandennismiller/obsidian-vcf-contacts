@@ -313,12 +313,20 @@ However, there are **shared concepts** that could be better abstracted:
 
 ## Recommended Next Steps
 
-### Phase 1: Move Simple Methods to Entities
-- [ ] Add `validate()` methods to field entities (EmailField, TelephoneField, UrlField)
-- [ ] Add `findKey()` method to Frontmatter entity
-- [ ] Add `stripFrontmatter()`, `findList()`, `findHeading()` to MarkdownSection
-- [ ] Add `fromFrontmatterKey()` to RelationshipType
-- [ ] Add `extract()` to FieldType utility
+### Phase 1: Move Simple Methods to Entities ✅ COMPLETE
+- [x] Add `validate()` methods to field entities (EmailField, TelephoneField, UrlField)
+- [x] Add `findKey()` method to Frontmatter entity
+- [x] Add `stripFrontmatter()`, `findList()`, `findHeading()` to MarkdownSection
+- [x] Add `fromFrontmatterKey()` to RelationshipType
+- [x] Add `extract()` to FieldType utility
+
+**Completed:** All Phase 1 tasks implemented in commit 1a1a95f
+- Added static `validateValue()` methods to field entities
+- Added `findKey()` to Frontmatter for case-insensitive key lookup
+- Added `stripFrontmatter()` to MarkdownSection as static utility
+- Added `fromFrontmatterKey()` to RelationshipType for key parsing
+- Created new FieldType utility class with `extract()` and helper methods
+- Refactored 5 methods in contactNote.ts to delegate to entities
 
 ### Phase 2: Create Service Classes
 - [ ] Create `ContactResolver` service for contact lookup/resolution
