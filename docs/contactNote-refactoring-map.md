@@ -328,11 +328,18 @@ However, there are **shared concepts** that could be better abstracted:
 - Created new FieldType utility class with `extract()` and helper methods
 - Refactored 5 methods in contactNote.ts to delegate to entities
 
-### Phase 2: Create Service Classes
-- [ ] Create `ContactResolver` service for contact lookup/resolution
-- [ ] Create `RelationshipCollection` entity for relationship deduplication
-- [ ] Create `RelationshipSyncService` for sync operations
-- [ ] Create `UIDConflictResolver` service for UID conflict detection/resolution
+### Phase 2: Create Service Classes ✅ COMPLETE
+- [x] Create `ContactResolver` service for contact lookup/resolution
+- [x] Create `RelationshipCollection` entity for relationship deduplication
+- [x] Create `RelationshipSyncService` for sync operations
+- [x] Create `UIDConflictResolver` service for UID conflict detection/resolution
+
+**Completed:** All Phase 2 tasks implemented in commits f99e7f0 and 6338347
+- Created ContactResolver service with 6 static methods for contact lookup
+- Created RelationshipCollection entity with deduplication and manipulation methods
+- Created UIDConflictResolver service with 4 methods for UID conflict management
+- Refactored 9 methods in contactNote.ts to delegate to services/entities
+- Removed ~150+ lines of inline implementation from contactNote.ts
 
 ### Phase 3: Refactor Complex Methods
 - [ ] Refactor `mdRender()` to use entity-based rendering
