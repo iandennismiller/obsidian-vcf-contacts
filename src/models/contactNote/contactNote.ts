@@ -486,40 +486,27 @@ export class ContactNote {
   /**
    * Parse a vCard RELATED value to extract UID or name
    */
+  /**
+   * Parse a RELATED value using RelationshipReference entity
+   * @deprecated Use RelationshipReference.fromString() directly
+   */
   parseRelatedValue(value: string): { type: 'uuid' | 'uid' | 'name'; value: string } | null {
     if (!value || typeof value !== 'string') return null;
     
-    const trimmed = value.trim();
-    
-    // Check for urn:uuid: format
-    if (trimmed.startsWith('urn:uuid:')) {
-      return {
-        type: 'uuid',
-        value: trimmed.substring(9)
-      };
+    try {
+      const reference = RelationshipReference.fromString(value);
+      const refType = reference.getType();
+      
+      if (refType === 'uid') {
+        const uid = reference.getUID();
+        return uid ? { type: 'uuid', value: uid.toString() } : null;
+      } else {
+        return { type: 'name', value: reference.getValue() };
+      }
+    } catch (error) {
+      // Fall back to name if parsing fails
+      return { type: 'name', value: value.trim() };
     }
-    
-    // Check for uid: format
-    if (trimmed.startsWith('uid:')) {
-      return {
-        type: 'uid',
-        value: trimmed.substring(4)
-      };
-    }
-    
-    // Check if it looks like a UID (UUID format)
-    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(trimmed)) {
-      return {
-        type: 'uuid',
-        value: trimmed
-      };
-    }
-    
-    // Default to name
-    return {
-      type: 'name',
-      value: trimmed
-    };
   }
 
   /**
@@ -890,15 +877,13 @@ export class ContactNote {
     return bracketMatch ? bracketMatch[1] || 'related' : 'related';
   }
 
+  /**
+   * Parse a RELATED value for markdown rendering using RelationshipReference entity
+   * @deprecated Use RelationshipReference.fromString() directly
+   */
   private parseRelatedValueForMarkdown(value: string): { type: 'uuid' | 'uid' | 'name'; value: string } | null {
-    if (value.startsWith('urn:uuid:')) {
-      return { type: 'uuid', value: value.substring(9) };
-    } else if (value.startsWith('uid:')) {
-      return { type: 'uid', value: value.substring(4) };
-    } else if (value.startsWith('name:')) {
-      return { type: 'name', value: value.substring(5) };
-    }
-    return null;
+    // Delegate to parseRelatedValue which now uses RelationshipReference entity
+    return this.parseRelatedValue(value);
   }
 
   // === Sync Operations (inlined from SyncOperations) ===
