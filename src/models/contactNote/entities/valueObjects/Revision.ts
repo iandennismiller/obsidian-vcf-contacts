@@ -93,6 +93,40 @@ export class Revision {
   }
   
   /**
+   * Create Revision from VCF format timestamp
+   * VCF format: YYYYMMDDTHHMMSSZ (no hyphens, no colons)
+   * 
+   * @param vcfString - VCF formatted timestamp
+   * @returns Revision instance
+   * @throws Error if VCF string is invalid
+   */
+  static fromVCFFormat(vcfString: string): Revision {
+    if (!vcfString || !/^\d{8}T\d{6}Z$/.test(vcfString)) {
+      throw new Error(`Invalid VCF format: ${vcfString}`);
+    }
+    
+    const year = parseInt(vcfString.substr(0, 4), 10);
+    const month = parseInt(vcfString.substr(4, 2), 10);
+    const day = parseInt(vcfString.substr(6, 2), 10);
+    const hour = parseInt(vcfString.substr(9, 2), 10);
+    const minute = parseInt(vcfString.substr(11, 2), 10);
+    const second = parseInt(vcfString.substr(13, 2), 10);
+    
+    // Validate ranges
+    if (month < 1 || month > 12 || day < 1 || day > 31 || 
+        hour < 0 || hour > 23 || minute < 0 || minute > 59 || second < 0 || second > 59) {
+      throw new Error(`Invalid VCF date values: ${vcfString}`);
+    }
+    
+    const date = new Date(Date.UTC(year, month - 1, day, hour, minute, second));
+    if (isNaN(date.getTime())) {
+      throw new Error(`Invalid VCF date: ${vcfString}`);
+    }
+    
+    return new Revision(date);
+  }
+  
+  /**
    * Get the timestamp as Date object
    * Returns a defensive copy to maintain immutability
    * 
@@ -170,6 +204,17 @@ export class Revision {
    */
   toFrontmatterValue(): string {
     return this.toISOString();
+  }
+  
+  /**
+   * Convert to VCF format timestamp
+   * VCF format: YYYYMMDDTHHMMSSZ (no hyphens, no colons)
+   * 
+   * @returns VCF formatted timestamp
+   */
+  toVCFFormat(): string {
+    // VCF format: remove hyphens and colons from ISO format
+    return this.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
   }
   
   /**

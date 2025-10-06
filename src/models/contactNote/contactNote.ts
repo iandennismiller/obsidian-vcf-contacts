@@ -170,31 +170,11 @@ export class ContactNote {
 
   /**
    * Parse GENDER field value from vCard
-   * Uses Gender entity for parsing logic
+   * Delegates to Gender entity
    */
   parseGender(value: string): Gender {
-    if (!value || value.trim() === '') {
-      return null;
-    }
-    
     try {
-      // Normalize special cases that the Gender entity doesn't handle
-      const normalized = value.trim().toUpperCase();
-      let valueToparse = value;
-      
-      // Handle NON-BINARY variations
-      if (normalized === 'NON-BINARY' || normalized === 'NONBINARY') {
-        valueToparse = 'nb';
-      }
-      // Handle UNSPECIFIED
-      else if (normalized === 'UNSPECIFIED') {
-        valueToparse = 'u';
-      }
-      
-      // Use Gender entity for parsing
-      const genderEntity = GenderEntity.fromString(valueToparse);
-      // Return legacy format for backward compatibility
-      return genderEntity.toLegacyFormat();
+      return GenderEntity.fromString(value).getValue();
     } catch (error) {
       return null;
     }
@@ -225,12 +205,10 @@ export class ContactNote {
 
   /**
    * Generate a revision timestamp in VCF format
-   * Uses Revision entity
+   * Delegates to Revision entity
    */
   generateRevTimestamp(): string {
-    const revision = Revision.now();
-    // VCF format: remove hyphens and colons from ISO format
-    return revision.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    return Revision.now().toVCFFormat();
   }
 
   /**
@@ -311,81 +289,40 @@ export class ContactNote {
 
   /**
    * Update a single frontmatter value
+   * Delegates to Frontmatter entity
    */
   async updateFrontmatterValue(key: string, value: string, skipRevUpdate = false): Promise<void> {
-    const frontmatter = await this.getFrontmatter();
-    if (!frontmatter) {
-      return;
-    }
-
-    if (frontmatter[key] === value) {
-      return;
-    }
-
-    if (value === '') {
-      delete frontmatter[key];
-    } else {
-      frontmatter[key] = value;
-    }
-
+    let fm = Frontmatter.fromObject(await this.getFrontmatter() || {});
+    
+    // Update or delete value
+    fm = value === '' ? fm.delete(key) : fm.set(key, value);
+    
+    // Update revision if needed
     if (!skipRevUpdate && key !== 'REV') {
-      frontmatter['REV'] = this.generateRevTimestamp();
+      fm = fm.set('REV', this.generateRevTimestamp());
     }
-
-    await this.saveFrontmatter(frontmatter);
+    
+    await this.saveFrontmatter(fm.toObject());
   }
 
   /**
    * Update multiple frontmatter values in a single operation
+   * Delegates to Frontmatter entity
    */
   async updateMultipleFrontmatterValues(updates: Record<string, string>, skipRevUpdate = false): Promise<void> {
-    const frontmatter = await this.getFrontmatter();
-    if (!frontmatter) {
-      return;
-    }
-
-    let hasChanges = false;
-    const keyMapping: Record<string, string> = {};
+    let fm = Frontmatter.fromObject(await this.getFrontmatter() || {});
     
+    // Apply all updates
     for (const [key, value] of Object.entries(updates)) {
-      const actualKey = this.findFrontmatterKey(frontmatter, key);
-      if (actualKey) {
-        keyMapping[key] = actualKey;
-      } else {
-        keyMapping[key] = key;
-      }
-      
-      const currentValue = actualKey ? frontmatter[actualKey] : undefined;
-      const fieldType = this.extractFieldType(key);
-      const valuesMatch = this.valuesAreEqual(currentValue, value, fieldType);
-      if (!valuesMatch) {
-        hasChanges = true;
-      }
+      fm = value === '' ? fm.delete(key) : fm.set(key, value);
     }
-
-    if (!hasChanges) {
-      return;
-    }
-
-    for (const [key, value] of Object.entries(updates)) {
-      const actualKey = keyMapping[key];
-      
-      if (actualKey !== key && actualKey in frontmatter) {
-        delete frontmatter[actualKey];
-      }
-      
-      if (value === '') {
-        delete frontmatter[key];
-      } else {
-        frontmatter[key] = value;
-      }
-    }
-
+    
+    // Update revision if needed
     if (!skipRevUpdate) {
-      frontmatter['REV'] = this.generateRevTimestamp();
+      fm = fm.set('REV', this.generateRevTimestamp());
     }
-
-    await this.saveFrontmatter(frontmatter);
+    
+    await this.saveFrontmatter(fm.toObject());
   }
 
   // === Relationship Operations (using Relationship entities) ===
@@ -471,15 +408,15 @@ export class ContactNote {
 
   /**
    * Format a related value for vCard RELATED field
+   * Delegates to RelationshipReference entity
    */
   formatRelatedValue(targetUid: string, targetName: string): string {
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (uuidRegex.test(targetUid)) {
-      return `urn:uuid:${targetUid}`;
-    } else if (targetUid) {
-      return `uid:${targetUid}`;
-    } else {
-      return `name:${targetName}`;
+    try {
+      return targetUid 
+        ? RelationshipReference.fromUID(UID.fromString(targetUid)).toString()
+        : RelationshipReference.fromName(targetName).toString();
+    } catch {
+      return RelationshipReference.fromName(targetName).toString();
     }
   }
 
@@ -496,162 +433,84 @@ export class ContactNote {
     try {
       const reference = RelationshipReference.fromString(value);
       const refType = reference.getType();
+      const uid = reference.getUID();
       
-      if (refType === 'uid') {
-        const uid = reference.getUID();
-        return uid ? { type: 'uuid', value: uid.toString() } : null;
-      } else {
-        return { type: 'name', value: reference.getValue() };
-      }
+      return refType === 'uid' && uid
+        ? { type: 'uuid', value: uid.toString() }
+        : { type: 'name', value: reference.getValue() };
     } catch (error) {
-      // Fall back to name if parsing fails
       return { type: 'name', value: value.trim() };
     }
   }
 
   /**
-   * Extract relationship type from RELATED key format
-   */
-  extractRelationshipType(key: string): string {
-    // Extract type from RELATED[type] format
-    const match = key.match(/^RELATED\[([^\]]+)\]$/);
-    return match ? match[1] : '';
-  }
-
-  /**
    * Parse RELATED fields from frontmatter
+   * Delegates to Frontmatter and Relationship entities
    */
   async parseFrontmatterRelationships(): Promise<FrontmatterRelationship[]> {
     const frontmatter = await this.getFrontmatter();
+    if (!frontmatter) return [];
+
     const relationships: FrontmatterRelationship[] = [];
+    const fm = Frontmatter.fromObject(frontmatter);
 
-    if (!frontmatter) return relationships;
-
-    for (const [key, value] of Object.entries(frontmatter)) {
+    // Get all keys that start with RELATED
+    for (const key of fm.getKeys()) {
       if (key.startsWith('RELATED')) {
-        // Handle RELATED as an object (from RELATED.type YAML dot notation)
-        if (key === 'RELATED' && typeof value === 'object' && value !== null && !Array.isArray(value)) {
+        const value = fm.get(key);
+        
+        // Handle different value types
+        if (typeof value === 'string') {
+          this.addRelationshipFromValue(relationships, key, value);
+        } else if (Array.isArray(value)) {
+          value.forEach((v, i) => {
+            if (typeof v === 'string') {
+              const arrayKey = i === 0 ? key : `${key}.${i}`;
+              this.addRelationshipFromValue(relationships, arrayKey, v);
+            }
+          });
+        } else if (typeof value === 'object' && value !== null) {
+          // Handle nested objects (RELATED.type format)
           for (const [nestedKey, nestedValue] of Object.entries(value)) {
             if (typeof nestedValue === 'string') {
-              const correctedKey = `RELATED.${nestedKey}`;
-              const type = nestedKey;
-              const parsedValue = this.parseRelatedValue(nestedValue);
-              
-              relationships.push({
-                key: correctedKey,
-                type,
-                value: nestedValue,
-                parsedValue: parsedValue || undefined
-              });
-              
-              console.debug(`[ContactNote] Parsed RELATED.${nestedKey}`);
+              this.addRelationshipFromValue(relationships, `${key}.${nestedKey}`, nestedValue);
             } else if (Array.isArray(nestedValue)) {
-              for (let i = 0; i < nestedValue.length; i++) {
-                const arrayValue = nestedValue[i];
-                if (typeof arrayValue === 'string') {
-                  const correctedKey = i === 0 ? `RELATED.${nestedKey}` : `RELATED.${nestedKey}.${i}`;
-                  const parsedValue = this.parseRelatedValue(arrayValue);
-                  
-                  relationships.push({
-                    key: correctedKey,
-                    type: nestedKey,
-                    value: arrayValue,
-                    parsedValue: parsedValue || undefined
-                  });
-                  
-                  console.debug(`[ContactNote] Parsed RELATED.${nestedKey}${i > 0 ? '.' + i : ''}`);
+              nestedValue.forEach((v, i) => {
+                if (typeof v === 'string') {
+                  const arrayKey = i === 0 ? `${key}.${nestedKey}` : `${key}.${nestedKey}.${i}`;
+                  this.addRelationshipFromValue(relationships, arrayKey, v);
                 }
-              }
-            }
-          }
-          continue;
-        }
-        
-        // Handle RELATED.type format (dot notation as a key)
-        if (key.includes('.') && key !== 'RELATED') {
-          const parts = key.split('.');
-          if (parts[0] === 'RELATED' && parts.length >= 2) {
-            const typePart = parts.slice(1).join('.');
-            
-            if (typeof value === 'string') {
-              const parsedValue = this.parseRelatedValue(value);
-              
-              relationships.push({
-                key: key,
-                type: typePart,
-                value: value,
-                parsedValue: parsedValue || undefined
               });
-              
-              console.debug(`[ContactNote] Parsed ${key}`);
-              continue;
-            } else if (Array.isArray(value)) {
-              for (let i = 0; i < value.length; i++) {
-                const arrayValue = value[i];
-                if (typeof arrayValue === 'string') {
-                  const correctedKey = i === 0 ? `RELATED.${typePart}` : `RELATED.${typePart}.${i}`;
-                  const parsedValue = this.parseRelatedValue(arrayValue);
-                  
-                  relationships.push({
-                    key: correctedKey,
-                    type: typePart,
-                    value: arrayValue,
-                    parsedValue: parsedValue || undefined
-                  });
-                  
-                  console.debug(`[ContactNote] Parsed ${correctedKey}`);
-                }
-              }
-              continue;
-            } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-              for (const [nestedKey, nestedValue] of Object.entries(value)) {
-                if (typeof nestedValue === 'string') {
-                  const combinedType = `${typePart}.${nestedKey}`;
-                  const parsedValue = this.parseRelatedValue(nestedValue);
-                  
-                  relationships.push({
-                    key: `RELATED.${combinedType}`,
-                    type: combinedType,
-                    value: nestedValue,
-                    parsedValue: parsedValue || undefined
-                  });
-                  
-                  console.debug(`[ContactNote] Parsed RELATED.${combinedType}`);
-                }
-              }
-              continue;
-            } else {
-              let valueType: string = typeof value;
-              if (value === null) {
-                valueType = 'null';
-              } else if (Array.isArray(value)) {
-                valueType = 'array';
-              }
-              console.warn(`[ContactNote] Skipping malformed RELATED key "${key}": Use RELATED.type format. Value type: ${valueType}`);
-              continue;
             }
           }
         }
-        
-        // Skip non-string values
-        if (typeof value !== 'string') {
-          console.warn(`[ContactNote] Skipping non-string RELATED value for key ${key}: ${typeof value}`);
-          continue;
-        }
-        
-        const type = this.extractRelationshipType(key);
-        const parsedValue = this.parseRelatedValue(value);
-        
-        relationships.push({
-          key,
-          type,
-          value: value,
-          parsedValue: parsedValue || undefined
-        });
       }
     }
 
     return relationships;
+  }
+
+  /**
+   * Helper to add a relationship from a frontmatter value
+   */
+  private addRelationshipFromValue(relationships: FrontmatterRelationship[], key: string, value: string): void {
+    try {
+      const reference = RelationshipReference.fromString(value);
+      const type = this.extractRelationshipTypeFromKey(key);
+      
+      relationships.push({
+        key,
+        type,
+        value,
+        parsedValue: {
+          type: reference.getType() === 'uid' ? 'uid' : 'name',
+          value: reference.getValue()
+        }
+      });
+    } catch (error) {
+      // Skip invalid references
+      console.debug(`[ContactNote] Failed to parse relationship from ${key}: ${value}`);
+    }
   }
 
   /**
@@ -694,44 +553,30 @@ export class ContactNote {
 
   /**
    * Get the display term for a relationship based on the contact's gender
+   * Delegates to RelationshipType entity
    */
   getGenderedRelationshipTerm(relationshipType: string, contactGender: Gender): string {
     const relType = RelationshipType.fromString(relationshipType);
-    // Convert old Gender type to GenderEntity
-    let genderEntity: GenderEntity;
-    if (contactGender === 'M' || contactGender === 'male') {
-      genderEntity = GenderEntity.MALE;
-    } else if (contactGender === 'F' || contactGender === 'female') {
-      genderEntity = GenderEntity.FEMALE;
-    } else if (contactGender === 'NB' || contactGender === 'other') {
-      genderEntity = GenderEntity.OTHER;
-    } else {
-      genderEntity = GenderEntity.UNKNOWN;
-    }
+    const genderEntity = GenderEntity.fromString(contactGender);
     return relType.getGenderedTerm(genderEntity);
   }
 
   /**
    * Infer gender from a gendered relationship term
+   * Delegates to RelationshipType entity
    */
   inferGenderFromRelationship(relationshipType: string): Gender {
     const relType = RelationshipType.fromString(relationshipType);
     const genderEntity = relType.inferGender();
-    
-    // Convert GenderEntity back to legacy Gender type
-    if (!genderEntity) return null;
-    if (genderEntity.isMale()) return 'M';
-    if (genderEntity.isFemale()) return 'F';
-    if (genderEntity.isOther()) return 'NB';
-    return 'U';
+    return genderEntity ? genderEntity.getValue() : null;
   }
 
   /**
    * Convert gendered relationship term to genderless equivalent
+   * Delegates to RelationshipType entity
    */
   convertToGenderlessType(relationshipType: string): string {
-    const relType = RelationshipType.fromString(relationshipType);
-    return relType.getNeutralType();
+    return RelationshipType.fromString(relationshipType).getNeutralType();
   }
 
   // === Markdown Operations (delegated to MarkdownOperations) ===
@@ -774,19 +619,13 @@ export class ContactNote {
       other: {} as Record<string, any>
     };
 
-    // Group fields by category for better organization
+    // Group fields by category
     for (const [key, value] of Object.entries(record)) {
       const baseKey = key.split('[')[0];
-      
-      if (nameKeys.includes(baseKey)) {
-        groups.name[key] = value;
-      } else if (priorityKeys.includes(baseKey)) {
-        groups.priority[key] = value;
-      } else if (addressKeys.includes(baseKey)) {
-        groups.address[key] = value;
-      } else {
-        groups.other[key] = value;
-      }
+      if (nameKeys.includes(baseKey)) groups.name[key] = value;
+      else if (priorityKeys.includes(baseKey)) groups.priority[key] = value;
+      else if (addressKeys.includes(baseKey)) groups.address[key] = value;
+      else groups.other[key] = value;
     }
 
     return groups;
@@ -796,18 +635,14 @@ export class ContactNote {
     const nameOrder = ["N.PREFIX", "N.GN", "N.MN", "N.FN", "N.SUFFIX", "FN"];
     const sortedNameItems: Record<string, any> = {};
 
-    // Sort name fields in logical order
-    nameOrder.forEach(key => {
-      if (nameItems[key] !== undefined) {
-        sortedNameItems[key] = nameItems[key];
-      }
+    // Add ordered fields first
+    nameOrder.filter(key => nameItems[key] !== undefined).forEach(key => {
+      sortedNameItems[key] = nameItems[key];
     });
 
-    // Add any remaining name fields
-    Object.keys(nameItems).forEach(key => {
-      if (!nameOrder.includes(key)) {
-        sortedNameItems[key] = nameItems[key];
-      }
+    // Add remaining fields
+    Object.keys(nameItems).filter(key => !nameOrder.includes(key)).forEach(key => {
+      sortedNameItems[key] = nameItems[key];
     });
 
     return sortedNameItems;
@@ -839,7 +674,7 @@ export class ContactNote {
     Object.entries(record).forEach(([key, value]) => {
       if (key.startsWith('RELATED')) {
         const relationshipType = this.extractRelationshipTypeFromKey(key);
-        const parsedValue = this.parseRelatedValueForMarkdown(value as string);
+        const parsedValue = this.parseRelatedValue(value as string);
         
         if (parsedValue) {
           let contactName = parsedValue.value;
@@ -865,7 +700,7 @@ export class ContactNote {
     return `${HEADING_LEVELS.SECTION} ${SECTION_NAMES.RELATED}\n${relatedEntries.join('\n')}\n`;
   }
 
-  private extractRelationshipTypeFromKey(key: string): string {
+  extractRelationshipTypeFromKey(key: string): string {
     // Try dot notation first (RELATED.type or RELATED.type.1)
     const dotMatch = key.match(/^RELATED\.([^.]+)(?:\.\d+)?$/);
     if (dotMatch) {
@@ -875,15 +710,6 @@ export class ContactNote {
     // Fall back to bracket notation for backward compatibility
     const bracketMatch = key.match(/RELATED(?:\[(?:\d+:)?([^\]]+)\])?/);
     return bracketMatch ? bracketMatch[1] || 'related' : 'related';
-  }
-
-  /**
-   * Parse a RELATED value for markdown rendering using RelationshipReference entity
-   * @deprecated Use RelationshipReference.fromString() directly
-   */
-  private parseRelatedValueForMarkdown(value: string): { type: 'uuid' | 'uid' | 'name'; value: string } | null {
-    // Delegate to parseRelatedValue which now uses RelationshipReference entity
-    return this.parseRelatedValue(value);
   }
 
   // === Sync Operations (inlined from SyncOperations) ===
@@ -965,67 +791,58 @@ export class ContactNote {
   /**
    * Sync Related list from markdown to frontmatter
    */
+  /**
+   * Sync relationships from Related section to frontmatter
+   * Uses entities for clean conversion
+   */
   async syncRelatedListToFrontmatter(): Promise<{ success: boolean; errors: string[] }> {
     const errors: string[] = [];
     
     try {
       const relationships = await this.parseRelatedSection();
-      const { deduplicated, inferredGender } = this.deduplicateRelationships(relationships);
+      const { deduplicated } = this.deduplicateRelationships(relationships);
       
+      // Build frontmatter updates
       const frontmatterUpdates: Record<string, string> = {};
       const typeIndices = new Map<string, number>();
 
       // Clear existing RELATED fields
       const frontmatter = await this.getFrontmatter();
       if (frontmatter) {
-        Object.keys(frontmatter).forEach(key => {
+        for (const key of Object.keys(frontmatter)) {
           if (key.startsWith('RELATED') || key === 'RELATED') {
             frontmatterUpdates[key] = '';
           }
-        });
+        }
       }
 
       // Process each relationship
       for (const relationship of deduplicated) {
+        const type = this.convertToGenderlessType(relationship.getType().toString());
+        const contactName = relationship.getTarget().getValue();
+        const currentIndex = typeIndices.get(type) || 0;
+        typeIndices.set(type, currentIndex + 1);
+        
+        const key = currentIndex === 0 ? `RELATED.${type}` : `RELATED.${type}.${currentIndex}`;
+        
         try {
-          const type = relationship.getType().toString();
-          const contactName = relationship.getTarget().getValue();
-          
-          const genderlessType = this.convertToGenderlessType(type);
-          const currentIndex = typeIndices.get(genderlessType) || 0;
-          typeIndices.set(genderlessType, currentIndex + 1);
-          
           const resolvedContact = await this.resolveContact(contactName);
+          frontmatterUpdates[key] = resolvedContact 
+            ? this.formatRelatedValue(resolvedContact.uid, resolvedContact.name)
+            : `name:${contactName}`;
           
-          if (resolvedContact) {
-            const relatedValue = this.formatRelatedValue(
-              resolvedContact.uid, 
-              resolvedContact.name
-            );
-            
-            const key = currentIndex === 0 
-              ? `RELATED.${genderlessType}`
-              : `RELATED.${genderlessType}.${currentIndex}`;
-            
-            frontmatterUpdates[key] = relatedValue;
-          } else {
-            const key = currentIndex === 0 
-              ? `RELATED.${genderlessType}`
-              : `RELATED.${genderlessType}.${currentIndex}`;
-            
-            frontmatterUpdates[key] = `name:${contactName}`;
+          if (!resolvedContact) {
             errors.push(`Could not resolve contact: ${contactName}`);
           }
         } catch (error: any) {
-          const contactName = relationship.getTarget().getValue();
           errors.push(`Error processing relationship ${contactName}: ${error.message}`);
+          frontmatterUpdates[key] = `name:${contactName}`;
         }
       }
 
-      if (Object.keys(frontmatterUpdates).length > 0) {
-        await this.updateMultipleFrontmatterValues(frontmatterUpdates);
-      }
+      await this.updateMultipleFrontmatterValues(frontmatterUpdates);
       
+      // Update Related section if deduplication occurred
       if (relationships.length !== deduplicated.length) {
         await this.updateRelatedSectionInContent(
           deduplicated.map(rel => ({
@@ -1044,6 +861,7 @@ export class ContactNote {
 
   /**
    * Sync relationships from frontmatter to markdown
+   * Uses entities for clean conversion
    */
   async syncFrontmatterToRelatedList(): Promise<{ 
     success: boolean; 
@@ -1063,49 +881,49 @@ export class ContactNote {
           contactName: rel.getTarget().getValue() 
         }));
 
+      // Process frontmatter relationships
       for (const fmRel of frontmatterRelationships) {
+        if (!fmRel.parsedValue) {
+          errors.push(`Could not parse RELATED value: ${fmRel.value}`);
+          continue;
+        }
+        
         try {
-          if (fmRel.parsedValue) {
-            let contactName: string;
+          // Resolve contact name
+          let contactName: string;
+          if (fmRel.parsedValue.type === 'name') {
+            contactName = fmRel.parsedValue.value;
+          } else {
+            const resolvedContact = await this.findContactByUid(fmRel.parsedValue.value);
+            contactName = resolvedContact?.name || fmRel.parsedValue.value;
             
-            if (fmRel.parsedValue.type === 'name') {
-              contactName = fmRel.parsedValue.value;
+            if (!resolvedContact) {
+              errors.push(`Could not resolve UID/UUID: ${fmRel.parsedValue.value}`);
             } else {
-              const resolvedContact = await this.findContactByUid(fmRel.parsedValue.value);
-              if (resolvedContact) {
-                contactName = resolvedContact.name;
-                
-                const existingRel = existingMarkdownRelationships.find(rel => 
-                  rel.getType().toString() === fmRel.type
-                );
-                if (existingRel && existingRel.getTarget().getValue() !== contactName) {
-                  updatedRelationships.push({
-                    newName: contactName,
-                    uid: fmRel.parsedValue.value,
-                    oldName: existingRel.getTarget().getValue()
-                  });
-                }
-              } else {
-                contactName = fmRel.parsedValue.value;
-                errors.push(`Could not resolve UID/UUID: ${fmRel.parsedValue.value}`);
+              // Track if this is an update
+              const existingRel = existingMarkdownRelationships.find(rel => 
+                rel.getType().toString() === fmRel.type
+              );
+              if (existingRel && existingRel.getTarget().getValue() !== contactName) {
+                updatedRelationships.push({
+                  newName: contactName,
+                  uid: fmRel.parsedValue.value,
+                  oldName: existingRel.getTarget().getValue()
+                });
               }
             }
-            
-            const genderlessFmType = this.convertToGenderlessType(fmRel.type);
-            const alreadyExists = markdownRelationships.some(rel => {
-              const genderlessMdType = this.convertToGenderlessType(rel.type);
-              return genderlessMdType === genderlessFmType && 
-                     rel.contactName.toLowerCase() === contactName.toLowerCase();
-            });
-            
-            if (!alreadyExists) {
-              markdownRelationships.push({
-                type: fmRel.type,
-                contactName: contactName
-              });
-            }
-          } else {
-            errors.push(`Could not parse RELATED value: ${fmRel.value}`);
+          }
+          
+          // Check if already exists (using genderless comparison)
+          const genderlessFmType = this.convertToGenderlessType(fmRel.type);
+          const alreadyExists = markdownRelationships.some(rel => {
+            const genderlessMdType = this.convertToGenderlessType(rel.type);
+            return genderlessMdType === genderlessFmType && 
+                   rel.contactName.toLowerCase() === contactName.toLowerCase();
+          });
+          
+          if (!alreadyExists) {
+            markdownRelationships.push({ type: fmRel.type, contactName });
           }
         } catch (error: any) {
           errors.push(`Error processing frontmatter relationship ${fmRel.key}: ${error.message}`);
@@ -1151,6 +969,10 @@ export class ContactNote {
   /**
    * Validate relationship consistency
    */
+  /**
+   * Validate relationship consistency between markdown and frontmatter
+   * Uses entity parsing for validation
+   */
   async validateRelationshipConsistency(): Promise<{ 
     isConsistent: boolean; 
     issues: string[]; 
@@ -1163,39 +985,35 @@ export class ContactNote {
       const markdownRels = await this.parseRelatedSection();
       const frontmatterRels = await this.parseFrontmatterRelationships();
 
+      // Check count mismatch
       if (markdownRels.length !== frontmatterRels.length) {
         issues.push(`Relationship count mismatch: ${markdownRels.length} in markdown, ${frontmatterRels.length} in frontmatter`);
         recommendations.push('Run full sync to resolve count discrepancies');
       }
 
+      // Validate markdown relationships
       for (const rel of markdownRels) {
-        const resolvedContact = await this.resolveContact(rel.contactName);
-        if (!resolvedContact) {
-          issues.push(`Unresolved contact in markdown: ${rel.contactName}`);
-          recommendations.push(`Check if contact file exists for: ${rel.contactName}`);
+        if (!await this.resolveContact(rel.getTarget().getValue())) {
+          issues.push(`Unresolved contact in markdown: ${rel.getTarget().getValue()}`);
+          recommendations.push(`Check if contact file exists for: ${rel.getTarget().getValue()}`);
         }
       }
 
+      // Validate frontmatter UID references
       for (const fmRel of frontmatterRels) {
         if (fmRel.parsedValue?.type === 'uid' || fmRel.parsedValue?.type === 'uuid') {
-          const resolvedContact = await this.findContactByUid(fmRel.parsedValue.value);
-          if (!resolvedContact) {
+          if (!await this.findContactByUid(fmRel.parsedValue.value)) {
             issues.push(`Orphaned UID in frontmatter: ${fmRel.parsedValue.value}`);
             recommendations.push(`Remove or update orphaned relationship: ${fmRel.key}`);
           }
         }
       }
 
-      return {
-        isConsistent: issues.length === 0,
-        issues,
-        recommendations
-      };
+      return { isConsistent: issues.length === 0, issues, recommendations };
     } catch (error: any) {
-      issues.push(`Validation failed: ${error.message}`);
       return {
         isConsistent: false,
-        issues,
+        issues: [`Validation failed: ${error.message}`],
         recommendations: ['Fix validation errors before checking consistency']
       };
     }
@@ -1235,90 +1053,11 @@ export class ContactNote {
     return { isValid, issues };
   }
 
-  /**
-   * Validate email format
-   */
-  /**
-   * Validate email format
-   * @deprecated Use EmailField.validate() entity method directly
-   */
-  validateEmail(email: string): boolean {
-    if (!email || typeof email !== 'string') return true; // Empty is valid
-    try {
-      const { EmailField } = require('./entities/fields/EmailField');
-      const field = EmailField.fromMarkdown(`- ${email}`);
-      const result = field?.validate();
-      return result?.isValid ?? true;
-    } catch {
-      // Fallback to basic validation
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      return emailRegex.test(email);
-    }
-  }
 
-  /**
-   * Validate phone number format
-   * @deprecated Use TelephoneField.validate() entity method directly
-   */
-  validatePhoneNumber(phone: string): boolean {
-    if (!phone || typeof phone !== 'string') return true; // Empty is valid
-    try {
-      const { TelephoneField } = require('./entities/fields/TelephoneField');
-      const field = TelephoneField.fromMarkdown(`- ${phone}`);
-      const result = field?.validate();
-      return result?.isValid ?? true;
-    } catch {
-      // Fallback to basic validation
-      const phoneRegex = /^[\+]?[\s\-\(\)0-9]{7,}$/;
-      return phoneRegex.test(phone.replace(/\s/g, ''));
-    }
-  }
-
-  /**
-   * Validate date format
-   */
-  validateDate(dateStr: string): boolean {
-    if (!dateStr || typeof dateStr !== 'string') return true; // Empty is valid
-    
-    // Try various date formats
-    const date = new Date(dateStr);
-    return !isNaN(date.getTime());
-  }
-
-  /**
-   * Sanitize user input to prevent XSS
-   */
-  sanitizeInput(input: string): string {
-    if (!input || typeof input !== 'string') return '';
-    
-    // Basic XSS prevention - remove script tags and dangerous content
-    return input
-      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-      .replace(/javascript:/gi, 'removed:')
-      .replace(/on\w+\s*=/gi, 'removed=')
-      .replace(/alert\s*\(/gi, 'removed(');
-  }
-
-  /**
-   * Validate URL format
-   * @deprecated Use UrlField.validate() entity method directly
-   */
-  private validateURL(url: string): boolean {
-    if (!url || typeof url !== 'string') return true; // Empty is valid
-    try {
-      const { UrlField } = require('./entities/fields/UrlField');
-      const field = UrlField.fromMarkdown(`- ${url}`);
-      const result = field?.validate();
-      return result?.isValid ?? true;
-    } catch {
-      // Fallback to basic validation
-      return /^https?:\/\/.+/.test(url);
-    }
-  }
 
   /**
    * Identify invalid frontmatter fields
-   * Returns list of invalid fields with their values and reasons
+   * Uses Frontmatter entity and field validation
    */
   async identifyInvalidFrontmatterFields(): Promise<{
     invalidFields: Array<{ key: string; value: string; reason: string }>;
@@ -1328,52 +1067,32 @@ export class ContactNote {
     const errors: string[] = [];
 
     try {
-      const frontmatter = await this.getFrontmatter();
-      if (!frontmatter) {
-        return { invalidFields, errors };
-      }
+      const fm = Frontmatter.fromObject(await this.getFrontmatter() || {});
+      
+      // Validate each field
+      for (const key of fm.getKeys()) {
+        const value = fm.get(key);
+        if (!value || typeof value !== 'string') continue;
 
-      // Check each frontmatter key
-      for (const key of Object.keys(frontmatter)) {
-        const value = frontmatter[key];
-        
-        // Skip non-string values or empty values
-        if (!value || typeof value !== 'string') {
-          continue;
+        let isInvalid = false;
+        let reason = '';
+
+        // Check field types
+        if (key.startsWith('EMAIL') && !this.validateEmail(value)) {
+          isInvalid = true;
+          reason = 'Invalid email format (must contain @ and domain)';
+        } else if (key.startsWith('TEL') && !this.validatePhoneNumber(value)) {
+          isInvalid = true;
+          reason = 'Invalid phone format (must contain digits)';
+        } else if (key.startsWith('URL') && !this.validateURL(value)) {
+          isInvalid = true;
+          reason = 'Invalid URL format (must start with http:// or https://)';
         }
 
-        // Check EMAIL fields
-        if (key.startsWith('EMAIL')) {
-          if (!this.validateEmail(value)) {
-            invalidFields.push({ 
-              key, 
-              value, 
-              reason: 'Invalid email format (must contain @ and domain)' 
-            });
-          }
-        }
-        // Check TEL fields
-        else if (key.startsWith('TEL')) {
-          if (!this.validatePhoneNumber(value)) {
-            invalidFields.push({ 
-              key, 
-              value, 
-              reason: 'Invalid phone format (must contain digits)' 
-            });
-          }
-        }
-        // Check URL fields
-        else if (key.startsWith('URL')) {
-          if (!this.validateURL(value)) {
-            invalidFields.push({ 
-              key, 
-              value, 
-              reason: 'Invalid URL format (must start with http:// or https://)' 
-            });
-          }
+        if (isInvalid) {
+          invalidFields.push({ key, value, reason });
         }
       }
-
     } catch (error: any) {
       errors.push(`Error identifying invalid fields: ${error.message}`);
     }
@@ -1383,7 +1102,7 @@ export class ContactNote {
 
   /**
    * Remove specified fields from frontmatter
-   * Used after user confirmation
+   * Uses Frontmatter entity for deletion
    */
   async removeFieldsFromFrontmatter(keysToRemove: string[]): Promise<{
     removed: string[];
@@ -1393,24 +1112,20 @@ export class ContactNote {
     const errors: string[] = [];
 
     try {
-      const frontmatter = await this.getFrontmatter();
-      if (!frontmatter) {
-        return { removed, errors };
-      }
+      let fm = Frontmatter.fromObject(await this.getFrontmatter() || {});
 
       // Remove specified fields
       for (const key of keysToRemove) {
-        if (key in frontmatter) {
-          delete frontmatter[key];
+        if (fm.has(key)) {
+          fm = fm.delete(key);
           removed.push(key);
         }
       }
 
-      // Save the updated frontmatter if any fields were removed
+      // Save if any fields were removed
       if (removed.length > 0) {
-        await this.saveFrontmatterDirect(frontmatter);
+        await this.saveFrontmatter(fm.toObject());
       }
-
     } catch (error: any) {
       errors.push(`Error removing fields: ${error.message}`);
     }
@@ -1418,45 +1133,11 @@ export class ContactNote {
     return { removed, errors };
   }
 
-  /**
-   * Save frontmatter directly by reconstructing the file content
-   * This is a helper method for removeFieldsFromFrontmatter
-   */
-  private async saveFrontmatterDirect(frontmatter: Record<string, any>): Promise<void> {
-    // Import yaml library for stringification
-    const { stringify: stringifyYaml } = await import('yaml');
-    
-    const content = await this.getContent();
-    
-    // Use yaml library to stringify frontmatter
-    let frontmatterYaml = stringifyYaml(frontmatter);
-    
-    // Ensure frontmatter YAML ends with a newline
-    if (!frontmatterYaml.endsWith('\n')) {
-      frontmatterYaml += '\n';
-    }
-    
-    const hasExistingFrontmatter = content.startsWith('---\n');
-    let newContent: string;
-    
-    if (hasExistingFrontmatter) {
-      const endIndex = content.indexOf('---\n', 4);
-      if (endIndex !== -1) {
-        newContent = `---\n${frontmatterYaml}---\n${content.substring(endIndex + 4)}`;
-      } else {
-        newContent = `---\n${frontmatterYaml}---\n${content}`;
-      }
-    } else {
-      newContent = `---\n${frontmatterYaml}---\n${content}`;
-    }
-    
-    await this.updateContent(newContent);
-  }
-
   // === Advanced Relationship Operations ===
 
   /**
-   * Get relationships with enhanced UID/name linking information
+   * Get all relationships from both frontmatter and Related section
+   * Delegates to Relationship entities for parsing
    */
   async getRelationships(): Promise<Array<{
     type: string;
@@ -1475,66 +1156,47 @@ export class ContactNote {
       linkType: 'uid' | 'name';
       originalType: string;
     }> = [];
+    
     const processedTargets = new Set<string>();
     
+    // Process frontmatter relationships (prioritized)
     for (const fmRel of frontmatterRelationships) {
-      if (fmRel.parsedValue && (fmRel.parsedValue.type === 'uuid' || fmRel.parsedValue.type === 'uid')) {
-        const contactName = await this.resolveContactNameByUID(fmRel.parsedValue.value);
-        if (contactName) {
-          result.push({
-            type: fmRel.type,
-            contactName,
-            targetUID: fmRel.parsedValue.value,
-            linkType: 'uid',
-            originalType: fmRel.type
-          });
-          processedTargets.add(contactName.toLowerCase());
-        }
-      } else if (fmRel.parsedValue && fmRel.parsedValue.type === 'name') {
-        const resolved = await this.resolveContact(fmRel.parsedValue.value);
-        const obj: {
-          type: string;
-          contactName: string;
-          targetUID?: string;
-          linkType: 'uid' | 'name';
-          originalType: string;
-        } = {
-          type: fmRel.type,
-          contactName: fmRel.parsedValue.value,
-          linkType: resolved?.uid ? 'uid' : 'name',
-          originalType: fmRel.type
-        };
-        if (resolved?.uid) {
-          obj.targetUID = resolved.uid;
-        }
-        result.push(obj);
-        processedTargets.add(fmRel.parsedValue.value.toLowerCase());
-      }
+      const parsedValue = fmRel.parsedValue;
+      if (!parsedValue) continue;
+      
+      const isUID = parsedValue.type === 'uuid' || parsedValue.type === 'uid';
+      const contactName = isUID 
+        ? await this.resolveContactNameByUID(parsedValue.value)
+        : parsedValue.value;
+      
+      if (!contactName && isUID) continue;
+      
+      const resolved = !isUID ? await this.resolveContact(parsedValue.value) : null;
+      
+      result.push({
+        type: fmRel.type,
+        contactName: contactName || parsedValue.value,
+        targetUID: isUID ? parsedValue.value : resolved?.uid,
+        linkType: (isUID || resolved?.uid) ? 'uid' : 'name',
+        originalType: fmRel.type
+      });
+      
+      processedTargets.add((contactName || parsedValue.value).toLowerCase());
     }
     
+    // Add relationships from Related section that aren't in frontmatter
     for (const rel of relationships) {
-      const type = rel.getType().toString();
       const contactName = rel.getTarget().getValue();
+      if (processedTargets.has(contactName.toLowerCase())) continue;
       
-      if (!processedTargets.has(contactName.toLowerCase())) {
-        const resolved = await this.resolveContact(contactName);
-        const obj: {
-          type: string;
-          contactName: string;
-          targetUID?: string;
-          linkType: 'uid' | 'name';
-          originalType: string;
-        } = {
-          type: type,
-          contactName: contactName,
-          linkType: resolved?.uid ? 'uid' : 'name',
-          originalType: type
-        };
-        if (resolved?.uid) {
-          obj.targetUID = resolved.uid;
-        }
-        result.push(obj);
-      }
+      const resolved = await this.resolveContact(contactName);
+      result.push({
+        type: rel.getType().toString(),
+        contactName,
+        targetUID: resolved?.uid,
+        linkType: resolved?.uid ? 'uid' : 'name',
+        originalType: rel.getType().toString()
+      });
     }
     
     return result;
@@ -1579,49 +1241,47 @@ export class ContactNote {
   /**
    * Resolve relationship target by relationship type or identifier
    */
+  /**
+   * Resolve relationship target by identifier (UID, name, or relationship type)
+   * Uses entity parsing for robust resolution
+   */
   async resolveRelationshipTarget(identifierOrType: string): Promise<{
     file: TFile | null;
     frontmatter?: any;
     type: 'uid' | 'name';
     contactName: string;
   } | null> {
-    // First, check if identifier is a relationship type in frontmatter
-    const frontmatter = await this.getFrontmatter();
-    if (frontmatter) {
-      for (const [key, value] of Object.entries(frontmatter)) {
-        if (key.startsWith('RELATED[') && typeof value === 'string') {
-          const typeMatch = key.match(/RELATED\[(?:\d+:)?([^\]]+)\]/);
-          const relType = typeMatch ? typeMatch[1] : '';
-          
-          if (relType.toLowerCase() === identifierOrType.toLowerCase()) {
-            const parsedValue = this.parseRelatedValue(value);
-            if (parsedValue && (parsedValue.type === 'uuid' || parsedValue.type === 'uid')) {
-              const result = await this.resolveContactByUID(parsedValue.value);
-              if (result) {
-                const contactName = result.frontmatter?.FN || result.file.basename;
-                return { 
-                  file: result.file, 
-                  frontmatter: result.frontmatter,
-                  type: 'uid', 
-                  contactName 
-                };
-              }
+    // Check if identifier matches a relationship type in frontmatter
+    const fm = Frontmatter.fromObject(await this.getFrontmatter() || {});
+    for (const key of fm.getKeys()) {
+      if (key.startsWith('RELATED[')) {
+        const typeMatch = key.match(/RELATED\[(?:\d+:)?([^\]]+)\]/);
+        if (typeMatch && typeMatch[1].toLowerCase() === identifierOrType.toLowerCase()) {
+          const ref = RelationshipReference.fromString(fm.get(key) as string);
+          if (ref.getType() === 'uid') {
+            const result = await this.resolveContactByUID(ref.getUID()!.toString());
+            if (result) {
+              return { 
+                file: result.file, 
+                frontmatter: result.frontmatter,
+                type: 'uid', 
+                contactName: result.frontmatter?.FN || result.file.basename 
+              };
             }
           }
         }
       }
     }
     
-    // Check if it's a UID format
+    // Check if it's a UID
     if (identifierOrType.startsWith('urn:uuid:') || UID.validate(identifierOrType)) {
       const result = await this.resolveContactByUID(identifierOrType);
       if (result) {
-        const contactName = result.frontmatter?.FN || result.file.basename;
         return { 
           file: result.file, 
           frontmatter: result.frontmatter,
           type: 'uid', 
-          contactName 
+          contactName: result.frontmatter?.FN || result.file.basename 
         };
       }
     }
@@ -1630,12 +1290,7 @@ export class ContactNote {
     const file = await this.findContactByName(identifierOrType);
     if (file) {
       const cache = this.app.metadataCache.getFileCache(file);
-      return { 
-        file, 
-        frontmatter: cache?.frontmatter,
-        type: 'name', 
-        contactName: identifierOrType 
-      };
+      return { file, frontmatter: cache?.frontmatter, type: 'name', contactName: identifierOrType };
     }
     
     return null;
@@ -1655,33 +1310,16 @@ export class ContactNote {
     }>;
     errors: string[];
   }> {
-    const result: {
-      success: boolean;
-      processedRelationships: Array<{
-        targetContact: string;
-        reverseType: string;
-        added: boolean;
-        reason?: string;
-        error?: string;
-      }>;
-      errors: string[];
-    } = {
-      success: true,
-      processedRelationships: [],
-      errors: []
-    };
+    const result = { success: true, processedRelationships: [], errors: [] };
 
     try {
       const relationships = await this.parseRelatedSection();
       const sourceContactName = this.getDisplayName();
-      const sourceFrontmatter = await this.getFrontmatter();
-      const sourceGender = sourceFrontmatter?.GENDER as Gender;
       
       for (const relationship of relationships) {
         const contactName = relationship.getTarget().getValue();
-        const relType = relationship.getType().toString();
-        
         const targetFile = await this.findContactByName(contactName);
+        
         if (!targetFile) {
           result.processedRelationships.push({
             targetContact: contactName,
@@ -1693,12 +1331,7 @@ export class ContactNote {
           continue;
         }
 
-        const targetContact = new ContactNote(this.app, this.settings, targetFile);
-        
-        // Use entity method to get reciprocal type
-        const reciprocalType = relationship.getReciprocalType();
-        const reverseType = reciprocalType.toString();
-        
+        const reverseType = relationship.getReciprocalType().toString();
         if (!reverseType) {
           result.processedRelationships.push({
             targetContact: contactName,
@@ -1710,15 +1343,16 @@ export class ContactNote {
           continue;
         }
 
+        const targetContact = new ContactNote(this.app, this.settings, targetFile);
         const targetRelationships = await targetContact.parseRelatedSection();
+        const sourceRef = RelationshipReference.fromName(sourceContactName);
         
+        // Check if reverse relationship already exists using entity methods
         const reverseExists = targetRelationships.some((rel: Relationship) => {
-          const relContactName = rel.getTarget().getValue();
-          const relType = rel.getType().toString();
-          const normalizedRelName = relContactName.toLowerCase().replace(/[\s\-]/g, '');
-          const normalizedSourceName = sourceContactName.toLowerCase().replace(/[\s\-]/g, '');
-          return normalizedRelName === normalizedSourceName && 
-            this.areRelationshipTypesEquivalent(relType, reverseType);
+          const relTarget = rel.getTarget();
+          const matchesName = relTarget.getValue().toLowerCase().replace(/[\s\-]/g, '') === 
+                             sourceContactName.toLowerCase().replace(/[\s\-]/g, '');
+          return matchesName && this.areRelationshipTypesEquivalent(rel.getType().toString(), reverseType);
         });
 
         if (!reverseExists) {
@@ -1726,11 +1360,7 @@ export class ContactNote {
             type: r.getType().toString(),
             contactName: r.getTarget().getValue()
           }));
-          newRelationships.push({
-            type: reverseType,
-            contactName: sourceContactName
-          });
-          
+          newRelationships.push({ type: reverseType, contactName: sourceContactName });
           await targetContact.updateRelatedSectionInContent(newRelationships);
           
           result.processedRelationships.push({
@@ -1767,46 +1397,32 @@ export class ContactNote {
     }>;
     errors: string[];
   }> {
-    const result: {
-      success: boolean;
-      upgradedRelationships: Array<{
-        targetUID: string;
-        type: string;
-        key: string;
-      }>;
-      errors: string[];
-    } = { success: true, upgradedRelationships: [], errors: [] };
+    const result = { success: true, upgradedRelationships: [], errors: [] };
 
     try {
       const frontmatter = await this.getFrontmatter();
       const updates: Record<string, string> = {};
       
+      // Upgrade existing frontmatter name-based relationships
       if (frontmatter) {
         for (const [key, value] of Object.entries(frontmatter)) {
           if (key.startsWith('RELATED[') && typeof value === 'string') {
-            const parsedValue = this.parseRelatedValue(value);
-            if (parsedValue && parsedValue.type === 'name') {
-              const targetFile = await this.findContactByName(parsedValue.value);
-              if (targetFile) {
-                const targetCache = this.app.metadataCache.getFileCache(targetFile);
-                const targetUID = targetCache?.frontmatter?.UID;
+            const ref = RelationshipReference.fromString(value);
+            if (ref.isNameReference()) {
+              const targetFile = await this.findContactByName(ref.getValue());
+              const targetUID = targetFile ? this.app.metadataCache.getFileCache(targetFile)?.frontmatter?.UID : null;
                 
-                if (targetUID) {
-                  updates[key] = this.formatRelatedValue(targetUID, parsedValue.value);
-                  const typeMatch = key.match(/RELATED\[(?:\d+:)?([^\]]+)\]/);
-                  const relType = typeMatch ? typeMatch[1] : 'related';
-                  result.upgradedRelationships.push({
-                    targetUID,
-                    type: relType,
-                    key
-                  });
-                }
+              if (targetUID) {
+                updates[key] = this.formatRelatedValue(targetUID, ref.getValue());
+                const relType = this.extractRelationshipTypeFromKey(key);
+                result.upgradedRelationships.push({ targetUID, type: relType, key });
               }
             }
           }
         }
       }
 
+      // Add missing markdown relationships to frontmatter with UIDs
       const markdownRelationships = await this.parseRelatedSection();
       let relationshipIndex = 0;
       
@@ -1814,32 +1430,21 @@ export class ContactNote {
         const relType = relationship.getType().toString();
         const contactName = relationship.getTarget().getValue();
         
-        const hasFrontmatterEntry = frontmatter && Object.keys(frontmatter).some(key => {
-          if (!key.startsWith('RELATED[')) return false;
-          const typeMatch = key.match(/RELATED\[(?:\d+:)?([^\]]+)\]/);
-          const fmRelType = typeMatch ? typeMatch[1] : '';
-          return fmRelType.toLowerCase() === relType.toLowerCase();
-        });
+        // Skip if already in frontmatter
+        const hasEntry = frontmatter && Object.keys(frontmatter).some(key => 
+          key.startsWith('RELATED[') && 
+          this.extractRelationshipTypeFromKey(key).toLowerCase() === relType.toLowerCase()
+        );
         
-        if (!hasFrontmatterEntry) {
+        if (!hasEntry) {
           const targetFile = await this.findContactByName(contactName);
-          if (targetFile) {
-            const targetCache = this.app.metadataCache.getFileCache(targetFile);
-            const targetUID = targetCache?.frontmatter?.UID;
+          const targetUID = targetFile ? this.app.metadataCache.getFileCache(targetFile)?.frontmatter?.UID : null;
             
-            if (targetUID) {
-              const key = relationshipIndex === 0 && !hasFrontmatterEntry
-                ? `RELATED.${relType}`
-                : `RELATED.${relType}.${relationshipIndex}`;
-              
-              updates[key] = this.formatRelatedValue(targetUID, contactName);
-              result.upgradedRelationships.push({
-                targetUID,
-                type: relType,
-                key
-              });
-              relationshipIndex++;
-            }
+          if (targetUID) {
+            const key = relationshipIndex === 0 ? `RELATED.${relType}` : `RELATED.${relType}.${relationshipIndex}`;
+            updates[key] = this.formatRelatedValue(targetUID, contactName);
+            result.upgradedRelationships.push({ targetUID, type: relType, key });
+            relationshipIndex++;
           }
         }
       }
@@ -1857,47 +1462,31 @@ export class ContactNote {
 
   /**
    * Detect UID conflicts within the contact system
+   * Simplified using Map operations
    */
   async detectUIDConflicts(): Promise<{
     hasConflicts: boolean;
-    conflicts: Array<{
-      uid: string;
-      files: string[];
-    }>;
+    conflicts: Array<{ uid: string; files: string[] }>;
   }> {
-    const result: {
-      hasConflicts: boolean;
-      conflicts: Array<{
-        uid: string;
-        files: string[];
-      }>;
-    } = { hasConflicts: false, conflicts: [] };
     const uidMap = new Map<string, string[]>();
     
-    const allFiles = this.app.vault.getMarkdownFiles();
-    
-    for (const file of allFiles) {
+    // Collect UIDs from all contact files
+    for (const file of this.app.vault.getMarkdownFiles()) {
       if (!file.path.startsWith(this.settings.contactsFolder)) continue;
       
-      const cache = this.app.metadataCache.getFileCache(file);
-      const uid = cache?.frontmatter?.UID;
-      
+      const uid = this.app.metadataCache.getFileCache(file)?.frontmatter?.UID;
       if (uid) {
-        if (!uidMap.has(uid)) {
-          uidMap.set(uid, []);
-        }
+        if (!uidMap.has(uid)) uidMap.set(uid, []);
         uidMap.get(uid)!.push(file.path);
       }
     }
     
-    for (const [uid, files] of uidMap.entries()) {
-      if (files.length > 1) {
-        result.hasConflicts = true;
-        result.conflicts.push({ uid, files });
-      }
-    }
+    // Find conflicts (UIDs with multiple files)
+    const conflicts = Array.from(uidMap.entries())
+      .filter(([_, files]) => files.length > 1)
+      .map(([uid, files]) => ({ uid, files }));
     
-    return result;
+    return { hasConflicts: conflicts.length > 0, conflicts };
   }
 
   /**
@@ -2043,12 +1632,10 @@ export class ContactNote {
    * Get reciprocal relationship type with gender awareness
    */
   /**
-   * Check if two relationship types are equivalent
+   * Check if two relationship types are equivalent (delegates to entity)
    */
   private areRelationshipTypesEquivalent(type1: string, type2: string): boolean {
-    const genderless1 = this.convertToGenderlessType(type1);
-    const genderless2 = this.convertToGenderlessType(type2);
-    return genderless1 === genderless2;
+    return RelationshipType.fromString(type1).equals(RelationshipType.fromString(type2));
   }
 
   // === Helper methods from BaseMarkdownSectionOperations ===
@@ -2133,35 +1720,14 @@ export class ContactNote {
 
   /**
    * Parse a VCard REV date string into a Date object
-   * Handles VCard format: YYYYMMDDTHHMMSSZ
+   * Uses Revision entity for parsing
    */
   parseRevDate(revString: string): Date | null {
-    if (!revString) {
-      return null;
-    }
-
+    if (!revString) return null;
+    
     try {
-      // Only handle VCard format: YYYYMMDDTHHMMSSZ - be strict about format
-      if (/^\d{8}T\d{6}Z$/.test(revString)) {
-        const year = parseInt(revString.substr(0, 4), 10);
-        const month = parseInt(revString.substr(4, 2), 10);
-        const day = parseInt(revString.substr(6, 2), 10);
-        const hour = parseInt(revString.substr(9, 2), 10);
-        const minute = parseInt(revString.substr(11, 2), 10);
-        const second = parseInt(revString.substr(13, 2), 10);
-
-        // Validate ranges
-        if (month < 1 || month > 12 || day < 1 || day > 31 || 
-            hour < 0 || hour > 23 || minute < 0 || minute > 59 || second < 0 || second > 59) {
-          return null;
-        }
-
-        const date = new Date(Date.UTC(year, month - 1, day, hour, minute, second));
-        return isNaN(date.getTime()) ? null : date;
-      }
-
-      // Don't parse ISO format or other formats - return null for non-VCard formats
-      return null;
+      const revision = Revision.fromVCFFormat(revString);
+      return revision.getTimestamp();
     } catch {
       return null;
     }
@@ -2223,116 +1789,96 @@ export class ContactNote {
    * Generate Contact section markdown from frontmatter
    * Uses ContactSection entity to generate markdown
    */
+  /**
+   * Generate Contact section markdown from frontmatter
+   * Delegates to ContactSection entity
+   */
   async generateContactSection(): Promise<string> {
-    const frontmatter = await this.getFrontmatter();
-    if (!frontmatter) return '';
-    
+    const fm = Frontmatter.fromObject(await this.getFrontmatter() || {});
     const fields: ContactField[] = [];
     
-    // Create ContactField entities from frontmatter
-    // Try to parse EMAIL, TEL, URL, and ADR fields
-    for (const [key, value] of Object.entries(frontmatter)) {
+    // Parse contact fields from frontmatter
+    for (const key of fm.getKeys()) {
+      const value = fm.get(key);
+      if (typeof value !== 'string') continue;
+      
       try {
-        // Import field types dynamically based on key prefix
-        if (key.startsWith('EMAIL') && typeof value === 'string') {
+        if (key.startsWith('EMAIL')) {
           const { EmailField } = await import('./entities/fields/EmailField');
-          const field = EmailField.fromFrontmatter(key, value);
-          fields.push(field);
-        } else if (key.startsWith('TEL') && typeof value === 'string') {
+          fields.push(EmailField.fromFrontmatter(key, value));
+        } else if (key.startsWith('TEL')) {
           const { TelephoneField } = await import('./entities/fields/TelephoneField');
-          const field = TelephoneField.fromFrontmatter(key, value);
-          fields.push(field);
-        } else if (key.startsWith('URL') && typeof value === 'string') {
+          fields.push(TelephoneField.fromFrontmatter(key, value));
+        } else if (key.startsWith('URL')) {
           const { UrlField } = await import('./entities/fields/UrlField');
-          const field = UrlField.fromFrontmatter(key, value);
-          fields.push(field);
+          fields.push(UrlField.fromFrontmatter(key, value));
         }
-        // ADR fields are more complex - need to collect components
-        // For now, skip ADR in this simplified version
       } catch (error) {
-        // Skip fields that fail to parse
         console.debug(`[ContactNote] Failed to parse field ${key}:`, error);
       }
     }
     
-    if (fields.length === 0) {
-      return '';
-    }
+    if (fields.length === 0) return '';
     
-    // Use ContactSection entity to generate markdown
-    const contactSection = ContactSection.fromFields(fields, 'Contact', 2);
-    const markdown = contactSection.toMarkdown();
-    
-    // Extract just the content part (remove header)
-    const lines = markdown.split('\n');
-    const contentLines = lines.filter(line => !line.match(/^#{2,4}\s+Contact/));
-    return contentLines.join('\n').trim();
+    // Generate markdown and strip header
+    const markdown = ContactSection.fromFields(fields, 'Contact', 2).toMarkdown();
+    return markdown.split('\n').filter(line => !line.match(/^#{2,4}\s+Contact/)).join('\n').trim();
   }
 
   /**
    * Update Contact section in markdown content
+   * Ensures Contact section appears before Related section
    */
   async updateContactSectionInContent(contactSection: string): Promise<void> {
     const content = await this.getContent();
+    const contactRegex = /^(#{2,4} Contact\s*\n)([\s\S]*?)(?=\n#{2,4} |\n#\w+|$)/m;
+    const relatedRegex = /^(#{2,4} Related\s*\n)/m;
     
-    // Check if Contact section exists
-    const contactSectionRegex = /^(#{2,4} Contact\s*\n)([\s\S]*?)(?=\n#{2,4} |\n#\w+|$)/m;
-    const contactMatch = content.match(contactSectionRegex);
+    const contactMatch = content.match(contactRegex);
+    const relatedMatch = content.match(relatedRegex);
     
-    // Check if Related section exists
-    const relatedSectionRegex = /^(#{2,4} Related\s*\n)/m;
-    const relatedMatch = content.match(relatedSectionRegex);
-    
+    // If both exist, check ordering
     if (contactMatch && relatedMatch) {
-      // Both exist - check ordering
       const contactIndex = content.indexOf(contactMatch[0]);
       const relatedIndex = content.indexOf(relatedMatch[0]);
       
       if (contactIndex > relatedIndex) {
-        // Wrong order! Contact is after Related. Need to move Contact before Related
-        // 1. Remove Contact section from current position
-        const contentWithoutContact = content.replace(contactSectionRegex, '');
-        // 2. Insert Contact before Related
-        const newRelatedMatch = contentWithoutContact.match(relatedSectionRegex);
+        // Wrong order - move Contact before Related
+        const contentWithoutContact = content.replace(contactRegex, '');
+        const newRelatedMatch = contentWithoutContact.match(relatedRegex);
         if (newRelatedMatch) {
           const insertPos = contentWithoutContact.indexOf(newRelatedMatch[0]);
-          const newContent = contentWithoutContact.slice(0, insertPos) + `## Contact\n${contactSection}\n\n` + contentWithoutContact.slice(insertPos);
-          await this.updateContent(newContent);
+          await this.updateContent(
+            contentWithoutContact.slice(0, insertPos) + 
+            `## Contact\n${contactSection}\n\n` + 
+            contentWithoutContact.slice(insertPos)
+          );
           return;
         }
-      } else {
-        // Correct order - just replace Contact section
-        const newContent = content.replace(contactSectionRegex, `$1${contactSection}\n`);
-        await this.updateContent(newContent);
-        return;
       }
-    }
-    
-    if (contactMatch && !relatedMatch) {
-      // Contact exists, no Related - just replace in-place
-      const newContent = content.replace(contactSectionRegex, `$1${contactSection}\n`);
-      await this.updateContent(newContent);
+      // Correct order - just replace
+      await this.updateContent(content.replace(contactRegex, `$1${contactSection}\n`));
       return;
     }
     
-    // Contact doesn't exist - add it in the right place
-    // Priority: before Related section > before hashtags > at end
+    // Contact exists alone - replace it
+    if (contactMatch) {
+      await this.updateContent(content.replace(contactRegex, `$1${contactSection}\n`));
+      return;
+    }
     
+    // No Contact section - add it (before Related > before hashtags > at end)
     const relatedMatch2 = content.match(/\n(#{2,4} Related)/);
     const hashtagMatch = content.match(/\n(#\w+)/);
     
     let newContent: string;
-    
     if (relatedMatch2) {
-      // Insert before Related section
       const insertPos = content.indexOf(relatedMatch2[0]);
       newContent = content.slice(0, insertPos) + `\n## Contact\n${contactSection}\n` + content.slice(insertPos);
     } else if (hashtagMatch) {
-      // Insert before hashtags
       const insertPos = content.indexOf(hashtagMatch[0]);
       newContent = content.slice(0, insertPos) + `\n## Contact\n${contactSection}\n` + content.slice(insertPos);
     } else {
-      // Add at end
       newContent = content + `\n\n## Contact\n${contactSection}\n`;
     }
     

@@ -40,37 +40,36 @@ export class Gender {
   
   /**
    * Create Gender from modern string value
+   * Handles various formats including 'non-binary', 'unspecified', etc.
    * 
-   * @param value - Gender value ('unknown', 'male', 'female', 'other')
+   * @param value - Gender value in any supported format
    * @returns Gender instance
    * @throws Error if value is invalid
    */
   static fromString(value: string | null | undefined): Gender {
-    if (!value) {
+    if (!value || value.trim() === '') {
       return Gender.UNKNOWN;
     }
     
-    const normalized = value.toLowerCase();
+    // Normalize: lowercase, remove hyphens, underscores, spaces
+    const normalized = value.trim().toLowerCase().replace(/[-_\s]/g, '');
     
     switch (normalized) {
       case 'unknown':
+      case 'unspecified':
+      case 'u':
         return Gender.UNKNOWN;
       case 'male':
-        return Gender.MALE;
-      case 'female':
-        return Gender.FEMALE;
-      case 'other':
-        return Gender.OTHER;
-      // Legacy format support
       case 'm':
         return Gender.MALE;
+      case 'female':
       case 'f':
         return Gender.FEMALE;
+      case 'other':
+      case 'nonbinary':
       case 'nb':
       case 'n':
         return Gender.OTHER;
-      case 'u':
-        return Gender.UNKNOWN;
       default:
         throw new Error(`Invalid gender value: ${value}`);
     }
