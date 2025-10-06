@@ -12,3 +12,5 @@ export {
   type UIDUpdateResult, 
   type BulkUIDUpdateResult 
 } from './UIDConflictResolver';
+export { MarkdownRenderer } from './MarkdownRenderer';
+export { RelationshipUpgradeService, type RelationshipUpgradeResult } from './RelationshipUpgradeService';

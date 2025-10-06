@@ -30,6 +30,9 @@ import { RelationshipCollection } from './entities/relationships/RelationshipCol
 // Import services
 import { ContactResolver } from './services/ContactResolver';
 import { UIDConflictResolver } from './services/UIDConflictResolver';
+import { MarkdownRenderer } from './services/MarkdownRenderer';
+import { FieldGrouper } from './entities/fields/FieldGrouper';
+import { RelationshipUpgradeService } from './services/RelationshipUpgradeService';
 
 // Import utilities for markdown rendering
 import { marked, Tokens } from 'marked';
@@ -392,29 +395,6 @@ export class ContactNote {
   }
 
   /**
-   * Parse a vCard RELATED value to extract UID or name
-   */
-  /**
-   * Parse a RELATED value using RelationshipReference entity
-   * @deprecated Use RelationshipReference.fromString() directly
-   */
-  parseRelatedValue(value: string): { type: 'uuid' | 'uid' | 'name'; value: string } | null {
-    if (!value || typeof value !== 'string') return null;
-    
-    try {
-      const reference = RelationshipReference.fromString(value);
-      const refType = reference.getType();
-      const uid = reference.getUID();
-      
-      return refType === 'uid' && uid
-        ? { type: 'uuid', value: uid.toString() }
-        : { type: 'name', value: reference.getValue() };
-    } catch (error) {
-      return { type: 'name', value: value.trim() };
-    }
-  }
-
-  /**
    * Parse RELATED fields from frontmatter
    * Delegates to Frontmatter and Relationship entities
    */
@@ -554,121 +534,10 @@ export class ContactNote {
 
   /**
    * Render the contact as markdown from vCard record data
+   * Delegates to MarkdownRenderer service
    */
   mdRender(record: Record<string, any>, hashtags: string, genderLookup?: (contactRef: string) => Gender): string {
-    const { NOTE, ...recordWithoutNote } = record;
-    const groups = this.groupVCardFields(recordWithoutNote);
-    const myNote = NOTE ? NOTE.replace(/\\n/g, '\n') : '';
-    let additionalTags = '';
-    
-    if (recordWithoutNote.CATEGORIES) {
-      const tempTags = recordWithoutNote.CATEGORIES.split(',');
-      additionalTags = `#${tempTags.join(' #')}`;
-    }
-
-    const frontmatter = {
-      ...this.sortNameItems(groups.name),
-      ...this.sortedPriorityItems(groups.priority),
-      ...groups.address,
-      ...groups.other
-    };
-
-    const relatedSection = this.generateRelatedList(recordWithoutNote, genderLookup);
-
-    return `---\n${stringifyYaml(frontmatter)}---\n${HEADING_LEVELS.SUBSECTION} ${SECTION_NAMES.NOTES}\n${myNote}\n${relatedSection}\n\n${hashtags} ${additionalTags}\n`;
-  }
-
-  private groupVCardFields(record: Record<string, any>) {
-    const nameKeys = FIELD_GROUPS.NAME as readonly string[];
-    const priorityKeys = FIELD_GROUPS.PRIORITY as readonly string[];
-    const addressKeys = FIELD_GROUPS.ADDRESS as readonly string[];
-
-    const groups = {
-      name: {} as Record<string, any>,
-      priority: {} as Record<string, any>,
-      address: {} as Record<string, any>,
-      other: {} as Record<string, any>
-    };
-
-    // Group fields by category
-    for (const [key, value] of Object.entries(record)) {
-      const baseKey = key.split('[')[0];
-      if (nameKeys.includes(baseKey)) groups.name[key] = value;
-      else if (priorityKeys.includes(baseKey)) groups.priority[key] = value;
-      else if (addressKeys.includes(baseKey)) groups.address[key] = value;
-      else groups.other[key] = value;
-    }
-
-    return groups;
-  }
-
-  private sortNameItems(nameItems: Record<string, any>): Record<string, any> {
-    const nameOrder = ["N.PREFIX", "N.GN", "N.MN", "N.FN", "N.SUFFIX", "FN"];
-    const sortedNameItems: Record<string, any> = {};
-
-    // Add ordered fields first
-    nameOrder.filter(key => nameItems[key] !== undefined).forEach(key => {
-      sortedNameItems[key] = nameItems[key];
-    });
-
-    // Add remaining fields
-    Object.keys(nameItems).filter(key => !nameOrder.includes(key)).forEach(key => {
-      sortedNameItems[key] = nameItems[key];
-    });
-
-    return sortedNameItems;
-  }
-
-  private sortedPriorityItems(priorityItems: Record<string, any>): Record<string, any> {
-    const priorityOrder = [
-      "EMAIL", "TEL", "BDAY", "URL", "ORG", "TITLE", "ROLE", 
-      "PHOTO", "RELATED", "GENDER"
-    ];
-    const sortedPriorityItems: Record<string, any> = {};
-
-    // Sort priority fields in logical order
-    priorityOrder.forEach(baseKey => {
-      Object.keys(priorityItems).forEach(key => {
-        if (key.startsWith(baseKey)) {
-          sortedPriorityItems[key] = priorityItems[key];
-        }
-      });
-    });
-
-    return sortedPriorityItems;
-  }
-
-  private generateRelatedList(record: Record<string, any>, genderLookup?: (contactRef: string) => Gender): string {
-    const relatedEntries: string[] = [];
-
-    // Process RELATED fields from frontmatter
-    Object.entries(record).forEach(([key, value]) => {
-      if (key.startsWith('RELATED')) {
-        const relationshipType = this.extractRelationshipTypeFromKey(key);
-        const parsedValue = this.parseRelatedValue(value as string);
-        
-        if (parsedValue) {
-          let contactName = parsedValue.value;
-          let displayType = relationshipType;
-          
-          // Apply gender-based relationship terms if gender lookup is available
-          if (genderLookup && parsedValue.type === 'name') {
-            const contactGender = genderLookup(contactName);
-            if (contactGender) {
-              displayType = this.getGenderedRelationshipTerm(relationshipType, contactGender);
-            }
-          }
-          
-          relatedEntries.push(`- ${displayType} [[${contactName}]]`);
-        }
-      }
-    });
-
-    if (relatedEntries.length === 0) {
-      return `${HEADING_LEVELS.SECTION} ${SECTION_NAMES.RELATED}\n`;
-    }
-
-    return `${HEADING_LEVELS.SECTION} ${SECTION_NAMES.RELATED}\n${relatedEntries.join('\n')}\n`;
+    return MarkdownRenderer.render(record, hashtags, genderLookup);
   }
 
   /**
@@ -1304,6 +1173,7 @@ export class ContactNote {
 
   /**
    * Upgrade name-based relationships to UID-based when possible
+   * Delegates to RelationshipUpgradeService
    */
   async upgradeNameBasedRelationshipsToUID(): Promise<{
     success: boolean;
@@ -1314,67 +1184,17 @@ export class ContactNote {
     }>;
     errors: string[];
   }> {
-    const result = { success: true, upgradedRelationships: [], errors: [] };
-
-    try {
-      const frontmatter = await this.getFrontmatter();
-      const updates: Record<string, string> = {};
-      
-      // Upgrade existing frontmatter name-based relationships
-      if (frontmatter) {
-        for (const [key, value] of Object.entries(frontmatter)) {
-          if (key.startsWith('RELATED[') && typeof value === 'string') {
-            const ref = RelationshipReference.fromString(value);
-            if (ref.isNameReference()) {
-              const targetFile = await this.findContactByName(ref.getValue());
-              const targetUID = targetFile ? this.app.metadataCache.getFileCache(targetFile)?.frontmatter?.UID : null;
-                
-              if (targetUID) {
-                updates[key] = this.formatRelatedValue(targetUID, ref.getValue());
-                const relType = this.extractRelationshipTypeFromKey(key);
-                result.upgradedRelationships.push({ targetUID, type: relType, key });
-              }
-            }
-          }
-        }
-      }
-
-      // Add missing markdown relationships to frontmatter with UIDs
-      const markdownRelationships = await this.parseRelatedSection();
-      let relationshipIndex = 0;
-      
-      for (const relationship of markdownRelationships) {
-        const relType = relationship.getType().toString();
-        const contactName = relationship.getTarget().getValue();
-        
-        // Skip if already in frontmatter
-        const hasEntry = frontmatter && Object.keys(frontmatter).some(key => 
-          key.startsWith('RELATED[') && 
-          this.extractRelationshipTypeFromKey(key).toLowerCase() === relType.toLowerCase()
-        );
-        
-        if (!hasEntry) {
-          const targetFile = await this.findContactByName(contactName);
-          const targetUID = targetFile ? this.app.metadataCache.getFileCache(targetFile)?.frontmatter?.UID : null;
-            
-          if (targetUID) {
-            const key = relationshipIndex === 0 ? `RELATED.${relType}` : `RELATED.${relType}.${relationshipIndex}`;
-            updates[key] = this.formatRelatedValue(targetUID, contactName);
-            result.upgradedRelationships.push({ targetUID, type: relType, key });
-            relationshipIndex++;
-          }
-        }
-      }
-
-      if (Object.keys(updates).length > 0) {
-        await this.updateMultipleFrontmatterValues(updates);
-      }
-    } catch (error: any) {
-      result.success = false;
-      result.errors.push(`Error upgrading relationships: ${error.message}`);
-    }
-
-    return result;
+    return RelationshipUpgradeService.upgradeRelationships(
+      this.app,
+      this.settings,
+      this.file,
+      () => this.getFrontmatter(),
+      (name: string) => this.findContactByName(name),
+      () => this.parseRelatedSection(),
+      (key: string) => this.extractRelationshipTypeFromKey(key),
+      (uid: string, displayName?: string) => this.formatRelatedValue(uid, displayName),
+      (updates: Record<string, string>) => this.updateMultipleFrontmatterValues(updates)
+    );
   }
 
   /**
@@ -1410,7 +1230,19 @@ export class ContactNote {
         oldUID,
         newUID,
         frontmatter,
-        (value: string) => this.parseRelatedValue(value)
+        (value: string) => {
+          if (!value || typeof value !== 'string') return null;
+          try {
+            const reference = RelationshipReference.fromString(value);
+            const refType = reference.getType();
+            const uid = reference.getUID();
+            return refType === 'uid' && uid
+              ? { type: 'uuid', value: uid.toString() }
+              : { type: 'name', value: reference.getValue() };
+          } catch (error) {
+            return { type: 'name', value: value.trim() };
+          }
+        }
       );
 
       if (result.updatedRelationships.length > 0) {
@@ -1466,14 +1298,21 @@ export class ContactNote {
           let matchedUID = mappingMap[value];
           
           if (!matchedUID) {
-            // Try parsing the value
-            const parsedValue = this.parseRelatedValue(value);
-            if (parsedValue) {
-              if (parsedValue.type === 'name') {
-                matchedUID = mappingMap[`name:${parsedValue.value}`] || mappingMap[parsedValue.value];
-              } else {
-                matchedUID = mappingMap[parsedValue.value];
+            // Try parsing the value using RelationshipReference
+            try {
+              const reference = RelationshipReference.fromString(value);
+              const refValue = reference.getValue();
+              const refType = reference.getType();
+              const uid = reference.getUID();
+              
+              if (refType === 'name') {
+                matchedUID = mappingMap[`name:${refValue}`] || mappingMap[refValue];
+              } else if (uid) {
+                matchedUID = mappingMap[uid.toString()];
               }
+            } catch (error) {
+              // If parsing fails, try matching as plain value
+              matchedUID = mappingMap[value.trim()];
             }
           }
           
