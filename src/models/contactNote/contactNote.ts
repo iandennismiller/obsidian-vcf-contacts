@@ -824,67 +824,58 @@ export class ContactNote {
   /**
    * Sync Related list from markdown to frontmatter
    */
+  /**
+   * Sync relationships from Related section to frontmatter
+   * Uses entities for clean conversion
+   */
   async syncRelatedListToFrontmatter(): Promise<{ success: boolean; errors: string[] }> {
     const errors: string[] = [];
     
     try {
       const relationships = await this.parseRelatedSection();
-      const { deduplicated, inferredGender } = this.deduplicateRelationships(relationships);
+      const { deduplicated } = this.deduplicateRelationships(relationships);
       
+      // Build frontmatter updates
       const frontmatterUpdates: Record<string, string> = {};
       const typeIndices = new Map<string, number>();
 
       // Clear existing RELATED fields
       const frontmatter = await this.getFrontmatter();
       if (frontmatter) {
-        Object.keys(frontmatter).forEach(key => {
+        for (const key of Object.keys(frontmatter)) {
           if (key.startsWith('RELATED') || key === 'RELATED') {
             frontmatterUpdates[key] = '';
           }
-        });
+        }
       }
 
       // Process each relationship
       for (const relationship of deduplicated) {
+        const type = this.convertToGenderlessType(relationship.getType().toString());
+        const contactName = relationship.getTarget().getValue();
+        const currentIndex = typeIndices.get(type) || 0;
+        typeIndices.set(type, currentIndex + 1);
+        
+        const key = currentIndex === 0 ? `RELATED.${type}` : `RELATED.${type}.${currentIndex}`;
+        
         try {
-          const type = relationship.getType().toString();
-          const contactName = relationship.getTarget().getValue();
-          
-          const genderlessType = this.convertToGenderlessType(type);
-          const currentIndex = typeIndices.get(genderlessType) || 0;
-          typeIndices.set(genderlessType, currentIndex + 1);
-          
           const resolvedContact = await this.resolveContact(contactName);
+          frontmatterUpdates[key] = resolvedContact 
+            ? this.formatRelatedValue(resolvedContact.uid, resolvedContact.name)
+            : `name:${contactName}`;
           
-          if (resolvedContact) {
-            const relatedValue = this.formatRelatedValue(
-              resolvedContact.uid, 
-              resolvedContact.name
-            );
-            
-            const key = currentIndex === 0 
-              ? `RELATED.${genderlessType}`
-              : `RELATED.${genderlessType}.${currentIndex}`;
-            
-            frontmatterUpdates[key] = relatedValue;
-          } else {
-            const key = currentIndex === 0 
-              ? `RELATED.${genderlessType}`
-              : `RELATED.${genderlessType}.${currentIndex}`;
-            
-            frontmatterUpdates[key] = `name:${contactName}`;
+          if (!resolvedContact) {
             errors.push(`Could not resolve contact: ${contactName}`);
           }
         } catch (error: any) {
-          const contactName = relationship.getTarget().getValue();
           errors.push(`Error processing relationship ${contactName}: ${error.message}`);
+          frontmatterUpdates[key] = `name:${contactName}`;
         }
       }
 
-      if (Object.keys(frontmatterUpdates).length > 0) {
-        await this.updateMultipleFrontmatterValues(frontmatterUpdates);
-      }
+      await this.updateMultipleFrontmatterValues(frontmatterUpdates);
       
+      // Update Related section if deduplication occurred
       if (relationships.length !== deduplicated.length) {
         await this.updateRelatedSectionInContent(
           deduplicated.map(rel => ({
@@ -903,6 +894,7 @@ export class ContactNote {
 
   /**
    * Sync relationships from frontmatter to markdown
+   * Uses entities for clean conversion
    */
   async syncFrontmatterToRelatedList(): Promise<{ 
     success: boolean; 
@@ -922,49 +914,49 @@ export class ContactNote {
           contactName: rel.getTarget().getValue() 
         }));
 
+      // Process frontmatter relationships
       for (const fmRel of frontmatterRelationships) {
+        if (!fmRel.parsedValue) {
+          errors.push(`Could not parse RELATED value: ${fmRel.value}`);
+          continue;
+        }
+        
         try {
-          if (fmRel.parsedValue) {
-            let contactName: string;
+          // Resolve contact name
+          let contactName: string;
+          if (fmRel.parsedValue.type === 'name') {
+            contactName = fmRel.parsedValue.value;
+          } else {
+            const resolvedContact = await this.findContactByUid(fmRel.parsedValue.value);
+            contactName = resolvedContact?.name || fmRel.parsedValue.value;
             
-            if (fmRel.parsedValue.type === 'name') {
-              contactName = fmRel.parsedValue.value;
+            if (!resolvedContact) {
+              errors.push(`Could not resolve UID/UUID: ${fmRel.parsedValue.value}`);
             } else {
-              const resolvedContact = await this.findContactByUid(fmRel.parsedValue.value);
-              if (resolvedContact) {
-                contactName = resolvedContact.name;
-                
-                const existingRel = existingMarkdownRelationships.find(rel => 
-                  rel.getType().toString() === fmRel.type
-                );
-                if (existingRel && existingRel.getTarget().getValue() !== contactName) {
-                  updatedRelationships.push({
-                    newName: contactName,
-                    uid: fmRel.parsedValue.value,
-                    oldName: existingRel.getTarget().getValue()
-                  });
-                }
-              } else {
-                contactName = fmRel.parsedValue.value;
-                errors.push(`Could not resolve UID/UUID: ${fmRel.parsedValue.value}`);
+              // Track if this is an update
+              const existingRel = existingMarkdownRelationships.find(rel => 
+                rel.getType().toString() === fmRel.type
+              );
+              if (existingRel && existingRel.getTarget().getValue() !== contactName) {
+                updatedRelationships.push({
+                  newName: contactName,
+                  uid: fmRel.parsedValue.value,
+                  oldName: existingRel.getTarget().getValue()
+                });
               }
             }
-            
-            const genderlessFmType = this.convertToGenderlessType(fmRel.type);
-            const alreadyExists = markdownRelationships.some(rel => {
-              const genderlessMdType = this.convertToGenderlessType(rel.type);
-              return genderlessMdType === genderlessFmType && 
-                     rel.contactName.toLowerCase() === contactName.toLowerCase();
-            });
-            
-            if (!alreadyExists) {
-              markdownRelationships.push({
-                type: fmRel.type,
-                contactName: contactName
-              });
-            }
-          } else {
-            errors.push(`Could not parse RELATED value: ${fmRel.value}`);
+          }
+          
+          // Check if already exists (using genderless comparison)
+          const genderlessFmType = this.convertToGenderlessType(fmRel.type);
+          const alreadyExists = markdownRelationships.some(rel => {
+            const genderlessMdType = this.convertToGenderlessType(rel.type);
+            return genderlessMdType === genderlessFmType && 
+                   rel.contactName.toLowerCase() === contactName.toLowerCase();
+          });
+          
+          if (!alreadyExists) {
+            markdownRelationships.push({ type: fmRel.type, contactName });
           }
         } catch (error: any) {
           errors.push(`Error processing frontmatter relationship ${fmRel.key}: ${error.message}`);
@@ -1317,6 +1309,10 @@ export class ContactNote {
   /**
    * Get relationships with enhanced UID/name linking information
    */
+  /**
+   * Get all relationships from both frontmatter and Related section
+   * Delegates to Relationship entities for parsing
+   */
   async getRelationships(): Promise<Array<{
     type: string;
     contactName: string;
@@ -1334,66 +1330,47 @@ export class ContactNote {
       linkType: 'uid' | 'name';
       originalType: string;
     }> = [];
+    
     const processedTargets = new Set<string>();
     
+    // Process frontmatter relationships (prioritized)
     for (const fmRel of frontmatterRelationships) {
-      if (fmRel.parsedValue && (fmRel.parsedValue.type === 'uuid' || fmRel.parsedValue.type === 'uid')) {
-        const contactName = await this.resolveContactNameByUID(fmRel.parsedValue.value);
-        if (contactName) {
-          result.push({
-            type: fmRel.type,
-            contactName,
-            targetUID: fmRel.parsedValue.value,
-            linkType: 'uid',
-            originalType: fmRel.type
-          });
-          processedTargets.add(contactName.toLowerCase());
-        }
-      } else if (fmRel.parsedValue && fmRel.parsedValue.type === 'name') {
-        const resolved = await this.resolveContact(fmRel.parsedValue.value);
-        const obj: {
-          type: string;
-          contactName: string;
-          targetUID?: string;
-          linkType: 'uid' | 'name';
-          originalType: string;
-        } = {
-          type: fmRel.type,
-          contactName: fmRel.parsedValue.value,
-          linkType: resolved?.uid ? 'uid' : 'name',
-          originalType: fmRel.type
-        };
-        if (resolved?.uid) {
-          obj.targetUID = resolved.uid;
-        }
-        result.push(obj);
-        processedTargets.add(fmRel.parsedValue.value.toLowerCase());
-      }
+      const parsedValue = fmRel.parsedValue;
+      if (!parsedValue) continue;
+      
+      const isUID = parsedValue.type === 'uuid' || parsedValue.type === 'uid';
+      const contactName = isUID 
+        ? await this.resolveContactNameByUID(parsedValue.value)
+        : parsedValue.value;
+      
+      if (!contactName && isUID) continue;
+      
+      const resolved = !isUID ? await this.resolveContact(parsedValue.value) : null;
+      
+      result.push({
+        type: fmRel.type,
+        contactName: contactName || parsedValue.value,
+        targetUID: isUID ? parsedValue.value : resolved?.uid,
+        linkType: (isUID || resolved?.uid) ? 'uid' : 'name',
+        originalType: fmRel.type
+      });
+      
+      processedTargets.add((contactName || parsedValue.value).toLowerCase());
     }
     
+    // Add relationships from Related section that aren't in frontmatter
     for (const rel of relationships) {
-      const type = rel.getType().toString();
       const contactName = rel.getTarget().getValue();
+      if (processedTargets.has(contactName.toLowerCase())) continue;
       
-      if (!processedTargets.has(contactName.toLowerCase())) {
-        const resolved = await this.resolveContact(contactName);
-        const obj: {
-          type: string;
-          contactName: string;
-          targetUID?: string;
-          linkType: 'uid' | 'name';
-          originalType: string;
-        } = {
-          type: type,
-          contactName: contactName,
-          linkType: resolved?.uid ? 'uid' : 'name',
-          originalType: type
-        };
-        if (resolved?.uid) {
-          obj.targetUID = resolved.uid;
-        }
-        result.push(obj);
-      }
+      const resolved = await this.resolveContact(contactName);
+      result.push({
+        type: rel.getType().toString(),
+        contactName,
+        targetUID: resolved?.uid,
+        linkType: resolved?.uid ? 'uid' : 'name',
+        originalType: rel.getType().toString()
+      });
     }
     
     return result;
