@@ -67,7 +67,9 @@ export const RelatedListProcessor: CuratorProcessor = {
       
       console.debug(`[RelatedListProcessor] Found ${relatedSectionRelationships.length} relationships in Related section`);
       relatedSectionRelationships.forEach(rel => {
-        console.debug(`[RelatedListProcessor]   Related section: ${rel.type} -> ${rel.contactName}`);
+        const relType = rel.getType().toString();
+        const contactName = rel.getTarget().getValue();
+        console.debug(`[RelatedListProcessor]   Related section: ${relType} -> ${contactName}`);
       });
       
       console.debug(`[RelatedListProcessor] Found ${currentFrontmatterRelationships.length} relationships in frontmatter`);
@@ -80,11 +82,13 @@ export const RelatedListProcessor: CuratorProcessor = {
       let hasDuplicates = false;
       
       for (const rel of relatedSectionRelationships) {
-        const genderlessType = contactNote.convertToGenderlessType(rel.type);
-        const key = `${genderlessType}:${rel.contactName.toLowerCase()}`;
+        const relType = rel.getType().toString();
+        const contactName = rel.getTarget().getValue();
+        const genderlessType = contactNote.convertToGenderlessType(relType);
+        const key = `${genderlessType}:${contactName.toLowerCase()}`;
         if (seenRelationships.has(key)) {
           hasDuplicates = true;
-          console.debug(`[RelatedListProcessor] Duplicate detected: ${rel.type} -> ${rel.contactName}`);
+          console.debug(`[RelatedListProcessor] Duplicate detected: ${relType} -> ${contactName}`);
         } else {
           seenRelationships.set(key, true);
         }

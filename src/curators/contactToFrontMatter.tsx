@@ -96,56 +96,44 @@ export const ContactToFrontMatterProcessor: CuratorProcessor = {
       );
       
       for (const field of contactFields) {
-        let frontmatterKey: string;
+        // Use entity's toFrontmatter method to get key/value
+        const frontmatterEntries = field.toFrontmatter();
+        const entries = Array.isArray(frontmatterEntries) ? frontmatterEntries : [frontmatterEntries];
         
-        // Normalize field label to uppercase for consistent frontmatter keys
-        const normalizedLabel = field.fieldLabel ? field.fieldLabel.toUpperCase() : '';
-        
-        if (field.component) {
-          // Structured field (e.g., ADR[HOME].STREET or ADR.STREET for bare)
-          if (normalizedLabel) {
-            frontmatterKey = `${field.fieldType}[${normalizedLabel}].${field.component}`;
-          } else {
-            frontmatterKey = `${field.fieldType}.${field.component}`;
-          }
-        } else {
-          // Simple field (e.g., EMAIL[HOME] or EMAIL for bare)
-          if (normalizedLabel) {
-            frontmatterKey = `${field.fieldType}[${normalizedLabel}]`;
-          } else {
-            frontmatterKey = field.fieldType;
-          }
-        }
-        
-        // Normalize the value based on field type
-        const normalizedValue = normalizeFieldValue(field.value, field.fieldType);
-        
-        // Remove from deletion tracking
-        existingContactKeys.delete(frontmatterKey);
-        
-        // Check if value differs from current frontmatter
-        const currentValue = currentFrontmatter[frontmatterKey];
-        if (currentValue !== normalizedValue) {
-          updates[frontmatterKey] = normalizedValue;
-          changeCount++;
+        for (const entry of entries) {
+          const frontmatterKey = entry.key;
+          const fieldValue = String(entry.value);
           
-          // Track change type for confirmation modal
-          if (currentValue === undefined) {
-            changes.push({
-              key: frontmatterKey,
-              newValue: normalizedValue,
-              changeType: 'added'
-            });
-          } else {
-            changes.push({
-              key: frontmatterKey,
-              oldValue: currentValue,
-              newValue: normalizedValue,
-              changeType: 'modified'
-            });
-          }
+          // Normalize the value based on field type
+          const normalizedValue = normalizeFieldValue(fieldValue, field.getType());
           
-          console.debug(`[ContactToFrontMatterProcessor] Will update ${frontmatterKey}: ${normalizedValue}`);
+          // Remove from deletion tracking
+          existingContactKeys.delete(frontmatterKey);
+          
+          // Check if value differs from current frontmatter
+          const currentValue = currentFrontmatter[frontmatterKey];
+          if (currentValue !== normalizedValue) {
+            updates[frontmatterKey] = normalizedValue;
+            changeCount++;
+          
+            // Track change type for confirmation modal
+            if (currentValue === undefined) {
+              changes.push({
+                key: frontmatterKey,
+                newValue: normalizedValue,
+                changeType: 'added'
+              });
+            } else {
+              changes.push({
+                key: frontmatterKey,
+                oldValue: currentValue,
+                newValue: normalizedValue,
+                changeType: 'modified'
+              });
+            }
+            
+            console.debug(`[ContactToFrontMatterProcessor] Will update ${frontmatterKey}: ${normalizedValue}`);
+          }
         }
       }
       

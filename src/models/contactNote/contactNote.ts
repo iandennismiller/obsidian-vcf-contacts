@@ -6,14 +6,14 @@
 import { TFile, App } from 'obsidian';
 import { ContactsPluginSettings } from 'src/plugin/settings';
 import { Gender, Contact, ParsedRelationship, FrontmatterRelationship, ResolvedContact } from './types';
-
-// Import the optimized components
-import { ContactData } from './contactData';
+import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
+import { normalizeFieldValue } from './fieldPatternDetection';
 
 // Import entities
 import { UID } from './entities/valueObjects/UID';
 import { Revision } from './entities/valueObjects/Revision';
 import { Gender as GenderEntity } from './entities/valueObjects/Gender';
+import { Frontmatter } from './entities/document/Frontmatter';
 import { ContactSection } from './entities/document/ContactSection';
 import type { ContactField } from './entities/fields/ContactField';
 import { RelatedSection } from './entities/document/RelatedSection';
@@ -22,7 +22,6 @@ import { RelationshipType } from './entities/relationships/RelationshipType';
 import { RelationshipReference } from './entities/relationships/RelationshipReference';
 
 // Import utilities for markdown rendering
-import { stringify as stringifyYaml } from 'yaml';
 import { marked, Tokens } from 'marked';
 import { 
   SECTION_NAMES, 
@@ -38,103 +37,355 @@ export type { Contact, Gender, ParsedRelationship, FrontmatterRelationship, Reso
 export { mdRender, createNameSlug, createContactSlug, isKind, fileId, getUiName, uiSafeString, getSortName, createFileName } from './utilityFunctions';
 
 /**
- * Optimized ContactNote class that groups operations by data locality.
- * Uses centralized ContactData for better cache performance.
+ * Simplified ContactNote class with direct data access.
+ * Caches frontmatter and content for performance.
  */
 export class ContactNote {
   private app: App;
   private settings: ContactsPluginSettings;
-  private contactData: ContactData;
+  private file: TFile;
+  
+  // Cached data
+  private _frontmatter: Record<string, any> | null = null;
+  private _content: string | null = null;
+  private _gender: Gender | null = null;
+  private _uid: string | null = null;
+  private _displayName: string | null = null;
+  
+  // Flag to skip metadata cache after a write operation
+  private _skipMetadataCache: boolean = false;
 
   constructor(app: App, settings: ContactsPluginSettings, file: TFile) {
     this.app = app;
     this.settings = settings;
-    
-    // Initialize centralized data store
-    this.contactData = new ContactData(app, file);
+    this.file = file;
   }
 
-  // === Core File Operations (directly from ContactData) ===
+  // === Core File Operations ===
 
   /**
    * Get the TFile object for this contact
    */
   getFile(): TFile {
-    return this.contactData.getFile();
+    return this.file;
   }
 
   /**
    * Get the contact's UID from frontmatter
    */
   async getUID(): Promise<string | null> {
-    return this.contactData.getUID();
+    if (this._uid === null) {
+      const frontmatter = await this.getFrontmatter();
+      this._uid = frontmatter?.UID || null;
+    }
+    return this._uid;
   }
 
   /**
    * Get the contact's display name
    */
   getDisplayName(): string {
-    return this.contactData.getDisplayName();
+    if (this._displayName === null) {
+      this._displayName = this.file.basename;
+    }
+    return this._displayName;
   }
 
   /**
    * Get the file content with caching
    */
   async getContent(): Promise<string> {
-    return this.contactData.getContent();
+    if (this._content === null) {
+      this._content = await this.app.vault.read(this.file);
+    }
+    return this._content;
   }
 
   /**
    * Get the frontmatter with caching
+   * Uses Frontmatter entity internally for parsing
    */
   async getFrontmatter(): Promise<Record<string, any> | null> {
-    return this.contactData.getFrontmatter();
+    if (this._frontmatter === null) {
+      // Skip metadata cache if we just wrote to the file
+      if (!this._skipMetadataCache) {
+        try {
+          const cache = this.app.metadataCache.getFileCache(this.file);
+          if (cache?.frontmatter) {
+            this._frontmatter = cache.frontmatter;
+            return this._frontmatter;
+          }
+        } catch (error: any) {
+          console.debug(`[ContactNote] Error accessing metadata cache for ${this.file.path}: ${error.message}`);
+        }
+      }
+
+      try {
+        const content = await this.getContent();
+        const match = content.match(/^---\n([\s\S]*?)\n---/);
+        if (match) {
+          try {
+            // Use Frontmatter entity for parsing
+            const frontmatterEntity = Frontmatter.fromYAML(match[1]);
+            this._frontmatter = frontmatterEntity.toObject();
+          } catch (error: any) {
+            console.debug(`[ContactNote] Error parsing frontmatter for ${this.file.path}: ${error.message}`);
+            this._frontmatter = null;
+            return null;
+          }
+        } else {
+          this._frontmatter = {};
+        }
+      } catch (error: any) {
+        console.debug(`[ContactNote] Error reading content for ${this.file.path}: ${error.message}`);
+        this._frontmatter = {};
+      }
+    }
+    return this._frontmatter;
+  }
+
+  /**
+   * Update content and invalidate caches
+   */
+  private async updateContent(newContent: string): Promise<void> {
+    await this.app.vault.modify(this.file, newContent);
+    this._content = null;
+    this._frontmatter = null;
+    this._skipMetadataCache = true;
   }
 
   /**
    * Invalidate caches when file is modified externally
    */
   invalidateCache(): void {
-    this.contactData.invalidateAllCaches();
+    this._frontmatter = null;
+    this._content = null;
+    this._gender = null;
+    this._uid = null;
+    this._displayName = null;
+    this._skipMetadataCache = false;
   }
 
-  // === Gender Operations (directly from ContactData) ===
+  // === Gender Operations ===
 
   /**
    * Parse GENDER field value from vCard
+   * Uses Gender entity for parsing logic
    */
   parseGender(value: string): Gender {
-    return this.contactData.parseGender(value);
+    if (!value || value.trim() === '') {
+      return null;
+    }
+    
+    try {
+      // Normalize special cases that the Gender entity doesn't handle
+      const normalized = value.trim().toUpperCase();
+      let valueToparse = value;
+      
+      // Handle NON-BINARY variations
+      if (normalized === 'NON-BINARY' || normalized === 'NONBINARY') {
+        valueToparse = 'nb';
+      }
+      // Handle UNSPECIFIED
+      else if (normalized === 'UNSPECIFIED') {
+        valueToparse = 'u';
+      }
+      
+      // Use Gender entity for parsing
+      const genderEntity = GenderEntity.fromString(valueToparse);
+      // Return legacy format for backward compatibility
+      return genderEntity.toLegacyFormat();
+    } catch (error) {
+      return null;
+    }
   }
 
   /**
    * Get the contact's gender from frontmatter
    */
   async getGender(): Promise<Gender> {
-    return this.contactData.getGender();
+    if (this._gender === null) {
+      const frontmatter = await this.getFrontmatter();
+      const genderValue = frontmatter?.GENDER;
+      this._gender = genderValue ? this.parseGender(genderValue) : null;
+    }
+    return this._gender;
   }
 
   /**
    * Update the contact's gender in frontmatter
    */
   async updateGender(gender: Gender): Promise<void> {
-    return this.contactData.updateGender(gender);
+    const genderValue = gender ? gender : '';
+    await this.updateFrontmatterValue('GENDER', genderValue);
+    this._gender = gender;
   }
 
-  // === Frontmatter Operations (directly from ContactData) ===
+  // === Frontmatter Operations ===
+
+  /**
+   * Generate a revision timestamp in VCF format
+   * Uses Revision entity
+   */
+  generateRevTimestamp(): string {
+    const revision = Revision.now();
+    // VCF format: remove hyphens and colons from ISO format
+    return revision.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+  }
+
+  /**
+   * Save frontmatter to file
+   * Uses Frontmatter entity for serialization
+   */
+  private async saveFrontmatter(frontmatter: Record<string, any>): Promise<void> {
+    const content = await this.getContent();
+    
+    // Use Frontmatter entity for YAML serialization
+    const frontmatterEntity = Frontmatter.fromObject(frontmatter);
+    let frontmatterYaml = frontmatterEntity.toYAML();
+    if (!frontmatterYaml.endsWith('\n')) {
+      frontmatterYaml += '\n';
+    }
+    
+    const hasExistingFrontmatter = content.startsWith('---\n');
+    let newContent: string;
+    
+    if (hasExistingFrontmatter) {
+      const endIndex = content.indexOf('---\n', 4);
+      if (endIndex !== -1) {
+        newContent = `---\n${frontmatterYaml}---\n${content.substring(endIndex + 4)}`;
+      } else {
+        newContent = `---\n${frontmatterYaml}---\n${content}`;
+      }
+    } else {
+      newContent = `---\n${frontmatterYaml}---\n${content}`;
+    }
+    
+    await this.updateContent(newContent);
+  }
+
+  /**
+   * Extract field type from a frontmatter key
+   */
+  private extractFieldType(key: string): string | null {
+    const match = key.match(/^(EMAIL|TEL|URL|ADR)(\[|\.)?/);
+    return match ? match[1] : null;
+  }
+
+  /**
+   * Compare two values for a given field type, normalizing both before comparison
+   */
+  private valuesAreEqual(currentValue: any, newValue: string, fieldType: string | null): boolean {
+    if (currentValue === undefined || currentValue === null) {
+      return false;
+    }
+
+    const currentStr = String(currentValue);
+    
+    if (fieldType && (fieldType === 'TEL' || fieldType === 'EMAIL' || fieldType === 'URL')) {
+      const normalizedCurrent = normalizeFieldValue(currentStr, fieldType);
+      const normalizedNew = normalizeFieldValue(newValue, fieldType);
+      return normalizedCurrent === normalizedNew;
+    }
+    
+    return currentStr === newValue;
+  }
+
+  /**
+   * Find an existing frontmatter key that matches the given key, ignoring case
+   */
+  private findFrontmatterKey(frontmatter: Record<string, any>, searchKey: string): string | null {
+    if (searchKey in frontmatter) {
+      return searchKey;
+    }
+    
+    const searchKeyLower = searchKey.toLowerCase();
+    for (const key of Object.keys(frontmatter)) {
+      if (key.toLowerCase() === searchKeyLower) {
+        return key;
+      }
+    }
+    
+    return null;
+  }
 
   /**
    * Update a single frontmatter value
    */
   async updateFrontmatterValue(key: string, value: string, skipRevUpdate = false): Promise<void> {
-    return this.contactData.updateFrontmatterValue(key, value, skipRevUpdate);
+    const frontmatter = await this.getFrontmatter();
+    if (!frontmatter) {
+      return;
+    }
+
+    if (frontmatter[key] === value) {
+      return;
+    }
+
+    if (value === '') {
+      delete frontmatter[key];
+    } else {
+      frontmatter[key] = value;
+    }
+
+    if (!skipRevUpdate && key !== 'REV') {
+      frontmatter['REV'] = this.generateRevTimestamp();
+    }
+
+    await this.saveFrontmatter(frontmatter);
   }
 
   /**
    * Update multiple frontmatter values in a single operation
    */
   async updateMultipleFrontmatterValues(updates: Record<string, string>, skipRevUpdate = false): Promise<void> {
-    return this.contactData.updateMultipleFrontmatterValues(updates, skipRevUpdate);
+    const frontmatter = await this.getFrontmatter();
+    if (!frontmatter) {
+      return;
+    }
+
+    let hasChanges = false;
+    const keyMapping: Record<string, string> = {};
+    
+    for (const [key, value] of Object.entries(updates)) {
+      const actualKey = this.findFrontmatterKey(frontmatter, key);
+      if (actualKey) {
+        keyMapping[key] = actualKey;
+      } else {
+        keyMapping[key] = key;
+      }
+      
+      const currentValue = actualKey ? frontmatter[actualKey] : undefined;
+      const fieldType = this.extractFieldType(key);
+      const valuesMatch = this.valuesAreEqual(currentValue, value, fieldType);
+      if (!valuesMatch) {
+        hasChanges = true;
+      }
+    }
+
+    if (!hasChanges) {
+      return;
+    }
+
+    for (const [key, value] of Object.entries(updates)) {
+      const actualKey = keyMapping[key];
+      
+      if (actualKey !== key && actualKey in frontmatter) {
+        delete frontmatter[actualKey];
+      }
+      
+      if (value === '') {
+        delete frontmatter[key];
+      } else {
+        frontmatter[key] = value;
+      }
+    }
+
+    if (!skipRevUpdate) {
+      frontmatter['REV'] = this.generateRevTimestamp();
+    }
+
+    await this.saveFrontmatter(frontmatter);
   }
 
   // === Relationship Operations (using Relationship entities) ===
@@ -143,7 +394,11 @@ export class ContactNote {
    * Parse Related section from markdown content
    * Returns parsed relationships compatible with existing code
    */
-  async parseRelatedSection(): Promise<ParsedRelationship[]> {
+  /**
+   * Parse Related section from markdown content
+   * Returns Relationship entity objects directly
+   */
+  async parseRelatedSection(): Promise<Relationship[]> {
     const content = await this.getContent();
     
     // Extract the Related section using regex
@@ -155,30 +410,7 @@ export class ContactNote {
     
     const relatedContent = relatedSectionMatch[1];
     const relatedSection = RelatedSection.fromMarkdown(relatedContent, 'Related', 2);
-    const relationships = relatedSection.getRelationships();
-    
-    // Convert Relationship entities to ParsedRelationship format for backward compatibility
-    const parsedRelationships: ParsedRelationship[] = [];
-    
-    for (const rel of relationships) {
-      const target = rel.getTarget();
-      const type = rel.getType();
-      
-      // Determine if this is a UID or name reference
-      const isUID = target.isUIDReference();
-      
-      parsedRelationships.push({
-        type: type.toString(),
-        contactName: target.getValue(), // This is either the UID or the name
-        linkType: isUID ? 'uid' : 'name',
-        parsedValue: {
-          type: isUID ? 'uid' : 'name',
-          value: target.getValue()
-        }
-      });
-    }
-    
-    return parsedRelationships;
+    return relatedSection.getRelationships();
   }
 
   /**
@@ -218,12 +450,12 @@ export class ContactNote {
     const file = await this.findContactByName(contactName);
     if (!file) return null;
     
-    // Create a temporary ContactData for the target contact
-    const targetContactData = new ContactData(this.app, file);
+    // Create a temporary ContactNote for the target contact
+    const targetContact = new ContactNote(this.app, this.settings, file);
     
     try {
-      const uid = await targetContactData.getUID();
-      const gender = await targetContactData.getGender();
+      const uid = await targetContact.getUID();
+      const gender = await targetContact.getGender();
       
       return {
         name: contactName,
@@ -254,40 +486,27 @@ export class ContactNote {
   /**
    * Parse a vCard RELATED value to extract UID or name
    */
+  /**
+   * Parse a RELATED value using RelationshipReference entity
+   * @deprecated Use RelationshipReference.fromString() directly
+   */
   parseRelatedValue(value: string): { type: 'uuid' | 'uid' | 'name'; value: string } | null {
     if (!value || typeof value !== 'string') return null;
     
-    const trimmed = value.trim();
-    
-    // Check for urn:uuid: format
-    if (trimmed.startsWith('urn:uuid:')) {
-      return {
-        type: 'uuid',
-        value: trimmed.substring(9)
-      };
+    try {
+      const reference = RelationshipReference.fromString(value);
+      const refType = reference.getType();
+      
+      if (refType === 'uid') {
+        const uid = reference.getUID();
+        return uid ? { type: 'uuid', value: uid.toString() } : null;
+      } else {
+        return { type: 'name', value: reference.getValue() };
+      }
+    } catch (error) {
+      // Fall back to name if parsing fails
+      return { type: 'name', value: value.trim() };
     }
-    
-    // Check for uid: format
-    if (trimmed.startsWith('uid:')) {
-      return {
-        type: 'uid',
-        value: trimmed.substring(4)
-      };
-    }
-    
-    // Check if it looks like a UID (UUID format)
-    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(trimmed)) {
-      return {
-        type: 'uuid',
-        value: trimmed
-      };
-    }
-    
-    // Default to name
-    return {
-      type: 'name',
-      value: trimmed
-    };
   }
 
   /**
@@ -303,7 +522,7 @@ export class ContactNote {
    * Parse RELATED fields from frontmatter
    */
   async parseFrontmatterRelationships(): Promise<FrontmatterRelationship[]> {
-    const frontmatter = await this.contactData.getFrontmatter();
+    const frontmatter = await this.getFrontmatter();
     const relationships: FrontmatterRelationship[] = [];
 
     if (!frontmatter) return relationships;
@@ -470,7 +689,7 @@ export class ContactNote {
       }
     }
     
-    await this.contactData.updateContent(newContent);
+    await this.updateContent(newContent);
   }
 
   /**
@@ -630,7 +849,7 @@ export class ContactNote {
           if (genderLookup && parsedValue.type === 'name') {
             const contactGender = genderLookup(contactName);
             if (contactGender) {
-              displayType = this.getGenderedRelationshipTermForMarkdown(relationshipType, contactGender);
+              displayType = this.getGenderedRelationshipTerm(relationshipType, contactGender);
             }
           }
           
@@ -658,37 +877,13 @@ export class ContactNote {
     return bracketMatch ? bracketMatch[1] || 'related' : 'related';
   }
 
+  /**
+   * Parse a RELATED value for markdown rendering using RelationshipReference entity
+   * @deprecated Use RelationshipReference.fromString() directly
+   */
   private parseRelatedValueForMarkdown(value: string): { type: 'uuid' | 'uid' | 'name'; value: string } | null {
-    if (value.startsWith('urn:uuid:')) {
-      return { type: 'uuid', value: value.substring(9) };
-    } else if (value.startsWith('uid:')) {
-      return { type: 'uid', value: value.substring(4) };
-    } else if (value.startsWith('name:')) {
-      return { type: 'name', value: value.substring(5) };
-    }
-    return null;
-  }
-
-  private getGenderedRelationshipTermForMarkdown(relationshipType: string, contactGender: Gender): string {
-    const mapping: Record<string, { M: string; F: string; default: string }> = {
-      parent: { M: 'father', F: 'mother', default: 'parent' },
-      auncle: { M: 'uncle', F: 'aunt', default: 'aunt/uncle' },
-      child: { M: 'son', F: 'daughter', default: 'child' },
-      sibling: { M: 'brother', F: 'sister', default: 'sibling' },
-      grandparent: { M: 'grandfather', F: 'grandmother', default: 'grandparent' },
-      grandchild: { M: 'grandson', F: 'granddaughter', default: 'grandchild' },
-      spouse: { M: 'husband', F: 'wife', default: 'spouse' },
-      friend: { M: 'friend', F: 'friend', default: 'friend' },
-      colleague: { M: 'colleague', F: 'colleague', default: 'colleague' },
-      acquaintance: { M: 'acquaintance', F: 'acquaintance', default: 'acquaintance' }
-    };
-
-    const typeMapping = mapping[relationshipType.toLowerCase()];
-    if (!typeMapping) return relationshipType;
-
-    if (contactGender === 'M') return typeMapping.M;
-    if (contactGender === 'F') return typeMapping.F;
-    return typeMapping.default;
+    // Delegate to parseRelatedValue which now uses RelationshipReference entity
+    return this.parseRelatedValue(value);
   }
 
   // === Sync Operations (inlined from SyncOperations) ===
@@ -696,35 +891,40 @@ export class ContactNote {
   /**
    * Deduplicate relationships, preferring gendered terms over ungendered
    */
-  private deduplicateRelationships(relationships: ParsedRelationship[]): {
-    deduplicated: ParsedRelationship[];
+  private deduplicateRelationships(relationships: Relationship[]): {
+    deduplicated: Relationship[];
     inferredGender: Map<string, Gender>;
   } {
-    const seen = new Map<string, ParsedRelationship>();
+    const seen = new Map<string, Relationship>();
     const inferredGender = new Map<string, Gender>();
     
     for (const rel of relationships) {
-      const genderlessType = this.convertToGenderlessType(rel.type);
-      const contactKey = `${genderlessType}:${rel.contactName.toLowerCase()}`;
+      const type = rel.getType().toString();
+      const contactName = rel.getTarget().getValue();
+      
+      const genderlessType = this.convertToGenderlessType(type);
+      const contactKey = `${genderlessType}:${contactName.toLowerCase()}`;
       const existing = seen.get(contactKey);
       
       if (!existing) {
         seen.set(contactKey, rel);
-        const gender = this.inferGenderFromRelationship(rel.type);
+        const gender = this.inferGenderFromRelationship(type);
         if (gender) {
-          inferredGender.set(rel.contactName, gender);
+          inferredGender.set(contactName, gender);
         }
         continue;
       }
       
-      const existingGender = this.inferGenderFromRelationship(existing.type);
-      const currentGender = this.inferGenderFromRelationship(rel.type);
+      const existingType = existing.getType().toString();
+      const existingGender = this.inferGenderFromRelationship(existingType);
+      const currentGender = this.inferGenderFromRelationship(type);
       
       if (currentGender && !existingGender) {
         seen.set(contactKey, rel);
-        inferredGender.set(rel.contactName, currentGender);
+        inferredGender.set(contactName, currentGender);
       } else if (currentGender) {
-        inferredGender.set(existing.contactName, existingGender!);
+        const existingContactName = existing.getTarget().getValue();
+        inferredGender.set(existingContactName, existingGender!);
       }
     }
     
@@ -742,11 +942,11 @@ export class ContactNote {
 
     for (const file of allFiles) {
       try {
-        const tempContactData = new ContactData(this.app, file);
-        const fileUid = await tempContactData.getUID();
+        const tempContact = new ContactNote(this.app, this.settings, file);
+        const fileUid = await tempContact.getUID();
         
         if (fileUid === uid) {
-          const frontmatter = await tempContactData.getFrontmatter();
+          const frontmatter = await tempContact.getFrontmatter();
           const contactName = frontmatter?.FN || file.basename;
           
           return {
@@ -776,7 +976,7 @@ export class ContactNote {
       const typeIndices = new Map<string, number>();
 
       // Clear existing RELATED fields
-      const frontmatter = await this.contactData.getFrontmatter();
+      const frontmatter = await this.getFrontmatter();
       if (frontmatter) {
         Object.keys(frontmatter).forEach(key => {
           if (key.startsWith('RELATED') || key === 'RELATED') {
@@ -788,11 +988,14 @@ export class ContactNote {
       // Process each relationship
       for (const relationship of deduplicated) {
         try {
-          const genderlessType = this.convertToGenderlessType(relationship.type);
+          const type = relationship.getType().toString();
+          const contactName = relationship.getTarget().getValue();
+          
+          const genderlessType = this.convertToGenderlessType(type);
           const currentIndex = typeIndices.get(genderlessType) || 0;
           typeIndices.set(genderlessType, currentIndex + 1);
           
-          const resolvedContact = await this.resolveContact(relationship.contactName);
+          const resolvedContact = await this.resolveContact(contactName);
           
           if (resolvedContact) {
             const relatedValue = this.formatRelatedValue(
@@ -810,23 +1013,24 @@ export class ContactNote {
               ? `RELATED.${genderlessType}`
               : `RELATED.${genderlessType}.${currentIndex}`;
             
-            frontmatterUpdates[key] = `name:${relationship.contactName}`;
-            errors.push(`Could not resolve contact: ${relationship.contactName}`);
+            frontmatterUpdates[key] = `name:${contactName}`;
+            errors.push(`Could not resolve contact: ${contactName}`);
           }
         } catch (error: any) {
-          errors.push(`Error processing relationship ${relationship.contactName}: ${error.message}`);
+          const contactName = relationship.getTarget().getValue();
+          errors.push(`Error processing relationship ${contactName}: ${error.message}`);
         }
       }
 
       if (Object.keys(frontmatterUpdates).length > 0) {
-        await this.contactData.updateMultipleFrontmatterValues(frontmatterUpdates);
+        await this.updateMultipleFrontmatterValues(frontmatterUpdates);
       }
       
       if (relationships.length !== deduplicated.length) {
         await this.updateRelatedSectionInContent(
           deduplicated.map(rel => ({
-            type: rel.type,
-            contactName: rel.contactName
+            type: rel.getType().toString(),
+            contactName: rel.getTarget().getValue()
           }))
         );
       }
@@ -854,7 +1058,10 @@ export class ContactNote {
       const existingMarkdownRelationships = await this.parseRelatedSection();
       
       const markdownRelationships: { type: string; contactName: string }[] = 
-        existingMarkdownRelationships.map(rel => ({ type: rel.type, contactName: rel.contactName }));
+        existingMarkdownRelationships.map(rel => ({ 
+          type: rel.getType().toString(), 
+          contactName: rel.getTarget().getValue() 
+        }));
 
       for (const fmRel of frontmatterRelationships) {
         try {
@@ -869,13 +1076,13 @@ export class ContactNote {
                 contactName = resolvedContact.name;
                 
                 const existingRel = existingMarkdownRelationships.find(rel => 
-                  rel.type === fmRel.type
+                  rel.getType().toString() === fmRel.type
                 );
-                if (existingRel && existingRel.contactName !== contactName) {
+                if (existingRel && existingRel.getTarget().getValue() !== contactName) {
                   updatedRelationships.push({
                     newName: contactName,
                     uid: fmRel.parsedValue.value,
-                    oldName: existingRel.contactName
+                    oldName: existingRel.getTarget().getValue()
                   });
                 }
               } else {
@@ -1003,7 +1210,7 @@ export class ContactNote {
     isValid: boolean;
     issues: string[];
   }> {
-    const frontmatter = await this.contactData.getFrontmatter();
+    const frontmatter = await this.getFrontmatter();
     const issues: string[] = [];
     
     if (!frontmatter) {
@@ -1031,20 +1238,40 @@ export class ContactNote {
   /**
    * Validate email format
    */
+  /**
+   * Validate email format
+   * @deprecated Use EmailField.validate() entity method directly
+   */
   validateEmail(email: string): boolean {
     if (!email || typeof email !== 'string') return true; // Empty is valid
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
+    try {
+      const { EmailField } = require('./entities/fields/EmailField');
+      const field = EmailField.fromMarkdown(`- ${email}`);
+      const result = field?.validate();
+      return result?.isValid ?? true;
+    } catch {
+      // Fallback to basic validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return emailRegex.test(email);
+    }
   }
 
   /**
    * Validate phone number format
+   * @deprecated Use TelephoneField.validate() entity method directly
    */
   validatePhoneNumber(phone: string): boolean {
     if (!phone || typeof phone !== 'string') return true; // Empty is valid
-    // Allow various phone formats but reject obviously invalid ones
-    const phoneRegex = /^[\+]?[\s\-\(\)0-9]{7,}$/;
-    return phoneRegex.test(phone.replace(/\s/g, ''));
+    try {
+      const { TelephoneField } = require('./entities/fields/TelephoneField');
+      const field = TelephoneField.fromMarkdown(`- ${phone}`);
+      const result = field?.validate();
+      return result?.isValid ?? true;
+    } catch {
+      // Fallback to basic validation
+      const phoneRegex = /^[\+]?[\s\-\(\)0-9]{7,}$/;
+      return phoneRegex.test(phone.replace(/\s/g, ''));
+    }
   }
 
   /**
@@ -1074,11 +1301,19 @@ export class ContactNote {
 
   /**
    * Validate URL format
+   * @deprecated Use UrlField.validate() entity method directly
    */
   private validateURL(url: string): boolean {
     if (!url || typeof url !== 'string') return true; // Empty is valid
-    // Basic URL validation - must start with http:// or https://
-    return /^https?:\/\/.+/.test(url);
+    try {
+      const { UrlField } = require('./entities/fields/UrlField');
+      const field = UrlField.fromMarkdown(`- ${url}`);
+      const result = field?.validate();
+      return result?.isValid ?? true;
+    } catch {
+      // Fallback to basic validation
+      return /^https?:\/\/.+/.test(url);
+    }
   }
 
   /**
@@ -1093,7 +1328,7 @@ export class ContactNote {
     const errors: string[] = [];
 
     try {
-      const frontmatter = await this.contactData.getFrontmatter();
+      const frontmatter = await this.getFrontmatter();
       if (!frontmatter) {
         return { invalidFields, errors };
       }
@@ -1158,7 +1393,7 @@ export class ContactNote {
     const errors: string[] = [];
 
     try {
-      const frontmatter = await this.contactData.getFrontmatter();
+      const frontmatter = await this.getFrontmatter();
       if (!frontmatter) {
         return { removed, errors };
       }
@@ -1191,7 +1426,7 @@ export class ContactNote {
     // Import yaml library for stringification
     const { stringify: stringifyYaml } = await import('yaml');
     
-    const content = await this.contactData.getContent();
+    const content = await this.getContent();
     
     // Use yaml library to stringify frontmatter
     let frontmatterYaml = stringifyYaml(frontmatter);
@@ -1215,7 +1450,7 @@ export class ContactNote {
       newContent = `---\n${frontmatterYaml}---\n${content}`;
     }
     
-    await this.contactData.updateContent(newContent);
+    await this.updateContent(newContent);
   }
 
   // === Advanced Relationship Operations ===
@@ -1278,8 +1513,11 @@ export class ContactNote {
     }
     
     for (const rel of relationships) {
-      if (!processedTargets.has(rel.contactName.toLowerCase())) {
-        const resolved = await this.resolveContact(rel.contactName);
+      const type = rel.getType().toString();
+      const contactName = rel.getTarget().getValue();
+      
+      if (!processedTargets.has(contactName.toLowerCase())) {
+        const resolved = await this.resolveContact(contactName);
         const obj: {
           type: string;
           contactName: string;
@@ -1287,10 +1525,10 @@ export class ContactNote {
           linkType: 'uid' | 'name';
           originalType: string;
         } = {
-          type: rel.type,
-          contactName: rel.contactName,
+          type: type,
+          contactName: contactName,
           linkType: resolved?.uid ? 'uid' : 'name',
-          originalType: rel.type
+          originalType: type
         };
         if (resolved?.uid) {
           obj.targetUID = resolved.uid;
@@ -1348,7 +1586,7 @@ export class ContactNote {
     contactName: string;
   } | null> {
     // First, check if identifier is a relationship type in frontmatter
-    const frontmatter = await this.contactData.getFrontmatter();
+    const frontmatter = await this.getFrontmatter();
     if (frontmatter) {
       for (const [key, value] of Object.entries(frontmatter)) {
         if (key.startsWith('RELATED[') && typeof value === 'string') {
@@ -1436,14 +1674,17 @@ export class ContactNote {
     try {
       const relationships = await this.parseRelatedSection();
       const sourceContactName = this.getDisplayName();
-      const sourceFrontmatter = await this.contactData.getFrontmatter();
+      const sourceFrontmatter = await this.getFrontmatter();
       const sourceGender = sourceFrontmatter?.GENDER as Gender;
       
       for (const relationship of relationships) {
-        const targetFile = await this.findContactByName(relationship.contactName);
+        const contactName = relationship.getTarget().getValue();
+        const relType = relationship.getType().toString();
+        
+        const targetFile = await this.findContactByName(contactName);
         if (!targetFile) {
           result.processedRelationships.push({
-            targetContact: relationship.contactName,
+            targetContact: contactName,
             reverseType: '',
             added: false,
             reason: 'target contact not found',
@@ -1453,11 +1694,14 @@ export class ContactNote {
         }
 
         const targetContact = new ContactNote(this.app, this.settings, targetFile);
-        const reverseType = this.getReciprocalRelationshipType(relationship.type, sourceGender);
+        
+        // Use entity method to get reciprocal type
+        const reciprocalType = relationship.getReciprocalType();
+        const reverseType = reciprocalType.toString();
         
         if (!reverseType) {
           result.processedRelationships.push({
-            targetContact: relationship.contactName,
+            targetContact: contactName,
             reverseType: '',
             added: false,
             reason: 'no reciprocal relationship type available',
@@ -1468,29 +1712,35 @@ export class ContactNote {
 
         const targetRelationships = await targetContact.parseRelatedSection();
         
-        const reverseExists = targetRelationships.some((rel: any) => {
-          const normalizedRelName = rel.contactName.toLowerCase().replace(/[\s\-]/g, '');
+        const reverseExists = targetRelationships.some((rel: Relationship) => {
+          const relContactName = rel.getTarget().getValue();
+          const relType = rel.getType().toString();
+          const normalizedRelName = relContactName.toLowerCase().replace(/[\s\-]/g, '');
           const normalizedSourceName = sourceContactName.toLowerCase().replace(/[\s\-]/g, '');
           return normalizedRelName === normalizedSourceName && 
-            this.areRelationshipTypesEquivalent(rel.type, reverseType);
+            this.areRelationshipTypesEquivalent(relType, reverseType);
         });
 
         if (!reverseExists) {
-          const newRelationships = [...targetRelationships, {
+          const newRelationships = targetRelationships.map(r => ({
+            type: r.getType().toString(),
+            contactName: r.getTarget().getValue()
+          }));
+          newRelationships.push({
             type: reverseType,
             contactName: sourceContactName
-          }];
+          });
           
           await targetContact.updateRelatedSectionInContent(newRelationships);
           
           result.processedRelationships.push({
-            targetContact: relationship.contactName,
+            targetContact: contactName,
             reverseType,
             added: true
           });
         } else {
           result.processedRelationships.push({
-            targetContact: relationship.contactName,
+            targetContact: contactName,
             reverseType,
             added: false,
             reason: 'relationship already exists'
@@ -1528,7 +1778,7 @@ export class ContactNote {
     } = { success: true, upgradedRelationships: [], errors: [] };
 
     try {
-      const frontmatter = await this.contactData.getFrontmatter();
+      const frontmatter = await this.getFrontmatter();
       const updates: Record<string, string> = {};
       
       if (frontmatter) {
@@ -1561,28 +1811,31 @@ export class ContactNote {
       let relationshipIndex = 0;
       
       for (const relationship of markdownRelationships) {
+        const relType = relationship.getType().toString();
+        const contactName = relationship.getTarget().getValue();
+        
         const hasFrontmatterEntry = frontmatter && Object.keys(frontmatter).some(key => {
           if (!key.startsWith('RELATED[')) return false;
           const typeMatch = key.match(/RELATED\[(?:\d+:)?([^\]]+)\]/);
-          const relType = typeMatch ? typeMatch[1] : '';
-          return relType.toLowerCase() === relationship.type.toLowerCase();
+          const fmRelType = typeMatch ? typeMatch[1] : '';
+          return fmRelType.toLowerCase() === relType.toLowerCase();
         });
         
         if (!hasFrontmatterEntry) {
-          const targetFile = await this.findContactByName(relationship.contactName);
+          const targetFile = await this.findContactByName(contactName);
           if (targetFile) {
             const targetCache = this.app.metadataCache.getFileCache(targetFile);
             const targetUID = targetCache?.frontmatter?.UID;
             
             if (targetUID) {
               const key = relationshipIndex === 0 && !hasFrontmatterEntry
-                ? `RELATED.${relationship.type}`
-                : `RELATED.${relationship.type}.${relationshipIndex}`;
+                ? `RELATED.${relType}`
+                : `RELATED.${relType}.${relationshipIndex}`;
               
-              updates[key] = this.formatRelatedValue(targetUID, relationship.contactName);
+              updates[key] = this.formatRelatedValue(targetUID, contactName);
               result.upgradedRelationships.push({
                 targetUID,
-                type: relationship.type,
+                type: relType,
                 key
               });
               relationshipIndex++;
@@ -1592,7 +1845,7 @@ export class ContactNote {
       }
 
       if (Object.keys(updates).length > 0) {
-        await this.contactData.updateMultipleFrontmatterValues(updates);
+        await this.updateMultipleFrontmatterValues(updates);
       }
     } catch (error: any) {
       result.success = false;
@@ -1671,7 +1924,7 @@ export class ContactNote {
     };
     
     try {
-      const frontmatter = await this.contactData.getFrontmatter();
+      const frontmatter = await this.getFrontmatter();
       if (!frontmatter) {
         result.success = false;
         return result;
@@ -1705,7 +1958,7 @@ export class ContactNote {
       }
 
       if (Object.keys(updates).length > 0) {
-        await this.contactData.updateMultipleFrontmatterValues(updates);
+        await this.updateMultipleFrontmatterValues(updates);
       }
     } catch (error: any) {
       result.success = false;
@@ -1734,7 +1987,7 @@ export class ContactNote {
     } = { success: true, updatedCount: 0, failedCount: 0, errors: [] };
     
     try {
-      const frontmatter = await this.contactData.getFrontmatter();
+      const frontmatter = await this.getFrontmatter();
       if (!frontmatter) return result;
 
       const updates: Record<string, string> = {};
@@ -1772,7 +2025,7 @@ export class ContactNote {
       }
 
       if (Object.keys(updates).length > 0) {
-        await this.contactData.updateMultipleFrontmatterValues(updates);
+        await this.updateMultipleFrontmatterValues(updates);
       }
     } catch (error: any) {
       result.success = false;
@@ -1789,120 +2042,6 @@ export class ContactNote {
   /**
    * Get reciprocal relationship type with gender awareness
    */
-  private getReciprocalRelationshipType(relationshipType: string, targetGender?: Gender): string | null {
-    const reciprocalMap: Record<string, string | Record<string, string>> = {
-      'father': {
-        'M': 'son',
-        'F': 'daughter',
-        'NB': 'child',
-        'O': 'child',
-        'N': 'child',
-        'U': 'child',
-        'default': 'child'
-      },
-      'mother': {
-        'M': 'son',
-        'F': 'daughter',
-        'NB': 'child',
-        'O': 'child',
-        'N': 'child',
-        'U': 'child',
-        'default': 'child'
-      },
-      'parent': {
-        'M': 'son',
-        'F': 'daughter',
-        'NB': 'child',
-        'O': 'child', 
-        'N': 'child',
-        'U': 'child',
-        'default': 'child'
-      },
-      'son': 'parent',
-      'daughter': 'parent',
-      'child': 'parent',
-      'brother': {
-        'M': 'brother',
-        'F': 'sister',
-        'NB': 'sibling',
-        'O': 'sibling',
-        'N': 'sibling', 
-        'U': 'sibling',
-        'default': 'sibling'
-      },
-      'sister': {
-        'M': 'brother',
-        'F': 'sister',
-        'NB': 'sibling',
-        'O': 'sibling',
-        'N': 'sibling',
-        'U': 'sibling', 
-        'default': 'sibling'
-      },
-      'sibling': 'sibling',
-      'spouse': 'spouse',
-      'husband': 'wife',
-      'wife': 'husband',
-      'friend': 'friend',
-      'colleague': 'colleague',
-      'manager': 'employee',
-      'employee': 'manager',
-      'boss': 'employee',
-      'mentor': 'mentee',
-      'mentee': 'mentor',
-      'uncle': {
-        'M': 'nephew',
-        'F': 'niece',
-        'NB': 'nephew',
-        'O': 'nephew',
-        'N': 'nephew',
-        'U': 'nephew',
-        'default': 'nephew'
-      },
-      'aunt': {
-        'M': 'nephew',
-        'F': 'niece',
-        'NB': 'nephew',
-        'O': 'nephew',
-        'N': 'nephew',
-        'U': 'nephew',
-        'default': 'nephew'
-      },
-      'nephew': {
-        'M': 'uncle',
-        'F': 'aunt',
-        'NB': 'uncle',
-        'O': 'uncle',
-        'N': 'uncle',
-        'U': 'uncle',
-        'default': 'uncle'
-      },
-      'niece': {
-        'M': 'uncle',
-        'F': 'aunt',
-        'NB': 'aunt',
-        'O': 'uncle',
-        'N': 'uncle',
-        'U': 'uncle',
-        'default': 'uncle'
-      }
-    };
-    
-    const mapping = reciprocalMap[relationshipType.toLowerCase()];
-    if (!mapping) return null;
-    
-    if (typeof mapping === 'string') {
-      return mapping;
-    }
-    
-    // Use gender-specific mapping if available
-    if (targetGender && mapping[targetGender]) {
-      return mapping[targetGender];
-    }
-    
-    return mapping.default || null;
-  }
-
   /**
    * Check if two relationship types are equivalent
    */
@@ -1981,17 +2120,16 @@ export class ContactNote {
    * Get cache status for debugging
    */
   getCacheStatus(): { [key: string]: boolean } {
-    return this.contactData.getCacheStatus();
+    return {
+      frontmatter: this._frontmatter !== null,
+      content: this._content !== null,
+      gender: this._gender !== null,
+      uid: this._uid !== null,
+      displayName: this._displayName !== null
+    };
   }
 
   // === Additional utility methods for backward compatibility ===
-
-  /**
-   * Generate REV timestamp for vCard compatibility
-   */
-  generateRevTimestamp(): string {
-    return this.contactData.generateRevTimestamp();
-  }
 
   /**
    * Parse a VCard REV date string into a Date object
@@ -2033,7 +2171,7 @@ export class ContactNote {
    * Check if contact should be updated from vcard based on REV timestamp
    */
   async shouldUpdateFromVcard(record: Record<string, any>): Promise<boolean> {
-    const frontmatter = await this.contactData.getFrontmatter();
+    const frontmatter = await this.getFrontmatter();
     if (!frontmatter) return true;
 
     const contactRev = frontmatter.REV;
@@ -2059,12 +2197,11 @@ export class ContactNote {
    * Parse Contact section from markdown
    * Returns parsed contact fields compatible with existing curators
    */
-  async parseContactSection(): Promise<Array<{
-    fieldType: string;
-    fieldLabel: string;
-    value: string;
-    component?: string;
-  }>> {
+  /**
+   * Parse Contact section from markdown content
+   * Returns ContactField entity objects directly
+   */
+  async parseContactSection(): Promise<ContactField[]> {
     const content = await this.getContent();
     
     // Extract the Contact section using markdown parsing
@@ -2076,43 +2213,15 @@ export class ContactNote {
     
     const contactContent = contactSectionMatch[1];
     const contactSection = ContactSection.fromMarkdown(contactContent, 'Contact', 2);
-    const fields = contactSection.getFields();
-    
-    // Convert ContactField entities to ParsedContactField format for backward compatibility
-    const parsedFields: Array<{
-      fieldType: string;
-      fieldLabel: string;
-      value: string;
-      component?: string;
-    }> = [];
-    
-    for (const field of fields) {
-      const frontmatter = field.toFrontmatter();
-      
-      // Handle both single entries and arrays
-      const entries = Array.isArray(frontmatter) ? frontmatter : [frontmatter];
-      
-      for (const entry of entries) {
-        // Parse the frontmatter key to extract field type, label, and component
-        // Format examples: "EMAIL[WORK]", "EMAIL", "ADR[HOME].STREET", "ADR.STREET"
-        const keyMatch = entry.key.match(/^([A-Z]+)(?:\[([^\]]+)\])?(?:\.(.+))?$/);
-        
-        if (keyMatch) {
-          parsedFields.push({
-            fieldType: keyMatch[1],
-            fieldLabel: keyMatch[2] || '',
-            value: String(entry.value),
-            component: keyMatch[3]
-          });
-        }
-      }
-    }
-    
-    return parsedFields;
+    return contactSection.getFields();
   }
 
   /**
    * Generate Contact section markdown from frontmatter
+   */
+  /**
+   * Generate Contact section markdown from frontmatter
+   * Uses ContactSection entity to generate markdown
    */
   async generateContactSection(): Promise<string> {
     const frontmatter = await this.getFrontmatter();
@@ -2120,105 +2229,44 @@ export class ContactNote {
     
     const fields: ContactField[] = [];
     
-    // Parse frontmatter for contact fields
-    // Look for EMAIL, TEL, URL, ADR fields
+    // Create ContactField entities from frontmatter
+    // Try to parse EMAIL, TEL, URL, and ADR fields
     for (const [key, value] of Object.entries(frontmatter)) {
-      // Match field patterns: EMAIL, EMAIL[WORK], EMAIL.WORK, etc.
-      const bareMatch = key.match(/^(EMAIL|TEL|URL|ADR)$/);
-      const bracketMatch = key.match(/^(EMAIL|TEL|URL|ADR)\[([^\]]+)\](?:\.(.+))?$/);
-      const dotMatch = key.match(/^(EMAIL|TEL|URL|ADR)\.([^.]+)(?:\.(.+))?$/);
-      
-      if (bareMatch) {
-        // Bare field: EMAIL, TEL, etc.
-        const fieldType = bareMatch[1];
-        // For now, convert to simple field format: "- value"
-        // This is a minimal implementation to get tests passing
-        if (fieldType === 'EMAIL' || fieldType === 'TEL' || fieldType === 'URL') {
-          // Will be rendered as "- value"
-          // The entity parsing doesn't need explicit type matching since we're generating simple format
+      try {
+        // Import field types dynamically based on key prefix
+        if (key.startsWith('EMAIL') && typeof value === 'string') {
+          const { EmailField } = await import('./entities/fields/EmailField');
+          const field = EmailField.fromFrontmatter(key, value);
+          fields.push(field);
+        } else if (key.startsWith('TEL') && typeof value === 'string') {
+          const { TelephoneField } = await import('./entities/fields/TelephoneField');
+          const field = TelephoneField.fromFrontmatter(key, value);
+          fields.push(field);
+        } else if (key.startsWith('URL') && typeof value === 'string') {
+          const { UrlField } = await import('./entities/fields/UrlField');
+          const field = UrlField.fromFrontmatter(key, value);
+          fields.push(field);
         }
+        // ADR fields are more complex - need to collect components
+        // For now, skip ADR in this simplified version
+      } catch (error) {
+        // Skip fields that fail to parse
+        console.debug(`[ContactNote] Failed to parse field ${key}:`, error);
       }
     }
     
-    // For now, generate a simple list from EMAIL, TEL, URL, ADR fields
-    const lines: string[] = [];
-    
-    // EMAIL fields
-    const emailFields = Object.keys(frontmatter).filter(k => k.startsWith('EMAIL'));
-    for (const key of emailFields) {
-      const match = key.match(/^EMAIL(?:\[([^\]]+)\])?(?:\.(.+))?$/);
-      if (match && !match[2]) { // Not a component field
-        const label = match[1] || '';
-        const value = frontmatter[key];
-        if (label) {
-          lines.push(`- ${label}: ${value}`);
-        } else {
-          lines.push(`- ${value}`);
-        }
-      }
-    }
-    
-    // TEL fields
-    const telFields = Object.keys(frontmatter).filter(k => k.startsWith('TEL'));
-    for (const key of telFields) {
-      const match = key.match(/^TEL(?:\[([^\]]+)\])?(?:\.(.+))?$/);
-      if (match && !match[2]) {
-        const label = match[1] || '';
-        const value = frontmatter[key];
-        if (label) {
-          lines.push(`- ${label}: ${value}`);
-        } else {
-          lines.push(`- ${value}`);
-        }
-      }
-    }
-    
-    // URL fields
-    const urlFields = Object.keys(frontmatter).filter(k => k.startsWith('URL'));
-    for (const key of urlFields) {
-      const match = key.match(/^URL(?:\[([^\]]+)\])?(?:\.(.+))?$/);
-      if (match && !match[2]) {
-        const label = match[1] || '';
-        const value = frontmatter[key];
-        if (label) {
-          lines.push(`- ${label}: ${value}`);
-        } else {
-          lines.push(`- ${value}`);
-        }
-      }
-    }
-    
-    // ADR fields (simplified - just show as single line for now)
-    const adrFields = Object.keys(frontmatter).filter(k => k.match(/^ADR(?:\[([^\]]+)\])?$/));
-    for (const key of adrFields) {
-      const match = key.match(/^ADR(?:\[([^\]]+)\])?$/);
-      if (match) {
-        const label = match[1] || '';
-        // Look for address components
-        const prefix = key;
-        const street = frontmatter[`${prefix}.STREET`];
-        const locality = frontmatter[`${prefix}.LOCALITY`];
-        const region = frontmatter[`${prefix}.REGION`];
-        const postal = frontmatter[`${prefix}.POSTAL`];
-        const country = frontmatter[`${prefix}.COUNTRY`];
-        
-        const parts = [street, locality, region, postal, country].filter(Boolean);
-        if (parts.length > 0) {
-          const addressValue = parts.join(', ');
-          if (label) {
-            lines.push(`- ${label}: ${addressValue}`);
-          } else {
-            lines.push(`- ${addressValue}`);
-          }
-        }
-      }
-    }
-    
-    if (lines.length === 0) {
+    if (fields.length === 0) {
       return '';
     }
     
-    return lines.join('\n');
+    // Use ContactSection entity to generate markdown
+    const contactSection = ContactSection.fromFields(fields, 'Contact', 2);
+    const markdown = contactSection.toMarkdown();
+    
+    // Extract just the content part (remove header)
+    const lines = markdown.split('\n');
+    const contentLines = lines.filter(line => !line.match(/^#{2,4}\s+Contact/));
+    return contentLines.join('\n').trim();
   }
 
   /**
@@ -2249,13 +2297,13 @@ export class ContactNote {
         if (newRelatedMatch) {
           const insertPos = contentWithoutContact.indexOf(newRelatedMatch[0]);
           const newContent = contentWithoutContact.slice(0, insertPos) + `## Contact\n${contactSection}\n\n` + contentWithoutContact.slice(insertPos);
-          await this.contactData.updateContent(newContent);
+          await this.updateContent(newContent);
           return;
         }
       } else {
         // Correct order - just replace Contact section
         const newContent = content.replace(contactSectionRegex, `$1${contactSection}\n`);
-        await this.contactData.updateContent(newContent);
+        await this.updateContent(newContent);
         return;
       }
     }
@@ -2263,7 +2311,7 @@ export class ContactNote {
     if (contactMatch && !relatedMatch) {
       // Contact exists, no Related - just replace in-place
       const newContent = content.replace(contactSectionRegex, `$1${contactSection}\n`);
-      await this.contactData.updateContent(newContent);
+      await this.updateContent(newContent);
       return;
     }
     
@@ -2288,7 +2336,7 @@ export class ContactNote {
       newContent = content + `\n\n## Contact\n${contactSection}\n`;
     }
     
-    await this.contactData.updateContent(newContent);
+    await this.updateContent(newContent);
   }
 
   /**

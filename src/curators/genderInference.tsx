@@ -61,8 +61,11 @@ export const GenderInferenceProcessor: CuratorProcessor = {
       // Process each relationship in the Related section
       for (const relationship of relatedSectionRelationships) {
         try {
+          const relType = relationship.getType().toString();
+          const contactName = relationship.getTarget().getValue();
+          
           // Check if this relationship implies a gender for the related contact
-          const inferredGender = contactNote.inferGenderFromRelationship(relationship.type);
+          const inferredGender = contactNote.inferGenderFromRelationship(relType);
           
           if (!inferredGender) {
             // This relationship type doesn't imply a gender
@@ -70,12 +73,12 @@ export const GenderInferenceProcessor: CuratorProcessor = {
           }
           
           // Try to resolve the related contact
-          const relatedContact = await contactNote.resolveContact(relationship.contactName);
+          const relatedContact = await contactNote.resolveContact(contactName);
           
           if (!relatedContact) {
             // Could not find the related contact file
             console.debug(
-              `[GenderInferenceProcessor] Could not resolve contact: ${relationship.contactName}`
+              `[GenderInferenceProcessor] Could not resolve contact: ${contactName}`
             );
             continue;
           }
@@ -94,16 +97,18 @@ export const GenderInferenceProcessor: CuratorProcessor = {
           
           inferenceCount++;
           inferencesMade.push(
-            `${relationship.contactName} → ${inferredGender} (from relationship "${relationship.type}")`
+            `${contactName} → ${inferredGender} (from relationship "${relType}")`
           );
           
           console.debug(
-            `[GenderInferenceProcessor] Inferred gender ${inferredGender} for ${relationship.contactName} based on relationship "${relationship.type}" from ${contact.file.basename}`
+            `[GenderInferenceProcessor] Inferred gender ${inferredGender} for ${contactName} based on relationship "${relType}" from ${contact.file.basename}`
           );
           
         } catch (error: any) {
+          const contactName = relationship.getTarget().getValue();
+          const relType = relationship.getType().toString();
           console.error(
-            `[GenderInferenceProcessor] Error processing relationship ${relationship.type} -> ${relationship.contactName}: ${error.message}`
+            `[GenderInferenceProcessor] Error processing relationship ${relType} -> ${contactName}: ${error.message}`
           );
         }
       }

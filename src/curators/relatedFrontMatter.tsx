@@ -73,10 +73,12 @@ export const RelatedFrontMatterProcessor: CuratorProcessor = {
         
         if (contactName) {
           // Check if this relationship is missing from Related section
-          const relationshipExists = existingRelationships.some(rel => 
-            rel.contactName === contactName && 
-            rel.type.toLowerCase() === fmRel.type.toLowerCase()
-          );
+          const relationshipExists = existingRelationships.some(rel => {
+            const relContactName = rel.getTarget().getValue();
+            const relType = rel.getType().toString();
+            return relContactName === contactName && 
+                   relType.toLowerCase() === fmRel.type.toLowerCase();
+          });
           
           if (!relationshipExists) {
             missingCount++;

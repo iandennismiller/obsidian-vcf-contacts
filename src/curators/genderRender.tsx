@@ -62,55 +62,60 @@ export const GenderRenderProcessor: CuratorProcessor = {
       // Process each relationship in the Related section
       for (const relationship of relatedSectionRelationships) {
         try {
+          const relType = relationship.getType().toString();
+          const contactName = relationship.getTarget().getValue();
+          
           // Try to resolve the related contact to get their gender
-          const relatedContact = await contactNote.resolveContact(relationship.contactName);
+          const relatedContact = await contactNote.resolveContact(contactName);
           
           if (!relatedContact || !relatedContact.gender) {
             // Could not find the related contact or they don't have a gender
             // Keep the original relationship term unchanged
             updatedRelationships.push({
-              type: relationship.type,
-              contactName: relationship.contactName
+              type: relType,
+              contactName: contactName
             });
             continue;
           }
           
           // Get the gendered version of the relationship term
-          const genderedTerm = contactNote.getGenderedRelationshipTerm(relationship.type, relatedContact.gender);
+          const genderedTerm = contactNote.getGenderedRelationshipTerm(relType, relatedContact.gender);
           
           // Check if the term changed (i.e., was previously ungendered)
-          if (genderedTerm !== relationship.type) {
+          if (genderedTerm !== relType) {
             // The term changed from ungendered to gendered
             changesCount++;
             changesMade.push(
-              `${relationship.type} [[${relationship.contactName}]] → ${genderedTerm} [[${relationship.contactName}]]`
+              `${relType} [[${contactName}]] → ${genderedTerm} [[${contactName}]]`
             );
             
             console.debug(
-              `[GenderRenderProcessor] Updated relationship term: "${relationship.type}" → "${genderedTerm}" for ${relationship.contactName} (gender: ${relatedContact.gender}) in ${contact.file.basename}`
+              `[GenderRenderProcessor] Updated relationship term: "${relType}" → "${genderedTerm}" for ${contactName} (gender: ${relatedContact.gender}) in ${contact.file.basename}`
             );
             
             updatedRelationships.push({
               type: genderedTerm,
-              contactName: relationship.contactName
+              contactName: contactName
             });
           } else {
             // The term didn't change (was already gendered or doesn't have gendered equivalent)
             updatedRelationships.push({
-              type: relationship.type,
-              contactName: relationship.contactName
+              type: relType,
+              contactName: contactName
             });
           }
           
         } catch (error: any) {
+          const relType = relationship.getType().toString();
+          const contactName = relationship.getTarget().getValue();
           console.error(
-            `[GenderRenderProcessor] Error processing relationship ${relationship.type} -> ${relationship.contactName}: ${error.message}`
+            `[GenderRenderProcessor] Error processing relationship ${relType} -> ${contactName}: ${error.message}`
           );
           
           // Keep the original relationship on error
           updatedRelationships.push({
-            type: relationship.type,
-            contactName: relationship.contactName
+            type: relType,
+            contactName: contactName
           });
         }
       }
