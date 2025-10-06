@@ -433,15 +433,12 @@ export class ContactNote {
     try {
       const reference = RelationshipReference.fromString(value);
       const refType = reference.getType();
+      const uid = reference.getUID();
       
-      if (refType === 'uid') {
-        const uid = reference.getUID();
-        return uid ? { type: 'uuid', value: uid.toString() } : null;
-      } else {
-        return { type: 'name', value: reference.getValue() };
-      }
+      return refType === 'uid' && uid
+        ? { type: 'uuid', value: uid.toString() }
+        : { type: 'name', value: reference.getValue() };
     } catch (error) {
-      // Fall back to name if parsing fails
       return { type: 'name', value: value.trim() };
     }
   }
