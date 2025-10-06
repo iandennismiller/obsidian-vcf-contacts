@@ -67,6 +67,26 @@ export class RelationshipType {
     }
     return new RelationshipType(type);
   }
+  
+  /**
+   * Extract relationship type from frontmatter key
+   * Supports both dot notation (RELATED.spouse) and bracket notation (RELATED[0:spouse])
+   * 
+   * @param key - Frontmatter key (e.g., "RELATED.spouse", "RELATED[0:spouse]")
+   * @returns RelationshipType instance
+   */
+  static fromFrontmatterKey(key: string): RelationshipType {
+    // Try dot notation first (RELATED.type or RELATED.type.1)
+    const dotMatch = key.match(/^RELATED\.([^.]+)(?:\.\d+)?$/);
+    if (dotMatch) {
+      return new RelationshipType(dotMatch[1]);
+    }
+    
+    // Fall back to bracket notation for backward compatibility
+    const bracketMatch = key.match(/RELATED(?:\[(?:\d+:)?([^\]]+)\])?/);
+    const type = bracketMatch ? bracketMatch[1] || 'related' : 'related';
+    return new RelationshipType(type);
+  }
 
   /**
    * Get the gender-neutral form of this relationship type

@@ -70,6 +70,35 @@ export class UrlField extends ContactField {
   }
   
   /**
+   * Validate URL value (static method for validation without instance)
+   * 
+   * @param value - URL to validate
+   * @returns True if valid URL format
+   */
+  static validateValue(value: string): boolean {
+    if (!value || value.trim() === '') {
+      return false;
+    }
+    
+    // Try to parse as URL
+    try {
+      // Add protocol if missing for validation
+      const hasProtocol = /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(value);
+      const urlToValidate = hasProtocol ? value : `https://${value}`;
+      const url = new URL(urlToValidate);
+      
+      // Check for valid hostname
+      if (!url.hostname || url.hostname === '') {
+        return false;
+      }
+      
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+  
+  /**
    * Validate URL format
    * 
    * @returns Validation result
@@ -82,23 +111,12 @@ export class UrlField extends ContactField {
       return { isValid: false, errors };
     }
     
-    // Try to parse as URL
-    try {
-      // Add protocol if missing for validation
-      const urlToValidate = this.hasProtocol() ? this.value : `https://${this.value}`;
-      const url = new URL(urlToValidate);
-      
-      // Check for valid hostname
-      if (!url.hostname || url.hostname === '') {
-        errors.push('URL must have a valid hostname');
-        return { isValid: false, errors };
-      }
-      
-      return { isValid: true, errors: [] };
-    } catch (error) {
+    if (!UrlField.validateValue(this.value)) {
       errors.push('Invalid URL format');
       return { isValid: false, errors };
     }
+    
+    return { isValid: true, errors: [] };
   }
   
   /**

@@ -69,6 +69,36 @@ export class TelephoneField extends ContactField {
   }
   
   /**
+   * Validate phone number value (static method for validation without instance)
+   * 
+   * @param value - Phone number to validate
+   * @returns True if valid phone number format
+   */
+  static validateValue(value: string): boolean {
+    if (!value || value.trim() === '') {
+      return false;
+    }
+    
+    // Must contain at least some digits
+    if (!/\d/.test(value)) {
+      return false;
+    }
+    
+    // Must have at least 3 digits (minimum viable phone number)
+    const digitCount = (value.match(/\d/g) || []).length;
+    if (digitCount < 3) {
+      return false;
+    }
+    
+    // Allow common phone number characters: digits, spaces, dashes, parentheses, plus, dots
+    if (!/^[\d\s\-().\+]+$/.test(value)) {
+      return false;
+    }
+    
+    return true;
+  }
+  
+  /**
    * Validate phone number format
    * Allows various formats including international
    * 

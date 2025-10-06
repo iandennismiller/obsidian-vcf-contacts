@@ -15,7 +15,12 @@ import { Revision } from './entities/valueObjects/Revision';
 import { Gender as GenderEntity } from './entities/valueObjects/Gender';
 import { Frontmatter } from './entities/document/Frontmatter';
 import { ContactSection } from './entities/document/ContactSection';
+import { MarkdownSection } from './entities/document/MarkdownSection';
 import type { ContactField } from './entities/fields/ContactField';
+import { EmailField } from './entities/fields/EmailField';
+import { TelephoneField } from './entities/fields/TelephoneField';
+import { UrlField } from './entities/fields/UrlField';
+import { FieldType } from './entities/fields/FieldType';
 import { RelatedSection } from './entities/document/RelatedSection';
 import { Relationship } from './entities/relationships/Relationship';
 import { RelationshipType } from './entities/relationships/RelationshipType';
@@ -244,10 +249,10 @@ export class ContactNote {
 
   /**
    * Extract field type from a frontmatter key
+   * Delegates to FieldType utility
    */
   private extractFieldType(key: string): string | null {
-    const match = key.match(/^(EMAIL|TEL|URL|ADR)(\[|\.)?/);
-    return match ? match[1] : null;
+    return FieldType.extract(key);
   }
 
   /**
@@ -271,20 +276,11 @@ export class ContactNote {
 
   /**
    * Find an existing frontmatter key that matches the given key, ignoring case
+   * Delegates to Frontmatter entity
    */
   private findFrontmatterKey(frontmatter: Record<string, any>, searchKey: string): string | null {
-    if (searchKey in frontmatter) {
-      return searchKey;
-    }
-    
-    const searchKeyLower = searchKey.toLowerCase();
-    for (const key of Object.keys(frontmatter)) {
-      if (key.toLowerCase() === searchKeyLower) {
-        return key;
-      }
-    }
-    
-    return null;
+    const fm = Frontmatter.fromObject(frontmatter);
+    return fm.findKey(searchKey);
   }
 
   /**
@@ -700,16 +696,12 @@ export class ContactNote {
     return `${HEADING_LEVELS.SECTION} ${SECTION_NAMES.RELATED}\n${relatedEntries.join('\n')}\n`;
   }
 
+  /**
+   * Extract relationship type from frontmatter key
+   * Delegates to RelationshipType entity
+   */
   extractRelationshipTypeFromKey(key: string): string {
-    // Try dot notation first (RELATED.type or RELATED.type.1)
-    const dotMatch = key.match(/^RELATED\.([^.]+)(?:\.\d+)?$/);
-    if (dotMatch) {
-      return dotMatch[1];
-    }
-    
-    // Fall back to bracket notation for backward compatibility
-    const bracketMatch = key.match(/RELATED(?:\[(?:\d+:)?([^\]]+)\])?/);
-    return bracketMatch ? bracketMatch[1] || 'related' : 'related';
+    return RelationshipType.fromFrontmatterKey(key).toString();
   }
 
   // === Sync Operations (inlined from SyncOperations) ===
@@ -1057,7 +1049,7 @@ export class ContactNote {
 
   /**
    * Identify invalid frontmatter fields
-   * Uses Frontmatter entity and field validation
+   * Delegates to field entity validation methods
    */
   async identifyInvalidFrontmatterFields(): Promise<{
     invalidFields: Array<{ key: string; value: string; reason: string }>;
@@ -1077,14 +1069,14 @@ export class ContactNote {
         let isInvalid = false;
         let reason = '';
 
-        // Check field types
-        if (key.startsWith('EMAIL') && !this.validateEmail(value)) {
+        // Check field types using entity static validation methods
+        if (key.startsWith('EMAIL') && !EmailField.validateValue(value)) {
           isInvalid = true;
           reason = 'Invalid email format (must contain @ and domain)';
-        } else if (key.startsWith('TEL') && !this.validatePhoneNumber(value)) {
+        } else if (key.startsWith('TEL') && !TelephoneField.validateValue(value)) {
           isInvalid = true;
           reason = 'Invalid phone format (must contain digits)';
-        } else if (key.startsWith('URL') && !this.validateURL(value)) {
+        } else if (key.startsWith('URL') && !UrlField.validateValue(value)) {
           isInvalid = true;
           reason = 'Invalid URL format (must start with http:// or https://)';
         }
@@ -1642,10 +1634,10 @@ export class ContactNote {
 
   /**
    * Remove frontmatter from markdown content
+   * Delegates to MarkdownSection entity
    */
   private removeFrontmatter(content: string): string {
-    const frontmatterRegex = /^---\n[\s\S]*?\n---\n/;
-    return content.replace(frontmatterRegex, '');
+    return MarkdownSection.stripFrontmatter(content);
   }
 
   /**
