@@ -859,7 +859,7 @@ export class ContactNote {
           if (genderLookup && parsedValue.type === 'name') {
             const contactGender = genderLookup(contactName);
             if (contactGender) {
-              displayType = this.getGenderedRelationshipTermForMarkdown(relationshipType, contactGender);
+              displayType = this.getGenderedRelationshipTerm(relationshipType, contactGender);
             }
           }
           
@@ -896,28 +896,6 @@ export class ContactNote {
       return { type: 'name', value: value.substring(5) };
     }
     return null;
-  }
-
-  private getGenderedRelationshipTermForMarkdown(relationshipType: string, contactGender: Gender): string {
-    const mapping: Record<string, { M: string; F: string; default: string }> = {
-      parent: { M: 'father', F: 'mother', default: 'parent' },
-      auncle: { M: 'uncle', F: 'aunt', default: 'aunt/uncle' },
-      child: { M: 'son', F: 'daughter', default: 'child' },
-      sibling: { M: 'brother', F: 'sister', default: 'sibling' },
-      grandparent: { M: 'grandfather', F: 'grandmother', default: 'grandparent' },
-      grandchild: { M: 'grandson', F: 'granddaughter', default: 'grandchild' },
-      spouse: { M: 'husband', F: 'wife', default: 'spouse' },
-      friend: { M: 'friend', F: 'friend', default: 'friend' },
-      colleague: { M: 'colleague', F: 'colleague', default: 'colleague' },
-      acquaintance: { M: 'acquaintance', F: 'acquaintance', default: 'acquaintance' }
-    };
-
-    const typeMapping = mapping[relationshipType.toLowerCase()];
-    if (!typeMapping) return relationshipType;
-
-    if (contactGender === 'M') return typeMapping.M;
-    if (contactGender === 'F') return typeMapping.F;
-    return typeMapping.default;
   }
 
   // === Sync Operations (inlined from SyncOperations) ===
