@@ -61,3 +61,39 @@ export type {
   /** Result of parsing a contact list item */
   ParsedContactLine
 } from './fieldPatternDetection';
+
+// Export services for advanced usage
+export { 
+  /** Contact lookup and resolution service */
+  ContactResolver,
+  /** UID conflict detection and resolution service */
+  UIDConflictResolver,
+  /** Markdown rendering service for vCard data */
+  MarkdownRenderer
+} from './services';
+
+export type {
+  /** Resolved contact information from ContactResolver */
+  ResolvedContact as ServiceResolvedContact,
+  /** UID conflict information */
+  UIDConflict,
+  /** Result of conflict detection */
+  ConflictDetectionResult,
+  /** Result of UID update operation */
+  UIDUpdateResult,
+  /** Result of bulk UID update operation */
+  BulkUIDUpdateResult
+} from './services';
+
+// Export field utilities
+export {
+  /** Field grouping and sorting utility */
+  FieldGrouper,
+  /** Field type extraction and validation utility */
+  FieldType
+} from './entities/fields';
+
+export type {
+  /** Grouped vCard fields by category */
+  FieldGroups
+} from './entities/fields';
