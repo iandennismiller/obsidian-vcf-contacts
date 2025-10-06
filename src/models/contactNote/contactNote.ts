@@ -178,8 +178,21 @@ export class ContactNote {
     }
     
     try {
+      // Normalize special cases that the Gender entity doesn't handle
+      const normalized = value.trim().toUpperCase();
+      let valueToparse = value;
+      
+      // Handle NON-BINARY variations
+      if (normalized === 'NON-BINARY' || normalized === 'NONBINARY') {
+        valueToparse = 'nb';
+      }
+      // Handle UNSPECIFIED
+      else if (normalized === 'UNSPECIFIED') {
+        valueToparse = 'u';
+      }
+      
       // Use Gender entity for parsing
-      const genderEntity = GenderEntity.fromString(value);
+      const genderEntity = GenderEntity.fromString(valueToparse);
       // Return legacy format for backward compatibility
       return genderEntity.toLegacyFormat();
     } catch (error) {
