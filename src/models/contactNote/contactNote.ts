@@ -13,6 +13,7 @@ import { normalizeFieldValue } from './fieldPatternDetection';
 import { UID } from './entities/valueObjects/UID';
 import { Revision } from './entities/valueObjects/Revision';
 import { Gender as GenderEntity } from './entities/valueObjects/Gender';
+import { Frontmatter } from './entities/document/Frontmatter';
 import { ContactSection } from './entities/document/ContactSection';
 import type { ContactField } from './entities/fields/ContactField';
 import { RelatedSection } from './entities/document/RelatedSection';
@@ -102,6 +103,7 @@ export class ContactNote {
 
   /**
    * Get the frontmatter with caching
+   * Uses Frontmatter entity internally for parsing
    */
   async getFrontmatter(): Promise<Record<string, any> | null> {
     if (this._frontmatter === null) {
@@ -123,7 +125,9 @@ export class ContactNote {
         const match = content.match(/^---\n([\s\S]*?)\n---/);
         if (match) {
           try {
-            this._frontmatter = parseYaml(match[1]) ?? {};
+            // Use Frontmatter entity for parsing
+            const frontmatterEntity = Frontmatter.fromYAML(match[1]);
+            this._frontmatter = frontmatterEntity.toObject();
           } catch (error: any) {
             console.debug(`[ContactNote] Error parsing frontmatter for ${this.file.path}: ${error.message}`);
             this._frontmatter = null;
@@ -166,29 +170,20 @@ export class ContactNote {
 
   /**
    * Parse GENDER field value from vCard
+   * Uses Gender entity for parsing logic
    */
   parseGender(value: string): Gender {
     if (!value || value.trim() === '') {
       return null;
     }
     
-    const normalized = value.trim().toUpperCase();
-    switch (normalized) {
-      case 'M':
-      case 'MALE':
-        return 'M';
-      case 'F':
-      case 'FEMALE':
-        return 'F';
-      case 'NB':
-      case 'NON-BINARY':
-      case 'NONBINARY':
-        return 'NB';
-      case 'U':
-      case 'UNSPECIFIED':
-        return 'U';
-      default:
-        return null;
+    try {
+      // Use Gender entity for parsing
+      const genderEntity = GenderEntity.fromString(value);
+      // Return legacy format for backward compatibility
+      return genderEntity.toLegacyFormat();
+    } catch (error) {
+      return null;
     }
   }
 
@@ -224,11 +219,14 @@ export class ContactNote {
 
   /**
    * Save frontmatter to file
+   * Uses Frontmatter entity for serialization
    */
   private async saveFrontmatter(frontmatter: Record<string, any>): Promise<void> {
     const content = await this.getContent();
     
-    let frontmatterYaml = stringifyYaml(frontmatter);
+    // Use Frontmatter entity for YAML serialization
+    const frontmatterEntity = Frontmatter.fromObject(frontmatter);
+    let frontmatterYaml = frontmatterEntity.toYAML();
     if (!frontmatterYaml.endsWith('\n')) {
       frontmatterYaml += '\n';
     }
