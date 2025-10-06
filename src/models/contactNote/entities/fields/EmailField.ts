@@ -69,6 +69,23 @@ export class EmailField extends ContactField {
   }
   
   /**
+   * Validate email value (static method for validation without instance)
+   * 
+   * @param value - Email address to validate
+   * @returns True if valid email format
+   */
+  static validateValue(value: string): boolean {
+    if (!value || value.trim() === '') {
+      return false;
+    }
+    
+    // RFC 5322 simplified email regex
+    const emailPattern = /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+    
+    return emailPattern.test(value);
+  }
+  
+  /**
    * Validate email format
    * Uses RFC 5322 simplified regex
    * 
@@ -82,10 +99,7 @@ export class EmailField extends ContactField {
       return { isValid: false, errors };
     }
     
-    // RFC 5322 simplified email regex
-    const emailPattern = /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
-    
-    if (!emailPattern.test(this.value)) {
+    if (!EmailField.validateValue(this.value)) {
       errors.push('Invalid email format');
       return { isValid: false, errors };
     }

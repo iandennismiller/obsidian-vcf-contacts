@@ -105,6 +105,30 @@ export class Frontmatter {
   hasFlat(key: string): boolean {
     return this.getFlat(key) !== undefined;
   }
+  
+  /**
+   * Find an existing key that matches the given key, ignoring case
+   * Useful for case-insensitive key lookups
+   * 
+   * @param searchKey - Key to search for (case-insensitive)
+   * @returns Actual key if found, null otherwise
+   */
+  findKey(searchKey: string): string | null {
+    // Exact match first
+    if (searchKey in this.data) {
+      return searchKey;
+    }
+    
+    // Case-insensitive match
+    const searchKeyLower = searchKey.toLowerCase();
+    for (const key of Object.keys(this.data)) {
+      if (key.toLowerCase() === searchKeyLower) {
+        return key;
+      }
+    }
+    
+    return null;
+  }
 
   // === Mutation Methods (return new Frontmatter - immutable) ===
 

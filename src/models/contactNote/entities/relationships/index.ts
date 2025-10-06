@@ -5,3 +5,4 @@
 export { RelationshipType } from './RelationshipType';
 export { RelationshipReference, ReferenceType } from './RelationshipReference';
 export { Relationship, type RelationshipValidation } from './Relationship';
+export { RelationshipCollection, type DeduplicationResult } from './RelationshipCollection';

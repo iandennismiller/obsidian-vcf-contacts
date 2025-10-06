@@ -15,11 +15,21 @@ import { Revision } from './entities/valueObjects/Revision';
 import { Gender as GenderEntity } from './entities/valueObjects/Gender';
 import { Frontmatter } from './entities/document/Frontmatter';
 import { ContactSection } from './entities/document/ContactSection';
+import { MarkdownSection } from './entities/document/MarkdownSection';
 import type { ContactField } from './entities/fields/ContactField';
+import { EmailField } from './entities/fields/EmailField';
+import { TelephoneField } from './entities/fields/TelephoneField';
+import { UrlField } from './entities/fields/UrlField';
+import { FieldType } from './entities/fields/FieldType';
 import { RelatedSection } from './entities/document/RelatedSection';
 import { Relationship } from './entities/relationships/Relationship';
 import { RelationshipType } from './entities/relationships/RelationshipType';
 import { RelationshipReference } from './entities/relationships/RelationshipReference';
+import { RelationshipCollection } from './entities/relationships/RelationshipCollection';
+
+// Import services
+import { ContactResolver } from './services/ContactResolver';
+import { UIDConflictResolver } from './services/UIDConflictResolver';
 
 // Import utilities for markdown rendering
 import { marked, Tokens } from 'marked';
@@ -244,10 +254,10 @@ export class ContactNote {
 
   /**
    * Extract field type from a frontmatter key
+   * Delegates to FieldType utility
    */
   private extractFieldType(key: string): string | null {
-    const match = key.match(/^(EMAIL|TEL|URL|ADR)(\[|\.)?/);
-    return match ? match[1] : null;
+    return FieldType.extract(key);
   }
 
   /**
@@ -271,20 +281,11 @@ export class ContactNote {
 
   /**
    * Find an existing frontmatter key that matches the given key, ignoring case
+   * Delegates to Frontmatter entity
    */
   private findFrontmatterKey(frontmatter: Record<string, any>, searchKey: string): string | null {
-    if (searchKey in frontmatter) {
-      return searchKey;
-    }
-    
-    const searchKeyLower = searchKey.toLowerCase();
-    for (const key of Object.keys(frontmatter)) {
-      if (key.toLowerCase() === searchKeyLower) {
-        return key;
-      }
-    }
-    
-    return null;
+    const fm = Frontmatter.fromObject(frontmatter);
+    return fm.findKey(searchKey);
   }
 
   /**
@@ -352,58 +353,28 @@ export class ContactNote {
 
   /**
    * Find contact by name in the contacts folder
+   * Delegates to ContactResolver service
    */
   async findContactByName(contactName: string): Promise<TFile | null> {
-    try {
-      const contactsFolder = this.settings.contactsFolder || 'Contacts';
-      
-      // Normalize the contact name
-      const normalizedContactName = contactName.toLowerCase().replace(/\s+/g, '-');
-      const contactFile = this.app.vault.getAbstractFileByPath(`${contactsFolder}/${normalizedContactName}.md`);
-      
-      if (contactFile && 'path' in contactFile && 'basename' in contactFile) {
-        return contactFile as TFile;
-      }
-
-      // Search for file in contacts folder
-      const allFiles = this.app.vault.getMarkdownFiles();
-      const matchingFiles = allFiles.filter(file => {
-        const normalizedBasename = file.basename.toLowerCase().replace(/\s+/g, '-');
-        return normalizedBasename === normalizedContactName &&
-          file.path.startsWith(contactsFolder);
-      });
-
-      return matchingFiles.length > 0 ? matchingFiles[0] : null;
-    } catch (error: any) {
-      console.error('Error finding contact by name:', error);
-      return null;
-    }
+    return ContactResolver.findByName(this.app, this.settings, contactName);
   }
 
   /**
    * Resolve contact information from contact name
+   * Delegates to ContactResolver service
    */
   async resolveContact(contactName: string): Promise<ResolvedContact | null> {
-    const file = await this.findContactByName(contactName);
-    if (!file) return null;
-    
-    // Create a temporary ContactNote for the target contact
-    const targetContact = new ContactNote(this.app, this.settings, file);
-    
-    try {
-      const uid = await targetContact.getUID();
-      const gender = await targetContact.getGender();
-      
-      return {
-        name: contactName,
-        uid: uid || '',
-        file: file,
-        gender: gender
-      };
-    } catch (error: any) {
-      console.debug(`[ContactNote] Error resolving contact ${contactName}: ${error.message}`);
-      return null;
-    }
+    return ContactResolver.resolveByName(
+      this.app,
+      this.settings,
+      contactName,
+      async (file: TFile) => {
+        const targetContact = new ContactNote(this.app, this.settings, file);
+        const uid = await targetContact.getUID();
+        const gender = await targetContact.getGender();
+        return { uid, gender };
+      }
+    );
   }
 
   /**
@@ -700,16 +671,12 @@ export class ContactNote {
     return `${HEADING_LEVELS.SECTION} ${SECTION_NAMES.RELATED}\n${relatedEntries.join('\n')}\n`;
   }
 
+  /**
+   * Extract relationship type from frontmatter key
+   * Delegates to RelationshipType entity
+   */
   extractRelationshipTypeFromKey(key: string): string {
-    // Try dot notation first (RELATED.type or RELATED.type.1)
-    const dotMatch = key.match(/^RELATED\.([^.]+)(?:\.\d+)?$/);
-    if (dotMatch) {
-      return dotMatch[1];
-    }
-    
-    // Fall back to bracket notation for backward compatibility
-    const bracketMatch = key.match(/RELATED(?:\[(?:\d+:)?([^\]]+)\])?/);
-    return bracketMatch ? bracketMatch[1] || 'related' : 'related';
+    return RelationshipType.fromFrontmatterKey(key).toString();
   }
 
   // === Sync Operations (inlined from SyncOperations) ===
@@ -717,75 +684,37 @@ export class ContactNote {
   /**
    * Deduplicate relationships, preferring gendered terms over ungendered
    */
+  /**
+   * Deduplicate relationships, preferring gendered terms over ungendered
+   * Delegates to RelationshipCollection entity
+   */
   private deduplicateRelationships(relationships: Relationship[]): {
     deduplicated: Relationship[];
     inferredGender: Map<string, Gender>;
   } {
-    const seen = new Map<string, Relationship>();
-    const inferredGender = new Map<string, Gender>();
-    
-    for (const rel of relationships) {
-      const type = rel.getType().toString();
-      const contactName = rel.getTarget().getValue();
-      
-      const genderlessType = this.convertToGenderlessType(type);
-      const contactKey = `${genderlessType}:${contactName.toLowerCase()}`;
-      const existing = seen.get(contactKey);
-      
-      if (!existing) {
-        seen.set(contactKey, rel);
-        const gender = this.inferGenderFromRelationship(type);
-        if (gender) {
-          inferredGender.set(contactName, gender);
-        }
-        continue;
-      }
-      
-      const existingType = existing.getType().toString();
-      const existingGender = this.inferGenderFromRelationship(existingType);
-      const currentGender = this.inferGenderFromRelationship(type);
-      
-      if (currentGender && !existingGender) {
-        seen.set(contactKey, rel);
-        inferredGender.set(contactName, currentGender);
-      } else if (currentGender) {
-        const existingContactName = existing.getTarget().getValue();
-        inferredGender.set(existingContactName, existingGender!);
-      }
-    }
-    
-    return {
-      deduplicated: Array.from(seen.values()),
-      inferredGender
-    };
+    return RelationshipCollection.deduplicate(
+      relationships,
+      (type: string) => this.convertToGenderlessType(type),
+      (type: string) => this.inferGenderFromRelationship(type)
+    );
   }
 
   /**
    * Find contact by UID
    */
+  /**
+   * Find contact by UID (legacy method for compatibility)
+   * Delegates to ContactResolver service
+   */
   private async findContactByUid(uid: string): Promise<{ name: string; file: any } | null> {
-    const allFiles = this.app.vault.getMarkdownFiles();
-
-    for (const file of allFiles) {
-      try {
-        const tempContact = new ContactNote(this.app, this.settings, file);
-        const fileUid = await tempContact.getUID();
-        
-        if (fileUid === uid) {
-          const frontmatter = await tempContact.getFrontmatter();
-          const contactName = frontmatter?.FN || file.basename;
-          
-          return {
-            name: contactName,
-            file: file
-          };
-        }
-      } catch (error: any) {
-        continue;
+    return ContactResolver.searchByUID(
+      this.app,
+      this.settings,
+      uid,
+      async (file: TFile, frontmatter: any) => {
+        return frontmatter?.FN || file.basename;
       }
-    }
-
-    return null;
+    );
   }
 
   /**
@@ -1057,7 +986,7 @@ export class ContactNote {
 
   /**
    * Identify invalid frontmatter fields
-   * Uses Frontmatter entity and field validation
+   * Delegates to field entity validation methods
    */
   async identifyInvalidFrontmatterFields(): Promise<{
     invalidFields: Array<{ key: string; value: string; reason: string }>;
@@ -1077,14 +1006,14 @@ export class ContactNote {
         let isInvalid = false;
         let reason = '';
 
-        // Check field types
-        if (key.startsWith('EMAIL') && !this.validateEmail(value)) {
+        // Check field types using entity static validation methods
+        if (key.startsWith('EMAIL') && !EmailField.validateValue(value)) {
           isInvalid = true;
           reason = 'Invalid email format (must contain @ and domain)';
-        } else if (key.startsWith('TEL') && !this.validatePhoneNumber(value)) {
+        } else if (key.startsWith('TEL') && !TelephoneField.validateValue(value)) {
           isInvalid = true;
           reason = 'Invalid phone format (must contain digits)';
-        } else if (key.startsWith('URL') && !this.validateURL(value)) {
+        } else if (key.startsWith('URL') && !UrlField.validateValue(value)) {
           isInvalid = true;
           reason = 'Invalid URL format (must start with http:// or https://)';
         }
@@ -1204,38 +1133,26 @@ export class ContactNote {
 
   /**
    * Resolve a contact by UID - returns object with frontmatter
+   * Delegates to ContactResolver service
    */
   async resolveContactByUID(uid: string): Promise<{ file: TFile; frontmatter: any } | null> {
-    const allFiles = this.app.vault.getMarkdownFiles();
-    
-    for (const file of allFiles) {
-      if (!file.path.startsWith(this.settings.contactsFolder)) continue;
-      
-      const cache = this.app.metadataCache.getFileCache(file);
-      if (cache?.frontmatter?.UID === uid) {
-        return { file, frontmatter: cache.frontmatter };
-      }
-    }
-    
-    return null;
+    return ContactResolver.findByUID(this.app, this.settings, uid);
   }
 
   /**
    * Resolve contact file by UID - returns just the TFile
+   * Delegates to ContactResolver service
    */
   async resolveContactFileByUID(uid: string): Promise<TFile | null> {
-    const result = await this.resolveContactByUID(uid);
-    return result?.file || null;
+    return ContactResolver.resolveFileByUID(this.app, this.settings, uid);
   }
 
   /**
    * Resolve contact name by UID
+   * Delegates to ContactResolver service
    */
   async resolveContactNameByUID(uid: string): Promise<string | null> {
-    const result = await this.resolveContactByUID(uid);
-    if (!result) return null;
-    
-    return result.frontmatter?.FN || result.file.basename;
+    return ContactResolver.resolveNameByUID(this.app, this.settings, uid);
   }
 
   /**
@@ -1462,35 +1379,18 @@ export class ContactNote {
 
   /**
    * Detect UID conflicts within the contact system
-   * Simplified using Map operations
+   * Delegates to UIDConflictResolver service
    */
   async detectUIDConflicts(): Promise<{
     hasConflicts: boolean;
     conflicts: Array<{ uid: string; files: string[] }>;
   }> {
-    const uidMap = new Map<string, string[]>();
-    
-    // Collect UIDs from all contact files
-    for (const file of this.app.vault.getMarkdownFiles()) {
-      if (!file.path.startsWith(this.settings.contactsFolder)) continue;
-      
-      const uid = this.app.metadataCache.getFileCache(file)?.frontmatter?.UID;
-      if (uid) {
-        if (!uidMap.has(uid)) uidMap.set(uid, []);
-        uidMap.get(uid)!.push(file.path);
-      }
-    }
-    
-    // Find conflicts (UIDs with multiple files)
-    const conflicts = Array.from(uidMap.entries())
-      .filter(([_, files]) => files.length > 1)
-      .map(([uid, files]) => ({ uid, files }));
-    
-    return { hasConflicts: conflicts.length > 0, conflicts };
+    return UIDConflictResolver.detectConflicts(this.app, this.settings);
   }
 
   /**
    * Update a specific relationship's UID
+   * Delegates to UIDConflictResolver service for UID updates
    */
   async updateRelationshipUID(oldUID: string, newUID: string): Promise<{
     success: boolean;
@@ -1500,61 +1400,32 @@ export class ContactNote {
       key: string;
     }>;
   }> {
-    const result: {
-      success: boolean;
-      updatedRelationships: Array<{
-        oldUID: string;
-        newUID: string;
-        key: string;
-      }>;
-    } = {
-      success: true,
-      updatedRelationships: []
-    };
-    
     try {
       const frontmatter = await this.getFrontmatter();
       if (!frontmatter) {
-        result.success = false;
-        return result;
+        return { success: false, updatedRelationships: [] };
       }
 
-      const updates: Record<string, string> = {};
-      
-      for (const [key, value] of Object.entries(frontmatter)) {
-        if (key.startsWith('RELATED[') && typeof value === 'string') {
-          const parsedValue = this.parseRelatedValue(value);
-          if (parsedValue && (parsedValue.type === 'uuid' || parsedValue.type === 'uid')) {
-            if (parsedValue.value === oldUID) {
-              // Format with the same prefix style (urn:uuid: or uid:)
-              updates[key] = this.formatRelatedValue(newUID, '');
-              result.updatedRelationships.push({
-                oldUID,
-                newUID,
-                key
-              });
-            }
-          } else if (value === oldUID) {
-            // Direct match without prefix
-            updates[key] = this.formatRelatedValue(newUID, '');
-            result.updatedRelationships.push({
-              oldUID,
-              newUID,
-              key
-            });
-          }
-        }
-      }
+      const result = UIDConflictResolver.updateRelationshipUID(
+        oldUID,
+        newUID,
+        frontmatter,
+        (value: string) => this.parseRelatedValue(value)
+      );
 
-      if (Object.keys(updates).length > 0) {
+      if (result.updatedRelationships.length > 0) {
+        const updates: Record<string, string> = {};
+        result.updatedRelationships.forEach(rel => {
+          updates[rel.key] = this.formatRelatedValue(rel.newUID, '');
+        });
         await this.updateMultipleFrontmatterValues(updates);
       }
+
+      return result;
     } catch (error: any) {
-      result.success = false;
       console.error(`Error updating relationship UID: ${error.message}`);
+      return { success: false, updatedRelationships: [] };
     }
-    
-    return result;
   }
 
   /**
@@ -1642,10 +1513,10 @@ export class ContactNote {
 
   /**
    * Remove frontmatter from markdown content
+   * Delegates to MarkdownSection entity
    */
   private removeFrontmatter(content: string): string {
-    const frontmatterRegex = /^---\n[\s\S]*?\n---\n/;
-    return content.replace(frontmatterRegex, '');
+    return MarkdownSection.stripFrontmatter(content);
   }
 
   /**

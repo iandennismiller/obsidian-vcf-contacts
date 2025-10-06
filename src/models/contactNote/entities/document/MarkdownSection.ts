@@ -106,6 +106,19 @@ export abstract class MarkdownSection {
     );
   }
 
+  // === Static Utility Methods ===
+  
+  /**
+   * Strip frontmatter from markdown content
+   * 
+   * @param content - Markdown content with potential frontmatter
+   * @returns Content without frontmatter
+   */
+  static stripFrontmatter(content: string): string {
+    const frontmatterRegex = /^---\n[\s\S]*?\n---\n/;
+    return content.replace(frontmatterRegex, '');
+  }
+
   // === Static Factory for Testing ===
 
   /**
