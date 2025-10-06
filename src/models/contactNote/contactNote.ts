@@ -26,6 +26,9 @@ import { Relationship } from './entities/relationships/Relationship';
 import { RelationshipType } from './entities/relationships/RelationshipType';
 import { RelationshipReference } from './entities/relationships/RelationshipReference';
 
+// Import services
+import { ContactResolver } from './services/ContactResolver';
+
 // Import utilities for markdown rendering
 import { marked, Tokens } from 'marked';
 import { 
@@ -348,58 +351,28 @@ export class ContactNote {
 
   /**
    * Find contact by name in the contacts folder
+   * Delegates to ContactResolver service
    */
   async findContactByName(contactName: string): Promise<TFile | null> {
-    try {
-      const contactsFolder = this.settings.contactsFolder || 'Contacts';
-      
-      // Normalize the contact name
-      const normalizedContactName = contactName.toLowerCase().replace(/\s+/g, '-');
-      const contactFile = this.app.vault.getAbstractFileByPath(`${contactsFolder}/${normalizedContactName}.md`);
-      
-      if (contactFile && 'path' in contactFile && 'basename' in contactFile) {
-        return contactFile as TFile;
-      }
-
-      // Search for file in contacts folder
-      const allFiles = this.app.vault.getMarkdownFiles();
-      const matchingFiles = allFiles.filter(file => {
-        const normalizedBasename = file.basename.toLowerCase().replace(/\s+/g, '-');
-        return normalizedBasename === normalizedContactName &&
-          file.path.startsWith(contactsFolder);
-      });
-
-      return matchingFiles.length > 0 ? matchingFiles[0] : null;
-    } catch (error: any) {
-      console.error('Error finding contact by name:', error);
-      return null;
-    }
+    return ContactResolver.findByName(this.app, this.settings, contactName);
   }
 
   /**
    * Resolve contact information from contact name
+   * Delegates to ContactResolver service
    */
   async resolveContact(contactName: string): Promise<ResolvedContact | null> {
-    const file = await this.findContactByName(contactName);
-    if (!file) return null;
-    
-    // Create a temporary ContactNote for the target contact
-    const targetContact = new ContactNote(this.app, this.settings, file);
-    
-    try {
-      const uid = await targetContact.getUID();
-      const gender = await targetContact.getGender();
-      
-      return {
-        name: contactName,
-        uid: uid || '',
-        file: file,
-        gender: gender
-      };
-    } catch (error: any) {
-      console.debug(`[ContactNote] Error resolving contact ${contactName}: ${error.message}`);
-      return null;
-    }
+    return ContactResolver.resolveByName(
+      this.app,
+      this.settings,
+      contactName,
+      async (file: TFile) => {
+        const targetContact = new ContactNote(this.app, this.settings, file);
+        const uid = await targetContact.getUID();
+        const gender = await targetContact.getGender();
+        return { uid, gender };
+      }
+    );
   }
 
   /**
@@ -755,29 +728,19 @@ export class ContactNote {
   /**
    * Find contact by UID
    */
+  /**
+   * Find contact by UID (legacy method for compatibility)
+   * Delegates to ContactResolver service
+   */
   private async findContactByUid(uid: string): Promise<{ name: string; file: any } | null> {
-    const allFiles = this.app.vault.getMarkdownFiles();
-
-    for (const file of allFiles) {
-      try {
-        const tempContact = new ContactNote(this.app, this.settings, file);
-        const fileUid = await tempContact.getUID();
-        
-        if (fileUid === uid) {
-          const frontmatter = await tempContact.getFrontmatter();
-          const contactName = frontmatter?.FN || file.basename;
-          
-          return {
-            name: contactName,
-            file: file
-          };
-        }
-      } catch (error: any) {
-        continue;
+    return ContactResolver.searchByUID(
+      this.app,
+      this.settings,
+      uid,
+      async (file: TFile, frontmatter: any) => {
+        return frontmatter?.FN || file.basename;
       }
-    }
-
-    return null;
+    );
   }
 
   /**
@@ -1196,38 +1159,26 @@ export class ContactNote {
 
   /**
    * Resolve a contact by UID - returns object with frontmatter
+   * Delegates to ContactResolver service
    */
   async resolveContactByUID(uid: string): Promise<{ file: TFile; frontmatter: any } | null> {
-    const allFiles = this.app.vault.getMarkdownFiles();
-    
-    for (const file of allFiles) {
-      if (!file.path.startsWith(this.settings.contactsFolder)) continue;
-      
-      const cache = this.app.metadataCache.getFileCache(file);
-      if (cache?.frontmatter?.UID === uid) {
-        return { file, frontmatter: cache.frontmatter };
-      }
-    }
-    
-    return null;
+    return ContactResolver.findByUID(this.app, this.settings, uid);
   }
 
   /**
    * Resolve contact file by UID - returns just the TFile
+   * Delegates to ContactResolver service
    */
   async resolveContactFileByUID(uid: string): Promise<TFile | null> {
-    const result = await this.resolveContactByUID(uid);
-    return result?.file || null;
+    return ContactResolver.resolveFileByUID(this.app, this.settings, uid);
   }
 
   /**
    * Resolve contact name by UID
+   * Delegates to ContactResolver service
    */
   async resolveContactNameByUID(uid: string): Promise<string | null> {
-    const result = await this.resolveContactByUID(uid);
-    if (!result) return null;
-    
-    return result.frontmatter?.FN || result.file.basename;
+    return ContactResolver.resolveNameByUID(this.app, this.settings, uid);
   }
 
   /**
