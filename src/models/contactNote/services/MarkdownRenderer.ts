@@ -9,6 +9,7 @@ import { stringify as stringifyYaml } from 'yaml';
 import { Gender } from '../types';
 import { FieldGrouper } from '../entities/fields';
 import { RelationshipType } from '../entities/relationships';
+import { Gender as GenderEntity } from '../entities/valueObjects';
 import { HEADING_LEVELS, SECTION_NAMES } from '../markdownConstants';
 
 /**
@@ -179,13 +180,15 @@ export class MarkdownRenderer {
   /**
    * Get gendered relationship term based on contact gender
    * 
-   * @param type - Relationship type
+   * @param type - Relationship type string
    * @param gender - Contact gender
    * @returns Gender-appropriate relationship term
    * 
    * @private
    */
   private static getGenderedRelationshipTerm(type: string, gender: Gender): string {
-    return RelationshipType.getGenderedTerm(type, gender);
+    const relType = RelationshipType.fromString(type);
+    const genderEntity = GenderEntity.fromString(gender);
+    return relType.getGenderedTerm(genderEntity);
   }
 }

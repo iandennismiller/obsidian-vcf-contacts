@@ -66,7 +66,9 @@ export class FieldGrouper {
 
     // Group fields by category based on field type prefix
     for (const [key, value] of Object.entries(record)) {
-      const baseKey = key.split('[')[0]; // Extract base key (e.g., "EMAIL" from "EMAIL[WORK]")
+      // Extract base key - handle both bracket and dot notation
+      // Examples: "EMAIL[WORK]" -> "EMAIL", "N.FN" -> "N", "ADR[HOME].STREET" -> "ADR"
+      const baseKey = key.split(/[\[\.]/)[0];
       
       if (nameKeys.includes(baseKey)) {
         groups.name[key] = value;
