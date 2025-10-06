@@ -2314,12 +2314,11 @@ export class ContactNote {
    * Parse Contact section from markdown
    * Returns parsed contact fields compatible with existing curators
    */
-  async parseContactSection(): Promise<Array<{
-    fieldType: string;
-    fieldLabel: string;
-    value: string;
-    component?: string;
-  }>> {
+  /**
+   * Parse Contact section from markdown content
+   * Returns ContactField entity objects directly
+   */
+  async parseContactSection(): Promise<ContactField[]> {
     const content = await this.getContent();
     
     // Extract the Contact section using markdown parsing
@@ -2331,39 +2330,7 @@ export class ContactNote {
     
     const contactContent = contactSectionMatch[1];
     const contactSection = ContactSection.fromMarkdown(contactContent, 'Contact', 2);
-    const fields = contactSection.getFields();
-    
-    // Convert ContactField entities to ParsedContactField format for backward compatibility
-    const parsedFields: Array<{
-      fieldType: string;
-      fieldLabel: string;
-      value: string;
-      component?: string;
-    }> = [];
-    
-    for (const field of fields) {
-      const frontmatter = field.toFrontmatter();
-      
-      // Handle both single entries and arrays
-      const entries = Array.isArray(frontmatter) ? frontmatter : [frontmatter];
-      
-      for (const entry of entries) {
-        // Parse the frontmatter key to extract field type, label, and component
-        // Format examples: "EMAIL[WORK]", "EMAIL", "ADR[HOME].STREET", "ADR.STREET"
-        const keyMatch = entry.key.match(/^([A-Z]+)(?:\[([^\]]+)\])?(?:\.(.+))?$/);
-        
-        if (keyMatch) {
-          parsedFields.push({
-            fieldType: keyMatch[1],
-            fieldLabel: keyMatch[2] || '',
-            value: String(entry.value),
-            component: keyMatch[3]
-          });
-        }
-      }
-    }
-    
-    return parsedFields;
+    return contactSection.getFields();
   }
 
   /**
