@@ -1238,20 +1238,40 @@ export class ContactNote {
   /**
    * Validate email format
    */
+  /**
+   * Validate email format
+   * @deprecated Use EmailField.validate() entity method directly
+   */
   validateEmail(email: string): boolean {
     if (!email || typeof email !== 'string') return true; // Empty is valid
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
+    try {
+      const { EmailField } = require('./entities/fields/EmailField');
+      const field = EmailField.fromMarkdown(`- ${email}`);
+      const result = field?.validate();
+      return result?.isValid ?? true;
+    } catch {
+      // Fallback to basic validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return emailRegex.test(email);
+    }
   }
 
   /**
    * Validate phone number format
+   * @deprecated Use TelephoneField.validate() entity method directly
    */
   validatePhoneNumber(phone: string): boolean {
     if (!phone || typeof phone !== 'string') return true; // Empty is valid
-    // Allow various phone formats but reject obviously invalid ones
-    const phoneRegex = /^[\+]?[\s\-\(\)0-9]{7,}$/;
-    return phoneRegex.test(phone.replace(/\s/g, ''));
+    try {
+      const { TelephoneField } = require('./entities/fields/TelephoneField');
+      const field = TelephoneField.fromMarkdown(`- ${phone}`);
+      const result = field?.validate();
+      return result?.isValid ?? true;
+    } catch {
+      // Fallback to basic validation
+      const phoneRegex = /^[\+]?[\s\-\(\)0-9]{7,}$/;
+      return phoneRegex.test(phone.replace(/\s/g, ''));
+    }
   }
 
   /**
@@ -1281,11 +1301,19 @@ export class ContactNote {
 
   /**
    * Validate URL format
+   * @deprecated Use UrlField.validate() entity method directly
    */
   private validateURL(url: string): boolean {
     if (!url || typeof url !== 'string') return true; // Empty is valid
-    // Basic URL validation - must start with http:// or https://
-    return /^https?:\/\/.+/.test(url);
+    try {
+      const { UrlField } = require('./entities/fields/UrlField');
+      const field = UrlField.fromMarkdown(`- ${url}`);
+      const result = field?.validate();
+      return result?.isValid ?? true;
+    } catch {
+      // Fallback to basic validation
+      return /^https?:\/\/.+/.test(url);
+    }
   }
 
   /**
