@@ -1169,7 +1169,7 @@ export class ContactNote {
 
   /**
    * Identify invalid frontmatter fields
-   * Returns list of invalid fields with their values and reasons
+   * Uses Frontmatter entity and field validation
    */
   async identifyInvalidFrontmatterFields(): Promise<{
     invalidFields: Array<{ key: string; value: string; reason: string }>;
@@ -1179,52 +1179,32 @@ export class ContactNote {
     const errors: string[] = [];
 
     try {
-      const frontmatter = await this.getFrontmatter();
-      if (!frontmatter) {
-        return { invalidFields, errors };
-      }
+      const fm = Frontmatter.fromObject(await this.getFrontmatter() || {});
+      
+      // Validate each field
+      for (const key of fm.getKeys()) {
+        const value = fm.get(key);
+        if (!value || typeof value !== 'string') continue;
 
-      // Check each frontmatter key
-      for (const key of Object.keys(frontmatter)) {
-        const value = frontmatter[key];
-        
-        // Skip non-string values or empty values
-        if (!value || typeof value !== 'string') {
-          continue;
+        let isInvalid = false;
+        let reason = '';
+
+        // Check field types
+        if (key.startsWith('EMAIL') && !this.validateEmail(value)) {
+          isInvalid = true;
+          reason = 'Invalid email format (must contain @ and domain)';
+        } else if (key.startsWith('TEL') && !this.validatePhoneNumber(value)) {
+          isInvalid = true;
+          reason = 'Invalid phone format (must contain digits)';
+        } else if (key.startsWith('URL') && !this.validateURL(value)) {
+          isInvalid = true;
+          reason = 'Invalid URL format (must start with http:// or https://)';
         }
 
-        // Check EMAIL fields
-        if (key.startsWith('EMAIL')) {
-          if (!this.validateEmail(value)) {
-            invalidFields.push({ 
-              key, 
-              value, 
-              reason: 'Invalid email format (must contain @ and domain)' 
-            });
-          }
-        }
-        // Check TEL fields
-        else if (key.startsWith('TEL')) {
-          if (!this.validatePhoneNumber(value)) {
-            invalidFields.push({ 
-              key, 
-              value, 
-              reason: 'Invalid phone format (must contain digits)' 
-            });
-          }
-        }
-        // Check URL fields
-        else if (key.startsWith('URL')) {
-          if (!this.validateURL(value)) {
-            invalidFields.push({ 
-              key, 
-              value, 
-              reason: 'Invalid URL format (must start with http:// or https://)' 
-            });
-          }
+        if (isInvalid) {
+          invalidFields.push({ key, value, reason });
         }
       }
-
     } catch (error: any) {
       errors.push(`Error identifying invalid fields: ${error.message}`);
     }
@@ -1234,7 +1214,7 @@ export class ContactNote {
 
   /**
    * Remove specified fields from frontmatter
-   * Used after user confirmation
+   * Uses Frontmatter entity for deletion
    */
   async removeFieldsFromFrontmatter(keysToRemove: string[]): Promise<{
     removed: string[];
@@ -1244,24 +1224,20 @@ export class ContactNote {
     const errors: string[] = [];
 
     try {
-      const frontmatter = await this.getFrontmatter();
-      if (!frontmatter) {
-        return { removed, errors };
-      }
+      let fm = Frontmatter.fromObject(await this.getFrontmatter() || {});
 
       // Remove specified fields
       for (const key of keysToRemove) {
-        if (key in frontmatter) {
-          delete frontmatter[key];
+        if (fm.has(key)) {
+          fm = fm.delete(key);
           removed.push(key);
         }
       }
 
-      // Save the updated frontmatter if any fields were removed
+      // Save if any fields were removed
       if (removed.length > 0) {
-        await this.saveFrontmatterDirect(frontmatter);
+        await this.saveFrontmatter(fm.toObject());
       }
-
     } catch (error: any) {
       errors.push(`Error removing fields: ${error.message}`);
     }
@@ -1269,46 +1245,8 @@ export class ContactNote {
     return { removed, errors };
   }
 
-  /**
-   * Save frontmatter directly by reconstructing the file content
-   * This is a helper method for removeFieldsFromFrontmatter
-   */
-  private async saveFrontmatterDirect(frontmatter: Record<string, any>): Promise<void> {
-    // Import yaml library for stringification
-    const { stringify: stringifyYaml } = await import('yaml');
-    
-    const content = await this.getContent();
-    
-    // Use yaml library to stringify frontmatter
-    let frontmatterYaml = stringifyYaml(frontmatter);
-    
-    // Ensure frontmatter YAML ends with a newline
-    if (!frontmatterYaml.endsWith('\n')) {
-      frontmatterYaml += '\n';
-    }
-    
-    const hasExistingFrontmatter = content.startsWith('---\n');
-    let newContent: string;
-    
-    if (hasExistingFrontmatter) {
-      const endIndex = content.indexOf('---\n', 4);
-      if (endIndex !== -1) {
-        newContent = `---\n${frontmatterYaml}---\n${content.substring(endIndex + 4)}`;
-      } else {
-        newContent = `---\n${frontmatterYaml}---\n${content}`;
-      }
-    } else {
-      newContent = `---\n${frontmatterYaml}---\n${content}`;
-    }
-    
-    await this.updateContent(newContent);
-  }
-
   // === Advanced Relationship Operations ===
 
-  /**
-   * Get relationships with enhanced UID/name linking information
-   */
   /**
    * Get all relationships from both frontmatter and Related section
    * Delegates to Relationship entities for parsing
