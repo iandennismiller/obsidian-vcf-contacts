@@ -25,9 +25,11 @@ import { RelatedSection } from './entities/document/RelatedSection';
 import { Relationship } from './entities/relationships/Relationship';
 import { RelationshipType } from './entities/relationships/RelationshipType';
 import { RelationshipReference } from './entities/relationships/RelationshipReference';
+import { RelationshipCollection } from './entities/relationships/RelationshipCollection';
 
 // Import services
 import { ContactResolver } from './services/ContactResolver';
+import { UIDConflictResolver } from './services/UIDConflictResolver';
 
 // Import utilities for markdown rendering
 import { marked, Tokens } from 'marked';
@@ -682,47 +684,19 @@ export class ContactNote {
   /**
    * Deduplicate relationships, preferring gendered terms over ungendered
    */
+  /**
+   * Deduplicate relationships, preferring gendered terms over ungendered
+   * Delegates to RelationshipCollection entity
+   */
   private deduplicateRelationships(relationships: Relationship[]): {
     deduplicated: Relationship[];
     inferredGender: Map<string, Gender>;
   } {
-    const seen = new Map<string, Relationship>();
-    const inferredGender = new Map<string, Gender>();
-    
-    for (const rel of relationships) {
-      const type = rel.getType().toString();
-      const contactName = rel.getTarget().getValue();
-      
-      const genderlessType = this.convertToGenderlessType(type);
-      const contactKey = `${genderlessType}:${contactName.toLowerCase()}`;
-      const existing = seen.get(contactKey);
-      
-      if (!existing) {
-        seen.set(contactKey, rel);
-        const gender = this.inferGenderFromRelationship(type);
-        if (gender) {
-          inferredGender.set(contactName, gender);
-        }
-        continue;
-      }
-      
-      const existingType = existing.getType().toString();
-      const existingGender = this.inferGenderFromRelationship(existingType);
-      const currentGender = this.inferGenderFromRelationship(type);
-      
-      if (currentGender && !existingGender) {
-        seen.set(contactKey, rel);
-        inferredGender.set(contactName, currentGender);
-      } else if (currentGender) {
-        const existingContactName = existing.getTarget().getValue();
-        inferredGender.set(existingContactName, existingGender!);
-      }
-    }
-    
-    return {
-      deduplicated: Array.from(seen.values()),
-      inferredGender
-    };
+    return RelationshipCollection.deduplicate(
+      relationships,
+      (type: string) => this.convertToGenderlessType(type),
+      (type: string) => this.inferGenderFromRelationship(type)
+    );
   }
 
   /**
@@ -1405,35 +1379,18 @@ export class ContactNote {
 
   /**
    * Detect UID conflicts within the contact system
-   * Simplified using Map operations
+   * Delegates to UIDConflictResolver service
    */
   async detectUIDConflicts(): Promise<{
     hasConflicts: boolean;
     conflicts: Array<{ uid: string; files: string[] }>;
   }> {
-    const uidMap = new Map<string, string[]>();
-    
-    // Collect UIDs from all contact files
-    for (const file of this.app.vault.getMarkdownFiles()) {
-      if (!file.path.startsWith(this.settings.contactsFolder)) continue;
-      
-      const uid = this.app.metadataCache.getFileCache(file)?.frontmatter?.UID;
-      if (uid) {
-        if (!uidMap.has(uid)) uidMap.set(uid, []);
-        uidMap.get(uid)!.push(file.path);
-      }
-    }
-    
-    // Find conflicts (UIDs with multiple files)
-    const conflicts = Array.from(uidMap.entries())
-      .filter(([_, files]) => files.length > 1)
-      .map(([uid, files]) => ({ uid, files }));
-    
-    return { hasConflicts: conflicts.length > 0, conflicts };
+    return UIDConflictResolver.detectConflicts(this.app, this.settings);
   }
 
   /**
    * Update a specific relationship's UID
+   * Delegates to UIDConflictResolver service for UID updates
    */
   async updateRelationshipUID(oldUID: string, newUID: string): Promise<{
     success: boolean;
@@ -1443,61 +1400,32 @@ export class ContactNote {
       key: string;
     }>;
   }> {
-    const result: {
-      success: boolean;
-      updatedRelationships: Array<{
-        oldUID: string;
-        newUID: string;
-        key: string;
-      }>;
-    } = {
-      success: true,
-      updatedRelationships: []
-    };
-    
     try {
       const frontmatter = await this.getFrontmatter();
       if (!frontmatter) {
-        result.success = false;
-        return result;
+        return { success: false, updatedRelationships: [] };
       }
 
-      const updates: Record<string, string> = {};
-      
-      for (const [key, value] of Object.entries(frontmatter)) {
-        if (key.startsWith('RELATED[') && typeof value === 'string') {
-          const parsedValue = this.parseRelatedValue(value);
-          if (parsedValue && (parsedValue.type === 'uuid' || parsedValue.type === 'uid')) {
-            if (parsedValue.value === oldUID) {
-              // Format with the same prefix style (urn:uuid: or uid:)
-              updates[key] = this.formatRelatedValue(newUID, '');
-              result.updatedRelationships.push({
-                oldUID,
-                newUID,
-                key
-              });
-            }
-          } else if (value === oldUID) {
-            // Direct match without prefix
-            updates[key] = this.formatRelatedValue(newUID, '');
-            result.updatedRelationships.push({
-              oldUID,
-              newUID,
-              key
-            });
-          }
-        }
-      }
+      const result = UIDConflictResolver.updateRelationshipUID(
+        oldUID,
+        newUID,
+        frontmatter,
+        (value: string) => this.parseRelatedValue(value)
+      );
 
-      if (Object.keys(updates).length > 0) {
+      if (result.updatedRelationships.length > 0) {
+        const updates: Record<string, string> = {};
+        result.updatedRelationships.forEach(rel => {
+          updates[rel.key] = this.formatRelatedValue(rel.newUID, '');
+        });
         await this.updateMultipleFrontmatterValues(updates);
       }
+
+      return result;
     } catch (error: any) {
-      result.success = false;
       console.error(`Error updating relationship UID: ${error.message}`);
+      return { success: false, updatedRelationships: [] };
     }
-    
-    return result;
   }
 
   /**

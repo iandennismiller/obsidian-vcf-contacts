@@ -5,3 +5,10 @@
  */
 
 export { ContactResolver, type ResolvedContact } from './ContactResolver';
+export { 
+  UIDConflictResolver, 
+  type UIDConflict, 
+  type ConflictDetectionResult, 
+  type UIDUpdateResult, 
+  type BulkUIDUpdateResult 
+} from './UIDConflictResolver';
